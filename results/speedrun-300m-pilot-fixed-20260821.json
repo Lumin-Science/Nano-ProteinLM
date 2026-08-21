@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "run_id": "speedrun-300m-pilot-fixed-20260821",
+  "status": "complete_with_bounded_diagnostic",
+  "claim_level": "single_seed_local_speedrun_diagnostic",
+  "source": {
+    "training_git_commit": "fd9fc61c04e51a519592691f90fd91da93c65f29",
+    "evaluation_git_commit": "aa118610590b3dfa88d063f1b033162e0a9eea2d",
+    "training_uv_lock_sha256": "e979ada1170639ea288bc11cf342d4e0ed201fd5a498b9f2633dbe296577cb75",
+    "evaluation_uv_lock_sha256": "370c94298b0497cf258ae80a3adc6a631ef508e9fcaa407cf4abedff0d3ff7cd"
+  },
+  "hardware": {
+    "accelerators": 4,
+    "gpu": "NVIDIA A100 80GB PCIe",
+    "training_world_size": 4,
+    "evaluation_gpus_used_concurrently": 2
+  },
+  "environment": {
+    "python": "3.11.15",
+    "torch": "2.13.0+cu126",
+    "cuda": "12.6",
+    "attention": "aten::_flash_attention_forward(varlen)",
+    "manager": "uv",
+    "lock_frozen": true
+  },
+  "data": {
+    "manifest_sha256": "02934239361fcd0b38c3138f5dc90636d322a980bb400106764e2728a3611c55",
+    "training_sequences": 750000,
+    "validation_sequences": 12288,
+    "exact_evaluation_sequences_excluded": 29,
+    "sampling_caveat": "uniform over transferred 70%-identity cluster representatives"
+  },
+  "model": {
+    "name": "esmc_300m",
+    "parameter_count": 332997184,
+    "layers": 30,
+    "width": 960,
+    "heads": 15,
+    "ffn_width": 2560
+  },
+  "training": {
+    "measured_seconds": 1800.0238715594169,
+    "walltime_budget_seconds": 1800.0,
+    "optimizer_steps": 2958,
+    "model_tokens": 135353999,
+    "filled_residues": 134301071,
+    "sequences_seen": 526464,
+    "average_model_tokens_per_second": 75195.6689,
+    "stage1": {
+      "measured_seconds": 1200.3173419225495,
+      "optimizer_steps": 1756,
+      "model_tokens": 111748787,
+      "filled_residues": 110849715,
+      "sequences_seen": 449536,
+      "average_model_tokens_per_second": 93099.3689,
+      "checkpoint_sha256": "a213518eb43b023f9df149aeff9541dee06fd0ae44e0f4601d6b3ba2096e8cb2",
+      "checkpoint_bytes": 3996376673
+    },
+    "stage2_delta": {
+      "measured_seconds": 599.7065296368674,
+      "model_tokens": 23605212,
+      "average_model_tokens_per_second": 39361.2723
+    },
+    "final_checkpoint_sha256": "5ed58935672d2e1eec40c1158ea4f0452def5c7b5359de31fc8d000c33a2f834",
+    "final_checkpoint_bytes": 3996375430
+  },
+  "evaluation": {
+    "profile": "speedrun",
+    "protocol": "pcore-diagnostic-v1",
+    "aggregate_score": null,
+    "bootstrap_replicates": 0,
+    "parallel_stage_final_wall_seconds": 528.71,
+    "cold_wall_estimate": "approximately 16 minutes from measured contact and diagnostic phases",
+    "full_pcore_status": "release_only_not_completed_for_local_speedrun",
+    "full_pcore_blocker": "secondary-structure full-residue LBFGS exceeded one hour",
+    "stage1": {
+      "evaluation_report_sha256": "0a7f08fbe99b23799843b8ae8d4f18dbd9b7634d307d329f19a444c7382fdf40",
+      "total_resumed_seconds": 426.4648167039268,
+      "heldout_sequence_mean_nll": 2.7288735806941986,
+      "heldout_perplexity": 15.315625483643297,
+      "contact_precision_at_l": 0.05228326773898068,
+      "contact_random_precision_at_l": 0.014875900808062571,
+      "contact_evaluation_chains": 32,
+      "diagnostic_coverage": "3/3",
+      "remote_homology_balanced_accuracy": 0.06816306650865475,
+      "remote_homology_seconds": 391.63036926998757,
+      "remote_homology_selected_c": 10.0,
+      "human_ppi_average_precision": 0.8518779439663856,
+      "human_ppi_seconds": 91.57831686805002,
+      "human_ppi_selected_c": 0.1,
+      "flip2_spearman_rho": 0.31624282512157015,
+      "flip2_seconds": 21.78984956489876,
+      "flip2_selected_alpha": 1.0
+    },
+    "final": {
+      "evaluation_report_sha256": "97ae7ca1f9d1ebdd54497a173029ddfe2307c006e20731c4ff9e26be3342dd92",
+      "total_resumed_seconds": 525.5591074808035,
+      "heldout_sequence_mean_nll": 2.754352889955044,
+      "heldout_perplexity": 15.710870950212355,
+      "contact_precision_at_l": 0.0618735029103824,
+      "contact_random_precision_at_l": 0.014875900808062571,
+      "contact_evaluation_chains": 32,
+      "diagnostic_coverage": "3/3",
+      "embedding_unique_sequences": 55977,
+      "embedding_resumed": 4145,
+      "embedding_written": 51832,
+      "remote_homology_balanced_accuracy": 0.07241053472671119,
+      "remote_homology_seconds": 371.07004890195094,
+      "remote_homology_selected_c": 10.0,
+      "human_ppi_average_precision": 0.8574171918303186,
+      "human_ppi_seconds": 91.17807275685482,
+      "human_ppi_selected_c": 0.01,
+      "flip2_spearman_rho": 0.3149566673323743,
+      "flip2_seconds": 23.32101399381645,
+      "flip2_selected_alpha": 1.0
+    },
+    "interpretation": "Final is directionally better on contact, remote homology, and PPI, but worse on held-out MLM NLL and FLIP2; no general quality claim is made."
+  },
+  "report": {
+    "source": "report/main.tex",
+    "pdf_sha256": "41e557336869a70d65d652f511acd17d4dfc91715777449edef5d9da6b2e00dc",
+    "pdf_pages": 3
+  },
+  "artifact_policy": {
+    "code_destination": "https://github.com/Lumin-Science/nano-protein-embedding",
+    "approved_data_and_model_destination": "https://huggingface.co/LuminScience",
+    "published": false
+  }
+}
