@@ -54,7 +54,9 @@ Training uses 15\% mask-all corruption, sequence-mean cross entropy, AdamW with
 $\beta=(0.9,0.95)$, selective decay, and unit gradient clipping. The original
 warmup--stable--decay trajectory is compressed into 1,800 measured seconds:
 1,200 seconds at context 512 and 600 seconds at context 2,048. Evaluation and
-checkpoint I/O are excluded from this training clock.
+checkpoint I/O are excluded from this training clock. Step duration is
+max-reduced across DDP workers so every rank makes the same context-stage and
+stopping decision.
 
 All Python dependencies are managed by uv with a committed lockfile. The
 qualified Linux environment fixes Python 3.11 and Torch 2.13 with CUDA 12.6.

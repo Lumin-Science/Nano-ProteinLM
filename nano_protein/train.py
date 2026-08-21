@@ -10,6 +10,7 @@ import random
 import subprocess
 import time
 from contextlib import nullcontext
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +50,7 @@ def _distributed() -> tuple[int, int, int]:
     if world_size > 1:
         device = torch.device("cuda", local_rank)
         torch.cuda.set_device(device)
-        dist.init_process_group("nccl", device_id=device)
+        dist.init_process_group("nccl", device_id=device, timeout=timedelta(minutes=5))
     return rank, local_rank, world_size
 
 
@@ -306,6 +307,10 @@ def train(
         optimizer.step()
         torch.cuda.synchronize(device)
         compute_seconds = time.perf_counter() - compute_started
+        if world_size > 1:
+            step_seconds = torch.tensor(compute_seconds, dtype=torch.float64, device=device)
+            dist.all_reduce(step_seconds, op=dist.ReduceOp.MAX)
+            compute_seconds = float(step_seconds.item())
         training_seconds += compute_seconds
         step_counts = torch.tensor(
             [step_tokens, step_filled, step_sequences],

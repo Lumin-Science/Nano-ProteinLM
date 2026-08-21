@@ -28,3 +28,11 @@ with its conservative 4 / 1 microbatches and gradient accumulation of 8. It
 completed both context stages in 61.3 measured seconds, processing 794,061
 model tokens across 3,040 sequences without an out-of-memory error. This is a
 runnability check only; the 300M tier remains the canonical speedrun target.
+
+The first 1,800-second canonical attempt processed 135,114,643 model tokens but
+exposed a DDP stopping race before the final checkpoint: workers compared
+rank-local clocks, so one worker could leave the loop while another entered one
+more gradient collective. The corrected trainer max-reduces every step's
+compute duration before updating a shared logical clock. This makes stage and
+stop decisions identical on all ranks; the incomplete attempt is retained as a
+failure receipt and is not reported as a completed speedrun.

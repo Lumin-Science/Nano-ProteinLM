@@ -29,6 +29,8 @@ and evaluates both. The default `EVAL_PROFILE=full` runs held-out MLM, a frozen
 20-chain paper-aligned P@L diagnostic, and the current full P-CORE v0.2 suite.
 Use `EVAL_PROFILE=standard` to omit P-CORE during kernel qualification.
 Evaluation and checkpoint I/O are outside the 30-minute training clock.
+Per-step compute time is max-reduced across DDP ranks, making both context-stage
+and stopping decisions identical on every worker.
 
 For a one-minute kernel/memory qualification:
 
