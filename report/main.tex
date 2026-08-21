@@ -1,10 +1,12 @@
 \documentclass{article}
-\IfFileExists{neurips_2025.sty}{\usepackage[preprint]{neurips_2025}}{\usepackage[margin=1in]{geometry}}
+\IfFileExists{neurips_2025.sty}{\usepackage[preprint]{neurips_2025}}{\usepackage[margin=0.75in]{geometry}}
 \usepackage{booktabs}
 \usepackage{microtype}
 \usepackage{amsmath}
 \usepackage{hyperref}
 \usepackage{xcolor}
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue!55!black, citecolor=black}
+\renewcommand{\thesection}{\arabic{section}.}
 
 \title{A Nanochat-Style System for Fixed-Compute Protein Representation Learning}
 \author{Lumin Science}
@@ -17,9 +19,11 @@ We describe a minimal, auditable system for training ESMC-class protein language
 models under a fixed four-A100 compute budget. The system binds exact released
 300M and 600M architectures to verified 70\%-identity cluster representatives,
 two-stage source mixtures, hash-disjoint validation, benchmark decontamination,
-FlashAttention execution, and frozen representation/contact evaluations. This
-paper is a living experiment report: it distinguishes verified contracts from
-speedrun approximations and does not fill unexecuted result cells.
+FlashAttention execution, and frozen representation/contact evaluations. A
+bounded diagnostic is used for routine iteration while the exact six-task
+benchmark is reserved for releases. This paper is a living experiment report:
+it distinguishes verified contracts from speedrun approximations and does not
+fill unexecuted result cells.
 \end{abstract}
 
 \section{Motivation}
@@ -67,7 +71,7 @@ quadratic padding work and long-sequence-only sampling bias.
 The operational sweep increased the per-GPU microbatch from 8/1 to 64/16 for
 the 512/2,048-token stages. In a 60-second qualification this increased model
 tokens from 2.096M to 4.521M (2.16$\times$) and sequences from 8,128 to 17,408.
-Peak observed throughput was 101.8k real tokens/s (16.3\% 6N MFU) in Stage 1
+Peak observed throughput was 101.8k non-pad model tokens/s (16.3\% 6N MFU) in Stage 1
 and 46.1k/s (7.4\%) in Stage 2, relative to the A100 dense BF16 peak of 312
 TFLOP/s. Dynamic compilation was rejected after an AOTAutograd metadata failure
 before step one; eager execution is therefore the qualified canonical path.
@@ -81,16 +85,27 @@ sequence hashes in P-CORE (108,215 sequences) and the contact manifest (20,795
 chains) are excluded; homology-level decontamination remains a release blocker.
 
 \section{Evaluation}
-We report held-out sequence-mean MLM NLL, P-CORE v0.2, and long-range contact
-precision at $L$. P@L uses a logistic probe over symmetrized attention planes
+The routine profile reports held-out sequence-mean MLM NLL, long-range contact
+precision at $L$, and three protein-level representation task metrics: remote
+homology, human PPI, and FLIP2 fitness. The latter are exact task metrics from
+P-CORE v0.2 but omit bootstrap and do not form a P-CORE aggregate. Each probe
+runs in an isolated process with a ten-minute limit, and timed-out tasks remain
+explicitly missing. P@L uses a logistic probe over symmetrized attention planes
 from every head/layer, 20 frozen probe structures, an 8\AA{} C$\beta$ threshold
 (C$\alpha$ for glycine), and sequence separation at least 24.
+
+Full P-CORE v0.2 is a release evaluation, not a 30-minute-training gate. The
+original serial evaluator embedded residues for all 108,215 sequences, produced
+a 122~GB cache, and spent more than one hour in four secondary-structure LBFGS
+fits. The optimized exact path stores protein means for all tasks and residue
+embeddings only for the 11,411 secondary-structure sequences. Release probes
+remain exact and should execute as restartable task-parallel jobs.
 
 The Enzyme Commission task is quarantined for model selection. Released 300M
 and 600M models score approximately 71 task skill, whereas 6B scores 1.607 even
 though an integrity audit found complete, finite, non-degenerate embeddings and
-disjoint splits. We execute and report EC but do not allow it to decide a model
-until the failure is reproduced and repaired.
+disjoint splits. The release profile executes and reports EC but does not allow
+it to decide a model until the failure is reproduced and repaired.
 
 \section{Current reference and speedrun results}
 The current released-model reference is P-CORE 45.550 for ESMC-300M and 45.690
@@ -99,16 +114,42 @@ On a frozen 1,024-chain diagnostic, P@L is 0.5340 and 0.5778 respectively.
 
 \begin{table}[h]
 \centering
-\caption{Canonical local speedrun. Cells remain pending until receipts exist.}
+\caption{Canonical local speedrun. Training throughput uses non-padding model tokens.}
 \begin{tabular}{lrrrr}
 \toprule
 Checkpoint & Train seconds & Tokens/s & Held-out NLL & P@L \\
 \midrule
-Stage 1 & pending & pending & pending & pending \\
-Final & pending & pending & pending & pending \\
+Stage 1 & 1200.317 & 93,099 & 2.7289 & 0.0523 \\
+Final & 1800.024 & 75,196 & 2.7544 & 0.0619 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The held-out NLL estimate uses 32 validation sequences and the contact diagnostic
+uses 32 predeclared chains, so neither supports a small-difference claim. Stage~2
+improves diagnostic P@L while its NLL is slightly worse; this divergence is a
+reason to retain downstream probes rather than tune on MLM loss alone.
+
+\begin{table}[h]
+\centering
+\caption{Bounded representation diagnostic; no aggregate is defined.}
+\begin{tabular}{lrrr}
+\toprule
+Checkpoint & Remote homology BA & Human PPI AP & FLIP2 $\rho$ \\
+\midrule
+Stage 1 & 0.0682 & 0.8519 & 0.3162 \\
+Final & 0.0724 & 0.8574 & 0.3150 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The final checkpoint is directionally better on remote homology, PPI, and P@L,
+but slightly worse on FLIP2 and MLM NLL. These single-run diagnostics therefore
+do not support a general quality claim. With cached MLM/contact components, both
+checkpoints completed concurrently in 8.81 minutes with all three tasks present;
+the measured components imply roughly 16 minutes for a cold routine evaluation.
+The prior exact full-profile attempt exceeded one hour in secondary structure
+alone, which motivated the profile separation.
 
 \section{Planned experiments}
 We first select operational settings (microbatch, accumulation, activation
@@ -122,8 +163,9 @@ comparisons to scientific claims.
 A 30-minute run cannot approximate the original 1.5M-step optimization horizon.
 Representative-only sampling differs from the released data process; exact
 hash exclusion does not prevent homologous contamination; one P-CORE task is
-untrusted; and the contact speedrun subset is diagnostic rather than the full
-20,775-chain evaluation. These are explicit promotion gates, not footnotes.
+untrusted; the routine three-task vector is not a P-CORE score; and the contact
+speedrun subset is diagnostic rather than the full 20,775-chain evaluation.
+These are explicit promotion gates, not footnotes.
 
 \section*{Primary sources}
 Code and architectural contracts are frozen against Biohub ESM commit

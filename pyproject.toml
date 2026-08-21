@@ -11,6 +11,7 @@ requires-python = "==3.11.*"
 license = {text = "MIT"}
 authors = [{name = "Lumin Science"}]
 dependencies = [
+  "lmdb==2.3.0",
   "numpy==2.4.6",
   "PyYAML==6.0.3",
   "scikit-learn==1.9.0",

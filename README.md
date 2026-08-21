@@ -25,12 +25,24 @@ locked Python/Torch/CUDA versions and executes every Python command through
 
 `runs/speedrun.sh` prepares a reusable mmap corpus when needed, trains for 1,800
 measured GPU-compute seconds, saves the stage boundary and final checkpoints,
-and evaluates both. The default `EVAL_PROFILE=full` runs held-out MLM, a frozen
-20-chain paper-aligned P@L diagnostic, and the current full P-CORE v0.2 suite.
-Use `EVAL_PROFILE=standard` to omit P-CORE during kernel qualification.
+and evaluates both. The default `EVAL_PROFILE=speedrun` runs held-out MLM, a
+frozen 20-chain paper-aligned P@L diagnostic, and a bounded three-task
+representation diagnostic. It does **not** claim a P-CORE aggregate. Stage and
+final evaluation use two idle GPUs concurrently when available, and each CPU
+probe has a ten-minute timeout. Use `EVAL_PROFILE=standard` for MLM + P@L, or
+`EVAL_PROFILE=full` for the exact six-task P-CORE v0.2 release evaluation.
 Evaluation and checkpoint I/O are outside the 30-minute training clock.
+Protein windows are packed across sequence boundaries during embedding, avoiding
+the former one-GPU-forward-per-short-protein behavior.
 Per-step compute time is max-reduced across DDP ranks, making both context-stage
 and stopping decisions identical on every worker.
+
+Evaluation is independently resumable and reuses content-addressed P-CORE
+embeddings. To evaluate existing stage/final checkpoints without retraining:
+
+```bash
+OUTPUT_ROOT=$PWD/outputs/<run-id> bash runs/evaluate.sh
+```
 
 For a one-minute kernel/memory qualification:
 
@@ -69,7 +81,7 @@ Speedrun approximations:
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA.md](docs/DATA.md),
 [docs/EVALUATION.md](docs/EVALUATION.md), [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md),
-and [docs/ROADMAP.md](docs/ROADMAP.md).
+[docs/ROADMAP.md](docs/ROADMAP.md), and [docs/RELEASE.md](docs/RELEASE.md).
 
 ## Repository map
 
@@ -81,6 +93,7 @@ scripts/          thin command-line wrappers
 tests/            fast contract and determinism checks
 docs/             scientific and operational decisions
 report/           NeurIPS-style experiment report
+results/          compact, content-addressed completed-run receipts
 ```
 
 ## Publication layout

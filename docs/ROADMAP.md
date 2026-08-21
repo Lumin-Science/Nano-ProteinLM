@@ -16,10 +16,13 @@ system. The ordered work is:
 4. **Complete data governance.** Homology decontamination, source provenance,
    license review, corpus statistics, immutable manifests, and a Hugging Face
    dataset card. Keep raw licensed corpora out of public hosting.
-5. **Make evaluation decision-grade.** Repair EC, add confidence intervals and
-   seed replication, freeze the evaluator as an immutable repository dependency,
-   finish full P-CORE and 20,775-chain P@L, and define one frozen aggregate
-   before comparing data or architecture variants.
+5. **Make evaluation decision-grade.** The routine gate is now bounded and
+   writes restartable component receipts, but it is deliberately not a P-CORE
+   score. Repair EC, validate a faster secondary-structure estimator before any
+   protocol change, add confidence intervals and seed replication, freeze the
+   evaluator as an immutable repository dependency, finish task-parallel full
+   P-CORE and 20,775-chain P@L, and define one frozen aggregate before comparing
+   data or architecture variants.
 6. **Run controlled science.** Source-mixture ablations, stage-duration/context
    ablations, and 300M/600M scaling comparisons. Change one scientific variable
    at a time and preserve compute/token parity.

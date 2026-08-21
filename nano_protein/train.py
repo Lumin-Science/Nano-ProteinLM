@@ -80,6 +80,9 @@ def save_checkpoint(
     config: dict[str, Any],
     optimizer_step: int,
     training_seconds: float,
+    model_tokens: int,
+    filled_residues: int,
+    sequences_seen: int,
     stage: str,
     parameter_count: int,
 ) -> dict[str, object]:
@@ -95,6 +98,9 @@ def save_checkpoint(
             "optimizer": optimizer.state_dict(),
             "optimizer_step": optimizer_step,
             "training_seconds": training_seconds,
+            "model_tokens": model_tokens,
+            "filled_residues": filled_residues,
+            "sequences_seen": sequences_seen,
             "stage": stage,
             "parameter_count": parameter_count,
             "train_config": config,
@@ -106,7 +112,15 @@ def save_checkpoint(
         temporary,
     )
     temporary.replace(path)
-    return {"path": str(path.resolve()), "sha256": file_sha256(path)}
+    return {
+        "path": str(path.resolve()),
+        "sha256": file_sha256(path),
+        "optimizer_step": optimizer_step,
+        "training_seconds": training_seconds,
+        "model_tokens": model_tokens,
+        "filled_residues": filled_residues,
+        "sequences_seen": sequences_seen,
+    }
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -254,6 +268,9 @@ def train(
                     config=config,
                     optimizer_step=optimizer_step,
                     training_seconds=training_seconds,
+                    model_tokens=model_tokens,
+                    filled_residues=filled_residues,
+                    sequences_seen=sequences_seen,
                     stage=current_stage_name,
                     parameter_count=parameter_count,
                 )
@@ -371,6 +388,9 @@ def train(
             config=config,
             optimizer_step=optimizer_step,
             training_seconds=training_seconds,
+            model_tokens=model_tokens,
+            filled_residues=filled_residues,
+            sequences_seen=sequences_seen,
             stage=current_stage_name or "stage1",
             parameter_count=parameter_count,
         )

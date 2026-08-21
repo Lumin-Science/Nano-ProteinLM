@@ -8,6 +8,8 @@ dist/
 *.egg-info/
 data/processed/
 outputs/
+output/
+tmp/
 report/*.aux
 report/*.bbl
 report/*.blg
