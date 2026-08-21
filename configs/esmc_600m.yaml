@@ -1,0 +1,37 @@
+schema_version: 1
+model: esmc_600m
+expected_parameter_count: 575036992
+seed: 20260821
+
+learning_rate: 0.000177778
+weight_decay: 0.03375
+betas: [0.9, 0.95]
+gradient_clip_norm: 1.0
+minimum_lr_ratio: 0.1
+warmup_steps: 10
+
+attention_backend: flash
+gradient_checkpointing: true
+compile: false
+compile_mode: default
+walltime_seconds: 1800
+stage1_fraction: 0.6666666666666666
+log_interval: 5
+peak_bf16_tflops_per_gpu: 312.0
+
+stages:
+  - name: stage1
+    context_length: 512
+    micro_batch_size: 4
+    gradient_accumulation: 8
+    mixture: {uniref90: 0.36, mgnify: 0.11, omg_img: 0.54}
+  - name: stage2
+    context_length: 2048
+    micro_batch_size: 1
+    gradient_accumulation: 8
+    mixture: {uniref90: 0.63, mgnify: 0.06, omg_img: 0.31}
+
+paper_reference:
+  stage1_steps: 1000000
+  stage2_steps: 500000
+  warmup_steps: 1000

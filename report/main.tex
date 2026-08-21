@@ -1,0 +1,134 @@
+\documentclass{article}
+\IfFileExists{neurips_2025.sty}{\usepackage[preprint]{neurips_2025}}{\usepackage[margin=1in]{geometry}}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\title{A Nanochat-Style System for Fixed-Compute Protein Representation Learning}
+\author{Lumin Science}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We describe a minimal, auditable system for training ESMC-class protein language
+models under a fixed four-A100 compute budget. The system binds exact released
+300M and 600M architectures to verified 70\%-identity cluster representatives,
+two-stage source mixtures, hash-disjoint validation, benchmark decontamination,
+FlashAttention execution, and frozen representation/contact evaluations. This
+paper is a living experiment report: it distinguishes verified contracts from
+speedrun approximations and does not fill unexecuted result cells.
+\end{abstract}
+
+\section{Motivation}
+Large protein-language-model projects often intermingle corpus assembly, model
+changes, optimizer tuning, and benchmark repair. We instead adopt one canonical
+speedrun whose inputs, code, runtime, checkpoints, and evaluations are
+content-addressed. The research objective is the best decision-grade protein
+embedding model, not the lowest masked-token loss alone.
+
+\section{Model and optimization}
+Table~\ref{tab:models} fixes the two target tiers. Blocks use pre-normalization,
+full-width Q/K normalization, non-interleaved rotary embeddings, rounded
+$8/3$ SwiGLU, and residual updates divided by $\sqrt{N/36}$, following the
+released Biohub implementation. The paper text instead states $\sqrt{N}$; we
+record rather than conceal this discrepancy.
+
+\begin{table}[h]
+\centering
+\caption{Frozen architecture contracts.}
+\label{tab:models}
+\begin{tabular}{lrrrrr}
+\toprule
+Tier & Layers & Width & Heads & FFN & Parameters \\
+\midrule
+ESMC 300M & 30 & 960 & 15 & 2560 & 332,997,184 \\
+ESMC 600M & 36 & 1152 & 18 & 3072 & 575,036,992 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Training uses 15\% mask-all corruption, sequence-mean cross entropy, AdamW with
+$\beta=(0.9,0.95)$, selective decay, and unit gradient clipping. The original
+warmup--stable--decay trajectory is compressed into 1,800 measured seconds:
+1,200 seconds at context 512 and 600 seconds at context 2,048. Evaluation and
+checkpoint I/O are excluded from this training clock.
+
+All Python dependencies are managed by uv with a committed lockfile. The
+qualified Linux environment fixes Python 3.11 and Torch 2.13 with CUDA 12.6.
+Prefix-padded batches are compacted with cumulative sequence lengths and passed
+to Torch's in-tree variable-length FlashAttention operator, avoiding both
+quadratic padding work and long-sequence-only sampling bias.
+
+The operational sweep increased the per-GPU microbatch from 8/1 to 64/16 for
+the 512/2,048-token stages. In a 60-second qualification this increased model
+tokens from 2.096M to 4.521M (2.16$\times$) and sequences from 8,128 to 17,408.
+Peak observed throughput was 101.8k real tokens/s (16.3\% 6N MFU) in Stage 1
+and 46.1k/s (7.4\%) in Stage 2, relative to the A100 dense BF16 peak of 312
+TFLOP/s. Dynamic compilation was rejected after an AOTAutograd metadata failure
+before step one; eager execution is therefore the qualified canonical path.
+
+\section{Data}
+The verified transfer contains 92.2M UniRef, 348.1M MGnify, and 324.9M OMG/IMG
+representatives. Because member sequences were not transferred, sampling is
+uniform over representatives rather than the paper's cluster-then-member
+procedure. Stage mixtures are 36/11/54\% and 63/6/31\% respectively. Exact
+sequence hashes in P-CORE (108,215 sequences) and the contact manifest (20,795
+chains) are excluded; homology-level decontamination remains a release blocker.
+
+\section{Evaluation}
+We report held-out sequence-mean MLM NLL, P-CORE v0.2, and long-range contact
+precision at $L$. P@L uses a logistic probe over symmetrized attention planes
+from every head/layer, 20 frozen probe structures, an 8\AA{} C$\beta$ threshold
+(C$\alpha$ for glycine), and sequence separation at least 24.
+
+The Enzyme Commission task is quarantined for model selection. Released 300M
+and 600M models score approximately 71 task skill, whereas 6B scores 1.607 even
+though an integrity audit found complete, finite, non-degenerate embeddings and
+disjoint splits. We execute and report EC but do not allow it to decide a model
+until the failure is reproduced and repaired.
+
+\section{Current reference and speedrun results}
+The current released-model reference is P-CORE 45.550 for ESMC-300M and 45.690
+for ESMC-600M; the paired 95\% interval for the difference includes zero.
+On a frozen 1,024-chain diagnostic, P@L is 0.5340 and 0.5778 respectively.
+
+\begin{table}[h]
+\centering
+\caption{Canonical local speedrun. Cells remain pending until receipts exist.}
+\begin{tabular}{lrrrr}
+\toprule
+Checkpoint & Train seconds & Tokens/s & Held-out NLL & P@L \\
+\midrule
+Stage 1 & pending & pending & pending & pending \\
+Final & pending & pending & pending & pending \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Planned experiments}
+We first select operational settings (microbatch, accumulation, activation
+checkpointing, compilation) by throughput and loss parity. We then calibrate
+the undisclosed proxy learning rate/decay and the residual-scaling discrepancy
+at small scale before multi-seed 300M confirmation. Only after evaluation repair
+and homology decontamination do we promote source-mixture, context, or 600M
+comparisons to scientific claims.
+
+\section{Limitations}
+A 30-minute run cannot approximate the original 1.5M-step optimization horizon.
+Representative-only sampling differs from the released data process; exact
+hash exclusion does not prevent homologous contamination; one P-CORE task is
+untrusted; and the contact speedrun subset is diagnostic rather than the full
+20,775-chain evaluation. These are explicit promotion gates, not footnotes.
+
+\section*{Primary sources}
+Code and architectural contracts are frozen against Biohub ESM commit
+\href{https://github.com/Biohub/esm/commit/9b9078cadf4e08bd02e9715ba99313fc5127379a}{9b9078c}.
+The training and contact protocols follow the 2026 ESMC preprint,
+\href{https://doi.org/10.64898/2026.06.03.729735}{doi:10.64898/2026.06.03.729735}.
+Repository organization is inspired by
+\href{https://github.com/karpathy/nanochat}{karpathy/nanochat}.
+
+\end{document}
