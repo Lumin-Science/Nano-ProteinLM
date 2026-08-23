@@ -11,16 +11,23 @@ data_root="${DATA_ROOT:-$repo_root/data/processed/pilot-v1}"
 output_root="${OUTPUT_ROOT:-$repo_root/outputs/speedrun-300m}"
 eval_profile="${EVAL_PROFILE:-speedrun}"
 visible_gpus="${EVAL_GPUS:-${CUDA_VISIBLE_DEVICES:-0,1}}"
+eval_checkpoints="${EVAL_CHECKPOINTS:-checkpoint-stage1.pt,checkpoint-final.pt}"
 pcore_task_timeout="${PCORE_TASK_TIMEOUT_SECONDS:-600}"
 pcore_probe_threads="${PCORE_PROBE_THREADS:-4}"
+pcore_bootstrap="${PCORE_BOOTSTRAP:-10000}"
+pcore_task_parallel="${PCORE_TASK_PARALLEL:-2}"
+contact_chains="${CONTACT_CHAINS:-32}"
+contact_bootstrap="${CONTACT_BOOTSTRAP:-5000}"
 eval_parallel="${EVAL_PARALLEL:-1}"
+uv_bin="${UV_BIN:-uv}"
+uv_cache_dir="${UV_CACHE_DIR:-$repo_root/.uv-cache}"
 
 case "$eval_profile" in
   minimal|standard|speedrun|full) ;;
   *) echo "EVAL_PROFILE must be minimal, standard, speedrun, or full" >&2; exit 2 ;;
 esac
 
-uv sync --frozen
+UV_CACHE_DIR="$uv_cache_dir" "$uv_bin" sync --frozen
 
 evaluate_one() {
   local checkpoint_name="$1"
@@ -42,13 +49,18 @@ evaluate_one() {
   if [[ "$eval_profile" == "full" ]]; then
     eval_flags+=(--run-pcore)
   fi
-  CUDA_VISIBLE_DEVICES="$eval_gpu" uv run --frozen python -m nano_protein.evaluate \
+  CUDA_VISIBLE_DEVICES="$eval_gpu" UV_CACHE_DIR="$uv_cache_dir" \
+    "$uv_bin" run --frozen python -m nano_protein.evaluate \
     --checkpoint "$checkpoint" \
     --data-root "$data_root" \
     --output-root "$eval_root" \
     --external-src "$external_src" \
     --pcore-root "$pcore_root" \
     --contact-root "$contact_root" \
+    --contact-chains "$contact_chains" \
+    --contact-bootstrap "$contact_bootstrap" \
+    --pcore-bootstrap "$pcore_bootstrap" \
+    --pcore-task-parallel "$pcore_task_parallel" \
     --pcore-diagnostic-timeout "$pcore_task_timeout" \
     --pcore-probe-threads "$pcore_probe_threads" \
     --resume-components \
@@ -56,10 +68,11 @@ evaluate_one() {
 }
 
 IFS=',' read -r -a gpu_list <<< "$visible_gpus"
-if [[ "$eval_parallel" == "1" && ${#gpu_list[@]} -ge 2 ]]; then
-  evaluate_one checkpoint-stage1.pt "${gpu_list[0]}" &
+IFS=',' read -r -a checkpoint_list <<< "$eval_checkpoints"
+if [[ "$eval_parallel" == "1" && ${#gpu_list[@]} -ge 2 && ${#checkpoint_list[@]} -eq 2 ]]; then
+  evaluate_one "${checkpoint_list[0]}" "${gpu_list[0]}" &
   stage_pid=$!
-  evaluate_one checkpoint-final.pt "${gpu_list[1]}" &
+  evaluate_one "${checkpoint_list[1]}" "${gpu_list[1]}" &
   final_pid=$!
   status=0
   wait "$stage_pid" || status=$?
@@ -68,5 +81,6 @@ if [[ "$eval_parallel" == "1" && ${#gpu_list[@]} -ge 2 ]]; then
 fi
 
 eval_gpu="${EVAL_GPU:-${gpu_list[0]}}"
-evaluate_one checkpoint-stage1.pt "$eval_gpu"
-evaluate_one checkpoint-final.pt "$eval_gpu"
+for checkpoint_name in "${checkpoint_list[@]}"; do
+  evaluate_one "$checkpoint_name" "$eval_gpu"
+done

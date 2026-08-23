@@ -1,0 +1,3 @@
+🚨 No checkpoint found for ESMCForSequenceClassification.forward. Please add a `checkpoint` arg to `auto_docstring` or add one in ESMCConfig's docstring
+🚨 No checkpoint found for ESMCForTokenClassification.forward. Please add a `checkpoint` arg to `auto_docstring` or add one in ESMCConfig's docstring
+{"event": "embedding_complete", "num_shards": 4, "residue_written": 0, "resumed": 795, "shard_index": 1, "total": 44705, "written": 43910}

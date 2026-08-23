@@ -1,0 +1,38 @@
+{
+  "compute_seconds": 56851.623332278104,
+  "event": "training_complete",
+  "filled_residues": 5123026423,
+  "final_checkpoint": {
+    "filled_residues": 5123026423,
+    "model_tokens": 5166034423,
+    "optimizer_step": 84000,
+    "path": "/home/muchenli/projects/nano-protein-embedding/outputs/stage1-300m-4xa100-16h/checkpoint-final.pt",
+    "sequences_seen": 21504000,
+    "sha256": "b00b3d3784b9d08cd960f766441c8fa0a79827b10630aae702dd2c7a8561700c",
+    "training_seconds": 56971.26824543695
+  },
+  "model_tokens": 5166034423,
+  "optimizer_steps": 84000,
+  "parameter_count": 332997184,
+  "peak_cuda_memory_bytes": 39971658240,
+  "sequences_seen": 21504000,
+  "source_counts": {
+    "stage1": {
+      "mgnify": 2340702,
+      "omg_img": 11498491,
+      "uniref90": 7664807
+    }
+  },
+  "source_epoch_maxima": {
+    "stage1": {
+      "mgnify": 0,
+      "omg_img": 3,
+      "uniref90": 2
+    }
+  },
+  "stage_checkpoint": null,
+  "stop_reason": "max_steps",
+  "target_optimizer_steps": 84000,
+  "training_seconds": 56971.26824543695,
+  "walltime_budget_seconds": 57600.0
+}

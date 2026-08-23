@@ -74,6 +74,36 @@ def evaluation_digests(paths: Sequence[Path]) -> set[str]:
     return digests
 
 
+def digest_lines(path: Path) -> set[str]:
+    digests: set[str] = set()
+    with path.open() as handle:
+        for line_number, line in enumerate(handle, start=1):
+            value = line.strip().removeprefix("sha256_")
+            if not value:
+                continue
+            if len(value) != 64 or any(
+                character not in "0123456789abcdef" for character in value
+            ):
+                raise ValueError(f"invalid sequence digest at {path}:{line_number}")
+            digests.add(value)
+    return digests
+
+
+def homology_receipt(path: Path, digest_path: Path) -> dict[str, object]:
+    receipt = json.loads(path.read_text())
+    if not isinstance(receipt, dict) or receipt.get("status") != "verified":
+        raise ValueError("homology receipt must be a verified JSON object")
+    expected = receipt.get("excluded_digest_file_sha256")
+    observed = file_sha256(digest_path)
+    if expected != observed:
+        raise ValueError(
+            f"homology exclusion digest mismatch: expected={expected}, observed={observed}"
+        )
+    if receipt.get("protocol") != "mmseqs2-evaluation-homology-exclusion-v1":
+        raise ValueError("homology exclusion protocol changed")
+    return receipt
+
+
 class _StoreWriter:
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -119,6 +149,8 @@ def prepare_dataset(
     contact_manifest: Path,
     train_per_source: int,
     validation_per_source: int,
+    homology_exclusion_digests: Path | None = None,
+    homology_exclusion_receipt: Path | None = None,
     validation_modulus: int = 32,
     validation_bucket: int = 0,
     minimum_length: int = 32,
@@ -136,7 +168,14 @@ def prepare_dataset(
         raise ValueError("train and validation targets must be positive")
     if not 0 <= validation_bucket < validation_modulus:
         raise ValueError("invalid validation hash bucket")
-    excluded = evaluation_digests([pcore_index, contact_manifest])
+    exact_excluded = evaluation_digests([pcore_index, contact_manifest])
+    if (homology_exclusion_digests is None) != (homology_exclusion_receipt is None):
+        raise ValueError("homology digest list and receipt must be supplied together")
+    homology_excluded: set[str] = set()
+    homology: dict[str, object] | None = None
+    if homology_exclusion_digests is not None and homology_exclusion_receipt is not None:
+        homology_excluded = digest_lines(homology_exclusion_digests)
+        homology = homology_receipt(homology_exclusion_receipt, homology_exclusion_digests)
     tokenizer = ProteinTokenizer.esmc()
     output_root.mkdir(parents=True, exist_ok=True)
     source_receipts: dict[str, object] = {}
@@ -152,14 +191,27 @@ def prepare_dataset(
         counts: Counter[str] = Counter()
         rejected: Counter[str] = Counter()
         scanned = 0
+        screen_limit: int | None = None
+        if homology is not None:
+            source_contract = homology.get("sources", {}).get(source, {})
+            coverage = source_contract.get("screening_coverage")
+            if isinstance(coverage, dict):
+                screen_limit = int(coverage["original_source_records_scanned"])
         for header, sequence in fasta_records(fasta):
             scanned += 1
+            if screen_limit is not None and scanned > screen_limit:
+                raise RuntimeError(
+                    f"{source} exhausted its homology-screened prefix before corpus targets"
+                )
             digest = _header_digest(header)
             sequence_digest = hashlib.sha256(sequence.encode("ascii")).hexdigest()
             if verify_sequence_hashes and sequence_digest != digest:
                 raise ValueError(f"sequence/header SHA mismatch in {fasta}: {header}")
-            if digest in excluded:
+            if digest in exact_excluded:
                 rejected["evaluation_exact_match"] += 1
+                continue
+            if digest in homology_excluded:
+                rejected["evaluation_homology_match"] += 1
                 continue
             if not minimum_length <= len(sequence) <= maximum_length:
                 rejected["length"] += 1
@@ -202,13 +254,40 @@ def prepare_dataset(
             "validation_bucket": validation_bucket,
         },
         "decontamination": {
-            "method": "exact_normalized_sequence_sha256",
-            "excluded_digest_count": len(excluded),
+            "method": (
+                "exact_sha256_plus_mmseqs2_homology"
+                if homology is not None
+                else "exact_normalized_sequence_sha256"
+            ),
+            "excluded_digest_count": len(exact_excluded | homology_excluded),
+            "exact_excluded_digest_count": len(exact_excluded),
             "pcore_index": str(pcore_index.resolve()),
             "pcore_index_sha256": file_sha256(pcore_index),
             "contact_manifest": str(contact_manifest.resolve()),
             "contact_manifest_sha256": file_sha256(contact_manifest),
-            "homology_exclusion": False,
+            "homology_exclusion": homology is not None,
+            "homology_excluded_digest_count": len(homology_excluded),
+            "homology_exclusion_digests": (
+                str(homology_exclusion_digests.resolve())
+                if homology_exclusion_digests is not None
+                else None
+            ),
+            "homology_exclusion_digests_sha256": (
+                file_sha256(homology_exclusion_digests)
+                if homology_exclusion_digests is not None
+                else None
+            ),
+            "homology_exclusion_receipt": (
+                str(homology_exclusion_receipt.resolve())
+                if homology_exclusion_receipt is not None
+                else None
+            ),
+            "homology_exclusion_receipt_sha256": (
+                file_sha256(homology_exclusion_receipt)
+                if homology_exclusion_receipt is not None
+                else None
+            ),
+            "homology_contract": homology,
         },
         "filters": {"minimum_length": minimum_length, "maximum_length": maximum_length},
         "sources": source_receipts,
@@ -245,6 +324,37 @@ class TokenStore:
         return self.tokens[start : start + int(record["length"])]
 
 
+class _ShuffledRows:
+    """Deterministic, rank-disjoint shuffled passes through one source store."""
+
+    def __init__(self, size: int, *, seed: int, rank: int, world_size: int) -> None:
+        if size <= 0 or world_size <= 0 or not 0 <= rank < world_size:
+            raise ValueError("invalid shuffled-row contract")
+        self.size = size
+        self.seed = seed
+        self.rank = rank
+        self.world_size = world_size
+        self.epoch = 0
+        self.cursor = 0
+        self.rows = self._epoch_rows()
+
+    def _epoch_rows(self) -> np.ndarray:
+        permutation = np.random.default_rng(self.seed + self.epoch).permutation(self.size)
+        rows = permutation[self.rank :: self.world_size]
+        if rows.size == 0:
+            raise ValueError("source store is smaller than the distributed world size")
+        return rows
+
+    def next(self) -> int:
+        if self.cursor == self.rows.size:
+            self.epoch += 1
+            self.cursor = 0
+            self.rows = self._epoch_rows()
+        row = int(self.rows[self.cursor])
+        self.cursor += 1
+        return row
+
+
 class MixtureBatcher:
     def __init__(
         self,
@@ -254,6 +364,7 @@ class MixtureBatcher:
         *,
         seed: int,
         rank: int = 0,
+        world_size: int = 1,
     ) -> None:
         missing = set(weights) - set(SOURCES)
         if missing:
@@ -265,6 +376,16 @@ class MixtureBatcher:
         self.probabilities = probabilities / probabilities.sum()
         self.stores = {name: TokenStore.open(root / name / split) for name in self.names}
         self.rng = np.random.default_rng(int(seed) + 1_000_003 * int(rank))
+        self.row_samplers = {
+            name: _ShuffledRows(
+                self.stores[name].index.size,
+                seed=int(seed)
+                + int.from_bytes(hashlib.sha256(name.encode("ascii")).digest()[:8], "big"),
+                rank=rank,
+                world_size=world_size,
+            )
+            for name in self.names
+        }
         self.source_counts: Counter[str] = Counter()
 
     def batch(
@@ -283,7 +404,7 @@ class MixtureBatcher:
         for row, source_row in enumerate(source_rows):
             source = self.names[int(source_row)]
             store = self.stores[source]
-            record = store.sequence(int(self.rng.integers(store.index.size)))
+            record = store.sequence(self.row_samplers[source].next())
             maximum_offset = max(0, record.size - residue_limit)
             offset = int(self.rng.integers(maximum_offset + 1)) if maximum_offset else 0
             residues = record[offset : offset + residue_limit]

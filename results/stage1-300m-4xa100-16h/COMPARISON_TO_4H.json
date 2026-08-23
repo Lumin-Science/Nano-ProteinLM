@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "comparison": "stage1-300m-4xa100-16h minus stage1-300m-4xa100-4h",
+  "interpretation": "Evaluation-unit paired comparison between two independently initialized single-seed training runs. Intervals condition on the two checkpoints and do not include training-seed uncertainty.",
+  "training_seeds": {
+    "stage1-300m-4xa100-4h": 20260821,
+    "stage1-300m-4xa100-16h": 20260822
+  },
+  "source_evaluations": {
+    "stage1-300m-4xa100-4h": "results/stage1-300m-4xa100-4h/eval-checkpoint-final/EVALUATION.json",
+    "stage1-300m-4xa100-16h": "results/stage1-300m-4xa100-16h/eval-checkpoint-final/EVALUATION.json"
+  },
+  "source_evaluation_sha256": {
+    "stage1-300m-4xa100-4h": "d21305ceac2c26c0904c6f4f64eb3458591267124138336be4b0be21b5ab5178",
+    "stage1-300m-4xa100-16h": "ae2f34af1af9cc45929402f80e5d4725c104dc7b1d7415a0ebb453f54af4f025"
+  },
+  "heldout_mlm": {
+    "sequence_mean_nll": {
+      "four_hour": 2.6510209925472736,
+      "sixteen_hour": 2.5049678161740303,
+      "delta": -0.14605317637324333
+    },
+    "perplexity": {
+      "four_hour": 14.168497193125306,
+      "sixteen_hour": 12.243164927570884,
+      "delta": -1.925332265554422
+    }
+  },
+  "pcore_q4_v0_3": {
+    "four_hour": 25.460875149956024,
+    "sixteen_hour": 30.66092731152218,
+    "delta": 5.2000521615661555,
+    "interval": null
+  },
+  "legacy_pcore_v0_2": {
+    "four_hour": 17.224031036486792,
+    "sixteen_hour": 20.21998006849481,
+    "delta": 2.995949032008019
+  },
+  "task_metrics": {
+    "remote_homology": {
+      "four_hour": 0.0669251602156014,
+      "sixteen_hour": 0.11919343932211579,
+      "delta": 0.052268279106514395,
+      "paired_confidence_interval_95": [0.03762369629031919, 0.08961116806878193]
+    },
+    "secondary_structure": {
+      "four_hour": 0.6808170831271422,
+      "sixteen_hour": 0.6984450800958978,
+      "delta": 0.01762799696875561,
+      "paired_confidence_interval_95": [0.011334949407492209, 0.02402873841232783]
+    },
+    "enzyme_commission": {
+      "four_hour": 0.018082289999368152,
+      "sixteen_hour": 0.018093409355650767,
+      "delta": 0.000011119356282614928,
+      "paired_confidence_interval_95": [-0.002034462103247868, 0.001987199536342615]
+    },
+    "deeploc2": {
+      "four_hour": 0.508942928359647,
+      "sixteen_hour": 0.5190063895027978,
+      "delta": 0.01006346114315071,
+      "paired_confidence_interval_95": [0.005194089399016328, 0.01542029653056503]
+    },
+    "human_ppi": {
+      "four_hour": 0.7979490898600996,
+      "sixteen_hour": 0.8709395856194297,
+      "delta": 0.07299049575933014,
+      "paired_confidence_interval_95": [0.0, 0.09190288616211224]
+    },
+    "flip2_hydro_low_to_high": {
+      "four_hour": 0.31469325303677836,
+      "sixteen_hour": 0.3265141777249427,
+      "delta": 0.011820924688164314,
+      "paired_confidence_interval_95": [0.005119026381318818, 0.01836675369634679]
+    }
+  },
+  "full_contact_precision_at_l": {
+    "four_hour": 0.10125178039652774,
+    "sixteen_hour": 0.16356628456757574,
+    "delta": 0.062314504171047995,
+    "relative_delta_percent": 61.544107103113184,
+    "paired_confidence_interval_95": [0.061374969341321806, 0.06324345975239642],
+    "paired_chains": 20775,
+    "bootstrap_replicates": 5000,
+    "bootstrap_seed": 20260820
+  }
+}

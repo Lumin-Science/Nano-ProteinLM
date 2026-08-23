@@ -32,10 +32,11 @@ runnability check only; the 300M tier remains the canonical speedrun target.
 The first 1,800-second canonical attempt processed 135,114,643 model tokens but
 exposed a DDP stopping race before the final checkpoint: workers compared
 rank-local clocks, so one worker could leave the loop while another entered one
-more gradient collective. The corrected trainer max-reduces every step's
-compute duration before updating a shared logical clock. This makes stage and
-stop decisions identical on all ranks; the incomplete attempt is retained as a
-failure receipt and is not reported as a completed speedrun.
+more gradient collective. The corrected trainer synchronizes a maximum elapsed
+wall clock across ranks at every loop boundary and separately max-reduces step
+compute duration for its throughput receipt. This makes stage and stop decisions
+identical on all ranks; the incomplete attempt is retained as a failure receipt
+and is not reported as a completed speedrun.
 
 The corrected canonical run completed from clean commit `fd9fc61` on four A100
 80GB PCIe GPUs. Stage 1 crossed at 1,200.317 measured seconds and optimizer step
@@ -48,6 +49,28 @@ was 102,843 / 52,745 tokens/s for Stages 1 / 2. The stage and final checkpoint
 SHA-256 digests begin `a213518e` and `5ed58935`; full digests live in the compact
 result receipt. Evaluation is recorded separately because it is outside the
 30-minute training clock.
+
+## First production-gated 300M campaign
+
+The next run is `configs/esmc_300m_stage1_4xa100_4h.yaml`: ESMC-300M, Stage 1
+only, context 512, 21,000 optimizer steps on four A100s, global batch 256, and
+2,100 warmup steps (exactly 10% of the target). The prior measured Stage-1 rate
+projects 3:59:15 of training, while 14,400 seconds remains a fail-safe cap.
+Normal completion is step-based, and a cap-limited run is reported as
+incomplete.
+
+Do not run this recipe on `pilot-v1`. That manifest excludes exact evaluation
+sequence hashes but records `homology_exclusion: false`. The trainer fails
+closed unless the production manifest explicitly certifies homology exclusion
+against every P-CORE split and the complete contact manifest. After training,
+`runs/stage1_300m_4xa100_4h.sh` evaluates the final checkpoint with held-out MLM,
+all six exact P-CORE tasks with 10,000 bootstrap replicates, and all 20,775
+contact chains. Evaluation is restartable and outside the four-hour training
+budget. The release evaluation uses all four GPUs without a surrogate: three
+deterministic contact-chain shards run alongside one exact P-CORE embedding
+job; the six frozen P-CORE probe/bootstraps then run as restartable parallel CPU
+tasks, and the contact merger performs the 5,000-replicate bootstrap over the
+complete 20,775-chain row set.
 
 ## Evaluation runtime correction
 

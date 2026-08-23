@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "run_id": "stage1-300m-4xa100-16h",
+  "status": "training_verified_active",
+  "verified_at": "2026-08-22T00:02:52-07:00",
+  "remote_output_root": "/home/muchenli/projects/nano-protein-embedding/outputs/stage1-300m-4xa100-16h",
+  "outer_process_id": 166381,
+  "worker_process_ids": [166566, 166567, 166568, 166569],
+  "physical_gpu_indices": [4, 5, 6, 7],
+  "physical_gpu_uuids": [
+    "GPU-46aad2fb-b2bd-8851-26e4-7c4bd99aaa51",
+    "GPU-61ac316a-a8ad-cf86-c363-dfa8abb556c2",
+    "GPU-1bc1f764-73cb-2321-c0f5-276e22002219",
+    "GPU-196a19b1-1b43-2cc9-ffa0-ca93d88ef91b"
+  ],
+  "other_active_gpu_indices_left_untouched": [0, 1, 2, 3],
+  "configuration": {
+    "seed": 20260822,
+    "target_optimizer_steps": 84000,
+    "warmup_steps": 8400,
+    "warmup_fraction": 0.1,
+    "walltime_seconds": 57600,
+    "config_sha256": "2081c6c773ea4e5592b17dcfde1bf97156000223e8441f35a37b49a0c0cb002e",
+    "launcher_sha256": "fd4fc99c22fd5867edaf1765bbf3030a88fb4d7d21b8e516e9461b54b2aa5faa"
+  },
+  "data_contract": {
+    "homology_exclusion": true,
+    "data_manifest_sha256": "a96cd2a09f7e3eee05a5bc1d88f4b3e6c397993b780d8aac395934c7e16cf7cd",
+    "corpus_verification_sha256": "0498f6d06f1f07f0ff79ecb0c8b95a2e3651bfa4bda8a38e9debb53f36b4bfb7",
+    "homology_exclusion_receipt_sha256": "ab4856381a3d70ece5163ac5df733a1509c7e776ea66c95393ebc37a05da53ed"
+  },
+  "environment": {
+    "manager": "uv",
+    "uv_lock_sha256": "370c94298b0497cf258ae80a3adc6a631ef508e9fcaa407cf4abedff0d3ff7cd",
+    "python": "3.11.15",
+    "torch": "2.13.0+cu126",
+    "cuda": "12.6",
+    "attention": "whole-transformer-packed-aten::_flash_attention_forward",
+    "world_size": 4
+  },
+  "first_verified_training_record": {
+    "optimizer_step": 1,
+    "learning_rate": 2.7820833333333333e-08,
+    "expected_linear_warmup_learning_rate": 2.7820833333333333e-08,
+    "loss": 4.5129523277282715
+  },
+  "latest_record_at_verification": {
+    "optimizer_step": 75,
+    "training_seconds": 52.42897810298018,
+    "learning_rate": 2.0865625e-06,
+    "loss": 2.9034276008605957,
+    "model_tokens": 4603387,
+    "filled_residues": 4564987
+  },
+  "post_training_action": "The same unsimplified six-task PCORE and 20,775-chain contact evaluation is chained automatically after training."
+}

@@ -1,0 +1,1 @@
+{"event": "evaluation_complete", "report": "/home/muchenli/projects/nano-protein-embedding/outputs/stage1-300m-4xa100-4h/eval-checkpoint-final/components/pcore/EVALUATION.json", "report_sha256": "8d9db277aac68353b3cacd205d75e8187a3561ff7cfa8874d85def61a7899927"}

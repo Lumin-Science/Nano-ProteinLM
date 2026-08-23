@@ -18,6 +18,8 @@ def main() -> None:
     parser.add_argument("--contact-manifest", type=Path, required=True)
     parser.add_argument("--train-per-source", type=int, default=250_000)
     parser.add_argument("--validation-per-source", type=int, default=4_096)
+    parser.add_argument("--homology-exclusion-digests", type=Path)
+    parser.add_argument("--homology-exclusion-receipt", type=Path)
     parser.add_argument("--skip-sequence-hash-verification", action="store_true")
     args = parser.parse_args()
     result = prepare_dataset(
@@ -27,6 +29,8 @@ def main() -> None:
         contact_manifest=args.contact_manifest,
         train_per_source=args.train_per_source,
         validation_per_source=args.validation_per_source,
+        homology_exclusion_digests=args.homology_exclusion_digests,
+        homology_exclusion_receipt=args.homology_exclusion_receipt,
         verify_sequence_hashes=not args.skip_sequence_hash_verification,
     )
     print(json.dumps({"event": "data_ready", **result}, sort_keys=True))

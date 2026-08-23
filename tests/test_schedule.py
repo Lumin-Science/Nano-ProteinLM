@@ -1,6 +1,6 @@
 import unittest
 
-from nano_protein.schedule import Stage, stage_for_time, wsd_multiplier
+from nano_protein.schedule import Stage, stage_for_progress, stage_for_time, wsd_multiplier
 
 
 class ScheduleTests(unittest.TestCase):
@@ -22,6 +22,15 @@ class ScheduleTests(unittest.TestCase):
         )
         self.assertEqual(stage.name, "stage2")
         self.assertAlmostEqual(progress, 0.5)
+
+    def test_one_stage_uses_full_progress_interval(self) -> None:
+        stage, progress = stage_for_progress(
+            0.42,
+            stage1_fraction=2 / 3,
+            stages=(self.stages[0],),
+        )
+        self.assertEqual(stage.name, "stage1")
+        self.assertAlmostEqual(progress, 0.42)
 
     def test_wsd(self) -> None:
         self.assertAlmostEqual(

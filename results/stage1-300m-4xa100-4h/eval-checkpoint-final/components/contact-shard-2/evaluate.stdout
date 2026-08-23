@@ -1,0 +1,1 @@
+{"event": "evaluation_complete", "report": "/home/muchenli/projects/nano-protein-embedding/outputs/stage1-300m-4xa100-4h/eval-checkpoint-final/components/contact-shard-2/EVALUATION.json", "report_sha256": "a4548ba0505616e275dccbcff731bd057b0c8d15e3fd903d0cd4d4b9dbfd39b6"}

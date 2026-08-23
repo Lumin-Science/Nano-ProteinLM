@@ -56,7 +56,7 @@ def test_packed_embedding_crosses_protein_boundaries_and_resumes() -> None:
         window_embeddings=embed,
     )
 
-    assert calls == [["AB", "CDE"], ["FGH", "IJ"]]
+    assert calls == [["CDE", "FGH"], ["AB", "IJ"]]
     assert result == {"total": 3, "resumed": 0, "written": 3, "residue_written": 3}
     np.testing.assert_allclose(store.proteins["FGHIJ"], [1.0, np.mean(list(map(ord, "FGHIJ")))])
     np.testing.assert_allclose(store.residues["FGHIJ"][:, 1], list(map(ord, "FGHIJ")))

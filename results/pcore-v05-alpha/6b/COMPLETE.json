@@ -1,0 +1,10 @@
+{
+  "completed_at": "2026-08-23T01:08:24.290102+00:00",
+  "elapsed_seconds": 967.2901179790497,
+  "event": "tmoss_pcore_v05_alpha_overlap_complete",
+  "model": "biohub/ESMC-6B",
+  "report": "/home/muchenli/projects/AutoResearch_ESMC/pcore/v0.5-alpha-q9/results/6b/pcore-v0.5-alpha.json",
+  "report_sha256": "1caa0bf25c8a3e73cdf2ca50f51722b31d0b0d2878be60fba103b673dfd12d97",
+  "revision": "45b0fa5d7fb06faefbd5e3b89bdcef35d564e79a",
+  "slurm_job_id": "10092"
+}

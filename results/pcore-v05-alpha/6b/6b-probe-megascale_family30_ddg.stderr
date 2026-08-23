@@ -1,0 +1,2 @@
+/home/muchenli/projects/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:213: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 2.80024869958595e-09.
+  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T

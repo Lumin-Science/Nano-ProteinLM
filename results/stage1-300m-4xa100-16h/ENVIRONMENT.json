@@ -1,0 +1,11 @@
+{
+  "attention": "aten::_flash_attention_forward(varlen)",
+  "cuda": "12.6",
+  "forward_backward": true,
+  "gpu": "NVIDIA A100 80GB PCIe",
+  "packed_transformer_forward_backward": true,
+  "python": "3.11.15",
+  "status": "qualified",
+  "torch": "2.13.0+cu126",
+  "visible_gpus": 4
+}

@@ -1,4 +1,4 @@
-"""Time-budgeted four-GPU ESMC pretraining loop."""
+"""Step- and time-budgeted four-GPU ESMC pretraining loop."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from .data import MixtureBatcher, file_sha256
 from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
-from .schedule import Stage, stage_for_time, wsd_multiplier
+from .schedule import Stage, stage_for_progress, stage_for_time, wsd_multiplier
 from .tokenizer import ProteinTokenizer, mask_tokens
 
 
@@ -33,6 +33,66 @@ def load_config(path: Path) -> dict[str, Any]:
     if not isinstance(config, dict):
         raise TypeError("training config must be a mapping")
     return config
+
+
+def validate_data_manifest(
+    data_root: Path,
+    *,
+    require_homology_exclusion: bool,
+) -> dict[str, Any]:
+    """Load the data receipt and enforce the campaign's contamination gate."""
+
+    manifest_path = data_root / "manifest.json"
+    with manifest_path.open() as handle:
+        manifest = json.load(handle)
+    if not isinstance(manifest, dict):
+        raise TypeError("data manifest must be a mapping")
+    decontamination = manifest.get("decontamination")
+    homology_exclusion = (
+        decontamination.get("homology_exclusion")
+        if isinstance(decontamination, dict)
+        else None
+    )
+    if require_homology_exclusion:
+        contract = (
+            decontamination.get("homology_contract")
+            if isinstance(decontamination, dict)
+            else None
+        )
+        valid_contract = (
+            isinstance(contract, dict)
+            and contract.get("status") == "verified"
+            and contract.get("protocol") == "mmseqs2-evaluation-homology-exclusion-v1"
+            and isinstance(decontamination.get("homology_exclusion_receipt_sha256"), str)
+        )
+        if homology_exclusion is not True or not valid_contract:
+            raise RuntimeError(
+                "training blocked: this campaign requires a verified MMseqs2 homology "
+                "receipt covering every evaluation validation/test split"
+            )
+        verification_path = data_root / "CORPUS_VERIFICATION.json"
+        if not verification_path.is_file():
+            raise RuntimeError("training blocked: prepared-corpus verification is missing")
+        verification = json.loads(verification_path.read_text())
+        verified_sources = verification.get("sources", {})
+        valid_verification = (
+            verification.get("status") == "verified"
+            and verification.get("protocol")
+            == "prepared-corpus-decontamination-verification-v1"
+            and verification.get("manifest_sha256") == file_sha256(manifest_path)
+            and verification.get("homology_exclusion_receipt_sha256")
+            == decontamination.get("homology_exclusion_receipt_sha256")
+            and all(
+                isinstance(verified_sources.get(source), dict)
+                and verified_sources[source].get("train_excluded_intersection") == 0
+                and verified_sources[source].get("validation_excluded_intersection") == 0
+                and verified_sources[source].get("train_validation_intersection") == 0
+                for source in ("uniref90", "mgnify", "omg_img")
+            )
+        )
+        if not valid_verification:
+            raise RuntimeError("training blocked: prepared-corpus verification is invalid")
+    return manifest
 
 
 def sequence_mean_loss(logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
@@ -158,6 +218,10 @@ def train(
     walltime_override: int | None = None,
 ) -> None:
     config = load_config(config_path)
+    data_manifest = validate_data_manifest(
+        data_root,
+        require_homology_exclusion=bool(config.get("require_homology_exclusion", False)),
+    )
     rank, local_rank, world_size = _distributed()
     if not torch.cuda.is_available():
         raise RuntimeError("speedrun training requires CUDA")
@@ -181,6 +245,21 @@ def train(
                 "config_sha256": file_sha256(config_path),
                 "data_manifest": str((data_root / "manifest.json").resolve()),
                 "data_manifest_sha256": file_sha256(data_root / "manifest.json"),
+                "homology_exclusion": data_manifest.get("decontamination", {}).get(
+                    "homology_exclusion"
+                ),
+                "homology_exclusion_receipt_sha256": data_manifest.get(
+                    "decontamination", {}
+                ).get("homology_exclusion_receipt_sha256"),
+                "corpus_verification_sha256": (
+                    file_sha256(data_root / "CORPUS_VERIFICATION.json")
+                    if (data_root / "CORPUS_VERIFICATION.json").is_file()
+                    else None
+                ),
+                "training_budget_semantics": (
+                    "true synchronized training-loop wall time; setup, final checkpoint, "
+                    "and evaluation are outside the training clock"
+                ),
                 "world_size": world_size,
                 "python": platform.python_version(),
                 "cuda": torch.version.cuda,
@@ -230,14 +309,27 @@ def train(
         fused=True,
     )
     tokenizer = ProteinTokenizer.esmc()
-    stages = (_stage(config["stages"][0]), _stage(config["stages"][1]))
+    stages = tuple(_stage(spec) for spec in config["stages"])
+    if not 1 <= len(stages) <= 2:
+        raise ValueError("training requires one or two stages")
     batchers = {
-        stage.name: MixtureBatcher(data_root, "train", stage.mixture, seed=seed, rank=rank)
+        stage.name: MixtureBatcher(
+            data_root,
+            "train",
+            stage.mixture,
+            seed=seed,
+            rank=rank,
+            world_size=world_size,
+        )
         for stage in stages
     }
     walltime_seconds = float(
         walltime_override if walltime_override is not None else config["walltime_seconds"]
     )
+    max_steps_value = config.get("max_steps")
+    max_steps = int(max_steps_value) if max_steps_value is not None else None
+    if max_steps is not None and max_steps <= 0:
+        raise ValueError("max_steps must be positive")
     stage1_fraction = float(config.get("stage1_fraction", 2.0 / 3.0))
     warmup_steps = int(config.get("warmup_steps", 10))
     log_interval = int(config.get("log_interval", 5))
@@ -246,19 +338,42 @@ def train(
     metrics_path = output_root / "metrics.jsonl"
     optimizer_step = 0
     training_seconds = 0.0
+    compute_seconds_total = 0.0
     model_tokens = 0
     filled_residues = 0
     sequences_seen = 0
     current_stage_name: str | None = None
     stage_checkpoint: dict[str, object] | None = None
+    if world_size > 1:
+        dist.barrier()
+    training_started = time.perf_counter()
 
-    while training_seconds < walltime_seconds:
-        stage, stage_progress = stage_for_time(
-            training_seconds,
-            walltime_seconds=walltime_seconds,
-            stage1_fraction=stage1_fraction,
-            stages=stages,
+    while True:
+        elapsed = torch.tensor(
+            time.perf_counter() - training_started,
+            dtype=torch.float64,
+            device=device,
         )
+        if world_size > 1:
+            dist.all_reduce(elapsed, op=dist.ReduceOp.MAX)
+        training_seconds = float(elapsed.item())
+        if training_seconds >= walltime_seconds or (
+            max_steps is not None and optimizer_step >= max_steps
+        ):
+            break
+        if max_steps is not None:
+            stage, stage_progress = stage_for_progress(
+                optimizer_step / max_steps,
+                stage1_fraction=stage1_fraction,
+                stages=stages,
+            )
+        else:
+            stage, stage_progress = stage_for_time(
+                training_seconds,
+                walltime_seconds=walltime_seconds,
+                stage1_fraction=stage1_fraction,
+                stages=stages,
+            )
         if current_stage_name is not None and stage.name != current_stage_name:
             if rank == 0:
                 stage_checkpoint = save_checkpoint(
@@ -328,7 +443,15 @@ def train(
             step_seconds = torch.tensor(compute_seconds, dtype=torch.float64, device=device)
             dist.all_reduce(step_seconds, op=dist.ReduceOp.MAX)
             compute_seconds = float(step_seconds.item())
-        training_seconds += compute_seconds
+        compute_seconds_total += compute_seconds
+        elapsed = torch.tensor(
+            time.perf_counter() - training_started,
+            dtype=torch.float64,
+            device=device,
+        )
+        if world_size > 1:
+            dist.all_reduce(elapsed, op=dist.ReduceOp.MAX)
+        training_seconds = float(elapsed.item())
         step_counts = torch.tensor(
             [step_tokens, step_filled, step_sequences],
             dtype=torch.int64,
@@ -379,6 +502,37 @@ def train(
 
     if world_size > 1:
         dist.barrier()
+    source_counts: dict[str, dict[str, int]] = {}
+    source_epoch_maxima: dict[str, dict[str, int]] = {}
+    for stage in stages:
+        batcher = batchers[stage.name]
+        stage_sources = sorted(batcher.names)
+        counts = torch.tensor(
+            [batcher.source_counts[name] for name in stage_sources],
+            dtype=torch.int64,
+            device=device,
+        )
+        epochs = torch.tensor(
+            [batcher.row_samplers[name].epoch for name in stage_sources],
+            dtype=torch.int64,
+            device=device,
+        )
+        if world_size > 1:
+            dist.all_reduce(counts, op=dist.ReduceOp.SUM)
+            dist.all_reduce(epochs, op=dist.ReduceOp.MAX)
+        source_counts[stage.name] = {
+            name: int(value) for name, value in zip(stage_sources, counts.tolist(), strict=True)
+        }
+        source_epoch_maxima[stage.name] = {
+            name: int(value) for name, value in zip(stage_sources, epochs.tolist(), strict=True)
+        }
+    peak_memory = torch.tensor(
+        torch.cuda.max_memory_allocated(device),
+        dtype=torch.int64,
+        device=device,
+    )
+    if world_size > 1:
+        dist.all_reduce(peak_memory, op=dist.ReduceOp.MAX)
     final_checkpoint: dict[str, object] | None = None
     if rank == 0:
         final_checkpoint = save_checkpoint(
@@ -397,12 +551,22 @@ def train(
         completion = {
             "event": "training_complete",
             "optimizer_steps": optimizer_step,
+            "target_optimizer_steps": max_steps,
             "training_seconds": training_seconds,
+            "compute_seconds": compute_seconds_total,
             "walltime_budget_seconds": walltime_seconds,
+            "stop_reason": (
+                "max_steps"
+                if max_steps is not None and optimizer_step >= max_steps
+                else "walltime"
+            ),
             "model_tokens": model_tokens,
             "filled_residues": filled_residues,
             "sequences_seen": sequences_seen,
+            "source_counts": source_counts,
+            "source_epoch_maxima": source_epoch_maxima,
             "parameter_count": parameter_count,
+            "peak_cuda_memory_bytes": int(peak_memory.item()),
             "stage_checkpoint": stage_checkpoint,
             "final_checkpoint": final_checkpoint,
         }

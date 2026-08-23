@@ -1,0 +1,24 @@
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files: 100%|██████████| 4/4 [00:00<00:00, 873.54it/s]
+`torch_dtype` is deprecated! Use `dtype` instead!
+ESMC: transformer_engine is not installed; falling back to pure-PyTorch LayerNorm+Linear / LayerNorm+MLP. Outputs will differ numerically — measured on the unnormalized residual stream (before the final LayerNorm), ~O(10) max-diff in fp32 and ~O(100) in bf16; after the final LayerNorm these shrink to a few ULP and perplexity stays within rounding noise. Install with `pip install transformer-engine[pytorch]` to enable fused fp32-reduction LayerNorm.
+ESMC: neither xformers nor flash-attn is installed; falling back to PyTorch ``F.scaled_dot_product_attention``. The attention reduction order in bf16 differs from a fused kernel by ~1 bf16 ULP per attention block; compounded across the 80-block stack this reaches ~O(100) max-diff on the unnormalized residual stream. Install xformers (preferred) with `pip install xformers` for a fused attention kernel.
+ESMC: flash-attn rotary kernel not installed; falling back to pure-PyTorch RoPE. For faster GPU inference run `pip install flash-attn`.
+Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files: 100%|██████████| 4/4 [00:00<00:00, 620.71it/s]
+`torch_dtype` is deprecated! Use `dtype` instead!
+ESMC: transformer_engine is not installed; falling back to pure-PyTorch LayerNorm+Linear / LayerNorm+MLP. Outputs will differ numerically — measured on the unnormalized residual stream (before the final LayerNorm), ~O(10) max-diff in fp32 and ~O(100) in bf16; after the final LayerNorm these shrink to a few ULP and perplexity stays within rounding noise. Install with `pip install transformer-engine[pytorch]` to enable fused fp32-reduction LayerNorm.
+ESMC: neither xformers nor flash-attn is installed; falling back to PyTorch ``F.scaled_dot_product_attention``. The attention reduction order in bf16 differs from a fused kernel by ~1 bf16 ULP per attention block; compounded across the 80-block stack this reaches ~O(100) max-diff on the unnormalized residual stream. Install xformers (preferred) with `pip install xformers` for a fused attention kernel.
+ESMC: flash-attn rotary kernel not installed; falling back to pure-PyTorch RoPE. For faster GPU inference run `pip install flash-attn`.
+/scratch/muchenli/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:213: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 6.416118480956357e-08.
+  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T
+/scratch/muchenli/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:213: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 6.39519157630275e-08.
+  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T
+/scratch/muchenli/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:213: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 5.5500464668511995e-08.
+  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T
+/scratch/muchenli/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:213: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 4.9942414648285194e-08.
+  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T
+/scratch/muchenli/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:213: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 9.926248623060019e-08.
+  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T
+/scratch/muchenli/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:213: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 9.634599251739928e-08.
+  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T
+/scratch/muchenli/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:213: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 1.444665898020503e-08.
+  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T

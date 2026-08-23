@@ -13,7 +13,6 @@ import sys
 import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
@@ -26,6 +25,13 @@ from .tokenizer import ProteinTokenizer, mask_tokens
 
 PCORE_DIAGNOSTIC_TASKS = (
     "remote_homology",
+    "flip2_hydro_low_to_high",
+)
+PCORE_TASKS = (
+    "remote_homology",
+    "secondary_structure",
+    "enzyme_commission",
+    "deeploc2",
     "human_ppi",
     "flip2_hydro_low_to_high",
 )
@@ -39,6 +45,38 @@ def write_json(path: Path, payload: object) -> str:
     temporary.write_text(json.dumps(payload, allow_nan=False, indent=2, sort_keys=True) + "\n")
     temporary.replace(path)
     return file_sha256(path)
+
+
+def bootstrap_mean_interval(
+    values: np.ndarray,
+    *,
+    replicates: int,
+    seed: int,
+) -> dict[str, object]:
+    """Bootstrap a mean in bounded-memory chunks."""
+
+    values = np.asarray(values, dtype=np.float64)
+    if values.ndim != 1 or values.size == 0:
+        raise ValueError("bootstrap values must be a non-empty vector")
+    if replicates < 0:
+        raise ValueError("bootstrap replicates cannot be negative")
+    if replicates == 0:
+        return {"replicates": 0, "confidence_interval_95": None}
+    rng = np.random.default_rng(seed)
+    means = np.empty(replicates, dtype=np.float64)
+    chunk_size = 128
+    for start in range(0, replicates, chunk_size):
+        stop = min(start + chunk_size, replicates)
+        indices = rng.integers(0, values.size, size=(stop - start, values.size))
+        means[start:stop] = values[indices].mean(axis=1)
+    return {
+        "replicates": replicates,
+        "unit_count": int(values.size),
+        "confidence_interval_95": [
+            float(np.quantile(means, 0.025)),
+            float(np.quantile(means, 0.975)),
+        ],
+    }
 
 
 def embed_sequences_packed(
@@ -78,6 +116,9 @@ def embed_sequences_packed(
         windows = deterministic_windows(sequence, store.contract.maximum_residues)
         remaining[sequence_index] = len(windows)
         records.extend((sequence_index, sequence, window) for window in windows)
+    # The model preserves sequence independence, so length bucketing is exactly
+    # equivalent while avoiding dense tokenizer padding between unlike windows.
+    records.sort(key=lambda record: (-len(record[2]), record[0]))
 
     weighted_sums: dict[int, np.ndarray] = {}
     residue_counts: dict[int, int] = {}
@@ -217,8 +258,15 @@ def run_pcore(
     device: torch.device,
     batch_residues: int,
     bootstrap: int,
+    task_parallel: int,
+    probe_threads: int,
 ) -> dict[str, object]:
-    """Run the current P-CORE v0.2 implementation without copying its datasets."""
+    """Run exact P-CORE v0.2 as restartable, bounded-parallel task processes."""
+
+    if bootstrap != 10_000:
+        raise ValueError("exact taskwise P-CORE v0.2 requires 10,000 bootstrap replicates")
+    if task_parallel <= 0 or probe_threads <= 0:
+        raise ValueError("task parallelism and probe threads must be positive")
 
     sys.path.insert(0, str(external_src))
     try:
@@ -228,9 +276,6 @@ def run_pcore(
             _window_embeddings,
             deterministic_windows,
             read_sequence_index,
-        )
-        from autoresearch_esm.pcore_probe import (
-            run as run_probe,  # type: ignore[import-not-found]
         )
     finally:
         sys.path.pop(0)
@@ -270,38 +315,116 @@ def run_pcore(
         deterministic_windows=deterministic_windows,
         window_embeddings=_window_embeddings,
     )
-    report_path = output_root / "PCORE_REPORT.json"
-    args = SimpleNamespace(
-        embedding_store=str(store_root),
-        processed_root=str(pcore_root / "processed"),
-        raw_root=str(pcore_root / "raw"),
-        output=str(report_path),
-        seed=20260819,
-        bootstrap=bootstrap,
-        protocol="pcore-v0.2",
-        target_control="none",
+    task_root = output_root / "pcore_tasks_exact"
+    task_root.mkdir(parents=True, exist_ok=True)
+    index_digest = file_sha256(index_path)
+    environment = os.environ.copy()
+    environment["PCORE_PROBE_JOBS"] = str(probe_threads)
+    environment["OMP_NUM_THREADS"] = str(probe_threads)
+    environment["MKL_NUM_THREADS"] = str(probe_threads)
+    environment["OPENBLAS_NUM_THREADS"] = str(probe_threads)
+    existing_pythonpath = environment.get("PYTHONPATH")
+    environment["PYTHONPATH"] = (
+        f"{external_src}{os.pathsep}{existing_pythonpath}"
+        if existing_pythonpath
+        else str(external_src)
     )
-    report = run_probe(args)
+
+    def run_task(task: str) -> tuple[str, dict[str, object]]:
+        partial_path = task_root / f"{task}.json"
+        log_path = task_root / f"{task}.log"
+        command = [
+            sys.executable,
+            "-m",
+            "autoresearch_esm.pcore_taskwise",
+            "run-task",
+            "--task",
+            task,
+            "--index-jsonl",
+            str(index_path),
+            "--expected-index-sha256",
+            index_digest,
+            "--embedding-store",
+            str(store_root),
+            "--processed-root",
+            str(pcore_root / "processed"),
+            "--raw-root",
+            str(pcore_root / "raw"),
+            "--output",
+            str(partial_path),
+            "--seed",
+            "20260819",
+        ]
+        started = time.monotonic()
+        with log_path.open("w") as log:
+            completed = subprocess.run(
+                command,
+                check=False,
+                env=environment,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            )
+        if completed.returncode != 0:
+            raise RuntimeError(f"exact P-CORE task {task} failed; see {log_path}")
+        return task, {
+            "seconds": time.monotonic() - started,
+            "partial": str(partial_path.resolve()),
+            "partial_sha256": file_sha256(partial_path),
+            "log": str(log_path.resolve()),
+        }
+
+    task_runs: dict[str, dict[str, object]] = {}
+    workers = min(task_parallel, len(PCORE_TASKS))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(run_task, task) for task in PCORE_TASKS]
+        for future in concurrent.futures.as_completed(futures):
+            task, task_run = future.result()
+            task_runs[task] = task_run
+
+    report_path = output_root / "PCORE_REPORT.json"
+    reduce_log = task_root / "reduce.log"
+    reduce_command = [
+        sys.executable,
+        "-m",
+        "autoresearch_esm.pcore_taskwise",
+        "reduce",
+    ]
+    for task in PCORE_TASKS:
+        reduce_command.extend(("--partial", str(task_root / f"{task}.json")))
+    reduce_command.extend(("--output", str(report_path)))
+    with reduce_log.open("w") as log:
+        reduced = subprocess.run(
+            reduce_command,
+            check=False,
+            env=environment,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+        )
+    if reduced.returncode != 0:
+        raise RuntimeError(f"exact P-CORE reduction failed; see {reduce_log}")
+    report = json.loads(report_path.read_text())
+    trust = report["trust_contract"]
     return {
-        "protocol": "pcore-v0.2",
+        "protocol": "pcore-v0.3-q4",
+        "probe_protocol": "pcore-v0.2",
+        "execution": {
+            "mode": "restartable_taskwise_subprocesses",
+            "maximum_parallel_tasks": workers,
+            "threads_per_task": probe_threads,
+            "task_runs": {task: task_runs[task] for task in PCORE_TASKS},
+            "reduction_log": str(reduce_log.resolve()),
+        },
         "embedding": {
             "protein_all_tasks": protein_embedding_result,
             "residue_secondary_structure_only": residue_embedding_result,
         },
         "pcore": report["pcore"],
+        "legacy_pcore_v0_2": report["legacy_pcore_v0_2"],
         "tasks": report["tasks"],
         "report": str(report_path.resolve()),
         "report_sha256": file_sha256(report_path),
-        "benchmark_status": {
-            "enzyme_commission": {
-                "trusted_for_model_selection": False,
-                "reason": (
-                    "known unresolved benchmark anomaly: released ESMC-6B collapses "
-                    "to 1.607 skill while 300M/600M score about 71 despite a clean "
-                    "embedding/split integrity audit"
-                ),
-            }
-        },
+        "trust_contract": trust,
+        "benchmark_status": trust["tasks"],
     }
 
 
@@ -392,7 +515,7 @@ def run_pcore_diagnostic(
 ) -> dict[str, object]:
     """Run a bounded, non-aggregate representation diagnostic.
 
-    This deliberately is not called P-CORE: it evaluates three exact P-CORE
+    This deliberately is not called P-CORE: it evaluates two trusted P-CORE
     task metrics without bootstrap, while excluding the expensive or
     quarantined tasks. Each CPU probe runs in its own time-limited process.
     """
@@ -490,6 +613,7 @@ def run_pcore_diagnostic(
             "secondary_structure": "full-residue LBFGS exceeds the routine gate budget",
             "enzyme_commission": "quarantined unresolved cross-scale benchmark anomaly",
             "deeploc2": "twenty model selections are reserved for release evaluation",
+            "human_ppi": "quarantined weak discrimination on the current 237-pair test",
         },
         "fallback_policy": (
             "timed-out or failed tasks remain explicit; no partial result is promoted "
@@ -531,6 +655,9 @@ def run_contact_lite(
     external_src: Path,
     device: torch.device,
     evaluation_chains: int,
+    bootstrap: int,
+    shard_index: int = 0,
+    shard_count: int = 1,
 ) -> dict[str, object]:
     """Fit the frozen 20-chain probe and score a predeclared uniform subset."""
 
@@ -548,6 +675,8 @@ def run_contact_lite(
     finally:
         sys.path.pop(0)
     dataset = ContactDataset(dataset_root)
+    if evaluation_chains <= 0 or shard_count <= 0 or not 0 <= shard_index < shard_count:
+        raise ValueError("invalid contact evaluation/shard contract")
     tokenizer = ProteinTokenizer.esmc()
     features: list[np.ndarray] = []
     labels: list[np.ndarray] = []
@@ -564,16 +693,16 @@ def run_contact_lite(
         features.append(x)
         labels.append(y)
         del attention
-        torch.cuda.empty_cache()
     coefficients, intercept, selected_c, trace = fit_logistic_probe(
         features[:16], labels[:16], features[16:], labels[16:], seed=20260819
     )
     del features, labels
     gc.collect()
-    ranked = sorted(
+    ranked_all = sorted(
         dataset.eval_ids,
         key=lambda chain_id: hashlib.sha256(f"20260820:{chain_id}".encode()).digest(),
     )[:evaluation_chains]
+    ranked = ranked_all[shard_index::shard_count]
     rows: list[dict[str, object]] = []
     for chain_id in ranked:
         payload, chain = dataset.load_payload(chain_id)
@@ -597,11 +726,124 @@ def run_contact_lite(
         row["attention_feature_sha256"] = feature_digest
         rows.append(row)
         del attention
-        torch.cuda.empty_cache()
     precision = np.asarray([float(row["precision_at_l"]) for row in rows])
     random_precision = np.asarray([float(row["random_precision_at_l"]) for row in rows])
+    uncertainty = bootstrap_mean_interval(
+        precision,
+        replicates=bootstrap,
+        seed=20260820,
+    )
     return {
         "protocol": "esmc-paper-contact-lite-v1",
+        "claim_level": "paper_aligned_diagnostic_not_paper_identical",
+        "selection": "sha256_rank_uniform_without_replacement",
+        "selection_seed": 20260820,
+        "selection_total_chains": len(ranked_all),
+        "shard_index": shard_index,
+        "shard_count": shard_count,
+        "probe_train_chains": 16,
+        "probe_validation_chains": 4,
+        "evaluation_chains": len(rows),
+        "precision_at_l": float(precision.mean()),
+        "precision_at_l_uncertainty": uncertainty,
+        "random_precision_at_l": float(random_precision.mean()),
+        "selected_C": selected_c,
+        "validation_trace": trace,
+        "rows": rows,
+    }
+
+
+def merge_full_evaluation(
+    *,
+    contact_paths: list[Path],
+    pcore_path: Path,
+    expected_contact_chains: int,
+    contact_bootstrap: int,
+) -> dict[str, object]:
+    """Validate and merge parallel exact-evaluation component receipts."""
+
+    if not contact_paths or expected_contact_chains <= 0 or contact_bootstrap <= 0:
+        raise ValueError("invalid full-evaluation merge contract")
+    pcore_report = json.loads(pcore_path.read_text())
+    if not isinstance(pcore_report, dict) or not isinstance(pcore_report.get("pcore"), dict):
+        raise ValueError("P-CORE component is absent from its evaluation receipt")
+    if not isinstance(pcore_report.get("validation_mlm"), dict):
+        raise ValueError("held-out MLM component is absent from the P-CORE receipt")
+    checkpoint_sha256 = pcore_report.get("checkpoint_sha256")
+
+    shards: dict[int, tuple[Path, dict[str, object], dict[str, object]]] = {}
+    for path in contact_paths:
+        report = json.loads(path.read_text())
+        if not isinstance(report, dict) or not isinstance(report.get("contact"), dict):
+            raise ValueError(f"contact component is missing from {path}")
+        contact = report["contact"]
+        if report.get("checkpoint_sha256") != checkpoint_sha256:
+            raise ValueError("parallel evaluation components use different checkpoints")
+        shard_index = int(contact["shard_index"])
+        if shard_index in shards:
+            raise ValueError(f"duplicate contact shard {shard_index}")
+        shards[shard_index] = (path, report, contact)
+    shard_count = len(shards)
+    if set(shards) != set(range(shard_count)):
+        raise ValueError("contact shard indices are incomplete")
+
+    rows: list[dict[str, object]] = []
+    shard_chain_ids: dict[int, set[str]] = {}
+    selected_c: object | None = None
+    validation_trace: object | None = None
+    component_receipts: list[dict[str, object]] = []
+    component_totals: list[float] = []
+    for shard_index in range(shard_count):
+        path, report, contact = shards[shard_index]
+        if (
+            int(contact["shard_count"]) != shard_count
+            or int(contact["selection_total_chains"]) != expected_contact_chains
+            or int(contact["evaluation_chains"])
+            != len(range(shard_index, expected_contact_chains, shard_count))
+        ):
+            raise ValueError(f"contact shard {shard_index} has the wrong selection contract")
+        uncertainty = contact.get("precision_at_l_uncertainty")
+        if not isinstance(uncertainty, dict) or int(uncertainty["replicates"]) != 0:
+            raise ValueError("contact shards must defer bootstrap to the exact merger")
+        if selected_c is None:
+            selected_c = contact["selected_C"]
+            validation_trace = contact["validation_trace"]
+        elif (
+            contact["selected_C"] != selected_c
+            or contact["validation_trace"] != validation_trace
+        ):
+            raise ValueError("contact probe fit differs across shards")
+        shard_rows = contact.get("rows")
+        if not isinstance(shard_rows, list):
+            raise ValueError(f"contact rows are missing from shard {shard_index}")
+        rows.extend(shard_rows)
+        shard_chain_ids[shard_index] = {str(row["chain_id"]) for row in shard_rows}
+        component_receipts.append(
+            {
+                "shard_index": shard_index,
+                "path": str(path.resolve()),
+                "sha256": file_sha256(path),
+                "chains": len(shard_rows),
+            }
+        )
+        timing = report.get("timing_seconds", {})
+        component_totals.append(float(timing.get("total", 0.0)))
+
+    chain_ids = [str(row["chain_id"]) for row in rows]
+    if len(rows) != expected_contact_chains or len(set(chain_ids)) != len(rows):
+        raise ValueError("merged contact rows are incomplete or duplicated")
+    rows.sort(
+        key=lambda row: hashlib.sha256(
+            f"20260820:{row['chain_id']}".encode()
+        ).digest()
+    )
+    for position, row in enumerate(rows):
+        if str(row["chain_id"]) not in shard_chain_ids[position % shard_count]:
+            raise ValueError("contact rows do not follow the frozen deterministic sharding")
+    precision = np.asarray([float(row["precision_at_l"]) for row in rows])
+    random_precision = np.asarray([float(row["random_precision_at_l"]) for row in rows])
+    contact = {
+        "protocol": "esmc-paper-contact-full-parallel-v1",
         "claim_level": "paper_aligned_diagnostic_not_paper_identical",
         "selection": "sha256_rank_uniform_without_replacement",
         "selection_seed": 20260820,
@@ -609,10 +851,53 @@ def run_contact_lite(
         "probe_validation_chains": 4,
         "evaluation_chains": len(rows),
         "precision_at_l": float(precision.mean()),
+        "precision_at_l_uncertainty": bootstrap_mean_interval(
+            precision,
+            replicates=contact_bootstrap,
+            seed=20260820,
+        ),
         "random_precision_at_l": float(random_precision.mean()),
         "selected_C": selected_c,
-        "validation_trace": trace,
+        "validation_trace": validation_trace,
+        "execution": {
+            "mode": "deterministic_chain_shards",
+            "shards": shard_count,
+            "component_receipts": component_receipts,
+        },
         "rows": rows,
+    }
+    pcore_timing = pcore_report.get("timing_seconds", {})
+    pcore_seconds = float(pcore_timing.get("total", 0.0))
+    return {
+        "schema_version": 1,
+        "protocol": "full-parallel-evaluation-v1",
+        "checkpoint": pcore_report["checkpoint"],
+        "checkpoint_sha256": checkpoint_sha256,
+        "checkpoint_training_seconds": pcore_report["checkpoint_training_seconds"],
+        "validation_mlm": pcore_report["validation_mlm"],
+        "contact": contact,
+        "pcore": pcore_report["pcore"],
+        "timing_seconds": {
+            "pcore_component": pcore_seconds,
+            "longest_contact_shard": max(component_totals),
+            "parallel_critical_path": max([pcore_seconds, *component_totals]),
+        },
+        "peak_cuda_memory_bytes": max(
+            [
+                int(pcore_report.get("peak_cuda_memory_bytes", 0)),
+                *[
+                    int(report.get("peak_cuda_memory_bytes", 0))
+                    for _path, report, _contact in shards.values()
+                ],
+            ]
+        ),
+        "component_receipts": {
+            "pcore": {
+                "path": str(pcore_path.resolve()),
+                "sha256": file_sha256(pcore_path),
+            },
+            "contact_shards": component_receipts,
+        },
     }
 
 
@@ -628,13 +913,18 @@ def main() -> None:
     parser.add_argument("--validation-batch-size", type=int, default=4)
     parser.add_argument("--validation-context", type=int, default=512)
     parser.add_argument("--contact-chains", type=int, default=32)
+    parser.add_argument("--contact-bootstrap", type=int, default=5000)
+    parser.add_argument("--contact-shard-index", type=int, default=0)
+    parser.add_argument("--contact-shard-count", type=int, default=1)
     parser.add_argument("--pcore-batch-residues", type=int, default=8192)
-    parser.add_argument("--pcore-bootstrap", type=int, default=200)
+    parser.add_argument("--pcore-bootstrap", type=int, default=10000)
+    parser.add_argument("--pcore-task-parallel", type=int, default=2)
     parser.add_argument("--pcore-diagnostic-timeout", type=int, default=600)
     parser.add_argument("--pcore-probe-threads", type=int, default=4)
     parser.add_argument("--run-pcore", action="store_true")
     parser.add_argument("--run-pcore-diagnostic", action="store_true")
     parser.add_argument("--run-contact", action="store_true")
+    parser.add_argument("--skip-validation-mlm", action="store_true")
     parser.add_argument("--resume-components", action="store_true")
     args = parser.parse_args()
     if args.run_pcore and args.run_pcore_diagnostic:
@@ -643,30 +933,15 @@ def main() -> None:
         parser.error("diagnostic timeout and probe threads must be positive")
     if not torch.cuda.is_available():
         raise RuntimeError("evaluation requires CUDA")
+    np.random.seed(20260821)
+    torch.manual_seed(20260821)
+    torch.cuda.manual_seed_all(20260821)
     evaluation_started = time.monotonic()
     timing_seconds: dict[str, float] = {}
     device = torch.device("cuda", 0)
     model, checkpoint_packet = load_checkpoint(args.checkpoint, device)
     args.output_root.mkdir(parents=True, exist_ok=True)
     resumed_components: list[str] = []
-    validation_path = args.output_root / "VALIDATION_MLM.json"
-    if args.resume_components and validation_path.exists():
-        validation = json.loads(validation_path.read_text())
-        timing_seconds["validation_mlm"] = 0.0
-        resumed_components.append("validation_mlm")
-    else:
-        component_started = time.monotonic()
-        validation = validation_mlm(
-            model,
-            data_root=args.data_root,
-            device=device,
-            context_length=args.validation_context,
-            batch_size=args.validation_batch_size,
-            batches=args.validation_batches,
-            seed=20260821,
-        )
-        timing_seconds["validation_mlm"] = time.monotonic() - component_started
-        write_json(validation_path, validation)
     report: dict[str, object] = {
         "schema_version": 1,
         "checkpoint": str(args.checkpoint.resolve()),
@@ -674,8 +949,27 @@ def main() -> None:
         "checkpoint_training_seconds": checkpoint_packet["training_seconds"],
         "resumed_components": resumed_components,
         "timing_seconds": timing_seconds,
-        "validation_mlm": validation,
     }
+    if not args.skip_validation_mlm:
+        validation_path = args.output_root / "VALIDATION_MLM.json"
+        if args.resume_components and validation_path.exists():
+            validation = json.loads(validation_path.read_text())
+            timing_seconds["validation_mlm"] = 0.0
+            resumed_components.append("validation_mlm")
+        else:
+            component_started = time.monotonic()
+            validation = validation_mlm(
+                model,
+                data_root=args.data_root,
+                device=device,
+                context_length=args.validation_context,
+                batch_size=args.validation_batch_size,
+                batches=args.validation_batches,
+                seed=20260821,
+            )
+            timing_seconds["validation_mlm"] = time.monotonic() - component_started
+            write_json(validation_path, validation)
+        report["validation_mlm"] = validation
     if args.run_contact:
         if args.external_src is None or args.contact_root is None:
             parser.error("--run-contact requires --external-src and --contact-root")
@@ -692,6 +986,9 @@ def main() -> None:
                 external_src=args.external_src,
                 device=device,
                 evaluation_chains=args.contact_chains,
+                bootstrap=args.contact_bootstrap,
+                shard_index=args.contact_shard_index,
+                shard_count=args.contact_shard_count,
             )
             timing_seconds["contact"] = time.monotonic() - component_started
             write_json(contact_path, contact)
@@ -725,9 +1022,12 @@ def main() -> None:
             device=device,
             batch_residues=args.pcore_batch_residues,
             bootstrap=args.pcore_bootstrap,
+            task_parallel=args.pcore_task_parallel,
+            probe_threads=args.pcore_probe_threads,
         )
         timing_seconds["pcore"] = time.monotonic() - component_started
     timing_seconds["total"] = time.monotonic() - evaluation_started
+    report["peak_cuda_memory_bytes"] = int(torch.cuda.max_memory_allocated(device))
     report_path = args.output_root / "EVALUATION.json"
     write_json(report_path, report)
     print(

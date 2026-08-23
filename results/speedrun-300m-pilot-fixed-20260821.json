@@ -28,6 +28,7 @@
     "training_sequences": 750000,
     "validation_sequences": 12288,
     "exact_evaluation_sequences_excluded": 29,
+    "homology_evaluation_exclusion": false,
     "sampling_caveat": "uniform over transferred 70%-identity cluster representatives"
   },
   "model": {
@@ -114,12 +115,13 @@
       "flip2_seconds": 23.32101399381645,
       "flip2_selected_alpha": 1.0
     },
-    "interpretation": "Final is directionally better on contact, remote homology, and PPI, but worse on held-out MLM NLL and FLIP2; no general quality claim is made."
+    "human_ppi_trusted_for_model_selection": false,
+    "interpretation": "Final is directionally better on contact and remote homology, but worse on held-out MLM NLL and FLIP2; Human PPI is retained as a quarantined raw diagnostic and no general quality claim is made."
   },
   "report": {
     "source": "report/main.tex",
-    "pdf_sha256": "41e557336869a70d65d652f511acd17d4dfc91715777449edef5d9da6b2e00dc",
-    "pdf_pages": 3
+    "pdf_sha256": "0eb488df8b7ba8992718137266840e57aa394b29f6675336b4447b6150e6d755",
+    "pdf_pages": 10
   },
   "artifact_policy": {
     "code_destination": "https://github.com/Lumin-Science/nano-protein-embedding",

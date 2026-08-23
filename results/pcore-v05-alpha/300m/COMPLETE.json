@@ -1,0 +1,8 @@
+{
+  "completed_at": "2026-08-22T22:40:19.430821+00:00",
+  "event": "labp_pcore_v05_alpha_complete",
+  "model": "biohub/ESMC-300M",
+  "report": "/scratch/muchenli/AutoResearch_ESMC/pcore/v0.5-alpha-q9/results/300m/pcore-v0.5-alpha.json",
+  "report_sha256": "29e13afa9b6f016056c40db97f231b44600ec4d021dc31c60bbbb0dab757fa40",
+  "revision": "a59b831785f907e96e6a246b1d142bfb76df31ee"
+}

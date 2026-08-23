@@ -1,4 +1,4 @@
-"""Two-stage ESMC mixture/context and WSD learning-rate schedules."""
+"""ESMC mixture/context and WSD learning-rate schedules."""
 
 from __future__ import annotations
 
@@ -23,15 +23,37 @@ def stage_for_time(
     *,
     walltime_seconds: float,
     stage1_fraction: float,
-    stages: tuple[Stage, Stage],
+    stages: tuple[Stage, ...],
 ) -> tuple[Stage, float]:
-    if walltime_seconds <= 0 or not 0.0 < stage1_fraction < 1.0:
-        raise ValueError("invalid two-stage time schedule")
-    boundary = walltime_seconds * stage1_fraction
-    if training_seconds < boundary:
-        return stages[0], min(max(training_seconds / boundary, 0.0), 1.0)
-    duration = walltime_seconds - boundary
-    return stages[1], min(max((training_seconds - boundary) / duration, 0.0), 1.0)
+    if walltime_seconds <= 0:
+        raise ValueError("walltime_seconds must be positive")
+    return stage_for_progress(
+        training_seconds / walltime_seconds,
+        stage1_fraction=stage1_fraction,
+        stages=stages,
+    )
+
+
+def stage_for_progress(
+    progress: float,
+    *,
+    stage1_fraction: float,
+    stages: tuple[Stage, ...],
+) -> tuple[Stage, float]:
+    """Select a stage from normalized run progress.
+
+    A one-stage recipe uses the full progress interval. Two-stage recipes keep
+    the original Stage-1 fraction contract.
+    """
+
+    bounded = min(max(progress, 0.0), 1.0)
+    if len(stages) == 1:
+        return stages[0], bounded
+    if len(stages) != 2 or not 0.0 < stage1_fraction < 1.0:
+        raise ValueError("expected one stage or a valid two-stage schedule")
+    if bounded < stage1_fraction:
+        return stages[0], bounded / stage1_fraction
+    return stages[1], (bounded - stage1_fraction) / (1.0 - stage1_fraction)
 
 
 def wsd_multiplier(

@@ -4,16 +4,17 @@ Training checkpoints are evaluated on three levels with two distinct operating
 profiles:
 
 1. Held-out sequence-mean MLM NLL on hash-disjoint cluster representatives.
-2. A bounded three-task representation diagnostic for routine speedruns, or
-   exact P-CORE v0.2 for release evaluation.
+2. A bounded two-task trusted representation diagnostic for routine speedruns,
+   or all six exact probes plus P-CORE-Q4 v0.3 for release evaluation.
 3. Long-range contact P@L using all-layer/all-head symmetrized attention maps,
    a logistic probe trained on the frozen 20 structures, Cβ distance below 8 Å
    (Cα for glycine), sequence separation at least 24, and top-L precision.
 
 The default speedrun uses a predeclared P@L subset after fitting the exact
-20-chain probe and runs the remote-homology, human-PPI, and FLIP2 fitness task
-metrics concurrently. It embeds only the 55,977 required sequences, stores only
-protein means, skips bootstrap, and limits each probe to ten minutes. A timeout
+20-chain probe and runs the trusted remote-homology and FLIP2 fitness task
+metrics concurrently. Human PPI is no longer a routine selection signal. It
+embeds only the required sequences, stores only protein means, skips bootstrap,
+and limits each probe to ten minutes. A timeout
 or failure is reported as partial coverage; the diagnostic has no aggregate and
 must never be reported as P-CORE. Stage and final checkpoints are evaluated on
 two GPUs concurrently when available. Embedding windows from different proteins
@@ -21,14 +22,21 @@ share a residue-budget GPU batch; pooling, deterministic long-sequence windows,
 and content-addressed cache values otherwise retain the frozen evaluator's
 contract.
 
-`EVAL_PROFILE=full` remains the exact six-task P-CORE v0.2 release profile. It
+`EVAL_PROFILE=full` runs all six exact v0.2 probe contracts and reduces the four
+trusted tasks to P-CORE-Q4 v0.3. It
 embeds protein means for all 108,215 sequences but writes residue embeddings
 only for the 11,411 secondary-structure sequences. This removes the former
 122 GB all-sequence residue cache without changing any full-suite task metric.
-The expensive six tasks should ultimately run as restartable task-parallel jobs;
-secondary structure in particular performs four full-residue LBFGS fits and is
-not suitable for a 30-minute training gate. The full 20,775-chain contact report
-is likewise a release evaluation.
+The expensive six tasks run as atomic, restartable taskwise subprocesses with
+bounded parallelism (six tasks with four probe threads each on the 256-thread
+tmoss host), followed by a digest-checked exact reduction. Secondary structure
+still performs four full-residue LBFGS fits and is not suitable for a short
+training gate. The full 20,775-chain contact report is likewise a release
+evaluation. For the final 300M checkpoint, three deterministic contact shards
+run concurrently with the exact P-CORE embedding job on the four A100s. The
+contact merger restores the global SHA-ranked chain order and performs the same
+5,000-replicate chain bootstrap over all 20,775 rows; sharding does not change
+the metric or reduce its data.
 
 Component receipts (`VALIDATION_MLM.json`, `CONTACT.json`, diagnostic embedding,
 and per-task JSON) are written atomically. A later failure therefore does not
@@ -56,11 +64,33 @@ an evaluator that is still under repair. Before a public release, the repaired
 evaluator must be versioned as an immutable dependency (or vendored with its
 tests and provenance) so a fresh clone does not depend on that sibling path.
 
-## Quarantined task
+## Quarantined tasks
 
-Enzyme Commission remains executable but is not trusted for model-selection
-claims. Released ESMC-300M and 600M score about 71 skill, while ESMC-6B collapses
-to 1.607. A dedicated audit verified split disjointness, cache coverage, finite
-and non-degenerate 6B embeddings, and label geometry, without explaining the
-collapse. Reports therefore carry an explicit `trusted_for_model_selection:
-false` marker until the probe path is repaired and independently reproduced.
+Enzyme Commission and Human PPI remain executable and their raw metrics are
+always reported, but neither may influence model selection. EC has an unresolved
+cross-scale anomaly: released ESMC-300M and 600M score about 71 skill while 6B
+collapses to 1.607 despite a clean integrity audit. Human PPI has only 237 test
+pairs in the current reconstruction, released-model scale ordering is
+non-monotonic, and the four-hour undertrained checkpoint (0.7979 AP) sits close
+to released ESMC-300M (0.8155 AP). This is inadequate discrimination for a
+promotion gate.
+
+Reports therefore use the versioned `pcore-v0.3-q4` selection aggregate over
+remote homology, secondary structure, DeepLoc2, and FLIP2. They carry a trust
+record for every task and retain the old six-task number only as
+`legacy_pcore_v0_2`. Human PPI can return only after a preregistered replacement
+adds substantially more family-disjoint test pairs, hard negatives, a leakage
+audit, and scale/checkpoint ranking validation. EC requires independent
+reproduction and repair before reinstatement.
+
+## P-CORE Next research track
+
+The proposed CATH, CAFA5-MF, PRING, MegaScale, and CAID3 additions have zero
+selection weight until they pass the benchmark-qualification program in
+[`plans/pcore-next/FORMULATION.md`](../plans/pcore-next/FORMULATION.md).
+P-CORE-Q4 remains authoritative throughout feasibility work, falsification
+pilots, full qualification, aggregation study, and shadow deployment.
+
+The concrete proposed successor—usable now as the implementation target—is
+[`PROPOSED_PCORE_V05.md`](PROPOSED_PCORE_V05.md), with a machine-readable
+contract at [`configs/pcore_v05_proposed_q9.yaml`](../configs/pcore_v05_proposed_q9.yaml).

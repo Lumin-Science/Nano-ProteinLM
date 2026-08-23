@@ -1,178 +1,916 @@
 \documentclass{article}
-\IfFileExists{neurips_2025.sty}{\usepackage[preprint]{neurips_2025}}{\usepackage[margin=0.75in]{geometry}}
-\usepackage{booktabs}
-\usepackage{microtype}
-\usepackage{amsmath}
-\usepackage{hyperref}
-\usepackage{xcolor}
-\hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue!55!black, citecolor=black}
-\renewcommand{\thesection}{\arabic{section}.}
 
-\title{A Nanochat-Style System for Fixed-Compute Protein Representation Learning}
-\author{Lumin Science}
+\usepackage[position,preprint]{neurips_2026}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{url}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\code}[1]{\texttt{#1}}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=blue!55!black,
+  urlcolor=blue!55!black,
+  pdftitle={A Fixed-Compute Route to Better Protein Embeddings},
+  pdfauthor={Lumin Science}
+}
+
+\title{A Fixed-Compute Route to Better Protein Embeddings:\\
+Data, Training, Evaluation, and Release Protocol}
+
+\author{%
+  Lumin Science\\
+  \texttt{https://luminscience.io}
+}
 
 \begin{document}
+\raggedbottom
 \maketitle
 
 \begin{abstract}
-We describe a minimal, auditable system for training ESMC-class protein language
-models under a fixed four-A100 compute budget. The system binds exact released
-300M and 600M architectures to verified 70\%-identity cluster representatives,
-two-stage source mixtures, hash-disjoint validation, benchmark decontamination,
-FlashAttention execution, and frozen representation/contact evaluations. A
-bounded diagnostic is used for routine iteration while the exact six-task
-benchmark is reserved for releases. This paper is a living experiment report:
-it distinguishes verified contracts from speedrun approximations and does not
-fill unexecuted result cells.
+We specify an auditable program for training the best protein embedding model
+obtainable under a fixed four-accelerator budget. The system reproduces the
+released ESMC 300M and 600M architectures, draws from verified UniRef90,
+MGnify, and OMG/IMG cluster representatives, uses a two-stage context and
+source schedule, and separates a fast checkpoint diagnostic from release-only
+evaluation. Two ESMC-300M Stage-1 runs now provide a local scale check on the
+same homology-screened 9M-protein pool: a four-hour run reached 20,971 steps
+and 1.279 billion filled residues, while a fresh sixteen-hour run completed
+84,000 steps and 5.123 billion residues. The trusted four-task P-CORE-Q4 rose
+from 25.461 to 30.661 and full 20,775-chain contact P@L rose from 0.1013 to
+0.1636. Both remain below the released ESMC-300M references of 37.485 and
+0.5387, respectively, so the result establishes useful training-scale
+progress but not a quality promotion. The new source-qualified
+v0.5-alpha panel completes on released
+ESMC-300M/600M/6B, but zero of five runnable tasks is strictly scale-monotone;
+only MegaScale establishes a paired 6B-over-300M gain, so no new aggregate or
+model ranking is issued. This two-page main report
+fixes the decision protocol and immediate work; the appendices provide full
+data lineage, cleaning and selection, training defaults, benchmark
+construction, uncertainty, three-scale ESMC baselines, and release gates.
+Every Python environment is created and locked with \texttt{uv}.
 \end{abstract}
 
-\section{Motivation}
-Large protein-language-model projects often intermingle corpus assembly, model
-changes, optimizer tuning, and benchmark repair. We instead adopt one canonical
-speedrun whose inputs, code, runtime, checkpoints, and evaluations are
-content-addressed. The research objective is the best decision-grade protein
-embedding model, not the lowest masked-token loss alone.
+\section{Objective and experimental contract}
 
-\section{Model and optimization}
-Table~\ref{tab:models} fixes the two target tiers. Blocks use pre-normalization,
-full-width Q/K normalization, non-interleaved rotary embeddings, rounded
-$8/3$ SwiGLU, and residual updates divided by $\sqrt{N/36}$, following the
-released Biohub implementation. The paper text instead states $\sqrt{N}$; we
-record rather than conceal this discrepancy.
+The objective is not merely lower masked-language-model (MLM) loss. It is a
+better \emph{frozen sequence representation}: useful across evolution,
+structure, function, localization, interaction, and fitness under low-capacity
+probes. The present selection core uses only the four tasks whose reconstructed
+benchmarks discriminate the known scale ladder; function/EC and interaction/PPI
+remain reported diagnostics. We use ESMC because its released family offers a clean scale ladder and
+strong contact representations \citep{candido2026language}. The working system
+is deliberately small in surface area, inspired by nanochat's inspectable
+organization \citep{karpathy2025nanochat}, while the scientific claim is bound
+to data and evaluation receipts rather than repository simplicity.
 
-\begin{table}[h]
-\centering
-\caption{Frozen architecture contracts.}
-\label{tab:models}
-\begin{tabular}{lrrrrr}
-\toprule
-Tier & Layers & Width & Heads & FFN & Parameters \\
-\midrule
-ESMC 300M & 30 & 960 & 15 & 2560 & 332,997,184 \\
-ESMC 600M & 36 & 1152 & 18 & 3072 & 575,036,992 \\
-\bottomrule
-\end{tabular}
+\begin{table}[H]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.19\textwidth}Y@{}}
+    \toprule
+    Decision object & Frozen rule \\
+    \midrule
+    Candidate & Sequence-only ESMC encoder; 300M is the speedrun tier, 600M a qualified scale check. \\
+    Compute & Two completed ESMC-300M Stage-1 campaigns on four A100s: 20,971/21,000 and 84,000/84,000 optimizer steps; evaluation and checkpoint I/O are outside the training clock. \\
+    Data & Verified 9M-protein Stage-1 pool from 70\%-identity representatives; all-split homology exclusion; immutable hashes. \\
+    Training & 15\% mask-all MLM, sequence-mean loss, AdamW, two contexts and mixtures. \\
+    Selection & Routine trusted metric vector for iteration; all six raw probes, four-task P-CORE-Q4, and full contact for promotion. \\
+    Environment & Python 3.11 and all Python dependencies resolved by \texttt{uv}; committed \code{uv.lock}; \code{uv sync --frozen}. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{The minimal experimental contract. Full values are in Appendices~\ref{app:data}--\ref{app:training}.}
+  \label{tab:contract}
 \end{table}
 
-Training uses 15\% mask-all corruption, sequence-mean cross entropy, AdamW with
-$\beta=(0.9,0.95)$, selective decay, and unit gradient clipping. The original
-warmup--stable--decay trajectory is compressed into 1,800 measured seconds:
-1,200 seconds at context 512 and 600 seconds at context 2,048. Evaluation and
-checkpoint I/O are excluded from this training clock. Step duration is
-max-reduced across DDP workers so every rank makes the same context-stage and
-stopping decision.
+Claims have three levels. A \emph{diagnostic} guides engineering but has no
+headline aggregate. A \emph{candidate comparison} requires equal compute,
+identical manifests, at least two seeds, and paired uncertainty. A
+\emph{release claim} additionally requires homology decontamination, exact
+all six raw probes, P-CORE-Q4, full contact evaluation, a clean locked rebuild,
+and licensing review.
+This prevents a fast proxy from quietly becoming the scientific target.
 
-All Python dependencies are managed by uv with a committed lockfile. The
-qualified Linux environment fixes Python 3.11 and Torch 2.13 with CUDA 12.6.
-Prefix-padded batches are compacted with cumulative sequence lengths and passed
-to Torch's in-tree variable-length FlashAttention operator, avoiding both
-quadratic padding work and long-sequence-only sampling bias.
+\section{Current evidence and next decisions}
 
-The operational sweep increased the per-GPU microbatch from 8/1 to 64/16 for
-the 512/2,048-token stages. In a 60-second qualification this increased model
-tokens from 2.096M to 4.521M (2.16$\times$) and sequences from 8,128 to 17,408.
-Peak observed throughput was 101.8k non-pad model tokens/s (16.3\% 6N MFU) in Stage 1
-and 46.1k/s (7.4\%) in Stage 2, relative to the A100 dense BF16 peak of 312
-TFLOP/s. Dynamic compilation was rejected after an AOTAutograd metadata failure
-before step one; eager execution is therefore the qualified canonical path.
+Both homology-gated campaigns used four A100 80GB PCIe GPUs and the actual
+9M-protein pool in Table~\ref{tab:first-corpus}. The synchronized four-hour
+training clock expired 29 steps before the 21,000-step target. The fresh
+sixteen-hour run used seed 20260822, completed all 84,000 steps under the
+57,600-second guardrail, and stopped normally at \code{max\_steps}; it is not a
+continuation of the four-hour seed-20260821 checkpoint. Warmup was exactly
+10\% of each target. Table~\ref{tab:current} records both immutable receipts;
+each row is still a single training seed.
 
-\section{Data}
-The verified transfer contains 92.2M UniRef, 348.1M MGnify, and 324.9M OMG/IMG
-representatives. Because member sequences were not transferred, sampling is
-uniform over representatives rather than the paper's cluster-then-member
-procedure. Stage mixtures are 36/11/54\% and 63/6/31\% respectively. Exact
-sequence hashes in P-CORE (108,215 sequences) and the contact manifest (20,795
-chains) are excluded; homology-level decontamination remains a release blocker.
-
-\section{Evaluation}
-The routine profile reports held-out sequence-mean MLM NLL, long-range contact
-precision at $L$, and three protein-level representation task metrics: remote
-homology, human PPI, and FLIP2 fitness. The latter are exact task metrics from
-P-CORE v0.2 but omit bootstrap and do not form a P-CORE aggregate. Each probe
-runs in an isolated process with a ten-minute limit, and timed-out tasks remain
-explicitly missing. P@L uses a logistic probe over symmetrized attention planes
-from every head/layer, 20 frozen probe structures, an 8\AA{} C$\beta$ threshold
-(C$\alpha$ for glycine), and sequence separation at least 24.
-
-Full P-CORE v0.2 is a release evaluation, not a 30-minute-training gate. The
-original serial evaluator embedded residues for all 108,215 sequences, produced
-a 122~GB cache, and spent more than one hour in four secondary-structure LBFGS
-fits. The optimized exact path stores protein means for all tasks and residue
-embeddings only for the 11,411 secondary-structure sequences. Release probes
-remain exact and should execute as restartable task-parallel jobs.
-
-The Enzyme Commission task is quarantined for model selection. Released 300M
-and 600M models score approximately 71 task skill, whereas 6B scores 1.607 even
-though an integrity audit found complete, finite, non-degenerate embeddings and
-disjoint splits. The release profile executes and reports EC but does not allow
-it to decide a model until the failure is reproduced and repaired.
-
-\section{Current reference and speedrun results}
-The current released-model reference is P-CORE 45.550 for ESMC-300M and 45.690
-for ESMC-600M; the paired 95\% interval for the difference includes zero.
-On a frozen 1,024-chain diagnostic, P@L is 0.5340 and 0.5778 respectively.
-
-\begin{table}[h]
-\centering
-\caption{Canonical local speedrun. Training throughput uses non-padding model tokens.}
-\begin{tabular}{lrrrr}
-\toprule
-Checkpoint & Train seconds & Tokens/s & Held-out NLL & P@L \\
-\midrule
-Stage 1 & 1200.317 & 93,099 & 2.7289 & 0.0523 \\
-Final & 1800.024 & 75,196 & 2.7544 & 0.0619 \\
-\bottomrule
-\end{tabular}
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3.5pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrrrrrrr@{}}
+    \toprule
+    Run & Target steps & Done & Warmup & Sequences (M) & Filled residues (B) & Model tokens (B) & Tok/s & Peak GiB \\
+    \midrule
+    Stage 1, seed 20260821 (4h) & 21,000 & 20,971 & 2,100 & 5.369 & 1.279 & 1.290 & 89,691 & 35.65 \\
+    Stage 1, seed 20260822 (16h) & 84,000 & 84,000 & 8,400 & 21.504 & 5.123 & 5.166 & 90,869 & 37.23 \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Completed ESMC-300M Stage-1 runs. Throughput uses accumulated step-compute time; optimizer-step completion is authoritative.}
+  \label{tab:current}
 \end{table}
 
-The held-out NLL estimate uses 32 validation sequences and the contact diagnostic
-uses 32 predeclared chains, so neither supports a small-difference claim. Stage~2
-improves diagnostic P@L while its NLL is slightly worse; this divergence is a
-reason to retain downstream probes rather than tune on MLM loss alone.
+The exact evaluator completed without simplification for both checkpoints. The
+new run required a 3,132.0-second (52.2-minute) parallel critical path: it
+embedded all 108,215 P-CORE proteins, ran six taskwise probes with 10,000
+uncertainty replicates each, and merged three disjoint contact shards into
+20,775 unique chain rows with a 5,000-fold bootstrap. Every trusted Q4 task and
+contact improve over the four-hour checkpoint; contact gains 0.0623 absolute
+(61.5\% relative; paired evaluation-unit 95\% interval [0.0614, 0.0632]). The
+two training seeds differ, so these paired intervals condition on the two
+checkpoints and do not measure training-seed uncertainty. The sixteen-hour
+checkpoint remains below released ESMC-300M on three of four trusted tasks,
+Q4, and full contact, so it is not promoted. EC and Human PPI remain visible
+raw diagnostics but are quarantined from model selection.
 
-\begin{table}[h]
-\centering
-\caption{Bounded representation diagnostic; no aggregate is defined.}
-\begin{tabular}{lrrr}
-\toprule
-Checkpoint & Remote homology BA & Human PPI AP & FLIP2 $\rho$ \\
-\midrule
-Stage 1 & 0.0682 & 0.8519 & 0.3162 \\
-Final & 0.0724 & 0.8574 & 0.3150 \\
-\bottomrule
-\end{tabular}
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3.0pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrrl@{}}
+    \toprule
+    Metric & Local 4h & Local 16h & Released ESMC-300M & Local 16h 95\% interval \\
+    \midrule
+    Held-out MLM NLL & 2.6510 & 2.5050 & -- & 32 sequences; 1,183 masks \\
+    Remote-homology balanced accuracy & 0.0669 & 0.1192 & 0.1159 & [0.1131, 0.1664] \\
+    Secondary-structure macro-F1 & 0.6808 & 0.6984 & 0.8315 & [0.6892, 0.7077] \\
+    EC macro average precision & 0.0181 & 0.0181 & 0.7174 & [0.0180, 0.0221] \\
+    DeepLoc2 macro average precision & 0.5089 & 0.5190 & 0.6442 & [0.5138, 0.5256] \\
+    Human-PPI average precision & 0.7979 & 0.8709 & 0.8155 & [0.8340, 1.0000] \\
+    FLIP2 hydro Spearman $\rho$ & 0.3147 & 0.3265 & 0.4132 & [0.3096, 0.3427] \\
+    P-CORE-Q4 v0.3 & 25.4609 & 30.6609 & 37.4847 & trusted point estimate; CI pending \\
+    Legacy P-CORE v0.2 & 17.2240 & 20.2200 & 45.5503 & diagnostic only; EC/PPI-sensitive \\
+    Full contact P@L & 0.1013 & 0.1636 & 0.5387 & [0.1620, 0.1651] \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Complete final-checkpoint evaluation. Sixteen-hour task intervals use 10,000 replicates; contact uses 5,000. Released-model values are from the same local protocol, not the ESMC paper column.}
+  \label{tab:current-eval}
 \end{table}
 
-The final checkpoint is directionally better on remote homology, PPI, and P@L,
-but slightly worse on FLIP2 and MLM NLL. These single-run diagnostics therefore
-do not support a general quality claim. With cached MLM/contact components, both
-checkpoints completed concurrently in 8.81 minutes with all three tasks present;
-the measured components imply roughly 16 minutes for a cold routine evaluation.
-The prior exact full-profile attempt exceeded one hour in secondary structure
-alone, which motivated the profile separation.
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.06\textwidth}p{0.23\textwidth}Yp{0.12\textwidth}@{}}
+    \toprule
+    Order & Workstream & Promotion evidence & State \\
+    \midrule
+    1 & 84k Stage-1 baseline & Fresh 84,000-step run and chained exact evaluation complete; retain as the local compute-scale baseline, not a promoted model. & complete \\
+    2 & Candidate improvement & Compare data, optimization, and architecture changes at matched steps/FLOPs; require repeat seeds only after a candidate clears the baseline. & active \\
+    3 & Evaluator hardening & Exact parallel path passed; repair EC, replace/audit Human PPI, and validate rank-preserving routine surrogates. & active \\
+    4 & Data/public release & Finish source-license review, then publish code/receipts and only permitted HF data/checkpoints. & planned \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Work required beyond simply fixing evaluation. Detailed gates are in Appendix~\ref{app:plan}.}
+\end{table}
 
-\section{Planned experiments}
-We first select operational settings (microbatch, accumulation, activation
-checkpointing, compilation) by throughput and loss parity. We then calibrate
-the undisclosed proxy learning rate/decay and the residual-scaling discrepancy
-at small scale before multi-seed 300M confirmation. Only after evaluation repair
-and homology decontamination do we promote source-mixture, context, or 600M
-comparisons to scientific claims.
+\clearpage
+\appendix
 
-\section{Limitations}
-A 30-minute run cannot approximate the original 1.5M-step optimization horizon.
-Representative-only sampling differs from the released data process; exact
-hash exclusion does not prevent homologous contamination; one P-CORE task is
-untrusted; the routine three-task vector is not a P-CORE score; and the contact
-speedrun subset is diagnostic rather than the full 20,775-chain evaluation.
-These are explicit promotion gates, not footnotes.
+\section{Complete data lineage and selection}
+\label{app:data}
 
-\section*{Primary sources}
-Code and architectural contracts are frozen against Biohub ESM commit
-\href{https://github.com/Biohub/esm/commit/9b9078cadf4e08bd02e9715ba99313fc5127379a}{9b9078c}.
-The training and contact protocols follow the 2026 ESMC preprint,
-\href{https://doi.org/10.64898/2026.06.03.729735}{doi:10.64898/2026.06.03.729735}.
-Repository organization is inspired by
-\href{https://github.com/karpathy/nanochat}{karpathy/nanochat}.
+\subsection{Source databases and evidence layers}
+
+The ESMC paper trains on UniRef, MGnify, and the Joint Genome Institute (JGI)
+metagenome collection, clustered at 70\% identity
+\citep{candido2026language,suzek2015uniref,richardson2023mgnify,grigoriev2012jgi}.
+Our open reconstruction uses UniRef90 2023\_02, MGnify 2023\_02, and the
+IMG/JGI-labelled portion of the OMG payload \citep{cornman2024omg} as the
+JGI-role arm.
+This substitution is always named \emph{OMG/IMG}; it is not claimed to be the
+paper's private JGI corpus.
+
+The production lineage has three tables. Table~\ref{tab:transfer} reports the
+full-corpus funnel from original records through quality and source filtering,
+global exact deduplication, and source-specific MMseqs2
+\citep{steinegger2018linclust} clustering. Table~\ref{tab:speedrun-corpus} is
+the large-run planning reservoir over those 70\%-identity representatives; it
+is not the corpus materialized for the first local campaign.
+Table~\ref{tab:first-corpus} is the verified 9M-protein local pool. The realized
+training stream is drawn from that pool using the Stage-1 source mixture. Thus
+the local lineage is directly
+Table~\ref{tab:transfer} $\rightarrow$ Table~\ref{tab:speedrun-corpus}
+$\rightarrow$ Table~\ref{tab:first-corpus} $\rightarrow$ sampled exposures.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3.2pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrrrrrr@{}}
+    \toprule
+    Source arm & Original records & $<60$ aa & $>20\%$ ambiguous & Wrong source & Quality-kept & Exact unique & 70\% clusters \\
+    \midrule
+    UniRef90 & 170,669,877 & 4,755,787 & 29,797 & 0 & 165,884,293 & 165,884,293 & 92,230,941 \\
+    MGnify & 729,215,663 & 117,372,608 & 26,021 & 0 & 611,817,034 & 611,788,129 & 348,135,082 \\
+    OMG/IMG & 3,280,269,924 & 145,672,826 & 0 & 1,048,850,563 & 2,085,746,535 & 963,673,186 & 324,923,979 \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Full-corpus production funnel. ``Wrong source'' removes non-IMG/JGI records from the OMG payload. Exact unique is source-present membership after global sequence deduplication; a sequence may remain eligible in more than one source arm. Clustering uses 70\% identity and 80\% coverage.}
+  \label{tab:transfer}
+\end{table}
+
+Only the representative FASTAs and cluster-membership TSVs were transferred:
+38.6 GB for UniRef90, 93.3 GB for MGnify, and 109.7 GB for OMG/IMG. The local
+system therefore samples uniformly from the transferred representatives; it
+does not have the member sequences needed to reproduce ESMC's
+cluster-then-member draw. A public FASTA sample may be a small subset for
+licensing and distribution, but it must not be confused with the complete local
+reservoir recorded in the training receipt.
+
+\subsection{Production reservoir and realized training stream}
+
+Large-run planning begins from every SHA-sorted representative and the
+pre-exclusion ceilings in Table~\ref{tab:speedrun-corpus}. This table answers
+whether the transferred reservoir can support a later eight-H100/seven-day
+run; it does not define the first four-A100 corpus. Every materialized record
+must still pass header-to-sequence SHA-256 verification, the 32--16,384
+amino-acid range, exact and homology benchmark exclusion, and the hash-frozen
+validation split. Tokens are stored as uint8 memory maps with offset, length,
+and digest indexes.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3.0pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrrrrr@{}}
+    \toprule
+    Source & 70\% reps (M proteins) & Exact unique (M proteins) & Stage-1 draw & Stage-2 draw & Projected draws (M) & Epochs: reps / exact \\
+    \midrule
+    UniRef90 & 92.231 & 165.884 & 35.64\% & 63\% & 253--269 & 2.74--2.92 / 1.53--1.62 \\
+    MGnify & 348.135 & 611.788 & 10.89\% & 6\% & 58--62 & 0.17--0.18 / 0.095--0.10 \\
+    OMG/IMG & 324.924 & 963.673 & 53.47\% & 31\% & 289--307 & 0.89--0.95 / 0.30--0.32 \\
+    \midrule
+    Global & 765.290 & 1,661.993 & 100\% & 100\% & 600--639 & 0.78--0.83 / 0.36--0.38 \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Large-run planning reservoir, not the first local training corpus. All quantities except draw probabilities and epochs are millions of proteins or protein/crop exposures; no residue count appears here. The global exact-unique count is lower than the sum of source-present rows because some sequences belong to multiple source arms. Counts are pre-exclusion ceilings from Table~\ref{tab:transfer}.}
+  \label{tab:speedrun-corpus}
+\end{table}
+
+Residue compute is a separate accounting layer. The measured four-H100 300M
+rates imply 122--130B Stage-1 plus 45--49B Stage-2 filled residues, or 168--178B
+total, in the ideal eight-H100 seven-day planning case. The observed mean sampled
+lengths (267 residues in Stage 1 and 317 in Stage 2) convert that budget to the
+600--639M protein/crop draws in Table~\ref{tab:speedrun-corpus}. The transferred
+representative FASTAs contain approximately 183--185B residue characters before
+final exclusions, so they can feed the run globally but provide little reserve.
+The former 200B figure is a desirable headroom target, not a hard minimum. More
+importantly, source ratios force 2.74--2.92 nominal UniRef representative passes
+while most MGnify representatives remain unseen. The exact eight-GPU rate and
+post-exclusion residue inventory must be measured before fixing the stop count.
+
+At each step, the stage selects a source using Table~\ref{tab:speedrun-corpus},
+then draws a representative from that source and a random contiguous crop when
+the protein exceeds the context ceiling. Production should use deterministic
+shuffled passes within each source and cycle only when required, instead of
+independent sampling with replacement that creates avoidable early duplicates.
+The realized training corpus is the resulting ordered exposure manifest: source
+counts, representative hashes, crop offsets, residues, and repeat counts. The
+completed 30-minute pilot used only 250,000 training and 4,096 validation
+representatives per source, excluded 29 exact evaluation matches, and processed
+449,536 Stage-1 plus 76,928 Stage-2 draws; those pilot counts are not a
+production-reservoir recommendation.
+
+\subsection{Verified corpus for the first 300M Stage-1 campaign}
+
+The launch-critical screen freezes a complete eligible prefix of 5,000,000
+train candidates plus 32,768 validation candidates per source. It searches
+all 116,841 unique sequences from every P-CORE/contact split against those
+15,098,304 candidates with MMseqs2 17-b804f
+\citep{steinegger2017mmseqs2}, requiring at least 30\% identity and at least 80\%
+coverage of both sequences. The final preparer rereads the original
+representative FASTAs and stops before the receipt-bound prefix boundary.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3.0pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrrrrrrr@{}}
+    \toprule
+    Source & Screened & Scanned & Exact rej. & Homology rej. & Length rej. & Train proteins & Train residues & Validation proteins / residues \\
+    \midrule
+    UniRef90 & 5,032,768 & 3,696,551 & 402 & 585,617 & 69 & 3,000,000 & 1.012398B & 4,096 / 1.374M \\
+    MGnify & 5,032,768 & 3,236,640 & 6 & 136,630 & 1 & 3,000,000 & 0.565676B & 4,096 / 0.754M \\
+    OMG/IMG & 5,032,768 & 3,486,965 & 20 & 381,427 & 0 & 3,000,000 & 0.764769B & 4,096 / 1.025M \\
+    \midrule
+    Total & 15,098,304 & 10,420,156 & 428 & 1,103,674 & 70 & 9,000,000 & 2.342843B & 12,288 / 3.153M \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Actual materialized first-campaign pool. Rejections apply only to the original-source prefixes scanned before all targets were filled; the homology search found 1,592,566 unique exclusions across the larger screened prefixes. Protein and residue counts are explicitly separated.}
+  \label{tab:first-corpus}
+\end{table}
+
+The four-hour run stopped at step 20,971 and drew 5,368,576 crops from this
+pool: 1,914,020 UniRef90, 584,338 MGnify, and 2,870,218 OMG/IMG exposures. The
+sixteen-hour run drew 21,504,000 crops with source counts reported in
+Appendix~\ref{app:training}. Both realized proportions match the normalized
+36:11:54 target. The pool is the eligible corpus; the ordered realized corpus
+is the source/crop stream recorded by training, not all nine million proteins
+consumed once.
+
+\paragraph{Decontamination status.}
+The completed 30-minute pilot remains exact-only and must not support a release
+claim. Both reported checkpoints and their evaluations use the same
+first-campaign pool, which is properly decontaminated against
+\emph{every} probe-fit, validation, and test sequence used by P-CORE and
+contact evaluation. Its verified MMseqs2 receipt excludes 816,307 UniRef90,
+216,915 MGnify, and 562,349 OMG/IMG candidates; the global union is 1,592,566
+because a few sequences belong to multiple source arms. The validation/test
+subset alone accounts for 1,382,540 exclusions. The maximum accepted hits for
+one query are 7,955/2,468/6,846, below the one-million cap.
+
+The post-preparation verifier independently rehashes all token/index files and
+reports zero exact/homology intersections and zero train--validation overlap in
+each source. It also proves the actual scans (3,696,551/3,236,640/3,486,965
+source records) end before the screened boundaries
+(5,162,125/5,161,284/5,161,757). The data-manifest and corpus-verification
+SHA-256 digests are \code{a96cd2a09f7e...} and \code{0498f6d06f1f...}.
+A temporal or family-disjoint test remains untouched by model and evaluator
+development.
+
+\paragraph{Release status.}
+Raw source files remain in controlled storage. Redistribution of any derived
+shard requires a source-by-source legal and license review. Hugging Face should
+initially host manifests, scripts, hashes, statistics, permitted small samples,
+and model artifacts---not raw databases by default.
+
+\section{Model and training setup}
+\label{app:training}
+
+\subsection{Architecture contracts}
+
+The released-model geometry is frozen before experiments. Each block is
+pre-norm with bias-free projections, 64-dimensional heads, full-projection Q/K
+normalization, non-interleaved RoPE, rounded $8/3$ SwiGLU, and a two-layer GELU
+language-model head \citep{candido2026language}. Table~\ref{tab:architecture}
+uses exact local parameter counts.
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{@{}lrrrrrr@{}}
+    \toprule
+    Model & Layers & Width & Heads & Head dim. & FFN & Parameters \\
+    \midrule
+    ESMC-300M & 30 & 960 & 15 & 64 & 2,560 & 332,997,184 \\
+    ESMC-600M & 36 & 1,152 & 18 & 64 & 3,072 & 575,036,992 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Frozen local architecture contracts.}
+  \label{tab:architecture}
+\end{table}
+
+The 2026 paper states that residual branch outputs are scaled by
+$\sqrt{N_{\mathrm{layers}}}$. The released Biohub implementation divides by
+$\sqrt{N_{\mathrm{layers}}/36}$; the local checkpoint-compatible path follows
+the released code. This discrepancy is a preregistered ablation, not an
+unreported implementation detail.
+
+\subsection{Default optimization hyperparameters}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3.4pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.25\textwidth}YYYY@{}}
+    \toprule
+    Setting & ESMC paper 300M & Local 300M & ESMC paper 600M & Local 600M \\
+    \midrule
+    Peak learning rate & $5.0\!\times\!10^{-4}$ & $2.33695\!\times\!10^{-4}$ & $4.6\!\times\!10^{-4}$ & $1.77778\!\times\!10^{-4}$ \\
+    Weight decay & not disclosed & 0.025675 & not disclosed & 0.033750 \\
+    Proxy transfer & $\mu$P width/depth rule & 512-wide, 16-layer hypothesis & same & same \\
+    Optimizer & AdamW & fused AdamW & AdamW & fused AdamW \\
+    $\beta_1,\beta_2,\epsilon$ & 0.9, 0.95, $10^{-8}$ & same & same & same \\
+    Gradient clip & 1.0 & 1.0 & 1.0 & 1.0 \\
+    Decay exclusions & norm and bias & 1-D/norm-like parameters & norm and bias & 1-D/norm-like parameters \\
+    Schedule & warmup--stable--decay & step-based warmup--stable & warmup--stable--decay & deferred \\
+    Warmup & 1,000 steps & 2,100 / 8,400 steps (10\%) & 1,000 steps & deferred \\
+    Minimum LR & $0.1\times$ peak & $0.1\times$ peak & $0.1\times$ peak & $0.1\times$ peak \\
+    MLM corruption & 15\% mask-all & 15\% mask-all; at least 1/sequence & same & same \\
+    Loss & sequence-mean CE & sequence-mean CE & sequence-mean CE & sequence-mean CE \\
+    Precision & BF16 mixed & BF16 autocast & BF16 mixed & BF16 autocast \\
+    Attention & implementation-specific & in-tree varlen FlashAttention & implementation-specific & same \\
+    Activation checkpointing & not specified & off & not specified & on \\
+    Compilation & not specified & eager & not specified & eager \\
+    Random seed & not specified & 20260821 / 20260822 & not specified & deferred \\
+    Training clock & 1.5M steps & 21,000 / 84,000 steps & 1.5M steps & deferred \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Published defaults versus the current fixed-compute hypotheses. Local learning rate and weight decay are not claimed reproductions because the paper does not disclose the calibrated proxy values.}
+  \label{tab:optimization}
+\end{table}
+
+\subsection{Step-based first campaign and paper reference}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3.5pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}llrrrrrrl@{}}
+    \toprule
+    Recipe & Stage & Context & Optimizer steps & Global seq./step & Microbatch/GPU & Accum. & Nominal tokens/step & UniRef/MGnify/IMG \\
+    \midrule
+    ESMC paper & 1 & 512 & 1,000,000 & 8,192 & -- & -- & 4.194M & 36/11/54 \\
+    ESMC paper & 2 & 2,048 & 500,000 & 2,048 & -- & -- & 4.194M & 63/6/31 \\
+    Local 300M first & 1 only & 512 & \textbf{21,000} & 256 & 64 & 1 & 0.131M max & 36/11/54 \\
+    Local 300M second & 1 only & 512 & \textbf{84,000} & 256 & 64 & 1 & 0.131M max & 36/11/54 \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Optimizer-step accounting on four GPUs. Warmup is exactly 10\% of each local target: 2,100 and 8,400 steps. Configured source weights sum to 101 and are normalized to 35.64/10.89/53.47\%.}
+  \label{tab:stages}
+\end{table}
+
+The first campaign reached 20,971 steps (99.862\% of target), 5,368,576
+protein/crop exposures, 1.290B non-padding model tokens, and 1.279B filled
+amino-acid residues. Its wall-time stop remains explicitly incomplete rather
+than silently redefining 20,971 as 21,000. The fresh second campaign completed
+84,000 steps, 21,504,000 exposures, 5.166B model tokens, and 5.123B filled
+residues. Its realized source counts were 7,664,807 UniRef90, 2,340,702 MGnify,
+and 11,498,491 OMG/IMG exposures; maximum observed zero-based source-epoch
+indices were 2, 0, and 3, respectively. These are sampled exposures from the Table~\ref{tab:first-corpus}
+pool, not a new training corpus. The paper schedule consumes approximately
+6.291 trillion shaped positions and is infeasible here. Filled residues,
+source counts, unique representatives, and repeat counts remain mandatory
+receipt fields.
+
+\subsection{Systems and environment}
+
+All Python environments are managed only with \texttt{uv}. The project pins
+Python 3.11, declares exact dependencies in \code{pyproject.toml}, and commits
+\code{uv.lock}. Qualification and training use \code{uv sync --frozen}; run
+receipts store the lockfile digest, Git commit and dirty state, Python/Torch/CUDA
+versions, GPU model, configuration digest, and data-manifest digest. The
+qualified Linux run used Python 3.11.15, Torch 2.13.0+cu126, CUDA 12.6, and four
+A100 80GB PCIe GPUs.
+
+The first campaign used a 14,400-second synchronized training-loop cap and
+stopped after 14,400.370 measured training seconds and 14,378.765 accumulated
+step-compute seconds. The second used a 57,600-second cap, completed normally
+after 56,971.268 training seconds and 56,851.623 step-compute seconds, and
+wrote checkpoint SHA-256
+\path{b00b3d3784b9d08cd960f766441c8fa0a79827b10630aae702dd2c7a8561700c}.
+Setup, final checkpoint writing, and evaluation are outside these clocks.
+Throughput was 89,691 and 90,869 model tokens/s, respectively. Duration remains
+a systems guardrail, not the scientific unit in Table~\ref{tab:stages}.
+
+Prefix-padded batches are compacted once around the entire transformer. The
+in-tree variable-length FlashAttention kernel receives cumulative lengths, so
+attention, norms, and MLPs avoid pad rows. Dynamic \code{torch.compile} was
+rejected after an AOTAutograd metadata failure before step one. Eager execution
+is the canonical path until a compiled graph passes parity at the 512-residue
+context. DDP max-reduces elapsed wall time at loop boundaries so every rank
+enforces the same cap, and separately max-reduces step compute time for
+throughput accounting; the optimizer-step counter controls normal completion.
+
+\section{Evaluation construction, provenance, and baselines}
+\label{app:evaluation}
+
+\subsection{Three operating levels}
+
+Every checkpoint receives held-out sequence-mean MLM NLL. Routine speedruns
+add a bounded two-task trusted representation vector and a small contact subset; this
+vector has \emph{no aggregate}. The final checkpoint of the first campaign
+received the complete report: held-out MLM NLL/perplexity; all six raw probe
+metrics with 10,000-replicate uncertainty and the four-task selection aggregate;
+full 20,775-chain contact P@L with 5,000-replicate uncertainty; plus throughput,
+peak memory, filled residues, and source exposures. The merged evaluation
+receipt has SHA-256 \code{d21305ceac2c...} and binds checkpoint
+\code{e3debec2e01b...}. The released
+ESMC-300M reference in Tables~\ref{tab:three-scale-pcore} and
+\ref{tab:contact-compare} is the paired baseline. EC and Human PPI remain
+visible but cannot select a model while quarantined. P-CORE reuses public task data from
+TAPE/PEER, DeepLoc2, and FLIP2
+\citep{rao2019tape,xu2022peer,thumuluri2022deeploc2,didi2026flip2}, but freezes
+its own embedding, probe, split, metric, normalization, and bootstrap contract.
+The machine-readable split ledger has SHA-256
+\code{bc28d479a696...}. Its all-split union contains 116,841 unique sequences
+(35,467,998 residues); validation/test roles contain 70,305 unique sequences
+(24,497,158 residues). ``Train'' below always means probe-fit data, never
+language-model pretraining data. DeepLoc2 rotates each of five partitions
+through test and the following partition through validation, so every one of
+its 28,303 proteins is test exactly once.
+
+For each task $t$, raw metric $m_t$ is converted to an unclipped null-anchored
+skill
+\[
+  s_t = \frac{m_t-n_t}{c_t-n_t},
+\]
+where $n_t$ is the frozen chance/prevalence null and $c_t=1$ is the fixed
+ceiling. All six raw metrics and skills are published. The selection set is
+$Q=\{$remote homology, secondary structure, DeepLoc2, FLIP2$\}$, one task in
+each of four trusted domains, and
+\[
+  \mathrm{P\mbox{-}CORE\mbox{-}Q4}
+  =100\exp\!\left(\frac{1}{4}\sum_{t\in Q}\log s_t\right).
+\]
+Any trusted task at or below its null invalidates the headline rather than
+allowing compensation by an unrelated domain. Version 0.3 therefore does not
+claim aggregate coverage of function or interaction: EC and Human PPI are raw
+diagnostics until their benchmarks pass reinstatement criteria. The old
+six-domain v0.2 aggregate is retained only as an explicitly named legacy field.
+
+\subsection{How a frozen embedding becomes an evaluation score}
+
+Every downstream result in Table~\ref{tab:pcore-composition} is a linear-probe
+measurement, not end-to-end fine-tuning. For sequence $x$ of $L$ valid amino
+acids, the checkpoint encoder $E_\theta$ is placed in inference mode and
+$\theta$ is never updated. After removing special and padding tokens, its
+final-layer residue vectors are $h_i\in\mathbb{R}^d$. Deterministic windows
+handle sequences longer than 2,046 residues, and sequence tasks receive
+\[
+  z(x)=\frac{1}{L}\sum_{i=1}^{L}h_i,
+  \qquad \widehat{y}=Wz(x)+b,
+\]
+followed only by the declared logistic or ridge link. Secondary structure uses
+$h_i$ directly to predict one label per residue. Human PPI forms a symmetric
+pair vector
+$\phi(a,b)=[\lvert z(a)-z(b)\rvert;z(a)\odot z(b)]$ before binary logistic
+regression. Remote homology uses multinomial logistic regression; EC and
+DeepLoc2 use one-vs-rest multilabel logistic regression; FLIP2 uses ridge
+regression. Thus the fitted layer has no nonlinear hidden representation and
+tests what information is linearly accessible in the frozen encoder
+\citep{rao2019tape,xu2022peer}.
+
+Leakage control is procedural. A feature standardizer is fit on probe-training
+examples only and then applied unchanged to validation and test. Each candidate
+$C\in\{0.01,0.1,1,10\}$ or
+$\alpha\in\{0.01,0.1,1,10\}$ is fit on probe train; validation selects one
+candidate, and that already-fitted probe is applied once to the untouched test
+split. It is not refit on validation. DeepLoc2 repeats this procedure in five
+rotating folds. Reported bootstraps resample frozen test predictions by the
+declared biological unit; neither encoder nor probe is refit inside a replicate.
+Consequently a score is conditional on the data split, pooling rule, probe
+family, regularization grid, and metric. It is evidence about accessible
+representation quality, not a universal property of an embedding or a claim
+about fine-tuned performance.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.13\textwidth}p{0.13\textwidth}p{0.20\textwidth}p{0.13\textwidth}p{0.12\textwidth}YY@{}}
+    \toprule
+    Domain/task & Data origin & Frozen split/evaluation unit & Probe input/model & Primary metric & Null & Uncertainty \\
+    \midrule
+    Evolution / remote homology & TAPE/PEER & 12,312 train; 736 valid; 718 fold-holdout proteins & mean embedding; standardized multinomial logistic & balanced accuracy & $1/136$ & group bootstrap \\
+    Structure / secondary structure & TAPE/CB513 & 8,678 train; 2,170 valid; 513 test proteins & residue embedding; standardized logistic & macro-F1 (Q3 accuracy diagnostic) & $1/3$ & protein bootstrap \\
+    Function / EC (Q) & PEER EC, $\leq$30\% test identity & 15,551 train; 1,729 valid; 720 test proteins & mean embedding; multilabel logistic & macro average precision & mean active-label prevalence & Bayesian label/group bootstrap \\
+    Localization / DeepLoc2 & DeepLoc2 & 28,303 proteins; five folds; 11 labels & mean embedding; multilabel logistic & macro average precision & mean prevalence & fold/group bootstrap \\
+    Interaction / human PPI (Q) & PEER & 35,669 train; 315 valid; 237 test pairs & $[|a-b|;a\odot b]$; logistic & average precision & test positive prevalence & pair/group bootstrap \\
+    Fitness / FLIP2 hydro & FLIP2 & 9,974 train; 2,493 valid; 12,468 high-fitness test variants & mean embedding; ridge & Spearman $\rho$ & 0 & group bootstrap \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Six exact probe contracts. Q denotes a quarantined diagnostic that is reported but excluded from P-CORE-Q4 v0.3. Regularization is selected only on validation; full reports use 10,000 bootstrap replicates.}
+  \label{tab:pcore-composition}
+\end{table}
+
+Frozen encoders are evaluated with deterministic long-sequence windows. P-CORE
+embeds protein means for all 108,215 unique task sequences and stores residue
+embeddings only for the 11,411 secondary-structure sequences. This retains the
+exact task metrics while eliminating the former 122GB all-sequence residue
+cache.
+
+\subsection{Contact protocol}
+
+The release contact score follows the 2026 ESMC definition
+\citep{candido2026language,rao2021unsupervised}: all-layer/all-head attention
+planes are symmetrized and passed to a frozen logistic probe fit on 20
+structures. A residue pair is a contact when C$\beta$ distance is below
+8\AA{} (C$\alpha$ for glycine); long range means sequence separation at least
+24. For each eligible chain, precision is measured among the top $L$ predicted
+pairs, and the headline is the unweighted mean over chains. Chains are cropped
+to 510 residues and must contain at least $L$ true eligible contacts. Our full
+manifest is built from the 2024-02-28 PDB snapshot and contains 20,775
+evaluation chains. The fast diagnostic is a frozen SHA-ranked sample of 1,024
+chains with a paired 5,000-replicate chain bootstrap.
+
+\subsection{Released ESMC baselines under exact probes and P-CORE-Q4}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{2.8pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrrrrll@{}}
+    \toprule
+    Task metric & Local 4h & Local 16h & ESMC-300M & ESMC-600M & ESMC-6B & Metric & Trust \\
+    \midrule
+    Remote homology & 0.0669 & 0.1192 & 0.1159 & 0.1152 & 0.1186 & balanced accuracy & yes \\
+    Secondary structure & 0.6808 & 0.6984 & 0.8315 & 0.8407 & 0.8780 & macro-F1 & yes \\
+    Enzyme Commission & 0.0181 & 0.0181 & 0.7174 & 0.7096 & 0.0237 & macro-AP & \textbf{quarantined} \\
+    DeepLoc2 & 0.5089 & 0.5190 & 0.6442 & 0.6568 & 0.6942 & macro-AP & yes \\
+    Human PPI & 0.7979 & 0.8709 & 0.8155 & 0.8026 & 0.8345 & average precision & \textbf{quarantined} \\
+    FLIP2 hydro & 0.3147 & 0.3265 & 0.4132 & 0.4276 & 0.4616 & Spearman $\rho$ & yes \\
+    \midrule
+    P-CORE-Q4 v0.3 & 25.4609 & 30.6609 & 37.4847 & 38.1553 & 40.6011 & four-task geo. mean & \textbf{selection} \\
+    Minimum Q4 task skill & 6.0013 & 11.2669 & 10.9367 & 10.8662 & 11.2031 & null-normalized & guardrail \\
+    Legacy P-CORE v0.2 & 17.2240 & 20.2200 & 45.5503 & 45.6899 & 25.7677 & six-domain geo. mean & diagnostic only \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Exact frozen-embedding evaluation of both local checkpoints and three released ESMC base models. All six raw probes remain visible; only the four trusted rows enter P-CORE-Q4. Sixteen-hour intervals appear in Table~\ref{tab:current-eval}.}
+  \label{tab:three-scale-pcore}
+\end{table}
+
+The sixteen-hour run improves all four trusted raw tasks over the four-hour
+run; remote-homology balanced accuracy slightly exceeds the released-300M point
+estimate, but structure, localization, fitness, Q4, and contact remain lower.
+Its EC macro-AP remains 0.0181, close to the anomalous released-6B result of
+0.0237 while released 300M/600M score about 0.71. The EC bootstrap interval is
+not centered on its plug-in estimate; the receipt reports both without
+adjustment. An integrity audit found disjoint splits, complete finite
+embeddings, and no obvious embedding collapse.
+
+Human PPI also fails the present discrimination requirement. Its reconstruction
+has only 237 test pairs, released scale ordering is non-monotonic
+(600M $<$ 300M $<$ 6B), the released range is only 0.0319 AP, and the severely
+undertrained four-hour model was just 0.0176 below released 300M, while the
+sixteen-hour run rises above all released points to 0.8709. Its grouped
+interval again reaches 1.0. This implausibly easy ordering strengthens rather
+than weakens the quarantine: the particular split/probe cannot yet serve as a
+reliable promotion gate. EC and Human PPI therefore both carry
+\code{trusted\_for\_model\_selection=false}. They run, retain raw metrics and
+uncertainty, and cannot enter aggregate or per-task regression gates.
+Reinstating Human PPI requires a preregistered larger family-disjoint test,
+hard negatives, leakage checks, and successful discrimination of released
+scales plus deliberately undertrained checkpoints. EC requires independent
+reproduction and repair. P-CORE-Q4 is cleanly scale-ordered across released
+300M/600M/6B (37.4847/38.1553/40.6011), but it is explicitly a four-domain
+selection core rather than a claim that function and interaction no longer
+matter.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}lrrl@{}}
+    \toprule
+    Metric & 4h $\rightarrow$ 16h delta & Paired 95\% interval & Selection status \\
+    \midrule
+    Remote homology & +0.0523 & [0.0376, 0.0896] & trusted \\
+    Secondary structure & +0.0176 & [0.0113, 0.0240] & trusted \\
+    DeepLoc2 & +0.0101 & [0.0052, 0.0154] & trusted \\
+    FLIP2 hydro & +0.0118 & [0.0051, 0.0184] & trusted \\
+    Enzyme Commission & +0.0000 & [$-$0.0020, 0.0020] & quarantined \\
+    Human PPI & +0.0730 & [0.0000, 0.0919] & quarantined \\
+    Full contact P@L & +0.0623 & [0.0614, 0.0632] & promotion metric \\
+    \bottomrule
+  \end{tabular}
+  \caption{Evaluation-unit paired changes between the two independently initialized local checkpoints. Probe intervals align the frozen 10,000-replicate resamples; contact resamples the same 20,775 chains 5,000 times. They exclude training-seed uncertainty. Q4 increases by 5.2001 points and held-out MLM NLL falls by 0.1461; neither has a paired interval.}
+  \label{tab:local-paired}
+\end{table}
+
+\subsection{P-CORE v0.5-alpha qualification panel}
+
+We additionally constructed a source-qualified alpha panel from CATH v4.4
+\citep{waman2025cath44}, PRING \citep{zheng2025pring}, FLIP2
+\citep{didi2026flip2}, MegaScale \citep{tsuboyama2023megascale}, CAID2/3
+\citep{mehdiabadi2026caid3}, and the CAFA5 final-evaluation release
+\citep{depaolis2026cafa5}. All identity screens use one pinned MMseqs2 build
+\citep{steinegger2017mmseqs2}. Table~\ref{tab:pcore-v05-contract} gives the
+complete frozen readout contract. The encoder is always frozen: final residue
+states feed token-level probes, while valid non-special residues are
+mean-pooled for protein-level probes. Linear-probe regularization is fixed
+before released-model scoring; no encoder, layer, pooling, or nonlinear head is
+tuned on these results.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}p{2.4cm}YYY@{}}
+    \toprule
+    Task & Fit / validation / test & Frozen readout & Primary metric & Interval unit / state \\
+    \midrule
+    CATH 4.4 S20 & -- / 8,549 gallery / 2,631 queries & mean + cosine & macro-H-superfamily mAP & H superfamily \\
+    PRING Human C3-30 & 82,621 / 20,662 / 64,038 pairs & $[|a-b|;a\odot b]$; logistic $C=1$ & AUPRC & two-endpoint identity clusters; provisional \\
+    FLIP2 shift & 39,948 / 10,161 / 54,837 variants & mean; ridge $\alpha=1$ & hierarchical $\tfrac12[(\rho+1)/2]+\tfrac12\mathrm{NDCG}$ & dataset $\rightarrow$ landscape \\
+    MegaScale family30 & 50,000 / 10,000 / 28,172 mutants & mean(mutant)$-$mean(WT); ridge $\alpha=1$ & median per-parent Spearman & parent \\
+    CAID2 $\rightarrow$ CAID3 & 275 / 72 / 319 proteins & residue state; logistic $C=1$ & macro-protein average precision & protein \\
+    CAFA5 MF NK30 & 78,637 / -- / 110 proteins & no probe fit & no score & \textbf{blocked}: hard set $<500$ \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Frozen P-CORE v0.5-alpha contracts. ``Fit'' is probe training, not
+  encoder training. PRING removes all non-test nodes in a test node's 30\%-identity
+  cluster and bootstraps both endpoints symmetrically. MegaScale holds out
+  parents and their 30\%-identity clusters. CAID removes an unchanged CAID2
+  protein duplicated in CAID3. CAFA receives no value after its preregistered
+  population-size gate fails.}
+  \label{tab:pcore-v05-contract}
+\end{table}
+
+The five runnable tasks cover 178,819 unique executable sequences. The CAID
+temporal audit removed the CAID2 copy of \code{DP02732}, leaving zero exact
+identifier or sequence overlap into CAID3. Fit-versus-test checks are also zero
+for PRING nodes, identity clusters, and unordered pairs; MegaScale parents,
+identity clusters, and mutant sequences; and FLIP2 sequences within every
+landscape. The panel remains an \emph{alpha qualification suite}: PRING has
+only one released negative realization rather than ten, CAFA is blocked, no
+missing value is imputed, and no nine-task aggregate or model ranking is
+formed.
+
+Table~\ref{tab:pcore-v05-results} reports the completed three-scale campaign.
+Every value uses the same corrected dataset receipt and 10,000 resamples of the
+declared biological unit. Zero of the five runnable tasks increases strictly
+from 300M to 600M to 6B. MegaScale is the only task whose 6B-minus-300M paired
+interval excludes zero: $+0.0372$ [0.0064, 0.1171]. The 600M CATH value is
+lower than 300M by $-0.0102$ [-0.0198, -0.0007]. PRING appears to improve from
+600M to 6B, but that comparison cannot qualify because every PRING percentile
+interval is non-centered by approximately 0.035--0.036 AUPRC and the release
+contains only one negative realization. We therefore report no v0.5 aggregate
+and no released-model ranking; the prior Q4 remains the selection core until a
+replacement passes qualification.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}lrrrY@{}}
+    \toprule
+    Task / primary metric & ESMC-300M & ESMC-600M & ESMC-6B & Qualification result \\
+    \midrule
+    CATH macro-H mAP & 0.1170 [0.1048, 0.1293] & 0.1067 [0.0953, 0.1183] & 0.1153 [0.1034, 0.1276] & diagnostic; not scale-monotone \\
+    PRING Human AUPRC & 0.7035 [0.7255, 0.7542] & 0.7001 [0.7215, 0.7524] & 0.7113 [0.7323, 0.7622] & provisional; all intervals non-centered \\
+    FLIP2 hierarchical score & 0.7823 [0.6765, 0.8164] & 0.7581 [0.7377, 0.8119] & 0.7805 [0.7489, 0.8127] & diagnostic; seven-dataset uncertainty \\
+    MegaScale median-parent $\rho$ & 0.6835 [0.5999, 0.7110] & 0.7267 [0.6481, 0.7534] & 0.7207 [0.6786, 0.7952] & candidate; 6B $>$ 300M paired \\
+    CAID3 macro-protein AP & 0.7292 [0.6931, 0.7635] & 0.7341 [0.6982, 0.7675] & 0.7340 [0.6999, 0.7663] & temporal diagnostic; scales unresolved \\
+    CAFA5 MF NK30 & blocked & blocked & blocked & 110 hard proteins $<500$ gate \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Completed P-CORE v0.5-alpha released-model results. Brackets are
+  95\% percentile intervals from 10,000 biological-unit resamples. PRING
+  intervals are printed for audit but fail their centering diagnostic. CAFA is
+  not scored, missing tasks are not imputed, and no q9 aggregate exists.}
+  \label{tab:pcore-v05-results}
+\end{table}
+
+\subsection{Published ESMC evaluation in the same comparison}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}lrrrY@{}}
+    \toprule
+    Model & ESMC paper P@L-LR & Local 1,024-chain P@L & Local full P@L & Interpretation \\
+    \midrule
+    ESMC-300M & $0.552\pm0.002$ & 0.5340 [0.5229, 0.5445] & 0.5387 & local below paper \\
+    ESMC-600M & $0.589\pm0.002$ & 0.5778 [0.5668, 0.5881] & 0.5803 & local near lower bound \\
+    ESMC-6B & $0.725\pm0.002$ & 0.7097 [0.6997, 0.7195] & not completed & local below paper \\
+    Local 4h checkpoint & -- & -- & 0.1013 [0.1003, 0.1022] & far below released 300M \\
+    Local 16h checkpoint & -- & -- & 0.1636 [0.1620, 0.1651] & improves 4h; below released 300M \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Published ESMC contact evaluation and our frozen-protocol reconstruction. Paper ranges are 95\% paired-bootstrap intervals with 5,000 replicates. Local brackets are 95\% intervals for the fixed 1,024-chain sample. Protocol and dataset differences preclude treating the columns as exact replications.}
+  \label{tab:contact-compare}
+\end{table}
+
+The paper reports ESMC-300M/600M/6B P@L-LR of 0.552/0.589/0.725 and does not
+report P-CORE. Our local numbers use the reconstructed 2024-02-28 PDB manifest,
+the released checkpoints, and our digest-bound probe implementation. The table
+is intentionally joint but not numerically pooled: it shows the replication
+gap instead of hiding it.
+
+\subsection{Routine diagnostic and evaluator acceleration}
+
+The revised default speedrun diagnostic embeds only the sequences needed for
+trusted remote homology and FLIP2 hydro. It stores protein means, skips
+bootstrap, runs the two CPU probes concurrently with independent ten-minute
+limits, and never forms a P-CORE score. Human PPI was removed from this routine
+gate when quarantined. Checkpoints are evaluated on separate GPUs when
+available. Component receipts are atomic and restartable.
+
+P-CORE v0.5-alpha additionally requests only the final backbone state, omits
+the unused language-model head and all-layer tuple, and packs proteins by
+length under a fixed residue budget. For 6B, four deterministic contiguous
+sequence shards wrote disjoint entries into one atomic store. The complete
+178,819-protein pass, 666-protein residue pass, five probes, 10,000 resamples,
+and reduction finished in 967.3 seconds on four A100s; the task populations and
+metrics were unchanged.
+
+The exact evaluator is accelerated without changing metrics by (i) caching one
+protein mean per sequence, (ii) writing residue arrays only for secondary
+structure, (iii) length-bucketing windows under a 32,768-residue budget,
+(iv) running all six probes as restartable tasks with four CPU threads each,
+and (v) scoring the 20,775 contact chains in three deterministic GPU shards
+while P-CORE embeds on the fourth GPU. The contact merger restores global
+SHA-ranked order and performs the full 5,000-replicate bootstrap. For the
+four-hour checkpoint, the longest contact shard took 3,044.6 seconds and exact
+P-CORE took 3,226.7 seconds, giving a 53.8-minute critical path. For the
+sixteen-hour checkpoint these times were 2,705.0 and 3,132.0 seconds, giving a
+52.2-minute critical path. EC alone used 2,653.1 seconds on the latter and
+remains the dominant exact-probe cost. Further
+simplification is conditional: one frozen regularization value
+per routine task, or an SGD/ridge secondary-structure surrogate, may replace
+the expensive grid/LBFGS path only after released models and archived
+checkpoints demonstrate ranking preservation. Otherwise the system falls back
+to the exact release evaluator rather than silently redefining it.
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{@{}lrrrrr@{}}
+    \toprule
+    Checkpoint & MLM NLL & Contact P@L & Remote BA & PPI AP & FLIP2 $\rho$ \\
+    \midrule
+    Stage 1 & 2.7289 & 0.0523 & 0.0682 & 0.8519 & 0.3162 \\
+    Final & 2.7544 & 0.0619 & 0.0724 & 0.8574 & 0.3150 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Archived bounded diagnostic from the completed run. Contact and MLM use 32 examples each; representation tasks have no bootstrap or aggregate. The PPI column is retained as historical raw evidence but is now quarantined and removed from future routine gates.}
+\end{table}
+
+\section{Experiment, promotion, and release plan}
+\label{app:plan}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.06\textwidth}p{0.19\textwidth}YYp{0.13\textwidth}@{}}
+    \toprule
+    Gate & Deliverable & Required evidence & Failure action & Destination \\
+    \midrule
+    G0 & Reproducible environment & Clean Linux clone; \code{uv sync --frozen}; unit tests; model parameter counts; both contexts execute. & block experiments & GitHub \\
+    G1 & Data contract & Full length/ambiguity/source audit; license matrix; homology exclusion; immutable manifests. & keep artifacts private & GitHub + HF manifests \\
+    G2 & Evaluator parity & Released-model P-CORE-Q4/contact receipts; EC root cause; replacement Human-PPI benchmark; task-parallel restart; proxy rank study. & exact evaluator only & GitHub + HF receipts \\
+    G3 & Operational recipe & Microbatch, accumulation, checkpointing, and compile sweep with loss parity and no OOM; filled-token throughput. & retain fastest passing eager point & GitHub results \\
+    G4 & Hyperparameter calibration & LR/WD and residual-scale factorial at small model; two late checkpoints; at least two seeds. & widen uncertainty; no promotion & GitHub results \\
+    G5 & Data/model scaling & Equal-FLOP source-mixture and 55--100M--300M ladder; paired diagnostic stability. & prefer smaller Pareto model & GitHub + HF checkpoints \\
+    G6 & Final 300M/600M candidate & All six raw probes, P-CORE-Q4, full contact, held-out MLM, throughput/memory, three seeds, no trusted-task regression. & return to G4/G5 & HF model card \\
+    G7 & Public release & Independent locked rebuild, SHA verification, licenses, limitations, inference example, data statement. & delay publication & GitHub + HF \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Promotion gates. GitHub hosts code, configurations, tests, small receipts, and reports. Hugging Face hosts approved datasets/manifests, checkpoints, tokenizer/config files, and model cards under the LuminScience organization.}
+\end{table}
+
+The homology-gated 21,000- and 84,000-step campaigns and both exact evaluations
+are complete. The latter is now the local Stage-1 compute-scale baseline: it
+demonstrates broad improvement over the speedrun but remains below the released
+300M reference on Q4 and contact. The next experiment should therefore change
+data, optimization, or architecture at matched steps/FLOPs rather than merely
+extend this run. Stage 2 and the 600M tier remain deferred until a candidate
+clears the local baseline; later filled-residue ranges remain planning
+hypotheses, not commitments or guaranteed optima.
+
+Model selection is Pareto-based. A candidate must improve the preregistered
+representation/contact vector at equal training FLOPs without a material
+worst-domain regression, while reporting wall time, filled tokens, GPU memory,
+and inference cost. MLM loss is a guardrail and diagnostic, not a substitute
+for biological transfer.
+
+\section{Limitations and claim boundary}
+
+Both completed runs are short relative to published protein-language-model
+training, single-seed at each budget, and Stage 1 only. Because the training
+seeds differ, their paired evaluation intervals do not isolate training duration
+from stochastic initialization. Although both exact evaluations are complete,
+the stronger run remains substantially below released ESMC-300M on the
+selection aggregate and contact and supports a systems plus local-scaling claim,
+not a model-quality promotion. Representative-only sampling still differs from
+the ESMC paper; OMG/IMG is
+only an open surrogate for the JGI role; local proxy learning rate and weight
+decay are hypotheses; the paper/code residual scaling differs; source-license
+review remains open; and EC and Human PPI are presently untrusted. These are promotion
+blockers, not footnotes.
+
+The public repository should therefore describe a research system and its
+receipts, not advertise a state-of-the-art model until G6--G7 pass. Data and
+checkpoint releases must preserve source terms, disclose every preprocessing
+step, and include a machine-readable statement of which claims are diagnostic,
+candidate-level, or release-level.
+
+\begingroup
+\footnotesize
+\setlength{\bibsep}{1pt}
+\bibliographystyle{plainnat}
+\bibliography{references}
+\endgroup
 
 \end{document}
