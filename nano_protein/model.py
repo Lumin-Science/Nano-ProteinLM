@@ -29,6 +29,7 @@ class ESMCConfig:
     head_dim: int = 64
     attention_backend: str = "flash"
     gradient_checkpointing: bool = False
+    learned_residual_routing: bool = False
 
     def __post_init__(self) -> None:
         if self.d_model != self.n_heads * self.head_dim:
@@ -375,6 +376,15 @@ class ESMCForMaskedLM(nn.Module):
         self.head_dense = nn.Linear(config.d_model, config.d_model)
         self.head_norm = nn.LayerNorm(config.d_model)
         self.head_out = nn.Linear(config.d_model, config.vocab_size)
+        if config.learned_residual_routing:
+            # Match nanochat's depth-dependent initialization. Each layer first
+            # routes the running stream and the original token embedding, then
+            # executes the otherwise unchanged ESMC block.
+            self.residual_lambdas = nn.Parameter(torch.linspace(1.15, 1.05, config.n_layers))
+            self.input_lambdas = nn.Parameter(torch.linspace(0.20, 0.05, config.n_layers))
+        else:
+            self.register_parameter("residual_lambdas", None)
+            self.register_parameter("input_lambdas", None)
         self.apply(self._initialize)
 
     @staticmethod
@@ -390,6 +400,18 @@ class ESMCForMaskedLM(nn.Module):
 
     def get_input_embeddings(self) -> nn.Embedding:
         return self.embedding
+
+    def _route_residual(
+        self,
+        hidden: torch.Tensor,
+        initial_hidden: torch.Tensor,
+        layer_index: int,
+    ) -> torch.Tensor:
+        if self.residual_lambdas is None or self.input_lambdas is None:
+            return hidden
+        residual = self.residual_lambdas[layer_index].to(dtype=hidden.dtype)
+        initial = self.input_lambdas[layer_index].to(dtype=hidden.dtype)
+        return residual * hidden + initial * initial_hidden
 
     def _forward_packed(
         self,
@@ -413,7 +435,9 @@ class ESMCForMaskedLM(nn.Module):
         torch.cumsum(lengths, dim=0, out=cumulative[1:])
         packed_input_ids = input_ids.reshape(-1).index_select(0, packed_indices)
         hidden = self.embedding(packed_input_ids)
-        for block in self.blocks:
+        initial_hidden = hidden
+        for layer_index, block in enumerate(self.blocks):
+            hidden = self._route_residual(hidden, initial_hidden, layer_index)
             if self.config.gradient_checkpointing and self.training:
                 hidden = torch_checkpoint.checkpoint(
                     lambda value, module=block: module.forward_packed(
@@ -480,8 +504,10 @@ class ESMCForMaskedLM(nn.Module):
                 return_dict=return_dict,
             )
         hidden = self.embedding(input_ids)
+        initial_hidden = hidden
         attentions: list[torch.Tensor] = []
-        for block in self.blocks:
+        for layer_index, block in enumerate(self.blocks):
+            hidden = self._route_residual(hidden, initial_hidden, layer_index)
             if self.config.gradient_checkpointing and self.training and not output_attentions:
                 hidden = torch_checkpoint.checkpoint(
                     lambda value, module=block: module(value, attention_mask)[0],
@@ -539,7 +565,8 @@ def expected_parameter_count(config: ESMCConfig) -> int:
     embedding = config.vocab_size * width
     final_norm = width
     head = (width * width + width) + 2 * width + (width * config.vocab_size + config.vocab_size)
-    return embedding + config.n_layers * block + final_norm + head
+    routing = 2 * config.n_layers if config.learned_residual_routing else 0
+    return embedding + config.n_layers * block + final_norm + head + routing
 
 
 def parameter_groups(model: nn.Module, *, weight_decay: float) -> list[dict[str, object]]:

@@ -20,6 +20,32 @@ class ModelContractTests(unittest.TestCase):
         model = build_model("tiny", attention_backend="math")
         self.assertEqual(count_parameters(model), expected_parameter_count(model.config))
 
+    def test_learned_residual_routing_contract(self) -> None:
+        model = build_model(
+            "tiny",
+            attention_backend="math",
+            learned_residual_routing=True,
+        )
+        self.assertEqual(count_parameters(model), expected_parameter_count(model.config))
+        self.assertEqual(
+            count_parameters(model),
+            expected_parameter_count(ESMCConfig.tiny()) + 2 * model.config.n_layers,
+        )
+        torch.testing.assert_close(
+            model.residual_lambdas,
+            torch.tensor([1.15, 1.05]),
+        )
+        torch.testing.assert_close(
+            model.input_lambdas,
+            torch.tensor([0.20, 0.05]),
+        )
+        hidden = torch.tensor([[1.0, 2.0]])
+        initial = torch.tensor([[3.0, 4.0]])
+        torch.testing.assert_close(
+            model._route_residual(hidden, initial, 0),
+            1.15 * hidden + 0.20 * initial,
+        )
+
     def test_rope_preserves_vector_norm(self) -> None:
         generator = torch.Generator().manual_seed(7)
         query = torch.randn(2, 2, 11, 64, generator=generator)
