@@ -288,6 +288,7 @@ def train(
         "attention_backend": str(config.get("attention_backend", "flash")),
         "gradient_checkpointing": bool(config.get("gradient_checkpointing", False)),
         "learned_residual_routing": bool(config.get("learned_residual_routing", False)),
+        "transformer_norm": str(config.get("transformer_norm", "layernorm")),
     }
     model = build_model(str(config["model"]), **model_options).to(device)
     parameter_count = count_parameters(model)

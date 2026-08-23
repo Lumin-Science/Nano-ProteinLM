@@ -4,6 +4,7 @@ import torch
 
 from nano_protein.model import (
     ESMCConfig,
+    ESMCRMSNorm,
     _apply_rope,
     build_model,
     count_parameters,
@@ -19,6 +20,39 @@ class ModelContractTests(unittest.TestCase):
     def test_materialized_tiny_matches_formula(self) -> None:
         model = build_model("tiny", attention_backend="math")
         self.assertEqual(count_parameters(model), expected_parameter_count(model.config))
+
+    def test_rejects_unknown_transformer_norm(self) -> None:
+        with self.assertRaisesRegex(ValueError, "unknown transformer norm"):
+            ESMCConfig.tiny(transformer_norm="unknown")
+
+    def test_parameter_free_rmsnorm_contract(self) -> None:
+        config = ESMCConfig.tiny(transformer_norm="rmsnorm")
+        model = build_model(
+            "tiny",
+            attention_backend="math",
+            transformer_norm="rmsnorm",
+        )
+        self.assertEqual(count_parameters(model), expected_parameter_count(config))
+        self.assertEqual(sum(p.numel() for p in model.blocks[0].attention.norm.parameters()), 0)
+        self.assertIsInstance(model.blocks[0].attention.norm, ESMCRMSNorm)
+        self.assertIsInstance(model.blocks[0].attention.q_norm, ESMCRMSNorm)
+        self.assertIsInstance(model.blocks[0].attention.k_norm, ESMCRMSNorm)
+        self.assertIsInstance(model.blocks[0].ffn.norm, ESMCRMSNorm)
+        self.assertIsInstance(model.final_norm, ESMCRMSNorm)
+        self.assertIsInstance(model.head_norm, torch.nn.LayerNorm)
+
+    def test_parameter_free_rmsnorm_forward_and_backward(self) -> None:
+        model = build_model(
+            "tiny",
+            attention_backend="math",
+            transformer_norm="rmsnorm",
+        )
+        inputs = torch.randint(4, 24, (2, 17))
+        mask = torch.ones_like(inputs, dtype=torch.bool)
+        logits = model(inputs, mask)["logits"]
+        self.assertEqual(logits.shape, (2, 17, 64))
+        logits.square().mean().backward()
+        self.assertIsNotNone(model.blocks[0].attention.qkv.weight.grad)
 
     def test_learned_residual_routing_contract(self) -> None:
         model = build_model(

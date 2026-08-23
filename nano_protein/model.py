@@ -30,12 +30,15 @@ class ESMCConfig:
     attention_backend: str = "flash"
     gradient_checkpointing: bool = False
     learned_residual_routing: bool = False
+    transformer_norm: str = "layernorm"
 
     def __post_init__(self) -> None:
         if self.d_model != self.n_heads * self.head_dim:
             raise ValueError("ESMC requires 64-dimensional attention heads")
         if self.attention_backend not in {"flash", "auto", "math"}:
             raise ValueError(f"unknown attention backend {self.attention_backend!r}")
+        if self.transformer_norm not in {"layernorm", "rmsnorm"}:
+            raise ValueError(f"unknown transformer norm {self.transformer_norm!r}")
 
     @classmethod
     def esmc_300m(cls, **overrides: object) -> ESMCConfig:
@@ -152,6 +155,19 @@ def _sdpa_context(backend: str, *, device: torch.device):
     return sdpa_kernel(selected)
 
 
+class ESMCRMSNorm(nn.Module):
+    """Parameter-free RMSNorm matching nanochat's transformer normalization."""
+
+    def forward(self, hidden: torch.Tensor) -> torch.Tensor:
+        return F.rms_norm(hidden, (hidden.shape[-1],))
+
+
+def _transformer_norm(width: int, kind: str, *, bias: bool = True) -> nn.Module:
+    if kind == "rmsnorm":
+        return ESMCRMSNorm()
+    return nn.LayerNorm(width, bias=bias)
+
+
 def _flash_attention_packed(
     query: torch.Tensor,
     key: torch.Tensor,
@@ -239,10 +255,14 @@ class ESMCAttention(nn.Module):
         self.backend = config.attention_backend
         # Biohub's fused fallback keeps a LayerNorm bias while the projection is
         # bias-free. Q/K normalizers themselves are bias-free.
-        self.norm = nn.LayerNorm(config.d_model)
+        self.norm = _transformer_norm(config.d_model, config.transformer_norm)
         self.qkv = nn.Linear(config.d_model, 3 * config.d_model, bias=False)
-        self.q_norm = nn.LayerNorm(config.d_model, bias=False)
-        self.k_norm = nn.LayerNorm(config.d_model, bias=False)
+        self.q_norm = _transformer_norm(
+            config.d_model, config.transformer_norm, bias=False
+        )
+        self.k_norm = _transformer_norm(
+            config.d_model, config.transformer_norm, bias=False
+        )
         self.proj = nn.Linear(config.d_model, config.d_model, bias=False)
         self.rotary = ESMCRotaryEmbedding(config.head_dim)
 
@@ -313,12 +333,12 @@ class ESMCAttention(nn.Module):
 
 
 class ESMCFeedForward(nn.Module):
-    def __init__(self, d_model: int) -> None:
+    def __init__(self, config: ESMCConfig) -> None:
         super().__init__()
-        hidden = int((((8.0 / 3.0) * d_model) + 255) // 256 * 256)
-        self.norm = nn.LayerNorm(d_model)
-        self.gate_up = nn.Linear(d_model, 2 * hidden, bias=False)
-        self.down = nn.Linear(hidden, d_model, bias=False)
+        hidden = int((((8.0 / 3.0) * config.d_model) + 255) // 256 * 256)
+        self.norm = _transformer_norm(config.d_model, config.transformer_norm)
+        self.gate_up = nn.Linear(config.d_model, 2 * hidden, bias=False)
+        self.down = nn.Linear(hidden, config.d_model, bias=False)
 
     def forward(self, hidden: torch.Tensor) -> torch.Tensor:
         gate, value = self.gate_up(self.norm(hidden)).chunk(2, dim=-1)
@@ -329,7 +349,7 @@ class ESMCBlock(nn.Module):
     def __init__(self, config: ESMCConfig) -> None:
         super().__init__()
         self.attention = ESMCAttention(config)
-        self.ffn = ESMCFeedForward(config.d_model)
+        self.ffn = ESMCFeedForward(config)
         # This follows the released Biohub inference source. The 2026 paper text
         # says sqrt(n_layers); see docs/ARCHITECTURE.md for the frozen choice.
         self.residual_scale = math.sqrt(config.n_layers / 36.0)
@@ -372,7 +392,9 @@ class ESMCForMaskedLM(nn.Module):
         self.config = config
         self.embedding = nn.Embedding(config.vocab_size, config.d_model)
         self.blocks = nn.ModuleList([ESMCBlock(config) for _ in range(config.n_layers)])
-        self.final_norm = nn.LayerNorm(config.d_model, bias=False)
+        self.final_norm = _transformer_norm(
+            config.d_model, config.transformer_norm, bias=False
+        )
         self.head_dense = nn.Linear(config.d_model, config.d_model)
         self.head_norm = nn.LayerNorm(config.d_model)
         self.head_out = nn.Linear(config.d_model, config.vocab_size)
@@ -553,17 +575,16 @@ def expected_parameter_count(config: ESMCConfig) -> int:
 
     width = config.d_model
     hidden = int((((8.0 / 3.0) * width) + 255) // 256 * 256)
+    transformer_norm = 0 if config.transformer_norm == "rmsnorm" else 6 * width
     block = (
-        2 * width  # attention pre-LayerNorm
+        transformer_norm  # attention, Q/K, and FFN pre-normalization
         + 3 * width * width  # QKV
-        + 2 * width  # Q/K LayerNorm weights
         + width * width  # attention output
-        + 2 * width  # FFN pre-LayerNorm
         + 2 * hidden * width  # SwiGLU gate/up
         + width * hidden  # FFN down
     )
     embedding = config.vocab_size * width
-    final_norm = width
+    final_norm = 0 if config.transformer_norm == "rmsnorm" else width
     head = (width * width + width) + 2 * width + (width * config.vocab_size + config.vocab_size)
     routing = 2 * config.n_layers if config.learned_residual_routing else 0
     return embedding + config.n_layers * block + final_norm + head + routing
