@@ -1,4 +1,4 @@
-# nano-protein-embedding
+# LuminBench Nano ESMC
 
 A small, auditable, uv-managed stack for training protein embedding models under
 fixed compute and evaluating them with frozen protein benchmarks.
@@ -77,8 +77,9 @@ results/          compact completed-run and data receipts
 
 ## Publication layout
 
-- Source and issues: `github.com/Lumin-Science/nano-protein-embedding`
-- Approved manifests and checkpoints: `huggingface.co/LuminScience`
+- Source and issues: [`Lumin-Science/LuminBench-Nano-ESMC`](https://github.com/Lumin-Science/LuminBench-Nano-ESMC)
+- Production training dataset: [`LuminScience/LuminBench-Nano-ESMC`](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC)
+- Approved checkpoints: [`LuminScience`](https://huggingface.co/LuminScience)
 - Large raw corpora remain in controlled storage and are not republished without
   a source-license audit.
 

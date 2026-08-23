@@ -5,8 +5,8 @@ source of truth until evaluation, licensing, and release gates pass.
 
 | Artifact | Local location | Proposed public destination | Gate |
 |---|---|---|---|
-| Source, configs, tests, docs, compact receipts | this Git repository | `github.com/Lumin-Science/nano-protein-embedding` | clean CI and reproducibility review |
-| Prepared-data manifest and dataset card | `data/processed/<version>/manifest.json` plus provenance | `huggingface.co/datasets/LuminScience/<approved-dataset>` | source-license and redistribution review |
+| Source, configs, tests, docs, compact receipts | this Git repository | `github.com/Lumin-Science/LuminBench-Nano-ESMC` | clean CI and reproducibility review |
+| Prepared-data manifest and dataset card | `data/processed/<version>/manifest.json` plus provenance | `huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC` | source-license and redistribution review |
 | Model weights, config, tokenizer, model card | content-addressed training output | `huggingface.co/LuminScience/<model-release>` | trusted evaluation, multi-seed confirmation, dual-use review |
 | Full P-CORE/contact embedding caches | controlled scratch storage | not public by default | benchmark terms and storage policy |
 | Raw UniRef/MGnify/OMG-IMG payloads | controlled source storage | never mirrored by this project | upstream terms govern access |
