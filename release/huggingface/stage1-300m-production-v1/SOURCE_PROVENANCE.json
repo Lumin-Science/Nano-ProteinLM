@@ -1,0 +1,101 @@
+{
+  "release": "stage1-300m-production-v1",
+  "reviewed_at": "2026-08-23",
+  "schema_version": 1,
+  "source_arms": {
+    "mgnify": {
+      "accepted_memberships_after_source_cleaning": 611817034,
+      "cluster_representatives_available": 348135082,
+      "direct_source": "MGnify Protein Database 2023_02 90%-identity cluster representatives",
+      "governing_terms": {
+        "kind": "terms-of-use",
+        "name": "EMBL-EBI Terms of Use with original-data-owner rights retained",
+        "url": "https://www.ebi.ac.uk/about/terms-of-use/"
+      },
+      "raw_artifact": {
+        "bytes": 83473342442,
+        "md5": "332d36d2a943bdb769237a03e050ed03",
+        "url": "https://ftp.ebi.ac.uk/pub/databases/metagenomics/peptide_database/2023_02/mgy_clusters.fa.gz"
+      },
+      "release_selection": {
+        "train_records": 3000000,
+        "train_residues": 565676089,
+        "validation_records": 4096,
+        "validation_residues": 753905
+      },
+      "source_present_exact_unique_sequences": 611788129
+    },
+    "omg_img": {
+      "accepted_memberships_after_source_cleaning": 2085746535,
+      "cluster_representatives_available": 324923979,
+      "direct_source": "JGI/IMG protein CDS rows in tattabio/OMG",
+      "direct_source_input_records": 3280269924,
+      "governing_terms": {
+        "kind": "creative-commons",
+        "name": "CC BY-SA 4.0 as declared by tattabio/OMG",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+      },
+      "raw_artifacts": {
+        "bytes": 1253813127320,
+        "manifest_path": "provenance/omg_upstream_shards.tsv",
+        "manifest_sha256": "bb24ae4e819c92faa20767bf9f4070dfd3e27f673e77d064b7a45cc897ebd7d0",
+        "repository": "https://huggingface.co/datasets/tattabio/OMG",
+        "shards": 959
+      },
+      "release_selection": {
+        "train_records": 3000000,
+        "train_residues": 764769134,
+        "validation_records": 4096,
+        "validation_residues": 1024819
+      },
+      "source_present_exact_unique_sequences": 963673186,
+      "source_separation": {
+        "classification": "numeric sample accessions retained as JGI/IMG; ERZ-prefixed MGnify-origin rows excluded",
+        "unknown_source_records": 0,
+        "wrong_source_records_excluded": 1048850563
+      }
+    },
+    "uniref90": {
+      "accepted_memberships_after_source_cleaning": 165884293,
+      "cluster_representatives_available": 92230941,
+      "direct_source": "UniRef90 release 2023_02",
+      "governing_terms": {
+        "kind": "creative-commons",
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "raw_artifact": {
+        "bytes": 211819312677,
+        "md5": "353681f464572bb199fa032f714d4669",
+        "url": "https://ftp.uniprot.org/pub/databases/uniprot/previous_releases/release-2023_02/uniref/uniref2023_02.tar.gz"
+      },
+      "release_selection": {
+        "train_records": 3000000,
+        "train_residues": 1012397817,
+        "validation_records": 4096,
+        "validation_residues": 1373842
+      },
+      "source_present_exact_unique_sequences": 165884293
+    }
+  },
+  "transform": {
+    "canonical_source_pipeline": [
+      "parse source-native records",
+      "separate OMG JGI/IMG rows from MGnify-origin rows",
+      "uppercase and remove whitespace and terminal stop symbols",
+      "map unsupported residue symbols to X",
+      "require at least 60 residues and at most 20 percent ambiguous residues",
+      "globally exact-deduplicate while retaining source membership",
+      "cluster each source arm at 70 percent identity and 80 percent coverage"
+    ],
+    "prepared_release_pipeline": [
+      "verify representative FASTA header-to-sequence SHA-256",
+      "exclude exact matches to every indexed evaluation sequence",
+      "exclude MMseqs2 homologs to all evaluation fit, validation, and test splits at 30 percent identity and 80 percent bidirectional coverage",
+      "apply the 32 to 16384 residue prepared-corpus length gate",
+      "assign train and validation by deterministic SHA-256 prefix modulus",
+      "tokenize with the released ESMC sequence vocabulary",
+      "verify payload hashes, train-validation disjointness, and zero exclusion-set intersection"
+    ]
+  }
+}

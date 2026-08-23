@@ -6,7 +6,7 @@ source of truth until evaluation, licensing, and release gates pass.
 | Artifact | Local location | Proposed public destination | Gate |
 |---|---|---|---|
 | Source, configs, tests, docs, compact receipts | this Git repository | `github.com/Lumin-Science/LuminBench-Nano-ESMC` | clean CI and reproducibility review |
-| Prepared-data manifest and dataset card | `data/processed/<version>/manifest.json` plus provenance | `huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC` | source-license and redistribution review |
+| Prepared-data manifest and dataset card | `data/processed/<version>/manifest.json` plus provenance | `huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC` | mixed-terms card, hash verification, and immutable revision receipt |
 | Model weights, config, tokenizer, model card | content-addressed training output | `huggingface.co/LuminScience/<model-release>` | trusted evaluation, multi-seed confirmation, dual-use review |
 | Full P-CORE/contact embedding caches | controlled scratch storage | not public by default | benchmark terms and storage policy |
 | Raw UniRef/MGnify/OMG-IMG payloads | controlled source storage | never mirrored by this project | upstream terms govern access |
@@ -29,3 +29,26 @@ source of truth until evaluation, licensing, and release gates pass.
 
 Git and Hugging Face credentials are intentionally absent from the canonical
 training path. Publishing is a separate, reviewed operation.
+
+## Stage-1 production dataset license decision
+
+`stage1-300m-production-v1` is published as `license: other` with source-specific
+terms. UniRef90 remains CC BY 4.0, the direct `tattabio/OMG` distribution makes
+the derived OMG/IMG arm CC BY-SA 4.0, and MGnify remains under the EMBL-EBI
+Terms of Use plus any original-data-owner rights. The binary token stores are
+reversible sequence representations, so tokenization does not erase these
+obligations. The release card and portable ledgers live under
+`release/huggingface/stage1-300m-production-v1/`.
+
+The canonical upload is run from the storage host with uv-managed tooling:
+
+```bash
+HF_XET_HIGH_PERFORMANCE=1 uvx --from huggingface-hub hf upload \
+  LuminScience/LuminBench-Nano-ESMC \
+  /path/to/stage1-300m-production-v1-hf . \
+  --repo-type dataset \
+  --commit-message "Publish stage1-300m-production-v1"
+```
+
+After upload, record the returned Hugging Face commit SHA in Git before tagging
+the release.
