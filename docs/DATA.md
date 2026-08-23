@@ -1,30 +1,51 @@
 # Data contract
 
-The current source payload is the verified Step-9 transfer at
-`~/workspace/esmc-open-step9-clusters-v1/clusters` on tmoss:
+## Source reservoir
+
+The controlled Step-9 transfer contains one representative per 70%-identity
+cluster:
 
 | Source | Unique sequences | 70%-identity clusters | Representative FASTA |
 |---|---:|---:|---:|
 | UniRef90 | 165,884,293 | 92,230,941 | 38.6 GB |
 | MGnify | 611,788,129 | 348,135,082 | 93.3 GB |
-| OMG/IMG (JGI role) | 963,673,186 | 324,923,979 | 109.7 GB |
+| OMG/IMG | 963,673,186 | 324,923,979 | 109.7 GB |
 
-Only the representative FASTAs and membership TSVs were transferred. The TSVs
-name cluster members but do not contain their sequences. Consequently, this
-repository samples one transferred representative uniformly per cluster. It
-does not claim to reproduce ESMC's cluster-then-member sampling.
+Membership TSVs do not include member sequences. Training therefore samples
+transferred representatives; it does not claim ESMC's cluster-then-member
+sampling.
 
-`scripts/prepare_data.py` scans SHA-sorted representatives, verifies sequence
-digests, applies a SHA-modulus validation split, excludes exact hashes present
-in the 108,215-sequence P-CORE index and 20,795-chain P@L manifest, and writes
-uint8 token mmaps with immutable receipts. SHA ordering makes a bounded prefix a
-pseudorandom sample with respect to sequence content.
+## Only supported prepared corpus
 
-Remaining release blockers:
+`stage1-300m-production-v1` contains 3,000,000 training and 4,096 validation
+representatives from each source: 9,012,288 records and 2,345,995,606 residues
+in total.
 
-1. Homology-level decontamination against every benchmark split, ideally with
-   MMseqs2 components at the benchmark's strictest identity/coverage policy.
-2. Source-license and redistribution review before publishing derived shards.
-3. Full-corpus length, ambiguity, taxonomy, and source-duplication audits.
-4. A scalable member-sequence store if exact cluster-then-member sampling is a
-   scientific requirement.
+Preparation performs, in order:
+
+1. header-to-sequence SHA-256 verification;
+2. exact exclusion against every indexed P-CORE and P@L sequence;
+3. MMseqs2 exclusion against all evaluation fit, validation, and test splits;
+4. the 32--16,384-residue length filter;
+5. deterministic SHA-modulus train/validation assignment; and
+6. independent post-write intersection and file-hash verification.
+
+The MMseqs2 contract uses at least 30% sequence identity, 80% query coverage,
+and 80% target coverage. Its query set contains 116,841 unique evaluation
+sequences, including the 16 P@L probe-fit, 4 probe-validation, and 20,775 test
+chains. It excludes 1,592,566 candidate training representatives by homology.
+
+The final verifier reports zero exact/homology intersections in every source,
+zero validation contamination, and zero train-validation overlap. Compact
+receipts are tracked in
+[`results/stage1-300m-production-v1/`](../results/stage1-300m-production-v1/).
+
+## Fail-closed behavior
+
+`scripts/prepare_data.py` requires the homology exclusion digest set and receipt;
+there is no exact-only mode. `nano_protein.train` independently requires the
+all-splits homology contract and a matching `CORPUS_VERIFICATION.json` for every
+training configuration.
+
+Raw sources and prepared mmap shards remain in controlled storage. Publishing
+derived data requires a source-by-source provenance and license review.

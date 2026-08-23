@@ -17,7 +17,7 @@ class DataContractTests(unittest.TestCase):
         self.assertFalse(rows_zero & rows_one)
         self.assertEqual(rows_zero | rows_one, set(range(12)))
 
-    def test_prepare_split_and_exact_exclusion(self) -> None:
+    def test_prepare_split_requires_exact_and_homology_exclusion(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             clusters = root / "clusters"
@@ -52,13 +52,21 @@ class DataContractTests(unittest.TestCase):
                     {
                         "status": "verified",
                         "protocol": "mmseqs2-evaluation-homology-exclusion-v1",
+                        "scope_used_for_training": "all evaluation splits",
+                        "thresholds": {
+                            "coverage_mode": 0,
+                            "minimum_sequence_identity": 0.3,
+                            "minimum_query_coverage": 0.8,
+                            "minimum_target_coverage": 0.8,
+                        },
                         "excluded_digest_file_sha256": hashlib.sha256(
                             homology_digests.read_bytes()
                         ).hexdigest(),
                         "sources": {
                             source: {
                                 "screening_coverage": {
-                                    "original_source_records_scanned": len(records)
+                                    "coverage_kind": "complete_eligible_prefix",
+                                    "original_source_records_scanned": len(records),
                                 }
                             }
                             for source in SOURCES

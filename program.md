@@ -39,6 +39,12 @@ Do not change the training corpus or mixture, tokenizer, masking/loss contract,
 four-GPU hardware class, 7,200-second clock, contact evaluator, dependencies,
 `pyproject.toml`, or `uv.lock`.
 
+The only allowed corpus is `data/processed/stage1-300m-production-v1`, whose
+tracked data-manifest digest is
+`a96cd2a09f7e3eee05a5bc1d88f4b3e6c397993b780d8aac395934c7e16cf7cd`.
+Training must pass the matching all-evaluation-splits MMseqs2 receipt and
+post-write corpus verification. Never create or use an exact-only corpus.
+
 Use `uv sync --frozen` and `uv run --frozen` for every Python command. Never use
 `pip`, Conda, or an ambient environment.
 

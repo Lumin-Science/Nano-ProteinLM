@@ -101,6 +101,16 @@ def homology_receipt(path: Path, digest_path: Path) -> dict[str, object]:
         )
     if receipt.get("protocol") != "mmseqs2-evaluation-homology-exclusion-v1":
         raise ValueError("homology exclusion protocol changed")
+    if receipt.get("scope_used_for_training") != "all evaluation splits":
+        raise ValueError("homology exclusion must cover all evaluation splits")
+    thresholds = receipt.get("thresholds")
+    if not isinstance(thresholds, dict) or not (
+        thresholds.get("minimum_sequence_identity") == 0.3
+        and thresholds.get("minimum_query_coverage") == 0.8
+        and thresholds.get("minimum_target_coverage") == 0.8
+        and thresholds.get("coverage_mode") == 0
+    ):
+        raise ValueError("homology exclusion thresholds changed")
     return receipt
 
 
@@ -149,15 +159,15 @@ def prepare_dataset(
     contact_manifest: Path,
     train_per_source: int,
     validation_per_source: int,
-    homology_exclusion_digests: Path | None = None,
-    homology_exclusion_receipt: Path | None = None,
+    homology_exclusion_digests: Path,
+    homology_exclusion_receipt: Path,
     validation_modulus: int = 32,
     validation_bucket: int = 0,
     minimum_length: int = 32,
     maximum_length: int = 16_384,
     verify_sequence_hashes: bool = True,
 ) -> dict[str, object]:
-    """Create an order-independent train/validation split with exact eval exclusion.
+    """Create a homology-decontaminated train/validation corpus.
 
     The Step-9 representative files contain one sequence per 70%-identity
     cluster and are ordered by SHA-256. A prefix is therefore a deterministic
@@ -169,13 +179,8 @@ def prepare_dataset(
     if not 0 <= validation_bucket < validation_modulus:
         raise ValueError("invalid validation hash bucket")
     exact_excluded = evaluation_digests([pcore_index, contact_manifest])
-    if (homology_exclusion_digests is None) != (homology_exclusion_receipt is None):
-        raise ValueError("homology digest list and receipt must be supplied together")
-    homology_excluded: set[str] = set()
-    homology: dict[str, object] | None = None
-    if homology_exclusion_digests is not None and homology_exclusion_receipt is not None:
-        homology_excluded = digest_lines(homology_exclusion_digests)
-        homology = homology_receipt(homology_exclusion_receipt, homology_exclusion_digests)
+    homology_excluded = digest_lines(homology_exclusion_digests)
+    homology = homology_receipt(homology_exclusion_receipt, homology_exclusion_digests)
     tokenizer = ProteinTokenizer.esmc()
     output_root.mkdir(parents=True, exist_ok=True)
     source_receipts: dict[str, object] = {}
@@ -191,12 +196,13 @@ def prepare_dataset(
         counts: Counter[str] = Counter()
         rejected: Counter[str] = Counter()
         scanned = 0
-        screen_limit: int | None = None
-        if homology is not None:
-            source_contract = homology.get("sources", {}).get(source, {})
-            coverage = source_contract.get("screening_coverage")
-            if isinstance(coverage, dict):
-                screen_limit = int(coverage["original_source_records_scanned"])
+        source_contract = homology.get("sources", {}).get(source, {})
+        coverage = source_contract.get("screening_coverage")
+        if not isinstance(coverage, dict):
+            raise ValueError(f"homology receipt lacks screening coverage for {source}")
+        if coverage.get("coverage_kind") != "complete_eligible_prefix":
+            raise ValueError(f"homology receipt has unsafe screening coverage for {source}")
+        screen_limit = int(coverage["original_source_records_scanned"])
         for header, sequence in fasta_records(fasta):
             scanned += 1
             if screen_limit is not None and scanned > screen_limit:
@@ -254,39 +260,19 @@ def prepare_dataset(
             "validation_bucket": validation_bucket,
         },
         "decontamination": {
-            "method": (
-                "exact_sha256_plus_mmseqs2_homology"
-                if homology is not None
-                else "exact_normalized_sequence_sha256"
-            ),
+            "method": "exact_sha256_plus_mmseqs2_homology",
             "excluded_digest_count": len(exact_excluded | homology_excluded),
             "exact_excluded_digest_count": len(exact_excluded),
             "pcore_index": str(pcore_index.resolve()),
             "pcore_index_sha256": file_sha256(pcore_index),
             "contact_manifest": str(contact_manifest.resolve()),
             "contact_manifest_sha256": file_sha256(contact_manifest),
-            "homology_exclusion": homology is not None,
+            "homology_exclusion": True,
             "homology_excluded_digest_count": len(homology_excluded),
-            "homology_exclusion_digests": (
-                str(homology_exclusion_digests.resolve())
-                if homology_exclusion_digests is not None
-                else None
-            ),
-            "homology_exclusion_digests_sha256": (
-                file_sha256(homology_exclusion_digests)
-                if homology_exclusion_digests is not None
-                else None
-            ),
-            "homology_exclusion_receipt": (
-                str(homology_exclusion_receipt.resolve())
-                if homology_exclusion_receipt is not None
-                else None
-            ),
-            "homology_exclusion_receipt_sha256": (
-                file_sha256(homology_exclusion_receipt)
-                if homology_exclusion_receipt is not None
-                else None
-            ),
+            "homology_exclusion_digests": str(homology_exclusion_digests.resolve()),
+            "homology_exclusion_digests_sha256": file_sha256(homology_exclusion_digests),
+            "homology_exclusion_receipt": str(homology_exclusion_receipt.resolve()),
+            "homology_exclusion_receipt_sha256": file_sha256(homology_exclusion_receipt),
             "homology_contract": homology,
         },
         "filters": {"minimum_length": minimum_length, "maximum_length": maximum_length},

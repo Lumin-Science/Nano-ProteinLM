@@ -17,7 +17,7 @@ uv run --frozen python -m torch.distributed.run \
   --standalone \
   --nproc-per-node="${NPROC:-4}" \
   -m nano_protein.train \
-  --config "${CONFIG:-configs/esmc_300m.yaml}" \
+  --config "${CONFIG:-configs/esmc_300m_stage1_4xa100_4h.yaml}" \
   --data-root "${DATA_ROOT:?set DATA_ROOT to a prepared corpus}" \
   --output-root "$output_root" \
   --walltime-seconds "${WALLTIME_SECONDS:-60}"

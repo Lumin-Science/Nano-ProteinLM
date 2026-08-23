@@ -15,7 +15,7 @@ source of truth until evaluation, licensing, and release gates pass.
 ## Release transaction
 
 1. Freeze a clean Git commit and exact `uv.lock`.
-2. Reproduce the canonical speedrun from a fresh clone and verify every receipt
+2. Reproduce the canonical production baseline from a fresh clone and verify every receipt
    hash against the candidate artifacts.
 3. Pass homology decontamination, repaired evaluation, confidence-interval, and
    multi-seed promotion gates.

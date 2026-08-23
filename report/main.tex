@@ -83,7 +83,7 @@ to data and evaluation receipts rather than repository simplicity.
     \toprule
     Decision object & Frozen rule \\
     \midrule
-    Candidate & Sequence-only ESMC encoder; 300M is the speedrun tier, 600M a qualified scale check. \\
+    Candidate & Sequence-only ESMC encoder; 300M is the active research tier, 600M a qualified scale check. \\
     Compute & Two completed ESMC-300M Stage-1 campaigns on four A100s: 20,971/21,000 and 84,000/84,000 optimizer steps; evaluation and checkpoint I/O are outside the training clock. \\
     Data & Verified 9M-protein Stage-1 pool from 70\%-identity representatives; all-split homology exclusion; immutable hashes. \\
     Training & 15\% mask-all MLM, sequence-mean loss, AdamW, two contexts and mixtures. \\
@@ -206,13 +206,13 @@ paper's private JGI corpus.
 The production lineage has three tables. Table~\ref{tab:transfer} reports the
 full-corpus funnel from original records through quality and source filtering,
 global exact deduplication, and source-specific MMseqs2
-\citep{steinegger2018linclust} clustering. Table~\ref{tab:speedrun-corpus} is
+\citep{steinegger2018linclust} clustering. Table~\ref{tab:planning-corpus} is
 the large-run planning reservoir over those 70\%-identity representatives; it
 is not the corpus materialized for the first local campaign.
 Table~\ref{tab:first-corpus} is the verified 9M-protein local pool. The realized
 training stream is drawn from that pool using the Stage-1 source mixture. Thus
 the local lineage is directly
-Table~\ref{tab:transfer} $\rightarrow$ Table~\ref{tab:speedrun-corpus}
+Table~\ref{tab:transfer} $\rightarrow$ Table~\ref{tab:planning-corpus}
 $\rightarrow$ Table~\ref{tab:first-corpus} $\rightarrow$ sampled exposures.
 
 \begin{table}[H]
@@ -244,7 +244,7 @@ reservoir recorded in the training receipt.
 \subsection{Production reservoir and realized training stream}
 
 Large-run planning begins from every SHA-sorted representative and the
-pre-exclusion ceilings in Table~\ref{tab:speedrun-corpus}. This table answers
+pre-exclusion ceilings in Table~\ref{tab:planning-corpus}. This table answers
 whether the transferred reservoir can support a later eight-H100/seven-day
 run; it does not define the first four-A100 corpus. Every materialized record
 must still pass header-to-sequence SHA-256 verification, the 32--16,384
@@ -269,14 +269,14 @@ and digest indexes.
     \bottomrule
   \end{tabular}}
   \caption{Large-run planning reservoir, not the first local training corpus. All quantities except draw probabilities and epochs are millions of proteins or protein/crop exposures; no residue count appears here. The global exact-unique count is lower than the sum of source-present rows because some sequences belong to multiple source arms. Counts are pre-exclusion ceilings from Table~\ref{tab:transfer}.}
-  \label{tab:speedrun-corpus}
+  \label{tab:planning-corpus}
 \end{table}
 
 Residue compute is a separate accounting layer. The measured four-H100 300M
 rates imply 122--130B Stage-1 plus 45--49B Stage-2 filled residues, or 168--178B
 total, in the ideal eight-H100 seven-day planning case. The observed mean sampled
 lengths (267 residues in Stage 1 and 317 in Stage 2) convert that budget to the
-600--639M protein/crop draws in Table~\ref{tab:speedrun-corpus}. The transferred
+600--639M protein/crop draws in Table~\ref{tab:planning-corpus}. The transferred
 representative FASTAs contain approximately 183--185B residue characters before
 final exclusions, so they can feed the run globally but provide little reserve.
 The former 200B figure is a desirable headroom target, not a hard minimum. More
@@ -284,17 +284,13 @@ importantly, source ratios force 2.74--2.92 nominal UniRef representative passes
 while most MGnify representatives remain unseen. The exact eight-GPU rate and
 post-exclusion residue inventory must be measured before fixing the stop count.
 
-At each step, the stage selects a source using Table~\ref{tab:speedrun-corpus},
+At each step, the stage selects a source using Table~\ref{tab:planning-corpus},
 then draws a representative from that source and a random contiguous crop when
 the protein exceeds the context ceiling. Production should use deterministic
 shuffled passes within each source and cycle only when required, instead of
 independent sampling with replacement that creates avoidable early duplicates.
 The realized training corpus is the resulting ordered exposure manifest: source
-counts, representative hashes, crop offsets, residues, and repeat counts. The
-completed 30-minute pilot used only 250,000 training and 4,096 validation
-representatives per source, excluded 29 exact evaluation matches, and processed
-449,536 Stage-1 plus 76,928 Stage-2 draws; those pilot counts are not a
-production-reservoir recommendation.
+counts, representative hashes, crop offsets, residues, and repeat counts.
 
 \subsection{Verified corpus for the first 300M Stage-1 campaign}
 
@@ -335,9 +331,8 @@ is the source/crop stream recorded by training, not all nine million proteins
 consumed once.
 
 \paragraph{Decontamination status.}
-The completed 30-minute pilot remains exact-only and must not support a release
-claim. Both reported checkpoints and their evaluations use the same
-first-campaign pool, which is properly decontaminated against
+Both reported checkpoints and their evaluations use the same first-campaign
+pool, which is properly decontaminated against
 \emph{every} probe-fit, validation, and test sequence used by P-CORE and
 contact evaluation. Its verified MMseqs2 receipt excludes 816,307 UniRef90,
 216,915 MGnify, and 562,349 OMG/IMG candidates; the global union is 1,592,566
@@ -494,9 +489,8 @@ throughput accounting; the optimizer-step counter controls normal completion.
 
 \subsection{Three operating levels}
 
-Every checkpoint receives held-out sequence-mean MLM NLL. Routine speedruns
-add a bounded two-task trusted representation vector and a small contact subset; this
-vector has \emph{no aggregate}. The final checkpoint of the first campaign
+Every reported production checkpoint receives held-out sequence-mean MLM NLL.
+The final checkpoint of the first campaign
 received the complete report: held-out MLM NLL/perplexity; all six raw probe
 metrics with 10,000-replicate uncertainty and the four-task selection aggregate;
 full 20,775-chain contact P@L with 5,000-replicate uncertainty; plus throughput,
@@ -797,14 +791,7 @@ the released checkpoints, and our digest-bound probe implementation. The table
 is intentionally joint but not numerically pooled: it shows the replication
 gap instead of hiding it.
 
-\subsection{Routine diagnostic and evaluator acceleration}
-
-The revised default speedrun diagnostic embeds only the sequences needed for
-trusted remote homology and FLIP2 hydro. It stores protein means, skips
-bootstrap, runs the two CPU probes concurrently with independent ten-minute
-limits, and never forms a P-CORE score. Human PPI was removed from this routine
-gate when quarantined. Checkpoints are evaluated on separate GPUs when
-available. Component receipts are atomic and restartable.
+\subsection{Evaluator acceleration}
 
 P-CORE v0.5-alpha additionally requests only the final backbone state, omits
 the unused language-model head and all-layer tuple, and packs proteins by
@@ -872,7 +859,7 @@ to the exact release evaluator rather than silently redefining it.
 
 The homology-gated 21,000- and 84,000-step campaigns and both exact evaluations
 are complete. The latter is now the local Stage-1 compute-scale baseline: it
-demonstrates broad improvement over the speedrun but remains below the released
+demonstrates broad improvement over the four-hour baseline but remains below the released
 300M reference on Q4 and contact. The next experiment should therefore change
 data, optimization, or architecture at matched steps/FLOPs rather than merely
 extend this run. Stage 2 and the 600M tier remain deferred until a candidate

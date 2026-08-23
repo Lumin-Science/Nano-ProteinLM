@@ -18,13 +18,11 @@ than silently falling back, and qualification exercises forward and backward.
 The optimized CUDA path packs once before the transformer and scatters once
 after the language-model head, so LayerNorm and SwiGLU also skip pad rows.
 
-The selected ESMC-300M microbatches are 64 sequences/GPU at context 512 and 16
-at context 2,048, both without accumulation. They are still far below the
-paper's global batches (8,192 and 2,048 sequences), but were the largest bounded
-qualification point and more than doubled real-token throughput over the
-initial 8/1 baseline. Dynamic `torch.compile` was tested and rejected before an
-optimizer step because Torch 2.13 AOTAutograd could not compile the packed
-graph; the canonical path is eager and fail-fast.
+The frozen production ESMC-300M baselines use 64 sequences/GPU at context 512
+without accumulation. AutoResearch may change architecture, batch size,
+optimizer, compilation, checkpointing, and kernels within the four-GPU,
+7,200-second contract, while retaining the frozen production corpus and P@L
+evaluator.
 
 ## Recorded source discrepancy
 
@@ -38,6 +36,5 @@ research queue; it must not silently alter the canonical run.
 
 The paper discloses a µP rule—learning rate scales inversely with width and the
 square root of depth, while decay preserves the LR×decay product—but not the
-calibrated width-512/depth-16 values. The speedrun uses an explicit proxy
-hypothesis. Recovering authoritative values, or re-calibrating them, is a
-required experiment before a long production run.
+calibrated width-512/depth-16 values. The frozen baselines use an explicit proxy
+hypothesis; optimizer calibration is an AutoResearch target.

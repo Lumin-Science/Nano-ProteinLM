@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare a bounded mmap pilot corpus from Step-9 cluster representatives."""
+"""Prepare a verified, homology-decontaminated production corpus."""
 
 from __future__ import annotations
 
@@ -16,10 +16,10 @@ def main() -> None:
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--pcore-index", type=Path, required=True)
     parser.add_argument("--contact-manifest", type=Path, required=True)
-    parser.add_argument("--train-per-source", type=int, default=250_000)
+    parser.add_argument("--train-per-source", type=int, default=3_000_000)
     parser.add_argument("--validation-per-source", type=int, default=4_096)
-    parser.add_argument("--homology-exclusion-digests", type=Path)
-    parser.add_argument("--homology-exclusion-receipt", type=Path)
+    parser.add_argument("--homology-exclusion-digests", type=Path, required=True)
+    parser.add_argument("--homology-exclusion-receipt", type=Path, required=True)
     parser.add_argument("--skip-sequence-hash-verification", action="store_true")
     args = parser.parse_args()
     result = prepare_dataset(

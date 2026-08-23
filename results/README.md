@@ -11,7 +11,6 @@ digests. Released copies should use a Git tag for source and immutable
 Hugging Face revisions under `LuminScience` for approved checkpoints and data
 manifests.
 
-Routine `pcore-diagnostic-v1` task vectors are recorded with explicit coverage
-and `aggregate_score: null`. They are useful for stage/final direction checks but
-must not be compared with published P-CORE aggregates. Only the six-task release
-profile may populate a P-CORE score.
+AutoResearch selects candidates only on the frozen full P@L score. Other metrics
+may appear in completed reference reports but cannot determine candidate
+promotion.

@@ -78,6 +78,18 @@ def verify(data_root: Path) -> dict[str, object]:
     homology_path = Path(decontamination["homology_exclusion_digests"])
     homology_receipt_path = Path(decontamination["homology_exclusion_receipt"])
     homology_receipt = json.loads(homology_receipt_path.read_text())
+    thresholds = homology_receipt.get("thresholds")
+    if not (
+        homology_receipt.get("status") == "verified"
+        and homology_receipt.get("protocol") == "mmseqs2-evaluation-homology-exclusion-v1"
+        and homology_receipt.get("scope_used_for_training") == "all evaluation splits"
+        and isinstance(thresholds, dict)
+        and thresholds.get("minimum_sequence_identity") == 0.3
+        and thresholds.get("minimum_query_coverage") == 0.8
+        and thresholds.get("minimum_target_coverage") == 0.8
+        and thresholds.get("coverage_mode") == 0
+    ):
+        raise ValueError("homology receipt does not satisfy the frozen all-splits contract")
     if file_sha256(homology_path) != decontamination["homology_exclusion_digests_sha256"]:
         raise ValueError("homology digest file changed after corpus preparation")
     if (

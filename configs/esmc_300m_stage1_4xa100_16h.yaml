@@ -21,8 +21,6 @@ compile_mode: default
 walltime_seconds: 57600
 log_interval: 25
 peak_bf16_tflops_per_gpu: 312.0
-require_homology_exclusion: true
-
 stages:
   - name: stage1
     context_length: 512

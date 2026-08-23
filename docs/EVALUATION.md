@@ -1,26 +1,17 @@
 # Evaluation contract
 
-Training checkpoints are evaluated on three levels with two distinct operating
-profiles:
+Training checkpoints can be evaluated on three levels:
 
 1. Held-out sequence-mean MLM NLL on hash-disjoint cluster representatives.
-2. A bounded two-task trusted representation diagnostic for routine speedruns,
-   or all six exact probes plus P-CORE-Q4 v0.3 for release evaluation.
+2. Frozen representation probes, including P-CORE-Q4 v0.3 for full reports.
 3. Long-range contact P@L using all-layer/all-head symmetrized attention maps,
    a logistic probe trained on the frozen 20 structures, Cβ distance below 8 Å
    (Cα for glycine), sequence separation at least 24, and top-L precision.
 
-The default speedrun uses a predeclared P@L subset after fitting the exact
-20-chain probe and runs the trusted remote-homology and FLIP2 fitness task
-metrics concurrently. Human PPI is no longer a routine selection signal. It
-embeds only the required sequences, stores only protein means, skips bootstrap,
-and limits each probe to ten minutes. A timeout
-or failure is reported as partial coverage; the diagnostic has no aggregate and
-must never be reported as P-CORE. Stage and final checkpoints are evaluated on
-two GPUs concurrently when available. Embedding windows from different proteins
-share a residue-budget GPU batch; pooling, deterministic long-sequence windows,
-and content-addressed cache values otherwise retain the frozen evaluator's
-contract.
+AutoResearch uses only the full frozen 20,775-chain P@L result for model
+selection. MLM and P-CORE results may be reported for completed reference
+checkpoints, but they cannot keep or discard an AutoResearch candidate. Human
+PPI remains quarantined from model selection.
 
 `EVAL_PROFILE=full` runs all six exact v0.2 probe contracts and reduces the four
 trusted tasks to P-CORE-Q4 v0.3. It
@@ -59,8 +50,7 @@ tests; this is primarily a metadata and storage optimization.
 
 The tmoss runner currently imports the frozen benchmark implementations from
 the adjacent `AutoResearch_ESMC` source checkout while keeping benchmark data
-outside this repository. This makes the local pilot runnable without duplicating
-an evaluator that is still under repair. Before a public release, the repaired
+outside this repository. Before a public release, the repaired
 evaluator must be versioned as an immutable dependency (or vendored with its
 tests and provenance) so a fresh clone does not depend on that sibling path.
 

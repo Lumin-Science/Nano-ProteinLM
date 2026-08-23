@@ -37,10 +37,8 @@ def load_config(path: Path) -> dict[str, Any]:
 
 def validate_data_manifest(
     data_root: Path,
-    *,
-    require_homology_exclusion: bool,
 ) -> dict[str, Any]:
-    """Load the data receipt and enforce the campaign's contamination gate."""
+    """Load the data receipt and enforce the mandatory contamination gate."""
 
     manifest_path = data_root / "manifest.json"
     with manifest_path.open() as handle:
@@ -49,49 +47,50 @@ def validate_data_manifest(
         raise TypeError("data manifest must be a mapping")
     decontamination = manifest.get("decontamination")
     homology_exclusion = (
-        decontamination.get("homology_exclusion")
-        if isinstance(decontamination, dict)
-        else None
+        decontamination.get("homology_exclusion") if isinstance(decontamination, dict) else None
     )
-    if require_homology_exclusion:
-        contract = (
-            decontamination.get("homology_contract")
-            if isinstance(decontamination, dict)
-            else None
+    contract = (
+        decontamination.get("homology_contract") if isinstance(decontamination, dict) else None
+    )
+    thresholds = contract.get("thresholds") if isinstance(contract, dict) else None
+    valid_contract = (
+        isinstance(contract, dict)
+        and contract.get("status") == "verified"
+        and contract.get("protocol") == "mmseqs2-evaluation-homology-exclusion-v1"
+        and contract.get("scope_used_for_training") == "all evaluation splits"
+        and isinstance(thresholds, dict)
+        and thresholds.get("minimum_sequence_identity") == 0.3
+        and thresholds.get("minimum_query_coverage") == 0.8
+        and thresholds.get("minimum_target_coverage") == 0.8
+        and thresholds.get("coverage_mode") == 0
+        and isinstance(decontamination.get("homology_exclusion_receipt_sha256"), str)
+    )
+    if homology_exclusion is not True or not valid_contract:
+        raise RuntimeError(
+            "training blocked: every corpus requires a verified MMseqs2 homology "
+            "receipt covering all evaluation splits"
         )
-        valid_contract = (
-            isinstance(contract, dict)
-            and contract.get("status") == "verified"
-            and contract.get("protocol") == "mmseqs2-evaluation-homology-exclusion-v1"
-            and isinstance(decontamination.get("homology_exclusion_receipt_sha256"), str)
+    verification_path = data_root / "CORPUS_VERIFICATION.json"
+    if not verification_path.is_file():
+        raise RuntimeError("training blocked: prepared-corpus verification is missing")
+    verification = json.loads(verification_path.read_text())
+    verified_sources = verification.get("sources", {})
+    valid_verification = (
+        verification.get("status") == "verified"
+        and verification.get("protocol") == "prepared-corpus-decontamination-verification-v1"
+        and verification.get("manifest_sha256") == file_sha256(manifest_path)
+        and verification.get("homology_exclusion_receipt_sha256")
+        == decontamination.get("homology_exclusion_receipt_sha256")
+        and all(
+            isinstance(verified_sources.get(source), dict)
+            and verified_sources[source].get("train_excluded_intersection") == 0
+            and verified_sources[source].get("validation_excluded_intersection") == 0
+            and verified_sources[source].get("train_validation_intersection") == 0
+            for source in ("uniref90", "mgnify", "omg_img")
         )
-        if homology_exclusion is not True or not valid_contract:
-            raise RuntimeError(
-                "training blocked: this campaign requires a verified MMseqs2 homology "
-                "receipt covering every evaluation validation/test split"
-            )
-        verification_path = data_root / "CORPUS_VERIFICATION.json"
-        if not verification_path.is_file():
-            raise RuntimeError("training blocked: prepared-corpus verification is missing")
-        verification = json.loads(verification_path.read_text())
-        verified_sources = verification.get("sources", {})
-        valid_verification = (
-            verification.get("status") == "verified"
-            and verification.get("protocol")
-            == "prepared-corpus-decontamination-verification-v1"
-            and verification.get("manifest_sha256") == file_sha256(manifest_path)
-            and verification.get("homology_exclusion_receipt_sha256")
-            == decontamination.get("homology_exclusion_receipt_sha256")
-            and all(
-                isinstance(verified_sources.get(source), dict)
-                and verified_sources[source].get("train_excluded_intersection") == 0
-                and verified_sources[source].get("validation_excluded_intersection") == 0
-                and verified_sources[source].get("train_validation_intersection") == 0
-                for source in ("uniref90", "mgnify", "omg_img")
-            )
-        )
-        if not valid_verification:
-            raise RuntimeError("training blocked: prepared-corpus verification is invalid")
+    )
+    if not valid_verification:
+        raise RuntimeError("training blocked: prepared-corpus verification is invalid")
     return manifest
 
 
@@ -218,13 +217,10 @@ def train(
     walltime_override: int | None = None,
 ) -> None:
     config = load_config(config_path)
-    data_manifest = validate_data_manifest(
-        data_root,
-        require_homology_exclusion=bool(config.get("require_homology_exclusion", False)),
-    )
+    data_manifest = validate_data_manifest(data_root)
     rank, local_rank, world_size = _distributed()
     if not torch.cuda.is_available():
-        raise RuntimeError("speedrun training requires CUDA")
+        raise RuntimeError("training requires CUDA")
     device = torch.device("cuda", local_rank)
     torch.cuda.set_device(device)
     torch.set_float32_matmul_precision("high")

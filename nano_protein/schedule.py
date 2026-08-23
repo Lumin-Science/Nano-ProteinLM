@@ -85,7 +85,7 @@ def mup_hyperparameters(
     """Apply the paper's disclosed width/depth transfer rule.
 
     The paper does not disclose the calibrated proxy values. The defaults are
-    therefore an explicit speedrun hypothesis, not a claimed reconstruction.
+    therefore an explicit baseline hypothesis, not a claimed reconstruction.
     """
 
     learning_rate = base_learning_rate * (base_width / d_model) * (base_depth / n_layers) ** 0.5
