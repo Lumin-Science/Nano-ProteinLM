@@ -1732,14 +1732,23 @@ def stage_release_metadata(
     ]
     for source in SOURCES:
         row = manifest["sources"][source]
+        train_bytes = sum(int(shard["bytes"]) for shard in row["train"])
+        validation_bytes = sum(int(shard["bytes"]) for shard in row["validation"])
         provenance["source_arms"][source].update(
             {
                 "pre_screen_70pct_representatives": row["representative_records_scanned"],
                 "release_train_records": row["train_records"],
                 "release_train_residues": row["train_residues"],
+                "release_train_shards": len(row["train"]),
+                "release_train_compressed_bytes": train_bytes,
                 "release_validation_records": sum(
                     int(shard["records"]) for shard in row["validation"]
                 ),
+                "release_validation_residues": sum(
+                    int(shard["residues"]) for shard in row["validation"]
+                ),
+                "release_validation_shards": len(row["validation"]),
+                "release_validation_compressed_bytes": validation_bytes,
                 "release_rejections": row["rejected"],
             }
         )
@@ -1752,6 +1761,26 @@ def stage_release_metadata(
     total_residues = sum(
         int(manifest["sources"][source]["train_residues"]) for source in SOURCES
     )
+    total_train_shards = sum(len(manifest["sources"][source]["train"]) for source in SOURCES)
+    total_validation_records = sum(
+        sum(int(shard["records"]) for shard in manifest["sources"][source]["validation"])
+        for source in SOURCES
+    )
+    total_validation_residues = sum(
+        sum(int(shard["residues"]) for shard in manifest["sources"][source]["validation"])
+        for source in SOURCES
+    )
+    total_validation_shards = sum(
+        len(manifest["sources"][source]["validation"]) for source in SOURCES
+    )
+    total_compressed_bytes = sum(
+        sum(
+            int(shard["bytes"])
+            for split in ("train", "validation")
+            for shard in manifest["sources"][source][split]
+        )
+        for source in SOURCES
+    )
     card = (template_root / "README.md").read_text()
     card = card.replace(
         "Do not use this template as a release receipt. Measured post-Q9 counts, bytes,\n"
@@ -1763,6 +1792,11 @@ def stage_release_metadata(
         "\n## Verified release measurements\n\n"
         f"- Training representatives: **{total_records:,}**\n"
         f"- Training residues: **{total_residues:,}**\n"
+        f"- Training Parquet shards: **{total_train_shards:,}**\n"
+        f"- Validation representatives: **{total_validation_records:,}**\n"
+        f"- Validation residues: **{total_validation_residues:,}**\n"
+        f"- Validation Parquet shards: **{total_validation_shards:,}**\n"
+        f"- Train plus validation compressed bytes: **{total_compressed_bytes:,}**\n"
         f"- Evaluation-query union: **{evaluation['union_unique_sequences']:,}** sequences\n"
         f"- Homology-excluded representative digests: "
         f"**{screen['excluded_training_representatives']:,}**\n"

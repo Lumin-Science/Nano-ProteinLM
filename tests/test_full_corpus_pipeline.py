@@ -251,7 +251,8 @@ class FullCorpusPipelineTests(unittest.TestCase):
                         "representative_records_scanned": 10,
                         "train_records": 8,
                         "train_residues": 800,
-                        "validation": [{"records": 2}],
+                        "train": [{"records": 8, "residues": 800, "bytes": 500}],
+                        "validation": [{"records": 2, "residues": 200, "bytes": 100}],
                         "rejected": {},
                     }
                     for source in self.pipeline.SOURCES
@@ -303,6 +304,16 @@ class FullCorpusPipelineTests(unittest.TestCase):
             self.assertNotIn("Do not use this template", card)
             self.assertIn("Training representatives: **24**", card)
             self.assertIn("Training residues: **2,400**", card)
+            self.assertIn("Training Parquet shards: **3**", card)
+            self.assertIn("Validation representatives: **6**", card)
+            self.assertIn("Validation residues: **600**", card)
+            self.assertIn("Train plus validation compressed bytes: **1,800**", card)
+            provenance = json.loads((release / "SOURCE_PROVENANCE.json").read_text())
+            self.assertNotIn("warning", provenance)
+            source_provenance = provenance["source_arms"]["uniref90"]
+            self.assertEqual(source_provenance["release_train_shards"], 1)
+            self.assertEqual(source_provenance["release_train_compressed_bytes"], 500)
+            self.assertEqual(source_provenance["release_validation_residues"], 200)
             for relative, artifact in receipt["artifacts"].items():
                 path = release / relative
                 self.assertEqual(
