@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 def sequence_digest(sequence: str) -> str:
@@ -21,6 +22,31 @@ class FullCorpusPipelineTests(unittest.TestCase):
         sys.modules[spec.name] = module
         spec.loader.exec_module(module)
         cls.pipeline = module
+
+    def test_delta_resume_cli_routes_recovery_flags(self) -> None:
+        with mock.patch.object(
+            self.pipeline, "run_delta_screen", return_value={"status": "test"}
+        ) as run:
+            self.pipeline.main(
+                [
+                    "delta-screen",
+                    "--query-fasta",
+                    "/tmp/query.fasta",
+                    "--target-db-root",
+                    "/tmp/db",
+                    "--output",
+                    "/tmp/output",
+                    "--mmseqs",
+                    "/tmp/mmseqs",
+                    "--threads",
+                    "64",
+                    "--resume",
+                ]
+            )
+        run.assert_called_once()
+        self.assertTrue(run.call_args.kwargs["resume"])
+        self.assertFalse(run.call_args.kwargs["concurrent_sources"])
+        self.assertEqual(run.call_args.kwargs["threads"], 64)
 
     def test_evaluation_union_protects_blocked_pairs_and_wildtypes(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -158,6 +184,81 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 manifest["verification"]["exact_and_homology_exclusion_intersection"],
                 0,
             )
+
+    def test_stage_metadata_removes_template_warning_and_binds_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            release = root / "release"
+            template = root / "template"
+            screen = root / "screen"
+            evaluation = root / "evaluation"
+            for path in (release, template, screen, evaluation):
+                path.mkdir()
+            manifest = {
+                "status": "verified",
+                "protocol": self.pipeline.RELEASE_PROTOCOL,
+                "sources": {
+                    source: {
+                        "representative_records_scanned": 10,
+                        "train_records": 8,
+                        "train_residues": 800,
+                        "validation": [{"records": 2}],
+                        "rejected": {},
+                    }
+                    for source in self.pipeline.SOURCES
+                },
+            }
+            manifest_path = release / "manifest.json"
+            manifest_path.write_text(json.dumps(manifest))
+            (release / "RELEASE_VERIFIED.json").write_text(
+                json.dumps(
+                    {"manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest()}
+                )
+            )
+            warning = (
+                "Do not use this template as a release receipt. Measured post-Q9 counts, "
+                "bytes,\n"
+                "checksums, and the immutable Hub revision are inserted only after the full "
+                "shard\n"
+                "verifier succeeds.\n\n"
+            )
+            (template / "README.md").write_text("# Card\n\n" + warning)
+            (template / "LICENSE_AND_ATTRIBUTION.md").write_text("license\n")
+            (template / "SOURCE_PROVENANCE.template.json").write_text(
+                json.dumps(
+                    {
+                        "warning": "template",
+                        "source_arms": {source: {} for source in self.pipeline.SOURCES},
+                    }
+                )
+            )
+            (screen / "HOMOLOGY_EXCLUSION_VERIFIED.json").write_text(
+                json.dumps({"excluded_training_representatives": 7})
+            )
+            (evaluation / "EVALUATION_SPLIT_LEDGER.json").write_text(
+                json.dumps({"union_unique_sequences": 11})
+            )
+            omg_manifest = root / "omg.tsv"
+            omg_manifest.write_text("path\tbytes\tsha256\n")
+
+            receipt = self.pipeline.stage_release_metadata(
+                release_root=release,
+                template_root=template,
+                omg_manifest=omg_manifest,
+                screen_root=screen,
+                evaluation_root=evaluation,
+            )
+
+            self.assertEqual(receipt["status"], "verified")
+            card = (release / "README.md").read_text()
+            self.assertNotIn("Do not use this template", card)
+            self.assertIn("Training representatives: **24**", card)
+            self.assertIn("Training residues: **2,400**", card)
+            for relative, artifact in receipt["artifacts"].items():
+                path = release / relative
+                self.assertEqual(
+                    hashlib.sha256(path.read_bytes()).hexdigest(), artifact["sha256"]
+                )
 
 
 if __name__ == "__main__":

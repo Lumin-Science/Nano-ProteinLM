@@ -15,66 +15,22 @@ Membership TSVs do not include member sequences. Training therefore samples
 transferred representatives; it does not claim ESMC's cluster-then-member
 sampling.
 
-## Only supported prepared local corpus
+## Supported release
 
-`stage1-300m-production-v1` contains 3,000,000 training and 4,096 validation
-representatives from each source: 9,012,288 records and 2,345,995,606 residues
-in total.
+The supported corpus is `full-open-v2`: the complete transferred 70%-identity
+representative reservoir after length filtering and decontamination. The older
+2.55-GiB Stage-1 subset is retained only as a historical experiment record under
+`dev/results/`; it is not a supported or publishable training corpus because it
+predates the Q9 evaluation-union screen.
 
-Preparation performs, in order:
+Preparation verifies sequence hashes, excludes exact evaluation matches, runs
+the symmetric all-splits MMseqs2 screen, applies the 32--16,384-residue filter,
+constructs globally disjoint validation sets, and independently re-reads every
+released row. The homology contract is 30% identity with both 80% query and 80%
+target coverage. It protects contact P@L, P-CORE v0.2, and every P-CORE
+v0.5-alpha-q9 sequence, including blocked future evaluation candidates.
 
-1. header-to-sequence SHA-256 verification;
-2. exact exclusion against every indexed P-CORE and P@L sequence;
-3. MMseqs2 exclusion against all evaluation fit, validation, and test splits;
-4. the 32--16,384-residue length filter;
-5. deterministic SHA-modulus train/validation assignment; and
-6. independent post-write intersection and file-hash verification.
-
-The MMseqs2 contract uses at least 30% sequence identity, 80% query coverage,
-and 80% target coverage. Its query set contains 116,841 unique evaluation
-sequences, including the 16 P@L probe-fit, 4 probe-validation, and 20,775 test
-chains. It excludes 1,592,566 candidate training representatives by homology.
-
-The final verifier reports zero exact/homology intersections in every source,
-zero validation contamination, and zero train-validation overlap. Compact
-receipts are retained in the development archive at
-[`dev/results/stage1-300m-production-v1/`](../dev/results/stage1-300m-production-v1/).
-
-## Release size and scale boundary
-
-The released mmap corpus is 2,742,552,096 bytes before the additional compact
-provenance files, or about 2.55 GiB. Its size follows directly from the binary
-format: 2,345,995,606 one-byte residue tokens, three 132,000,192-byte train
-indexes, three small validation indexes, and the immutable manifests.
-
-This is deliberately the production subset for short local Stage-1 campaigns.
-At four GPUs and microbatch 64, the 21,000-step four-hour baseline consumes
-5,376,000 sequence samples across the three configured source arms, less than
-the 9,000,000 released training records in aggregate. The longer sixteen-hour
-reference revisits the subset and reports that exposure in its run receipt.
-
-This release must not be confused with the full controlled source reservoir,
-which contains 765,290,002 transferred 70%-identity representatives across the
-three arms. A 300M model trained for seven days on eight H100s should use a
-larger sharded selection or a deterministic stream from that reservoir and
-publish the actual sample/repetition accounting.
-
-## Fail-closed behavior
-
-`scripts/prepare_data.py` requires the homology exclusion digest set and receipt;
-there is no exact-only mode. `nano_protein.train` independently requires the
-all-splits homology contract and a matching `CORPUS_VERIFICATION.json` for every
-training configuration.
-
-Raw sources and the full 70%-cluster reservoir remain in controlled storage.
-At present, only the reviewed prepared subset is distributed through the
-separately versioned Hugging Face dataset repository.
-
-## Complete sharded reservoir contract
-
-The full-reservoir v2 builder is maintained under `dev/data/` until its Q9
-homology screen and post-write verification receipts are complete. Its supported
-distribution format is source/split-partitioned Parquet with `sequence`,
+The distribution format is source/split-partitioned Parquet with `sequence`,
 `sha256`, and `length` fields. Shards are ordered by sequence digest and sized by
 an uncompressed 256 Mi-residue ceiling.
 
@@ -82,8 +38,9 @@ an uncompressed 256 Mi-residue ceiling.
 immutable commit, reads the verified release manifest, and downloads the
 smallest whole-shard prefix for each source that covers a run's total planned
 sequence exposures. All validation shards are always included. The command then
-rehashes each row while materializing the existing mmap stores; training remains
-fully local.
+records protein, residue, and compressed-byte totals separately, rehashes each
+row while materializing the existing mmap stores, and leaves training fully
+local.
 
 The v2 training gate additionally requires P@L, P-CORE v0.2, and P-CORE
 v0.5-alpha-q9 in the homology-screen receipt, including Q9 tasks blocked from

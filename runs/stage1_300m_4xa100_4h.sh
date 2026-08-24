@@ -4,18 +4,28 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-data_root="${DATA_ROOT:-$repo_root/data/processed/stage1-300m-production-v1}"
+data_root="${DATA_ROOT:-$repo_root/data/processed/full-open-v2-4h}"
+data_cache_root="${DATA_CACHE_ROOT:-$repo_root/data/cache/full-open-v2}"
+data_revision="${DATA_REVISION:-main}"
+training_samples="${TRAINING_SAMPLES:-5376000}"
+download_workers="${DOWNLOAD_WORKERS:-8}"
 output_root="${OUTPUT_ROOT:-$repo_root/outputs/stage1-300m-4xa100-4h}"
 config="${CONFIG:-$repo_root/configs/esmc_300m_stage1_4xa100_4h.yaml}"
 uv_bin="${UV_BIN:-uv}"
 uv_cache_dir="${UV_CACHE_DIR:-$repo_root/.uv-cache}"
 
-if [[ ! -f "$data_root/manifest.json" ]]; then
-  DATA_ROOT="$data_root" bash runs/prepare_stage1_300m_corpus.sh
-fi
-
 mkdir -p "$output_root"
 UV_CACHE_DIR="$uv_cache_dir" "$uv_bin" sync --frozen
+if [[ ! -f "$data_root/manifest.json" ]]; then
+  UV_CACHE_DIR="$uv_cache_dir" "$uv_bin" run --frozen python \
+    scripts/download_data.py \
+    --repo-id LuminScience/LuminBench-Nano-ESMC \
+    --revision "$data_revision" \
+    --training-samples "$training_samples" \
+    --download-workers "$download_workers" \
+    --cache-root "$data_cache_root" \
+    --output-root "$data_root"
+fi
 UV_CACHE_DIR="$uv_cache_dir" "$uv_bin" run --frozen python scripts/check_environment.py \
   --require-gpus 4 \
   --output "$output_root/ENVIRONMENT.json"

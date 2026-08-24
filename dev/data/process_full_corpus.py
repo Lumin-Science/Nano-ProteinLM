@@ -1453,6 +1453,12 @@ def stage_release_metadata(
         int(manifest["sources"][source]["train_residues"]) for source in SOURCES
     )
     card = (template_root / "README.md").read_text()
+    card = card.replace(
+        "Do not use this template as a release receipt. Measured post-Q9 counts, bytes,\n"
+        "checksums, and the immutable Hub revision are inserted only after the full shard\n"
+        "verifier succeeds.\n\n",
+        "",
+    )
     card += (
         "\n## Verified release measurements\n\n"
         f"- Training representatives: **{total_records:,}**\n"

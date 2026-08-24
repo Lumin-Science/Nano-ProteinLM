@@ -1,9 +1,10 @@
 # Completed production experiments
 
-All retained training results use the verified
-`stage1-300m-production-v1` corpus. The data manifest, corpus-verification, uv
+These historical training results used the then-verified
+`stage1-300m-production-v1` corpus. Their data manifest, corpus-verification, uv
 lock, config, code revision, checkpoint, and evaluation digests are recorded in
-the result receipts.
+the result receipts. This corpus predates the Q9 screen and is archived for
+provenance only; new runs must use an immutable `full-open-v2` shard prefix.
 
 | Run | GPUs | Target steps | Completed steps | Warmup | P@L | Status |
 |---|---:|---:|---:|---:|---:|---|

@@ -39,11 +39,13 @@ Do not change the training corpus or mixture, tokenizer, masking/loss contract,
 four-GPU hardware class, 7,200-second clock, contact evaluator, dependencies,
 `pyproject.toml`, or `uv.lock`.
 
-The only allowed corpus is `data/processed/stage1-300m-production-v1`, whose
-tracked data-manifest digest is
-`a96cd2a09f7e3eee05a5bc1d88f4b3e6c397993b780d8aac395934c7e16cf7cd`.
-Training must pass the matching all-evaluation-splits MMseqs2 receipt and
-post-write corpus verification. Never create or use an exact-only corpus.
+The only allowed corpus is a deterministic shard prefix of the immutable
+`full-open-v2` Hugging Face release. After the timing smoke run, download at
+least `estimated_steps × 4 GPUs × micro_batch_size` unique sequence records
+with `scripts/download_data.py`; record the resolved Hub commit, download-plan
+digest, and local manifest digest. Training must pass the P@L, P-CORE v0.2, and
+P-CORE v0.5-alpha-q9 all-splits homology contract and post-write corpus
+verification. Never create or use an exact-only or pre-Q9 corpus.
 
 Use `uv sync --frozen` and `uv run --frozen` for every Python command. Never use
 `pip`, Conda, or an ambient environment.

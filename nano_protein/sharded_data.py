@@ -3,9 +3,10 @@
 The remote dataset is a complete reservoir.  A training run downloads only the
 smallest deterministic prefix of each source arm that satisfies its requested
 number of unique examples.  Validation shards and the release contract are
-always fetched in full.  This mirrors nanochat's operational model: immutable
-whole shards are cached locally; individual rows are not streamed over the
-network inside the training loop.
+always fetched in full.  The plan reports records, residues, and compressed
+bytes separately.  This mirrors nanochat's operational model: immutable whole
+shards are cached locally; individual rows are not streamed over the network
+inside the training loop.
 """
 
 from __future__ import annotations
@@ -118,15 +119,20 @@ def plan_shards(
 
     selected: dict[str, Any] = {}
     all_paths: list[str] = []
+    selected_records = selected_residues = selected_bytes = 0
     for source in SOURCES:
         required = math.ceil(total_training_samples * float(weights[source]) / denominator)
         available = 0
+        residues = 0
+        compressed_bytes = 0
         train: list[Mapping[str, Any]] = []
         for shard in manifest["sources"][source]["train"]:
             if available >= required:
                 break
             train.append(shard)
             available += int(shard["records"])
+            residues += int(shard["residues"])
+            compressed_bytes += int(shard["bytes"])
         if available < required:
             raise ValueError(
                 f"release has only {available:,} {source} rows, below the {required:,} budget"
@@ -134,9 +140,20 @@ def plan_shards(
         validation = list(manifest["sources"][source]["validation"])
         all_paths.extend(str(row["path"]) for row in train)
         all_paths.extend(str(row["path"]) for row in validation)
+        validation_records = sum(int(row["records"]) for row in validation)
+        validation_residues = sum(int(row["residues"]) for row in validation)
+        validation_bytes = sum(int(row["bytes"]) for row in validation)
+        selected_records += available + validation_records
+        selected_residues += residues + validation_residues
+        selected_bytes += compressed_bytes + validation_bytes
         selected[source] = {
             "required_unique_records": required,
             "selected_unique_records": available,
+            "selected_train_residues": residues,
+            "selected_train_compressed_bytes": compressed_bytes,
+            "selected_validation_records": validation_records,
+            "selected_validation_residues": validation_residues,
+            "selected_validation_compressed_bytes": validation_bytes,
             "train": train,
             "validation": validation,
         }
@@ -148,6 +165,9 @@ def plan_shards(
         "normalized_weights": {
             source: float(weights[source]) / denominator for source in SOURCES
         },
+        "selected_records_including_validation": selected_records,
+        "selected_residues_including_validation": selected_residues,
+        "selected_compressed_bytes_including_validation": selected_bytes,
         "sources": selected,
         "paths": all_paths,
     }
@@ -160,10 +180,14 @@ def fetch_release_plan(
     cache_root: Path,
     total_training_samples: int,
     weights: Mapping[str, float],
+    download_workers: int = 8,
 ) -> tuple[dict[str, Any], Path]:
     """Download the manifest, plan locally, then fetch only selected whole shards."""
 
-    from huggingface_hub import HfApi, hf_hub_download
+    from huggingface_hub import HfApi, hf_hub_download, snapshot_download
+
+    if download_workers <= 0:
+        raise ValueError("download_workers must be positive")
 
     # Resolve a branch/tag exactly once.  The manifest and every shard then come
     # from one immutable commit even if `main` changes during a long download.
@@ -180,16 +204,18 @@ def fetch_release_plan(
     )
     manifest = json.loads(manifest_path.read_text())
     plan = plan_shards(manifest, total_training_samples=total_training_samples, weights=weights)
+    snapshot_download(
+        repo_id=repo_id,
+        repo_type="dataset",
+        revision=resolved_revision,
+        allow_patterns=plan["paths"],
+        local_dir=cache_root,
+        max_workers=download_workers,
+    )
     for relative in plan["paths"]:
-        local = Path(
-            hf_hub_download(
-                repo_id=repo_id,
-                repo_type="dataset",
-                revision=resolved_revision,
-                filename=relative,
-                local_dir=cache_root,
-            )
-        )
+        local = cache_root / relative
+        if not local.is_file():
+            raise FileNotFoundError(f"selected shard was not downloaded: {relative}")
         expected = next(
             row["sha256"]
             for source in SOURCES
@@ -326,6 +352,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--cache-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--training-samples", type=int, required=True)
+    parser.add_argument("--download-workers", type=int, default=8)
     parser.add_argument(
         "--weights",
         type=_weights,
@@ -338,6 +365,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         cache_root=args.cache_root,
         total_training_samples=args.training_samples,
         weights=args.weights,
+        download_workers=args.download_workers,
     )
     release_manifest = json.loads(manifest_path.read_text())
     receipt = materialize_plan(plan, release_manifest, args.cache_root, args.output_root)

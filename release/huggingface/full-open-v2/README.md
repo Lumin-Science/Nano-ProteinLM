@@ -57,15 +57,18 @@ uv run --frozen python scripts/download_data.py \
   --repo-id LuminScience/LuminBench-Nano-ESMC \
   --revision <immutable-release-commit> \
   --training-samples 5376000 \
+  --download-workers 8 \
   --cache-root data/cache/full-open-v2 \
   --output-root data/processed/run-prefix
 ```
 
 The command fetches `manifest.json`, converts the requested total sample count
 to per-source requirements using the 36:11:54 mixture, downloads the minimum
-whole-shard prefix for each source plus every validation shard, verifies the
-checksums, and materializes the existing mmap training layout. Training is local;
-it does not make row-level network requests.
+whole-shard prefix for each source plus every validation shard in parallel,
+verifies the checksums, and materializes the existing mmap training layout.
+The sample count means sequence draws, while the plan reports proteins,
+residues, and compressed bytes separately. Training is local; it does not make
+row-level network requests.
 
 ## Parquet schema
 

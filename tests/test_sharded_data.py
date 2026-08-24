@@ -89,6 +89,15 @@ class ShardedDataTests(unittest.TestCase):
                 self.assertEqual(plan["sources"][source]["selected_unique_records"], 4)
                 self.assertEqual(len(plan["sources"][source]["train"]), 2)
                 self.assertEqual(len(plan["sources"][source]["validation"]), 1)
+            self.assertGreater(plan["selected_residues_including_validation"], 0)
+            self.assertGreater(plan["selected_compressed_bytes_including_validation"], 0)
+            self.assertEqual(
+                plan["selected_records_including_validation"],
+                sum(
+                    source["selected_unique_records"] + source["selected_validation_records"]
+                    for source in plan["sources"].values()
+                ),
+            )
 
     def test_materialized_prefix_passes_training_gate(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

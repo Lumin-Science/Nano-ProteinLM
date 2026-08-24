@@ -30,9 +30,9 @@ source of truth until evaluation, licensing, and release gates pass.
 Git and Hugging Face credentials are intentionally absent from the canonical
 training path. Publishing is a separate, reviewed operation.
 
-## Stage-1 production dataset license decision
+## Full-reservoir dataset license decision
 
-The project-authored database compilation for `stage1-300m-production-v1` is
+The project-authored database compilation for `full-open-v2` is
 published under CC BY-SA 4.0. This covers only Lumin Science's selection,
 arrangement, decontamination ledger, packing, and release metadata. It does not
 relicense third-party sequence records. UniRef90 remains CC BY 4.0, the direct
@@ -40,17 +40,18 @@ relicense third-party sequence records. UniRef90 remains CC BY 4.0, the direct
 MGnify remains under the EMBL-EBI Terms of Use plus any original-data-owner
 rights. The binary token stores are reversible sequence representations, so
 tokenization does not erase these obligations. The release card and portable
-ledgers live under `release/huggingface/stage1-300m-production-v1/`.
+ledgers live under `release/huggingface/full-open-v2/`.
 
 The canonical upload is run from the storage host with uv-managed tooling:
 
 ```bash
-HF_XET_HIGH_PERFORMANCE=1 uvx --from huggingface-hub hf upload \
-  LuminScience/LuminBench-Nano-ESMC \
-  /path/to/stage1-300m-production-v1-hf . \
-  --repo-type dataset \
-  --commit-message "Publish stage1-300m-production-v1"
+HF_XET_HIGH_PERFORMANCE=1 uv run --frozen python scripts/upload_data.py \
+  --release-root /path/to/full-open-v2 \
+  --repo-id LuminScience/LuminBench-Nano-ESMC \
+  --confirm-public-repo LuminScience/LuminBench-Nano-ESMC \
+  --num-workers 16
 ```
 
-After upload, record the returned Hugging Face commit SHA in Git before tagging
-the release.
+The command refuses an unverified release, is safe to rerun after interruption,
+and prints the resulting immutable Hugging Face commit SHA. Record that SHA in
+Git before tagging the release.
