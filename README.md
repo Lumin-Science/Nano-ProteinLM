@@ -26,11 +26,27 @@ WALLTIME_SECONDS=60 \
   bash runs/qualify.sh
 ```
 
-The canonical four-A100 training and full evaluation entrypoint is:
+The canonical four-A100 training and full evaluation entrypoint keeps the
+original checkpoint-compatible ESMC architecture:
 
 ```bash
 bash runs/stage1_300m_4xa100_4h.sh
 ```
+
+The current P@L-selected architecture is an explicit opt-in; model defaults and
+the original config are unchanged:
+
+```bash
+CONFIG=$PWD/configs/esmc_300m_stage1_4xa100_4h_best.yaml \
+TRAINING_SAMPLES=5766144 \
+OUTPUT_ROOT=$PWD/outputs/stage1-300m-4xa100-4h-best \
+  bash runs/stage1_300m_4xa100_4h.sh
+```
+
+That preset combines learned residual/input routing with parameter-free
+transformer RMSNorm, the improvements selected by frozen full-chain P@L in
+AutoResearch rounds 2 and 6. Its provenance is documented in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 Every training command fails closed unless the corpus has matching content
 hashes, exact evaluation exclusion, all-splits MMseqs2 homology exclusion, zero
@@ -105,14 +121,16 @@ frozen metrics while reducing wasted compute:
 - stores residue embeddings only for secondary-structure sequences instead of
   all P-CORE proteins;
 - runs exact P-CORE probes concurrently as bounded, restartable subprocesses;
-- shards the full 20,775-chain contact P@L evaluation across three GPUs while
+- provides a P@L-only path with 32 deterministic process shards distributed
+  over four GPUs for rapid AutoResearch selection;
+- retains the full evaluator, which shards contact P@L across three GPUs while
   P-CORE uses the fourth; and
 - merges P@L rows back into the global deterministic order before the unchanged
   5,000-replicate chain bootstrap.
 
 The implementation is in [`nano_protein/evaluate.py`](nano_protein/evaluate.py),
 [`runs/evaluate_full_parallel.sh`](runs/evaluate_full_parallel.sh), and
-[`scripts/merge_full_evaluation.py`](scripts/merge_full_evaluation.py). Contract
+[`runs/evaluate_p_at_l_parallel.sh`](runs/evaluate_p_at_l_parallel.sh). Contract
 tests cover packed embedding parity and deterministic P@L merging.
 
 ## Repository map

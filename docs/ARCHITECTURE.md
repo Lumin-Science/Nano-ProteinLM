@@ -19,8 +19,19 @@ The optimized CUDA path packs once before the transformer and scatters once
 after the language-model head, so LayerNorm and SwiGLU also skip pad rows.
 
 The frozen production ESMC-300M baseline uses 64 sequences/GPU at context 512
-without accumulation. Experimental architecture and optimizer variants are
-isolated under `dev/` or on the `auto-research` branch.
+without accumulation. `ESMCConfig` defaults remain the original released
+architecture: learned residual routing is off and transformer normalization is
+LayerNorm. `configs/esmc_300m_stage1_4xa100_4h.yaml` preserves that setting.
+
+The separately named `configs/esmc_300m_stage1_4xa100_4h_best.yaml` is the
+current opt-in P@L-selected setting. AutoResearch round 2 added one learned
+residual-stream scalar and one learned input-embedding scalar per layer; round
+6 replaced transformer attention, Q/K, FFN, and final norms with parameter-free
+RMSNorm while retaining the LayerNorm MLM head. Their two-hour frozen full-chain
+P@L scores were 0.0973519991 and 0.0987442911 respectively, versus 0.0958063581
+for the original baseline. The combined 300M variant has 332,823,484 parameters.
+Rejected or not-yet-qualified variants remain isolated under `dev/` or on the
+`auto-research` branch.
 
 ## Recorded source discrepancy
 
