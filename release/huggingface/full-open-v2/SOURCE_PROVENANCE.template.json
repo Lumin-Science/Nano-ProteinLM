@@ -1,0 +1,32 @@
+{
+  "distribution_license": {
+    "license": "CC BY-SA 4.0",
+    "scope": "Lumin Science rights in selection, arrangement, decontamination, packing, and original metadata",
+    "third_party_records_relicensed": false
+  },
+  "release": "full-open-cluster-representatives-v2",
+  "reviewed_at": "2026-08-23",
+  "schema_version": 1,
+  "source_arms": {
+    "mgnify": {
+      "governing_terms": "EMBL-EBI Terms of Use plus applicable original-owner rights",
+      "raw_bytes": 83473342442,
+      "raw_md5": "332d36d2a943bdb769237a03e050ed03",
+      "raw_url": "https://ftp.ebi.ac.uk/pub/databases/metagenomics/peptide_database/2023_02/mgy_clusters.fa.gz"
+    },
+    "omg_img": {
+      "governing_terms": "CC BY-SA 4.0 as declared by tattabio/OMG",
+      "raw_bytes": 1253813127320,
+      "raw_manifest_sha256": "bb24ae4e819c92faa20767bf9f4070dfd3e27f673e77d064b7a45cc897ebd7d0",
+      "raw_repository": "https://huggingface.co/datasets/tattabio/OMG",
+      "raw_shards": 959
+    },
+    "uniref90": {
+      "governing_terms": "CC BY 4.0",
+      "raw_bytes": 211819312677,
+      "raw_md5": "353681f464572bb199fa032f714d4669",
+      "raw_url": "https://ftp.uniprot.org/pub/databases/uniprot/previous_releases/release-2023_02/uniref/uniref2023_02.tar.gz"
+    }
+  },
+  "warning": "Template: insert the verified release-manifest SHA-256 and measured post-screen counts before publication"
+}

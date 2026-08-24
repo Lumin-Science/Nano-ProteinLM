@@ -67,5 +67,25 @@ all-splits homology contract and a matching `CORPUS_VERIFICATION.json` for every
 training configuration.
 
 Raw sources and the full 70%-cluster reservoir remain in controlled storage.
-Only the reviewed prepared subset is distributed through the separately
-versioned Hugging Face dataset repository.
+At present, only the reviewed prepared subset is distributed through the
+separately versioned Hugging Face dataset repository.
+
+## Complete sharded reservoir contract
+
+The full-reservoir v2 builder is maintained under `dev/data/` until its Q9
+homology screen and post-write verification receipts are complete. Its supported
+distribution format is source/split-partitioned Parquet with `sequence`,
+`sha256`, and `length` fields. Shards are ordered by sequence digest and sized by
+an uncompressed 256 Mi-residue ceiling.
+
+`scripts/download_data.py` resolves a requested Hugging Face revision to one
+immutable commit, reads the verified release manifest, and downloads the
+smallest whole-shard prefix for each source that covers a run's total planned
+sequence exposures. All validation shards are always included. The command then
+rehashes each row while materializing the existing mmap stores; training remains
+fully local.
+
+The v2 training gate additionally requires P@L, P-CORE v0.2, and P-CORE
+v0.5-alpha-q9 in the homology-screen receipt, including Q9 tasks blocked from
+headline scoring. A blocked benchmark is still a future evaluation candidate and
+therefore not valid pretraining data.

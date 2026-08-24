@@ -11,8 +11,10 @@ requires-python = "==3.11.*"
 license = {text = "MIT"}
 authors = [{name = "Lumin Science"}]
 dependencies = [
+  "huggingface-hub==0.35.0",
   "lmdb==2.3.0",
   "numpy==2.4.6",
+  "pyarrow==21.0.0",
   "PyYAML==6.0.3",
   "scikit-learn==1.9.0",
   "torch==2.13.0",

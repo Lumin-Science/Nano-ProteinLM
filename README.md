@@ -57,6 +57,29 @@ There is no second GitHub repository for the binary corpus. Code, builders, and
 portable manifests live here; the separately versioned data artifact belongs in
 [`LuminScience/LuminBench-Nano-ESMC`](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC).
 
+## Full-reservoir and budget-sized downloads
+
+The full release is organized as immutable, SHA-ordered Parquet shards rather
+than one large archive. A run asks for its estimated total sequence exposures;
+the downloader selects the minimum per-source shard prefixes that cover that
+budget under the configured source mixture, pins one Hugging Face commit,
+downloads every validation shard, checks all file and sequence hashes, and
+materializes the existing fast mmap layout:
+
+```bash
+uv run --frozen python scripts/download_data.py \
+  --repo-id LuminScience/LuminBench-Nano-ESMC \
+  --revision <immutable-release-commit> \
+  --training-samples 5376000 \
+  --cache-root data/cache/full-open-v2 \
+  --output-root data/processed/run-prefix
+```
+
+This is shard-level on-demand download, like nanochat—not row-level network
+streaming during training. The full raw-to-release builder, all 959 pinned OMG
+object hashes, and the measured processing report live under
+[`dev/data/`](dev/data/).
+
 ## Distribution license
 
 The released database compilation—our selection, arrangement, decontamination

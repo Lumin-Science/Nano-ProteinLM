@@ -53,10 +53,18 @@ def validate_data_manifest(
         decontamination.get("homology_contract") if isinstance(decontamination, dict) else None
     )
     thresholds = contract.get("thresholds") if isinstance(contract, dict) else None
+    protocol = contract.get("protocol") if isinstance(contract, dict) else None
+    evaluations = contract.get("evaluation_protocols") if isinstance(contract, dict) else None
+    version_specific_contract = protocol == "mmseqs2-evaluation-homology-exclusion-v1" or (
+        protocol == "mmseqs2-evaluation-homology-exclusion-v2"
+        and isinstance(evaluations, list)
+        and {"contact-p-at-l", "pcore-v0.2", "pcore-v0.5-alpha-q9"} <= set(evaluations)
+        and contract.get("blocked_benchmark_candidates_are_protected") is True
+    )
     valid_contract = (
         isinstance(contract, dict)
         and contract.get("status") == "verified"
-        and contract.get("protocol") == "mmseqs2-evaluation-homology-exclusion-v1"
+        and version_specific_contract
         and contract.get("scope_used_for_training") == "all evaluation splits"
         and isinstance(thresholds, dict)
         and thresholds.get("minimum_sequence_identity") == 0.3
@@ -77,7 +85,11 @@ def validate_data_manifest(
     verified_sources = verification.get("sources", {})
     valid_verification = (
         verification.get("status") == "verified"
-        and verification.get("protocol") == "prepared-corpus-decontamination-verification-v1"
+        and verification.get("protocol")
+        in {
+            "prepared-corpus-decontamination-verification-v1",
+            "prepared-corpus-decontamination-verification-v2",
+        }
         and verification.get("manifest_sha256") == file_sha256(manifest_path)
         and verification.get("homology_exclusion_receipt_sha256")
         == decontamination.get("homology_exclusion_receipt_sha256")

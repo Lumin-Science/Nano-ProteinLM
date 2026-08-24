@@ -11,6 +11,7 @@ This directory keeps research state out of the supported `main` surface.
 | `plans/` | benchmark formulation and validation packets |
 | `report/` | NeurIPS-style paper source |
 | `results/` | completed-run logs, reports, and compact scientific receipts |
+| `data/` | annotated raw-to-shard corpus builder, source pins, Slurm launchers, and processing report |
 
 Production code, the frozen evaluator, the four-hour baseline configuration,
 tests, and release metadata stay at the repository root. Moving a research

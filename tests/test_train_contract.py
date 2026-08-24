@@ -71,6 +71,32 @@ class TrainingDataContractTests(unittest.TestCase):
         manifest = validate_data_manifest(root)
         self.assertTrue(manifest["decontamination"]["homology_exclusion"])
 
+    def test_q9_homology_gate_requires_all_protocols_and_blocked_candidates(self) -> None:
+        temporary, root = self._data_root(True)
+        self.addCleanup(temporary.cleanup)
+        manifest_path = root / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        contract = manifest["decontamination"]["homology_contract"]
+        contract["protocol"] = "mmseqs2-evaluation-homology-exclusion-v2"
+        contract["evaluation_protocols"] = [
+            "contact-p-at-l",
+            "pcore-v0.2",
+            "pcore-v0.5-alpha-q9",
+        ]
+        contract["blocked_benchmark_candidates_are_protected"] = True
+        manifest_path.write_text(json.dumps(manifest))
+        verification_path = root / "CORPUS_VERIFICATION.json"
+        verification = json.loads(verification_path.read_text())
+        verification["protocol"] = "prepared-corpus-decontamination-verification-v2"
+        verification["manifest_sha256"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        verification_path.write_text(json.dumps(verification))
+        validate_data_manifest(root)
+
+        contract["evaluation_protocols"].remove("pcore-v0.5-alpha-q9")
+        manifest_path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(RuntimeError, "verified MMseqs2 homology"):
+            validate_data_manifest(root)
+
     def test_sixteen_hour_campaign_is_step_gated(self) -> None:
         config_path = (
             Path(__file__).resolve().parents[1]
