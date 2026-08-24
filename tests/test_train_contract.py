@@ -9,6 +9,25 @@ import yaml
 from nano_protein.train import validate_data_manifest
 
 
+def orientation_audit() -> dict[str, object]:
+    sources = ("uniref90", "mgnify", "omg_img")
+    return {
+        "protocol": "mmseqs2-search-orientation-audit-v1",
+        "all_sources_reverse_recover_every_forward_pair": True,
+        "minimum_sampled_training_sequences_per_source": 8192,
+        "sources": {
+            source: {
+                "sample_training_sequences": 8192,
+                "forward_pairs": 10,
+                "reverse_pairs": 11,
+                "forward_only_pairs": 0,
+                "reverse_recovers_every_forward_pair": True,
+            }
+            for source in sources
+        },
+    }
+
+
 class TrainingDataContractTests(unittest.TestCase):
     def _data_root(self, homology_exclusion: bool) -> tuple[tempfile.TemporaryDirectory, Path]:
         temporary = tempfile.TemporaryDirectory()
@@ -41,9 +60,11 @@ class TrainingDataContractTests(unittest.TestCase):
                                         "evaluation_coverage,training_coverage,evalue,bits"
                                     ),
                                     "sensitivity": 7.5,
+                                    "maximum_evalue": 0.001,
                                     "configured_candidate_cap": 1_000_000,
                                     "evaluation_target_sequences": 317_000,
                                     "candidate_cap_unreachable": True,
+                                    "orientation_audit": orientation_audit(),
                                 }
                             },
                             "thresholds": {
@@ -51,6 +72,7 @@ class TrainingDataContractTests(unittest.TestCase):
                                 "minimum_sequence_identity": 0.3,
                                 "minimum_query_coverage": 0.8,
                                 "minimum_target_coverage": 0.8,
+                                "maximum_evalue": 0.001,
                             },
                         },
                     }

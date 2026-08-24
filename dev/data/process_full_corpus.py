@@ -80,10 +80,12 @@ MMSEQS_THRESHOLDS = {
     "minimum_sequence_identity": 0.30,
     "minimum_query_coverage": 0.80,
     "minimum_target_coverage": 0.80,
+    "maximum_evalue": 0.001,
     "coverage_mode": 0,
     "maximum_sequences_per_query": 1_000_000,
 }
 MMSEQS_SENSITIVITY = 7.5
+ORIENTATION_AUDIT_TRAINING_SEQUENCES = 8192
 SCREEN_SEARCH_ORIENTATION = "training-representative-query-vs-evaluation-target"
 LEGACY_SEARCH_ORIENTATION = "evaluation-query-vs-training-representative-target"
 NORMALIZED_HIT_TABLE_SCHEMA = (
@@ -769,6 +771,41 @@ def _resolve_screen_target(target_db_root: Path, source: str) -> tuple[Path, Pat
     raise FileNotFoundError(f"missing {source} target database; checked {direct} and {nested}")
 
 
+def _screen_search_command(
+    *,
+    mmseqs: Path,
+    query_db: Path,
+    target_db: Path,
+    result_db: Path,
+    temporary: Path,
+    threads: int,
+) -> list[str]:
+    """Build the one frozen search command used by production and its audit."""
+
+    return [
+        str(mmseqs),
+        "search",
+        str(query_db),
+        str(target_db),
+        str(result_db),
+        str(temporary),
+        "--min-seq-id",
+        "0.30",
+        "-c",
+        "0.80",
+        "--cov-mode",
+        "0",
+        "--max-seqs",
+        "1000000",
+        "-e",
+        "0.001",
+        "-s",
+        str(MMSEQS_SENSITIVITY),
+        "--threads",
+        str(threads),
+    ]
+
+
 def _screen_commands(
     *,
     mmseqs: Path,
@@ -787,26 +824,14 @@ def _screen_commands(
     preserving the historical TSV contract consumed by both finalizers.
     """
 
-    search = [
-        str(mmseqs),
-        "search",
-        str(representative_db),
-        str(evaluation_db),
-        str(result_db),
-        str(temporary),
-        "--min-seq-id",
-        "0.30",
-        "-c",
-        "0.80",
-        "--cov-mode",
-        "0",
-        "--max-seqs",
-        "1000000",
-        "-s",
-        str(MMSEQS_SENSITIVITY),
-        "--threads",
-        str(threads),
-    ]
+    search = _screen_search_command(
+        mmseqs=mmseqs,
+        query_db=representative_db,
+        target_db=evaluation_db,
+        result_db=result_db,
+        temporary=temporary,
+        threads=threads,
+    )
     convert = [
         str(mmseqs),
         "convertalis",
@@ -816,8 +841,157 @@ def _screen_commands(
         str(hit_table),
         "--format-output",
         "target,query,pident,alnlen,tcov,qcov,evalue,bits",
+        "--threads",
+        str(threads),
     ]
     return search, convert
+
+
+def _read_normalized_pairs(path: Path) -> set[tuple[str, str]]:
+    """Read normalized evaluation/training identifiers from one MMseqs TSV."""
+
+    pairs: set[tuple[str, str]] = set()
+    with path.open() as handle:
+        for line_number, line in enumerate(handle, start=1):
+            fields = line.rstrip("\n").split("\t")
+            if len(fields) != 8:
+                raise ValueError(f"malformed orientation-audit row at {path}:{line_number}")
+            pairs.add((valid_digest(fields[0]), valid_digest(fields[1])))
+    return pairs
+
+
+def audit_screen_orientation(
+    *,
+    output: Path,
+    source: str,
+    representative_db: Path,
+    evaluation_db: Path,
+    mmseqs: Path,
+    threads: int,
+) -> dict[str, Any]:
+    """Require reverse search to recover every forward hit on a fixed sample.
+
+    The pairwise identity and dual-coverage acceptance rule is symmetric, but
+    MMseqs' seed prefilter is heuristic.  This preflight samples the first 8,192
+    database keys (representatives are SHA-ordered and therefore sequence-random),
+    runs the exact production command in both orientations, normalizes both TSVs
+    to evaluation/training order, and fails if reversal loses any forward hit.
+    It is an empirical regression gate, not a mathematical completeness proof.
+    """
+
+    audit_root = output / "audit" / evaluation_db.name / source
+    audit_root.mkdir(parents=True, exist_ok=False)
+    lookup = Path(str(representative_db) + ".lookup")
+    if not lookup.is_file():
+        raise FileNotFoundError(f"MMseqs representative lookup is missing: {lookup}")
+    keys = audit_root / "training-sample.keys"
+    selected = 0
+    with lookup.open() as source_handle, keys.open("w") as key_handle:
+        for line in source_handle:
+            if selected == ORIENTATION_AUDIT_TRAINING_SEQUENCES:
+                break
+            fields = line.rstrip("\n").split("\t")
+            if not fields or not fields[0].isdigit():
+                raise ValueError(f"malformed MMseqs lookup row: {lookup}")
+            key_handle.write(fields[0] + "\n")
+            selected += 1
+    if selected == 0:
+        raise ValueError(f"cannot audit an empty representative database: {source}")
+    sample_db = audit_root / "training-sample"
+    createsubdb_command = [
+        str(mmseqs),
+        "createsubdb",
+        str(keys),
+        str(representative_db),
+        str(sample_db),
+    ]
+    subprocess.run(createsubdb_command, check=True)
+
+    forward_result = audit_root / "forward-result"
+    forward_tmp = audit_root / "forward-tmp"
+    forward_table = audit_root / "forward-normalized.tsv"
+    forward_search = _screen_search_command(
+        mmseqs=mmseqs,
+        query_db=evaluation_db,
+        target_db=sample_db,
+        result_db=forward_result,
+        temporary=forward_tmp,
+        threads=threads,
+    )
+    forward_convert = [
+        str(mmseqs),
+        "convertalis",
+        str(evaluation_db),
+        str(sample_db),
+        str(forward_result),
+        str(forward_table),
+        "--format-output",
+        "query,target,pident,alnlen,qcov,tcov,evalue,bits",
+        "--threads",
+        str(threads),
+    ]
+    subprocess.run(forward_search, check=True)
+    subprocess.run(forward_convert, check=True)
+
+    reverse_result = audit_root / "reverse-result"
+    reverse_tmp = audit_root / "reverse-tmp"
+    reverse_table = audit_root / "reverse-normalized.tsv"
+    reverse_search, reverse_convert = _screen_commands(
+        mmseqs=mmseqs,
+        representative_db=sample_db,
+        evaluation_db=evaluation_db,
+        result_db=reverse_result,
+        temporary=reverse_tmp,
+        hit_table=reverse_table,
+        threads=threads,
+    )
+    subprocess.run(reverse_search, check=True)
+    subprocess.run(reverse_convert, check=True)
+
+    forward_pairs = _read_normalized_pairs(forward_table)
+    reverse_pairs = _read_normalized_pairs(reverse_table)
+    forward_only = forward_pairs - reverse_pairs
+    if forward_only:
+        examples = sorted(forward_only)[:5]
+        raise ValueError(
+            f"reverse MMseqs orientation lost {len(forward_only):,} forward hits for "
+            f"{source}; examples={examples}"
+        )
+    artifacts = {
+        path.name: {"bytes": path.stat().st_size, "sha256": file_hash(path)}
+        for path in (keys, forward_table, reverse_table)
+    }
+    receipt = {
+        "schema_version": 1,
+        "status": "verified",
+        "protocol": "mmseqs2-search-orientation-audit-v1",
+        "source": source,
+        "sample_selection": "first-database-keys-from-sha-ordered-representatives",
+        "sample_training_sequences": selected,
+        "forward_pairs": len(forward_pairs),
+        "reverse_pairs": len(reverse_pairs),
+        "forward_only_pairs": 0,
+        "reverse_recovers_every_forward_pair": True,
+        "commands": [
+            createsubdb_command,
+            forward_search,
+            forward_convert,
+            reverse_search,
+            reverse_convert,
+        ],
+        "artifacts": artifacts,
+    }
+    receipt_path = audit_root / "ORIENTATION_AUDIT_VERIFIED.json"
+    atomic_json(receipt_path, receipt)
+    return {
+        "receipt_relative_path": receipt_path.relative_to(output).as_posix(),
+        "receipt_sha256": file_hash(receipt_path),
+        "sample_training_sequences": selected,
+        "forward_pairs": len(forward_pairs),
+        "reverse_pairs": len(reverse_pairs),
+        "forward_only_pairs": 0,
+        "reverse_recovers_every_forward_pair": True,
+    }
 
 
 def _safe_receipt_path(root: Path, relative: object, *, label: str) -> Path:
@@ -958,6 +1132,86 @@ def _validate_search_file_bindings(root: Path, receipt: dict[str, Any]) -> None:
             "source_receipt_sha256"
         ):
             raise ValueError(f"source completion receipt changed: {source}")
+    audits = receipt.get("orientation_audits")
+    if not isinstance(audits, dict) or set(audits) != set(SOURCES):
+        raise ValueError("search receipt lacks one orientation audit per source")
+    for source in SOURCES:
+        summary = audits[source]
+        if not isinstance(summary, dict):
+            raise ValueError(f"invalid orientation-audit summary: {source}")
+        audit_path = _safe_receipt_path(
+            root,
+            summary.get("receipt_relative_path"),
+            label=f"{source} orientation audit",
+        )
+        if not audit_path.is_file() or file_hash(audit_path) != summary.get(
+            "receipt_sha256"
+        ):
+            raise ValueError(f"orientation-audit receipt changed: {source}")
+        audit = json.loads(audit_path.read_text())
+        if not (
+            audit.get("status") == "verified"
+            and audit.get("protocol") == "mmseqs2-search-orientation-audit-v1"
+            and audit.get("source") == source
+            and audit.get("reverse_recovers_every_forward_pair") is True
+            and audit.get("forward_only_pairs") == 0
+            and isinstance(audit.get("sample_training_sequences"), int)
+            and not isinstance(audit.get("sample_training_sequences"), bool)
+            and audit["sample_training_sequences"] > 0
+        ):
+            raise ValueError(f"orientation audit is not safe: {source}")
+        for key in (
+            "sample_training_sequences",
+            "forward_pairs",
+            "reverse_pairs",
+            "forward_only_pairs",
+            "reverse_recovers_every_forward_pair",
+        ):
+            if summary.get(key) != audit.get(key):
+                raise ValueError(f"orientation-audit summary changed: {source}/{key}")
+        for relative, expected in audit.get("artifacts", {}).items():
+            artifact = _safe_receipt_path(
+                audit_path.parent,
+                relative,
+                label=f"{source} orientation-audit artifact",
+            )
+            if not (
+                isinstance(expected, dict)
+                and artifact.is_file()
+                and artifact.stat().st_size == expected.get("bytes")
+                and file_hash(artifact) == expected.get("sha256")
+            ):
+                raise ValueError(f"orientation-audit artifact changed: {source}/{relative}")
+
+
+def _orientation_audit_contract(search: dict[str, Any]) -> dict[str, Any]:
+    """Summarize the already-validated per-source directionality preflights."""
+
+    audits = search["orientation_audits"]
+    return {
+        "protocol": "mmseqs2-search-orientation-audit-v1",
+        "all_sources_reverse_recover_every_forward_pair": all(
+            audits[source]["reverse_recovers_every_forward_pair"]
+            and audits[source]["forward_only_pairs"] == 0
+            for source in SOURCES
+        ),
+        "minimum_sampled_training_sequences_per_source": min(
+            int(audits[source]["sample_training_sequences"]) for source in SOURCES
+        ),
+        "sources": {
+            source: {
+                key: audits[source][key]
+                for key in (
+                    "sample_training_sequences",
+                    "forward_pairs",
+                    "reverse_pairs",
+                    "forward_only_pairs",
+                    "reverse_recovers_every_forward_pair",
+                )
+            }
+            for source in SOURCES
+        },
+    }
 
 
 def run_delta_screen(
@@ -1004,6 +1258,19 @@ def run_delta_screen(
     subprocess.run(evaluation_createdb_command, check=True)
     evaluation_database_artifacts = _database_artifacts(output, evaluation_db)
     threads_per_source = max(1, threads // len(SOURCES)) if concurrent_sources else threads
+    orientation_audits: dict[str, Any] = {}
+    for source in SOURCES:
+        representative_db, _target_verification = _resolve_screen_target(
+            target_db_root, source
+        )
+        orientation_audits[source] = audit_screen_orientation(
+            output=output,
+            source=source,
+            representative_db=representative_db,
+            evaluation_db=evaluation_db,
+            mmseqs=mmseqs,
+            threads=threads_per_source,
+        )
 
     def screen_source(source: str) -> tuple[str, list[str], dict[str, Any]]:
         representative_db, target_verification = _resolve_screen_target(target_db_root, source)
@@ -1112,6 +1379,7 @@ def run_delta_screen(
         "thresholds": MMSEQS_THRESHOLDS,
         "sensitivity": MMSEQS_SENSITIVITY,
         "candidate_cap_unreachable": True,
+        "orientation_audits": orientation_audits,
         "mmseqs_version": subprocess.run(
             [str(mmseqs), "version"], check=True, capture_output=True, text=True
         ).stdout.strip(),
@@ -1178,6 +1446,13 @@ def _validate_legacy_search_contract(
                 raise ValueError(f"parent MMseqs command omitted {option}") from error
             if observed != expected:
                 raise ValueError(f"parent MMseqs command changed {option}")
+        if "-e" in command:
+            try:
+                maximum_evalue = float(command[command.index("-e") + 1])
+            except (ValueError, IndexError) as error:
+                raise ValueError("parent MMseqs command has an invalid -e") from error
+            if maximum_evalue != MMSEQS_THRESHOLDS["maximum_evalue"]:
+                raise ValueError("parent MMseqs command changed -e")
     maximum_emitted = max(
         int(parent["sources"][source]["maximum_hits_for_one_query"]) for source in SOURCES
     )
@@ -1188,6 +1463,7 @@ def _validate_legacy_search_contract(
         "search_orientation": LEGACY_SEARCH_ORIENTATION,
         "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
         "sensitivity": MMSEQS_SENSITIVITY,
+        "maximum_evalue": MMSEQS_THRESHOLDS["maximum_evalue"],
         "configured_candidate_cap": MMSEQS_THRESHOLDS["maximum_sequences_per_query"],
         "maximum_emitted_hits_for_one_evaluation_query": maximum_emitted,
         "all_emitted_hit_counts_below_cap": True,
@@ -1277,6 +1553,7 @@ def finalize_screen(
                 query, target = valid_digest(fields[0]), valid_digest(fields[1])
                 identity = float(fields[2]) / 100.0
                 qcov, tcov = float(fields[4]), float(fields[5])
+                evalue = float(fields[6])
                 qcov = qcov / 100 if qcov > 1 else qcov
                 tcov = tcov / 100 if tcov > 1 else tcov
                 if (
@@ -1284,6 +1561,7 @@ def finalize_screen(
                     or identity + 1e-12 < 0.30
                     or qcov + 1e-12 < 0.80
                     or tcov + 1e-12 < 0.80
+                    or evalue > MMSEQS_THRESHOLDS["maximum_evalue"]
                 ):
                     raise ValueError(
                         f"MMseqs threshold/query violation at {path}:{line_number}"
@@ -1337,9 +1615,11 @@ def finalize_screen(
                 "search_orientation": SCREEN_SEARCH_ORIENTATION,
                 "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
                 "sensitivity": MMSEQS_SENSITIVITY,
+                "maximum_evalue": MMSEQS_THRESHOLDS["maximum_evalue"],
                 "configured_candidate_cap": MMSEQS_THRESHOLDS["maximum_sequences_per_query"],
                 "evaluation_target_sequences": len(queries),
                 "candidate_cap_unreachable": True,
+                "orientation_audit": _orientation_audit_contract(delta),
             },
         },
         "evaluation_all_split_queries": ledger["union_unique_sequences"],
@@ -1427,6 +1707,7 @@ def finalize_full_screen(
                 query, target = valid_digest(fields[0]), valid_digest(fields[1])
                 identity = float(fields[2]) / 100.0
                 qcov, tcov = float(fields[4]), float(fields[5])
+                evalue = float(fields[6])
                 qcov = qcov / 100 if qcov > 1 else qcov
                 tcov = tcov / 100 if tcov > 1 else tcov
                 if (
@@ -1434,6 +1715,7 @@ def finalize_full_screen(
                     or identity + 1e-12 < MMSEQS_THRESHOLDS["minimum_sequence_identity"]
                     or qcov + 1e-12 < MMSEQS_THRESHOLDS["minimum_query_coverage"]
                     or tcov + 1e-12 < MMSEQS_THRESHOLDS["minimum_target_coverage"]
+                    or evalue > MMSEQS_THRESHOLDS["maximum_evalue"]
                 ):
                     raise ValueError(
                         f"MMseqs threshold/query violation at {path}:{line_number}"
@@ -1480,9 +1762,11 @@ def finalize_full_screen(
                 "search_orientation": SCREEN_SEARCH_ORIENTATION,
                 "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
                 "sensitivity": MMSEQS_SENSITIVITY,
+                "maximum_evalue": MMSEQS_THRESHOLDS["maximum_evalue"],
                 "configured_candidate_cap": MMSEQS_THRESHOLDS["maximum_sequences_per_query"],
                 "evaluation_target_sequences": len(queries),
                 "candidate_cap_unreachable": True,
+                "orientation_audit": _orientation_audit_contract(search),
             }
         },
         "evaluation_all_split_queries": len(queries),

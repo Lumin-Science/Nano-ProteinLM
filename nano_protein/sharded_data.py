@@ -33,6 +33,7 @@ NORMALIZED_HIT_TABLE_SCHEMA = (
     "evaluation_coverage,training_coverage,evalue,bits"
 )
 MINIMUM_MMSEQS_SENSITIVITY = 7.5
+MINIMUM_ORIENTATION_AUDIT_SAMPLE = 8192
 
 
 def _canonical_json(value: object) -> str:
@@ -66,17 +67,42 @@ def validate_search_contracts(value: object) -> None:
             return False
         sensitivity = numeric(row, "sensitivity")
         targets = numeric(row, "evaluation_target_sequences")
+        audit = row.get("orientation_audit")
+        if not isinstance(audit, Mapping):
+            return False
+        audit_sample = numeric(audit, "minimum_sampled_training_sequences_per_source")
+        audit_sources = audit.get("sources")
+        audit_is_safe = bool(
+            audit.get("protocol") == "mmseqs2-search-orientation-audit-v1"
+            and audit.get("all_sources_reverse_recover_every_forward_pair") is True
+            and audit_sample is not None
+            and audit_sample >= MINIMUM_ORIENTATION_AUDIT_SAMPLE
+            and audit_sample.is_integer()
+            and isinstance(audit_sources, Mapping)
+            and set(audit_sources) == set(SOURCES)
+            and all(
+                isinstance(audit_sources[source], Mapping)
+                and audit_sources[source].get("reverse_recovers_every_forward_pair") is True
+                and audit_sources[source].get("forward_only_pairs") == 0
+                and numeric(audit_sources[source], "sample_training_sequences") is not None
+                and numeric(audit_sources[source], "sample_training_sequences")
+                >= MINIMUM_ORIENTATION_AUDIT_SAMPLE
+                for source in SOURCES
+            )
+        )
         return bool(
             row.get("query_scope") == scope
             and row.get("search_orientation") == SCREEN_SEARCH_ORIENTATION
             and row.get("normalized_hit_table_schema") == NORMALIZED_HIT_TABLE_SCHEMA
             and sensitivity is not None
             and sensitivity >= MINIMUM_MMSEQS_SENSITIVITY
+            and row.get("maximum_evalue") == 0.001
             and row.get("configured_candidate_cap") == 1_000_000
             and targets is not None
             and 0 < targets < 1_000_000
             and targets.is_integer()
             and row.get("candidate_cap_unreachable") is True
+            and audit_is_safe
         )
 
     if set(value) == {"all_evaluation_splits"} and reverse_contract(
@@ -96,6 +122,7 @@ def validate_search_contracts(value: object) -> None:
         and legacy.get("normalized_hit_table_schema") == NORMALIZED_HIT_TABLE_SCHEMA
         and legacy_sensitivity is not None
         and legacy_sensitivity >= MINIMUM_MMSEQS_SENSITIVITY
+        and legacy.get("maximum_evalue") == 0.001
         and legacy.get("configured_candidate_cap") == 1_000_000
         and maximum_emitted is not None
         and 0 <= maximum_emitted < 1_000_000
@@ -136,6 +163,7 @@ def validate_release_manifest(manifest: Mapping[str, Any]) -> None:
         thresholds.get("minimum_sequence_identity") == 0.30
         and thresholds.get("minimum_query_coverage") == 0.80
         and thresholds.get("minimum_target_coverage") == 0.80
+        and thresholds.get("maximum_evalue") == 0.001
         and thresholds.get("coverage_mode") == 0
         and decontamination.get("scope") == "all_evaluation_splits"
     ):

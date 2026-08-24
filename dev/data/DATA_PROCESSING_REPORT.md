@@ -88,7 +88,7 @@ choose probe hyperparameters, or score the final model.
 The frozen MMseqs2 criterion is:
 
 ```text
---min-seq-id 0.30 -c 0.80 --cov-mode 0 --max-seqs 1000000 -s 7.5
+--min-seq-id 0.30 -c 0.80 --cov-mode 0 --max-seqs 1000000 -e 0.001 -s 7.5
 ```
 
 `--cov-mode 0` requires the 80% coverage threshold on both query and target. The
@@ -102,7 +102,12 @@ unknown evaluation IDs and every row below identity or either coverage
 threshold. Because the target contains only 317,000 sequences for a full screen
 (200,159 for the Q9 delta), fewer than the one-million candidate cap, truncation
 is impossible by construction. Exact SHA-256 exclusions are also applied
-independently.
+independently. MMseqs does not document its heuristic prefilter as
+query/target-invariant, so each source first runs an 8,192-training-sequence
+preflight in both orientations. The reversed production search is allowed only
+when it recovers every forward-orientation pair on that SHA-ordered sample. The
+sample counts, both hit counts, commands, TSV hashes, and zero forward-only
+pairs are receipt-bound and required by the downloader and trainer.
 
 ### Verified parent screen
 
@@ -126,6 +131,9 @@ Its three source-search commands are independently bound by
 `3dbb4439699894c90046b3a6d726b8929858395bf69268c35ae31051cb2d7662`;
 the finalizer parses that ledger and requires the forward orientation, all four
 identity/coverage/cap settings, and sensitivity 7.5 for every source.
+The parent command used the recorded MMseqs v17 default E-value of 0.001; new
+searches spell `-e 0.001` explicitly and the finalizer rechecks every emitted
+value.
 
 ### Q9 extension
 
@@ -380,6 +388,8 @@ Publication is blocked unless all of the following are true:
   ledger rather than trusting an unversioned narrative;
 - all normalized hit rows meet the frozen MMseqs thresholds, and the evaluation
   target cardinality proves the candidate cap cannot be reached;
+- each source's 8,192-sequence orientation audit proves zero sampled forward
+  hits are lost by the reversed production search;
 - the final exclusion file is the exact parent-plus-delta set union;
 - all Parquet file and sequence hashes pass;
 - every released training digest has exactly one source owner;

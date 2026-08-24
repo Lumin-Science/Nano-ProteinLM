@@ -79,6 +79,7 @@ def validate_data_manifest(
         and thresholds.get("minimum_sequence_identity") == 0.3
         and thresholds.get("minimum_query_coverage") == 0.8
         and thresholds.get("minimum_target_coverage") == 0.8
+        and thresholds.get("maximum_evalue") == 0.001
         and thresholds.get("coverage_mode") == 0
         and isinstance(decontamination.get("homology_exclusion_receipt_sha256"), str)
     )

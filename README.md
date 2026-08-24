@@ -50,7 +50,8 @@ AutoResearch rounds 2 and 6. Its provenance is documented in
 
 Every training command fails closed unless the corpus has matching content
 hashes, exact evaluation exclusion, all-splits MMseqs2 homology exclusion, zero
-excluded-sequence intersections, and zero train-validation overlap.
+excluded-sequence intersections, a bidirectional sampled audit of the accelerated
+search orientation, and zero train-validation overlap.
 
 ## Complete remote reservoir, budget-sized local corpus
 

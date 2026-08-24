@@ -221,7 +221,12 @@ class FullCorpusPipelineTests(unittest.TestCase):
         self.assertEqual(
             convert[2:4], ["/data/train-representatives", "/data/evaluation-union"]
         )
-        self.assertEqual(convert[-1], "target,query,pident,alnlen,tcov,qcov,evalue,bits")
+        self.assertEqual(
+            convert[convert.index("--format-output") + 1],
+            "target,query,pident,alnlen,tcov,qcov,evalue,bits",
+        )
+        self.assertEqual(convert[convert.index("--threads") + 1], "64")
+        self.assertEqual(search[search.index("-e") + 1], "0.001")
         self.assertEqual(search[search.index("-s") + 1], "7.5")
         self.assertEqual(search[search.index("--max-seqs") + 1], "1000000")
 
@@ -681,6 +686,7 @@ class FullCorpusPipelineTests(unittest.TestCase):
             )
 
             artifacts = {}
+            orientation_audits = {}
             expected = {parent_digest}
             for index, source in enumerate(self.pipeline.SOURCES):
                 target = sequence_digest(f"target-{index}")
@@ -709,6 +715,47 @@ class FullCorpusPipelineTests(unittest.TestCase):
                         }
                     )
                 )
+                audit_root = delta / "audit/evaluation" / source
+                audit_root.mkdir(parents=True)
+                audit_artifacts = {}
+                for name in (
+                    "training-sample.keys",
+                    "forward-normalized.tsv",
+                    "reverse-normalized.tsv",
+                ):
+                    audit_artifact = audit_root / name
+                    audit_artifact.write_text("fixture\n")
+                    audit_artifacts[name] = {
+                        "bytes": audit_artifact.stat().st_size,
+                        "sha256": hashlib.sha256(audit_artifact.read_bytes()).hexdigest(),
+                    }
+                audit_receipt = audit_root / "ORIENTATION_AUDIT_VERIFIED.json"
+                audit_receipt.write_text(
+                    json.dumps(
+                        {
+                            "status": "verified",
+                            "protocol": "mmseqs2-search-orientation-audit-v1",
+                            "source": source,
+                            "sample_training_sequences": 8192,
+                            "forward_pairs": 1,
+                            "reverse_pairs": 1,
+                            "forward_only_pairs": 0,
+                            "reverse_recovers_every_forward_pair": True,
+                            "artifacts": audit_artifacts,
+                        }
+                    )
+                )
+                orientation_audits[source] = {
+                    "receipt_relative_path": str(audit_receipt.relative_to(delta)),
+                    "receipt_sha256": hashlib.sha256(
+                        audit_receipt.read_bytes()
+                    ).hexdigest(),
+                    "sample_training_sequences": 8192,
+                    "forward_pairs": 1,
+                    "reverse_pairs": 1,
+                    "forward_only_pairs": 0,
+                    "reverse_recovers_every_forward_pair": True,
+                }
             (delta / "MMSEQS_DELTA_SEARCH_COMPLETE.json").write_text(
                 json.dumps(
                     {
@@ -723,6 +770,7 @@ class FullCorpusPipelineTests(unittest.TestCase):
                         ),
                         "candidate_cap_unreachable": True,
                         "evaluation_database_artifacts": evaluation_database_artifacts,
+                        "orientation_audits": orientation_audits,
                         "query_fasta_sha256": hashlib.sha256(
                             query_fasta.read_bytes()
                         ).hexdigest(),
@@ -776,6 +824,7 @@ class FullCorpusPipelineTests(unittest.TestCase):
                         ),
                         "candidate_cap_unreachable": True,
                         "evaluation_database_artifacts": evaluation_database_artifacts,
+                        "orientation_audits": orientation_audits,
                         "query_fasta_sha256": hashlib.sha256(
                             query_fasta.read_bytes()
                         ).hexdigest(),

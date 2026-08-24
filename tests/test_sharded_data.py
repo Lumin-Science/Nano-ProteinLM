@@ -15,6 +15,24 @@ def digest(sequence: str) -> str:
     return hashlib.sha256(sequence.encode("ascii")).hexdigest()
 
 
+def orientation_audit() -> dict[str, object]:
+    return {
+        "protocol": "mmseqs2-search-orientation-audit-v1",
+        "all_sources_reverse_recover_every_forward_pair": True,
+        "minimum_sampled_training_sequences_per_source": 8192,
+        "sources": {
+            source: {
+                "sample_training_sequences": 8192,
+                "forward_pairs": 10,
+                "reverse_pairs": 11,
+                "forward_only_pairs": 0,
+                "reverse_recovers_every_forward_pair": True,
+            }
+            for source in SOURCES
+        },
+    }
+
+
 class ShardedDataTests(unittest.TestCase):
     def _release(self, root: Path) -> dict[str, object]:
         sources: dict[str, object] = {}
@@ -78,9 +96,11 @@ class ShardedDataTests(unittest.TestCase):
                             "evaluation_coverage,training_coverage,evalue,bits"
                         ),
                         "sensitivity": 7.5,
+                        "maximum_evalue": 0.001,
                         "configured_candidate_cap": 1_000_000,
                         "evaluation_target_sequences": 317_000,
                         "candidate_cap_unreachable": True,
+                        "orientation_audit": orientation_audit(),
                     }
                 },
                 "thresholds": {
@@ -88,6 +108,7 @@ class ShardedDataTests(unittest.TestCase):
                     "minimum_sequence_identity": 0.3,
                     "minimum_query_coverage": 0.8,
                     "minimum_target_coverage": 0.8,
+                    "maximum_evalue": 0.001,
                 },
             },
             "sources": sources,
@@ -133,6 +154,7 @@ class ShardedDataTests(unittest.TestCase):
                     ),
                     "normalized_hit_table_schema": normalized_schema,
                     "sensitivity": 7.5,
+                    "maximum_evalue": 0.001,
                     "configured_candidate_cap": 1_000_000,
                     "maximum_emitted_hits_for_one_evaluation_query": 441_788,
                     "all_emitted_hit_counts_below_cap": True,
@@ -145,9 +167,11 @@ class ShardedDataTests(unittest.TestCase):
                     ),
                     "normalized_hit_table_schema": normalized_schema,
                     "sensitivity": 7.5,
+                    "maximum_evalue": 0.001,
                     "configured_candidate_cap": 1_000_000,
                     "evaluation_target_sequences": 200_159,
                     "candidate_cap_unreachable": True,
+                    "orientation_audit": orientation_audit(),
                 },
             }
             plan = plan_shards(
@@ -162,6 +186,19 @@ class ShardedDataTests(unittest.TestCase):
             release = self._release(Path(raw))
             del release["decontamination"]["search_contracts"]
             with self.assertRaisesRegex(ValueError, "search provenance"):
+                plan_shards(
+                    release,
+                    total_training_samples=3,
+                    weights={source: 1.0 for source in SOURCES},
+                )
+
+    def test_budget_plan_rejects_unaudited_reverse_orientation(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            release = self._release(Path(raw))
+            del release["decontamination"]["search_contracts"][
+                "all_evaluation_splits"
+            ]["orientation_audit"]
+            with self.assertRaisesRegex(ValueError, "unknown MMseqs"):
                 plan_shards(
                     release,
                     total_training_samples=3,
