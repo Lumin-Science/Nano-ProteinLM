@@ -86,9 +86,7 @@ class FullCorpusPipelineTests(unittest.TestCase):
             omg_file.parent.mkdir(parents=True)
             omg_file.write_bytes(b"fixture")
             omg_manifest = root / "omg.tsv"
-            omg_manifest.write_text(
-                "path\tbytes\tsha256\nchunk.parquet\t7\t" + "a" * 64 + "\n"
-            )
+            omg_manifest.write_text("path\tbytes\tsha256\nchunk.parquet\t7\t" + "a" * 64 + "\n")
             verified = {"status": "verified"}
             with (
                 mock.patch.object(
@@ -230,6 +228,54 @@ class FullCorpusPipelineTests(unittest.TestCase):
         self.assertEqual(search[search.index("-s") + 1], "7.5")
         self.assertEqual(search[search.index("--max-seqs") + 1], "1000000")
 
+    def test_forward_screen_preserves_safe_evaluation_query_orientation(self) -> None:
+        search, convert = self.pipeline._forward_screen_commands(
+            mmseqs=Path("/opt/mmseqs"),
+            representative_db=Path("/data/train-representatives"),
+            evaluation_db=Path("/data/evaluation-union"),
+            result_db=Path("/work/result"),
+            temporary=Path("/work/tmp"),
+            hit_table=Path("/work/hits.tsv"),
+            threads=64,
+            force_reuse=True,
+        )
+        self.assertEqual(search[2:4], ["/data/evaluation-union", "/data/train-representatives"])
+        self.assertEqual(
+            convert[2:4], ["/data/evaluation-union", "/data/train-representatives"]
+        )
+        self.assertEqual(
+            convert[convert.index("--format-output") + 1],
+            "query,target,pident,alnlen,qcov,tcov,evalue,bits",
+        )
+        self.assertEqual(search[search.index("--force-reuse") + 1], "1")
+
+    def test_checkpoint_query_database_requires_byte_identical_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            query_fasta = root / "evaluation_q9_delta.fasta"
+            query_fasta.write_text(">sha256_" + "a" * 64 + "\nACDE\n")
+            for name in ("query", "reference"):
+                prefix = root / name
+                prefix.write_bytes(b"sequence-db")
+                Path(str(prefix) + ".dbtype").write_bytes(b"\x00\x00\x00\x00")
+                Path(str(prefix) + ".lookup").write_text("0\trow\n")
+                Path(str(prefix) + ".source").write_text("0\tevaluation_q9_delta.fasta\n")
+            receipt = self.pipeline._verify_checkpoint_evaluation_database(
+                database=root / "query",
+                reference=root / "reference",
+                expected_sequences=1,
+                query_fasta=query_fasta,
+            )
+            self.assertEqual(receipt["status"], "verified")
+            Path(str(root / "reference") + ".lookup").write_text("changed\n")
+            with self.assertRaisesRegex(ValueError, "differs from fresh reference"):
+                self.pipeline._verify_checkpoint_evaluation_database(
+                    database=root / "query",
+                    reference=root / "reference",
+                    expected_sequences=1,
+                    query_fasta=query_fasta,
+                )
+
     def test_screen_recovery_never_trusts_a_bare_interrupted_tsv(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             output = Path(raw)
@@ -252,7 +298,7 @@ class FullCorpusPipelineTests(unittest.TestCase):
             results = output / "results"
             results.mkdir()
             hit_table = results / "mgnify-recovery-01.tsv"
-            hit_table.write_text("normalized-hit\n")
+            hit_table.write_text(f"{'a' * 64}\t{'b' * 64}\t30.0\t60\t0.8\t0.8\t1e-9\t100\n")
             target_binding = {"target_database": "/verified/mgnify"}
             artifact = {
                 "relative_path": "results/mgnify-recovery-01.tsv",
@@ -659,9 +705,7 @@ class FullCorpusPipelineTests(unittest.TestCase):
                     for source in self.pipeline.SOURCES
                 )
             )
-            parent_commands_sha256 = hashlib.sha256(
-                parent_commands.read_bytes()
-            ).hexdigest()
+            parent_commands_sha256 = hashlib.sha256(parent_commands.read_bytes()).hexdigest()
             parent_search_receipt = root / "MMSEQS_SEARCH_COMPLETE.json"
             parent_search_receipt.write_text(
                 json.dumps(
@@ -769,9 +813,7 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 )
                 orientation_audits[source] = {
                     "receipt_relative_path": str(audit_receipt.relative_to(delta)),
-                    "receipt_sha256": hashlib.sha256(
-                        audit_receipt.read_bytes()
-                    ).hexdigest(),
+                    "receipt_sha256": hashlib.sha256(audit_receipt.read_bytes()).hexdigest(),
                     "sample_training_sequences": 8192,
                     "forward_pairs": 1,
                     "reverse_pairs": 1,

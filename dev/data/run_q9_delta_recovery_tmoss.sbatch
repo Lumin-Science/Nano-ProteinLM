@@ -23,12 +23,17 @@ if [[ -s "$output/MMSEQS_DELTA_SEARCH_COMPLETE.json" ]]; then
   exit 0
 fi
 
-# Completed source TSVs from the interrupted concurrent attempt are immutable
-# inputs. Only missing sources are searched, serially, at the unchanged contract.
+# Resume the scientifically safe evaluation-query orientation. The preserved
+# tmp/latest state is accepted only after db/query is byte-identical to the
+# independently recreated evaluation-recovery-01 database. Sources run
+# serially; MMseqs reuses a completed prefilter only when its own .dbtype
+# completion marker exists.
 "$uv_bin" run --with pyarrow==21.0.0 python "$pipeline" delta-screen \
   --query-fasta "$evaluation_root/evaluation_q9_delta.fasta" \
   --target-db-root "$target_db_root" \
   --output "$output" \
   --mmseqs "$mmseqs" \
   --threads 64 \
-  --resume
+  --resume \
+  --reuse-incomplete-forward-checkpoint \
+  --checkpoint-reference-db "$output/db/evaluation-recovery-01"

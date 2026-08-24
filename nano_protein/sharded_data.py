@@ -105,10 +105,33 @@ def validate_search_contracts(value: object) -> None:
             and audit_is_safe
         )
 
-    if set(value) == {"all_evaluation_splits"} and reverse_contract(
-        value["all_evaluation_splits"], scope="all-evaluation-splits"
-    ):
-        return
+    def forward_contract(row: object, *, scope: str) -> bool:
+        """Validate the safe evaluation-query orientation by its observed cap."""
+
+        if not isinstance(row, Mapping):
+            return False
+        sensitivity = numeric(row, "sensitivity")
+        maximum_emitted = numeric(row, "maximum_emitted_hits_for_one_evaluation_query")
+        return bool(
+            row.get("query_scope") == scope
+            and row.get("search_orientation") == LEGACY_SEARCH_ORIENTATION
+            and row.get("normalized_hit_table_schema") == NORMALIZED_HIT_TABLE_SCHEMA
+            and sensitivity is not None
+            and sensitivity >= MINIMUM_MMSEQS_SENSITIVITY
+            and row.get("maximum_evalue") == 0.001
+            and row.get("configured_candidate_cap") == 1_000_000
+            and maximum_emitted is not None
+            and 0 <= maximum_emitted < 1_000_000
+            and maximum_emitted.is_integer()
+            and row.get("all_emitted_hit_counts_below_cap") is True
+        )
+
+    if set(value) == {"all_evaluation_splits"}:
+        all_splits = value["all_evaluation_splits"]
+        if reverse_contract(all_splits, scope="all-evaluation-splits") or forward_contract(
+            all_splits, scope="all-evaluation-splits"
+        ):
+            return
     if set(value) != {"legacy_parent", "q9_delta"}:
         raise ValueError("release has an unknown MMseqs search-provenance topology")
     legacy = value["legacy_parent"]
@@ -134,7 +157,11 @@ def validate_search_contracts(value: object) -> None:
         legacy.get("command_receipt_sha256"), label="legacy MMseqs command receipt"
     )
     _validate_digest(legacy.get("commands_sha256"), label="legacy MMseqs commands ledger")
-    if not reverse_contract(value["q9_delta"], scope="q9-delta"):
+    q9_delta = value["q9_delta"]
+    if not (
+        reverse_contract(q9_delta, scope="q9-delta")
+        or forward_contract(q9_delta, scope="q9-delta")
+    ):
         raise ValueError("Q9 delta MMseqs search provenance is incomplete")
 
 

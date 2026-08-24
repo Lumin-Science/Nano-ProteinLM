@@ -847,6 +847,50 @@ def _screen_commands(
     return search, convert
 
 
+def _forward_screen_commands(
+    *,
+    mmseqs: Path,
+    representative_db: Path,
+    evaluation_db: Path,
+    result_db: Path,
+    temporary: Path,
+    hit_table: Path,
+    threads: int,
+    force_reuse: bool = False,
+) -> tuple[list[str], list[str]]:
+    """Build the evaluation-query search used by the original safe screen.
+
+    This orientation is more expensive because MMseqs indexes the complete
+    representative reservoir, but it does not rely on heuristic symmetry.  A
+    recovery may opt into ``--force-reuse`` only after independently proving
+    that the preserved evaluation database is byte-identical to a fresh one.
+    """
+
+    search = _screen_search_command(
+        mmseqs=mmseqs,
+        query_db=evaluation_db,
+        target_db=representative_db,
+        result_db=result_db,
+        temporary=temporary,
+        threads=threads,
+    )
+    if force_reuse:
+        search.extend(["--force-reuse", "1"])
+    convert = [
+        str(mmseqs),
+        "convertalis",
+        str(evaluation_db),
+        str(representative_db),
+        str(result_db),
+        str(hit_table),
+        "--format-output",
+        "query,target,pident,alnlen,qcov,tcov,evalue,bits",
+        "--threads",
+        str(threads),
+    ]
+    return search, convert
+
+
 def _read_normalized_pairs(path: Path) -> set[tuple[str, str]]:
     """Read normalized evaluation/training identifiers from one MMseqs TSV."""
 
@@ -1061,6 +1105,63 @@ def _database_artifacts(root: Path, database: Path) -> dict[str, dict[str, Any]]
     return artifacts
 
 
+def _database_prefix_hashes(database: Path) -> dict[str, str]:
+    """Hash one MMseqs database by suffix so independently built DBs can match."""
+
+    artifacts = {
+        path.name.removeprefix(database.name): file_hash(path)
+        for path in sorted(database.parent.glob(database.name + "*"))
+        if path.is_file()
+    }
+    if not artifacts or ".dbtype" not in artifacts:
+        raise ValueError(f"incomplete MMseqs database: {database}")
+    return artifacts
+
+
+def _verify_checkpoint_evaluation_database(
+    *, database: Path, reference: Path, expected_sequences: int, query_fasta: Path
+) -> dict[str, Any]:
+    """Bind a preserved query DB to an independently recreated frozen DB."""
+
+    observed = _database_prefix_hashes(database)
+    expected = _database_prefix_hashes(reference)
+    if observed != expected:
+        raise ValueError("checkpoint evaluation database differs from fresh reference")
+    lookup = Path(str(database) + ".lookup")
+    with lookup.open() as handle:
+        lookup_sequences = sum(1 for _ in handle)
+    if lookup_sequences != expected_sequences:
+        raise ValueError("checkpoint evaluation database has the wrong cardinality")
+    source = Path(str(database) + ".source")
+    source_names = {
+        line.rstrip("\n").split("\t", maxsplit=1)[1]
+        for line in source.read_text().splitlines()
+        if "\t" in line
+    }
+    if source_names != {query_fasta.name}:
+        raise ValueError("checkpoint evaluation database source changed")
+    return {
+        "protocol": "mmseqs2-checkpoint-evaluation-database-binding-v1",
+        "status": "verified",
+        "reference_database": str(reference.resolve()),
+        "reference_database_hashes": expected,
+        "sequences": lookup_sequences,
+    }
+
+
+def _maximum_evaluation_hits(path: Path) -> int:
+    """Return the largest emitted hit count for one normalized evaluation query."""
+
+    counts: Counter[str] = Counter()
+    with path.open() as handle:
+        for line_number, line in enumerate(handle, start=1):
+            fields = line.rstrip("\n").split("\t", maxsplit=1)
+            if len(fields) != 2:
+                raise ValueError(f"malformed normalized hit row at {path}:{line_number}")
+            counts[valid_digest(fields[0])] += 1
+    return max(counts.values(), default=0)
+
+
 def _validated_source_search(
     *,
     output: Path,
@@ -1068,6 +1169,7 @@ def _validated_source_search(
     source_receipt: Path,
     query_fasta_sha256: str,
     target_binding: dict[str, Any],
+    search_orientation: str = SCREEN_SEARCH_ORIENTATION,
 ) -> dict[str, Any]:
     """Return a reusable artifact only when an atomic source receipt proves it."""
 
@@ -1077,7 +1179,7 @@ def _validated_source_search(
         and receipt.get("protocol") == SOURCE_SEARCH_PROTOCOL
         and receipt.get("source") == source
         and receipt.get("query_fasta_sha256") == query_fasta_sha256
-        and receipt.get("search_orientation") == SCREEN_SEARCH_ORIENTATION
+        and receipt.get("search_orientation") == search_orientation
         and receipt.get("normalized_hit_table_schema") == NORMALIZED_HIT_TABLE_SCHEMA
         and receipt.get("thresholds") == MMSEQS_THRESHOLDS
         and receipt.get("sensitivity") == MMSEQS_SENSITIVITY
@@ -1092,8 +1194,13 @@ def _validated_source_search(
     hit_table = _screen_hit_path(output, source, artifact)
     if not hit_table.is_file() or file_hash(hit_table) != artifact.get("sha256"):
         raise ValueError(f"completed source-search hit table changed for {source}")
+    maximum_evaluation_hits = _maximum_evaluation_hits(hit_table)
+    if maximum_evaluation_hits >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+        raise ValueError(f"{source} reached the configured MMseqs candidate cap")
     return {
         **artifact,
+        "maximum_emitted_hits_for_one_evaluation_query": maximum_evaluation_hits,
+        "all_emitted_hit_counts_below_cap": True,
         "source_receipt": str(source_receipt.resolve()),
         "source_receipt_relative_path": source_receipt.relative_to(output).as_posix(),
         "source_receipt_sha256": file_hash(source_receipt),
@@ -1132,6 +1239,10 @@ def _validate_search_file_bindings(root: Path, receipt: dict[str, Any]) -> None:
             "source_receipt_sha256"
         ):
             raise ValueError(f"source completion receipt changed: {source}")
+    if receipt.get("search_orientation") == LEGACY_SEARCH_ORIENTATION:
+        if receipt.get("orientation_audits") not in (None, {}):
+            raise ValueError("forward search must not claim a reverse-orientation audit")
+        return
     audits = receipt.get("orientation_audits")
     if not isinstance(audits, dict) or set(audits) != set(SOURCES):
         raise ValueError("search receipt lacks one orientation audit per source")
@@ -1144,9 +1255,7 @@ def _validate_search_file_bindings(root: Path, receipt: dict[str, Any]) -> None:
             summary.get("receipt_relative_path"),
             label=f"{source} orientation audit",
         )
-        if not audit_path.is_file() or file_hash(audit_path) != summary.get(
-            "receipt_sha256"
-        ):
+        if not audit_path.is_file() or file_hash(audit_path) != summary.get("receipt_sha256"):
             raise ValueError(f"orientation-audit receipt changed: {source}")
         audit = json.loads(audit_path.read_text())
         if not (
@@ -1223,6 +1332,9 @@ def run_delta_screen(
     threads: int,
     concurrent_sources: bool = False,
     resume: bool = False,
+    forward_search: bool = True,
+    reuse_incomplete_forward_checkpoint: bool = False,
+    checkpoint_reference_db: Path | None = None,
     receipt_name: str = "MMSEQS_DELTA_SEARCH_COMPLETE.json",
     receipt_protocol: str = "mmseqs2-evaluation-delta-search-v1",
     query_scope: str = "q9-delta",
@@ -1231,6 +1343,12 @@ def run_delta_screen(
 
     if threads <= 0:
         raise ValueError("threads must be positive")
+    if reuse_incomplete_forward_checkpoint and not (resume and forward_search):
+        raise ValueError("forward checkpoint reuse requires --resume and forward search")
+    if reuse_incomplete_forward_checkpoint and checkpoint_reference_db is None:
+        raise ValueError("forward checkpoint reuse requires an independent reference DB")
+    if checkpoint_reference_db is not None and not reuse_incomplete_forward_checkpoint:
+        raise ValueError("checkpoint reference DB is only valid for checkpoint reuse")
     if resume:
         if not output.is_dir():
             raise FileNotFoundError(f"delta output does not exist for resume: {output}")
@@ -1248,29 +1366,48 @@ def run_delta_screen(
     evaluation_sequences = sum(1 for _header, _sequence in iter_fasta(query_fasta))
     if not 0 < evaluation_sequences < MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
         raise ValueError("evaluation target cardinality does not prove max-seqs is unreachable")
-    evaluation_db = _new_evaluation_database(output, resume=resume)
-    evaluation_createdb_command = [
-        str(mmseqs),
-        "createdb",
-        str(query_fasta),
-        str(evaluation_db),
-    ]
-    subprocess.run(evaluation_createdb_command, check=True)
+    checkpoint_binding: dict[str, Any] | None = None
+    if reuse_incomplete_forward_checkpoint:
+        evaluation_db = output / "db/query"
+        checkpoint_binding = _verify_checkpoint_evaluation_database(
+            database=evaluation_db,
+            reference=checkpoint_reference_db,
+            expected_sequences=evaluation_sequences,
+            query_fasta=query_fasta,
+        )
+        evaluation_createdb_command = [
+            "reuse-byte-identical-checkpoint-evaluation-database",
+            str(evaluation_db),
+            str(checkpoint_reference_db),
+        ]
+    else:
+        evaluation_db = _new_evaluation_database(output, resume=resume)
+        evaluation_createdb_command = [
+            str(mmseqs),
+            "createdb",
+            str(query_fasta),
+            str(evaluation_db),
+        ]
+        subprocess.run(evaluation_createdb_command, check=True)
     evaluation_database_artifacts = _database_artifacts(output, evaluation_db)
     threads_per_source = max(1, threads // len(SOURCES)) if concurrent_sources else threads
     orientation_audits: dict[str, Any] = {}
-    for source in SOURCES:
-        representative_db, _target_verification = _resolve_screen_target(
-            target_db_root, source
-        )
-        orientation_audits[source] = audit_screen_orientation(
-            output=output,
-            source=source,
-            representative_db=representative_db,
-            evaluation_db=evaluation_db,
-            mmseqs=mmseqs,
-            threads=threads_per_source,
-        )
+    search_orientation = (
+        LEGACY_SEARCH_ORIENTATION if forward_search else SCREEN_SEARCH_ORIENTATION
+    )
+    if not forward_search:
+        for source in SOURCES:
+            representative_db, _target_verification = _resolve_screen_target(
+                target_db_root, source
+            )
+            orientation_audits[source] = audit_screen_orientation(
+                output=output,
+                source=source,
+                representative_db=representative_db,
+                evaluation_db=evaluation_db,
+                mmseqs=mmseqs,
+                threads=threads_per_source,
+            )
 
     def screen_source(source: str) -> tuple[str, list[str], dict[str, Any]]:
         representative_db, target_verification = _resolve_screen_target(target_db_root, source)
@@ -1297,28 +1434,64 @@ def run_delta_screen(
                 source_receipt=source_receipt,
                 query_fasta_sha256=query_fasta_sha256,
                 target_binding=target_binding,
+                search_orientation=search_orientation,
             )
             return source, ["reuse-completed-source-receipt", source], artifact
 
-        result, temporary, hit_table = _next_screen_attempt(output, source, resume=resume)
-        search_command, convert_command = _screen_commands(
-            mmseqs=mmseqs,
-            representative_db=representative_db,
-            evaluation_db=evaluation_db,
-            result_db=result,
-            temporary=temporary,
-            hit_table=hit_table,
-            threads=threads_per_source,
-        )
-        subprocess.run(search_command, check=True)
+        reuse_completed_result_database = False
+        if reuse_incomplete_forward_checkpoint:
+            result = output / f"results/{source}"
+            temporary = output / f"tmp/{source}"
+            hit_table = output / f"results/{source}.tsv"
+            if not temporary.is_dir():
+                raise FileNotFoundError(f"missing preserved MMseqs checkpoint: {source}")
+            if hit_table.exists():
+                attempt = 1
+                while True:
+                    candidate = output / f"results/{source}-convert-recovery-{attempt:02d}.tsv"
+                    if not candidate.exists():
+                        hit_table = candidate
+                        break
+                    attempt += 1
+            reuse_completed_result_database = result.with_suffix(".dbtype").is_file()
+        else:
+            result, temporary, hit_table = _next_screen_attempt(output, source, resume=resume)
+        if forward_search:
+            search_command, convert_command = _forward_screen_commands(
+                mmseqs=mmseqs,
+                representative_db=representative_db,
+                evaluation_db=evaluation_db,
+                result_db=result,
+                temporary=temporary,
+                hit_table=hit_table,
+                threads=threads_per_source,
+                force_reuse=reuse_incomplete_forward_checkpoint,
+            )
+        else:
+            search_command, convert_command = _screen_commands(
+                mmseqs=mmseqs,
+                representative_db=representative_db,
+                evaluation_db=evaluation_db,
+                result_db=result,
+                temporary=temporary,
+                hit_table=hit_table,
+                threads=threads_per_source,
+            )
+        if not reuse_completed_result_database:
+            subprocess.run(search_command, check=True)
         subprocess.run(convert_command, check=True)
+        maximum_evaluation_hits = _maximum_evaluation_hits(hit_table)
+        if maximum_evaluation_hits >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+            raise ValueError(f"{source} reached the configured MMseqs candidate cap")
         artifact = {
             "path": str(hit_table.resolve()),
             "relative_path": hit_table.relative_to(output).as_posix(),
             "bytes": hit_table.stat().st_size,
             "sha256": file_hash(hit_table),
-            "search_orientation": SCREEN_SEARCH_ORIENTATION,
+            "search_orientation": search_orientation,
             "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
+            "maximum_emitted_hits_for_one_evaluation_query": maximum_evaluation_hits,
+            "all_emitted_hit_counts_below_cap": True,
             **target_binding,
         }
         source_report = {
@@ -1328,11 +1501,12 @@ def run_delta_screen(
             "source": source,
             "query_fasta_sha256": query_fasta_sha256,
             "evaluation_target_sequences": evaluation_sequences,
-            "search_orientation": SCREEN_SEARCH_ORIENTATION,
+            "search_orientation": search_orientation,
             "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
             "thresholds": MMSEQS_THRESHOLDS,
             "sensitivity": MMSEQS_SENSITIVITY,
             "commands": [search_command, convert_command],
+            "reused_completed_result_database": reuse_completed_result_database,
             "artifact": artifact,
         }
         atomic_json(source_receipt, source_report)
@@ -1371,21 +1545,28 @@ def run_delta_screen(
         "evaluation_database": evaluation_db.relative_to(output).as_posix(),
         "evaluation_database_artifacts": evaluation_database_artifacts,
         "evaluation_createdb_command": evaluation_createdb_command,
-        "search_orientation": SCREEN_SEARCH_ORIENTATION,
+        "search_orientation": search_orientation,
         "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
         "target_scope": (
             "complete 70%-identity representative FASTAs via verified parent databases"
         ),
         "thresholds": MMSEQS_THRESHOLDS,
         "sensitivity": MMSEQS_SENSITIVITY,
-        "candidate_cap_unreachable": True,
         "orientation_audits": orientation_audits,
+        "candidate_cap_unreachable": not forward_search,
+        "maximum_emitted_hits_for_one_evaluation_query": max(
+            int(artifact["maximum_emitted_hits_for_one_evaluation_query"])
+            for artifact in artifacts.values()
+        ),
+        "all_emitted_hit_counts_below_cap": True,
         "mmseqs_version": subprocess.run(
             [str(mmseqs), "version"], check=True, capture_output=True, text=True
         ).stdout.strip(),
         "total_threads": threads,
         "concurrent_sources": concurrent_sources,
         "resumed_after_interrupted_attempt": resume,
+        "reused_incomplete_forward_checkpoint": reuse_incomplete_forward_checkpoint,
+        "checkpoint_evaluation_database_binding": checkpoint_binding,
         "threads_per_source": threads_per_source,
         "commands": sorted(commands, key=canonical_json),
         "artifacts": dict(sorted(artifacts.items())),
@@ -1418,9 +1599,7 @@ def _validate_legacy_search_contract(
         "status": "complete",
         "protocol": "mmseqs2-evaluation-homology-search-v1",
         "mmseqs_version": parent.get("mmseqs_version"),
-        "evaluation_split_ledger_sha256": parent.get(
-            "evaluation_split_ledger_sha256"
-        ),
+        "evaluation_split_ledger_sha256": parent.get("evaluation_split_ledger_sha256"),
         "threads": 64,
         "maximum_sequences_per_query": 1_000_000,
         "minimum_sequence_identity": 0.3,
@@ -1445,9 +1624,7 @@ def _validate_legacy_search_contract(
     searches = [
         command
         for command in parsed_lines
-        if len(command) > 1
-        and Path(command[0]).name == "mmseqs"
-        and command[1] == "search"
+        if len(command) > 1 and Path(command[0]).name == "mmseqs" and command[1] == "search"
     ]
     if len(searches) != len(SOURCES):
         raise ValueError("parent MMseqs command receipt lacks one search per source")
@@ -1538,15 +1715,27 @@ def finalize_screen(
     if file_hash(parent_exclusions) != parent["excluded_digest_file_sha256"]:
         raise ValueError("parent exclusion file changed")
     delta = json.loads((delta_root / "MMSEQS_DELTA_SEARCH_COMPLETE.json").read_text())
+    delta_orientation = delta.get("search_orientation")
+    if delta_orientation == SCREEN_SEARCH_ORIENTATION:
+        orientation_contract_valid = delta.get("candidate_cap_unreachable") is True
+    elif delta_orientation == LEGACY_SEARCH_ORIENTATION:
+        maximum_emitted = delta.get("maximum_emitted_hits_for_one_evaluation_query")
+        orientation_contract_valid = bool(
+            isinstance(maximum_emitted, int)
+            and not isinstance(maximum_emitted, bool)
+            and 0 <= maximum_emitted < MMSEQS_THRESHOLDS["maximum_sequences_per_query"]
+            and delta.get("all_emitted_hit_counts_below_cap") is True
+        )
+    else:
+        orientation_contract_valid = False
     if (
         delta.get("status") != "complete"
         or delta.get("protocol") != "mmseqs2-evaluation-delta-search-v1"
         or delta.get("query_scope") != "q9-delta"
         or delta.get("thresholds") != MMSEQS_THRESHOLDS
         or delta.get("sensitivity") != MMSEQS_SENSITIVITY
-        or delta.get("search_orientation") != SCREEN_SEARCH_ORIENTATION
         or delta.get("normalized_hit_table_schema") != NORMALIZED_HIT_TABLE_SCHEMA
-        or delta.get("candidate_cap_unreachable") is not True
+        or not orientation_contract_valid
     ):
         raise ValueError("delta search receipt is incomplete or uses different thresholds")
     _validate_search_file_bindings(delta_root, delta)
@@ -1570,7 +1759,7 @@ def finalize_screen(
         if file_hash(path) != artifact["sha256"]:
             raise ValueError(f"delta hit file changed: {source}")
         if (
-            artifact.get("search_orientation") != SCREEN_SEARCH_ORIENTATION
+            artifact.get("search_orientation") != delta_orientation
             or artifact.get("normalized_hit_table_schema") != NORMALIZED_HIT_TABLE_SCHEMA
         ):
             raise ValueError(f"delta hit orientation changed: {source}")
@@ -1607,8 +1796,14 @@ def finalize_screen(
                 targets.add(target)
                 rows += 1
         maximum_training_hits = max(per_training.values(), default=0)
-        if len(queries) >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+        maximum_evaluation_hits = max(per_evaluation.values(), default=0)
+        if (
+            delta_orientation == SCREEN_SEARCH_ORIENTATION
+            and len(queries) >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]
+        ):
             raise ValueError(f"{source} target cardinality can reach the max-seqs cap")
+        if maximum_evaluation_hits >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+            raise ValueError(f"{source} reached the configured MMseqs candidate cap")
         verification = json.loads((cluster_root / source / "verification.json").read_text())
         if (
             parent.get("sources", {}).get(source, {}).get("representative_fasta_sha256")
@@ -1619,11 +1814,12 @@ def finalize_screen(
             "alignment_rows": rows,
             "matched_queries": len(per_evaluation),
             "delta_excluded_representatives": len(targets),
-            "maximum_excluded_representatives_for_one_evaluation_query": max(
-                per_evaluation.values(), default=0
+            "maximum_excluded_representatives_for_one_evaluation_query": (
+                maximum_evaluation_hits
             ),
             "maximum_evaluation_hits_for_one_training_query": maximum_training_hits,
-            "candidate_cap_unreachable": True,
+            "candidate_cap_unreachable": (delta_orientation == SCREEN_SEARCH_ORIENTATION),
+            "all_emitted_hit_counts_below_cap": True,
             "complete_representative_sequences": verification["clusters"],
             "representative_fasta_sha256": verification["representative_fasta_sha256"],
             "target_database": str(expected_target),
@@ -1648,14 +1844,26 @@ def finalize_screen(
             "legacy_parent": legacy_search_contract,
             "q9_delta": {
                 "query_scope": "q9-delta",
-                "search_orientation": SCREEN_SEARCH_ORIENTATION,
+                "search_orientation": delta_orientation,
                 "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
                 "sensitivity": MMSEQS_SENSITIVITY,
                 "maximum_evalue": MMSEQS_THRESHOLDS["maximum_evalue"],
                 "configured_candidate_cap": MMSEQS_THRESHOLDS["maximum_sequences_per_query"],
-                "evaluation_target_sequences": len(queries),
-                "candidate_cap_unreachable": True,
-                "orientation_audit": _orientation_audit_contract(delta),
+                **(
+                    {
+                        "evaluation_target_sequences": len(queries),
+                        "candidate_cap_unreachable": True,
+                        "orientation_audit": _orientation_audit_contract(delta),
+                    }
+                    if delta_orientation == SCREEN_SEARCH_ORIENTATION
+                    else {
+                        "maximum_emitted_hits_for_one_evaluation_query": max(
+                            report["maximum_excluded_representatives_for_one_evaluation_query"]
+                            for report in source_reports.values()
+                        ),
+                        "all_emitted_hit_counts_below_cap": True,
+                    }
+                ),
             },
         },
         "evaluation_all_split_queries": ledger["union_unique_sequences"],
@@ -1687,15 +1895,27 @@ def finalize_full_screen(
 
     search_path = search_root / "MMSEQS_FULL_SEARCH_COMPLETE.json"
     search = json.loads(search_path.read_text())
+    search_orientation = search.get("search_orientation")
+    if search_orientation == SCREEN_SEARCH_ORIENTATION:
+        orientation_contract_valid = search.get("candidate_cap_unreachable") is True
+    elif search_orientation == LEGACY_SEARCH_ORIENTATION:
+        maximum_emitted = search.get("maximum_emitted_hits_for_one_evaluation_query")
+        orientation_contract_valid = bool(
+            isinstance(maximum_emitted, int)
+            and not isinstance(maximum_emitted, bool)
+            and 0 <= maximum_emitted < MMSEQS_THRESHOLDS["maximum_sequences_per_query"]
+            and search.get("all_emitted_hit_counts_below_cap") is True
+        )
+    else:
+        orientation_contract_valid = False
     if (
         search.get("status") != "complete"
         or search.get("protocol") != "mmseqs2-evaluation-full-search-v1"
         or search.get("query_scope") != "all-evaluation-splits"
         or search.get("thresholds") != MMSEQS_THRESHOLDS
         or search.get("sensitivity") != MMSEQS_SENSITIVITY
-        or search.get("search_orientation") != SCREEN_SEARCH_ORIENTATION
         or search.get("normalized_hit_table_schema") != NORMALIZED_HIT_TABLE_SCHEMA
-        or search.get("candidate_cap_unreachable") is not True
+        or not orientation_contract_valid
     ):
         raise ValueError("full homology search receipt is incomplete or changed")
     _validate_search_file_bindings(search_root, search)
@@ -1716,7 +1936,7 @@ def finalize_full_screen(
         if file_hash(path) != artifact["sha256"]:
             raise ValueError(f"full-screen hit file changed: {source}")
         if (
-            artifact.get("search_orientation") != SCREEN_SEARCH_ORIENTATION
+            artifact.get("search_orientation") != search_orientation
             or artifact.get("normalized_hit_table_schema") != NORMALIZED_HIT_TABLE_SCHEMA
         ):
             raise ValueError(f"full-screen hit orientation changed: {source}")
@@ -1761,17 +1981,24 @@ def finalize_full_screen(
                 targets.add(target)
                 rows += 1
         maximum_training_hits = max(per_training.values(), default=0)
-        if len(queries) >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+        maximum_evaluation_hits = max(per_evaluation.values(), default=0)
+        if (
+            search_orientation == SCREEN_SEARCH_ORIENTATION
+            and len(queries) >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]
+        ):
             raise ValueError(f"{source} target cardinality can reach the max-seqs cap")
+        if maximum_evaluation_hits >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+            raise ValueError(f"{source} reached the configured MMseqs candidate cap")
         source_reports[source] = {
             "alignment_rows": rows,
             "matched_queries": len(per_evaluation),
             "excluded_representatives": len(targets),
-            "maximum_excluded_representatives_for_one_evaluation_query": max(
-                per_evaluation.values(), default=0
+            "maximum_excluded_representatives_for_one_evaluation_query": (
+                maximum_evaluation_hits
             ),
             "maximum_evaluation_hits_for_one_training_query": maximum_training_hits,
-            "candidate_cap_unreachable": True,
+            "candidate_cap_unreachable": (search_orientation == SCREEN_SEARCH_ORIENTATION),
+            "all_emitted_hit_counts_below_cap": True,
             "complete_representative_sequences": verification["clusters"],
             "representative_fasta_sha256": verification["representative_fasta_sha256"],
             "target_database": str(expected_target),
@@ -1795,14 +2022,26 @@ def finalize_full_screen(
         "search_contracts": {
             "all_evaluation_splits": {
                 "query_scope": "all-evaluation-splits",
-                "search_orientation": SCREEN_SEARCH_ORIENTATION,
+                "search_orientation": search_orientation,
                 "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
                 "sensitivity": MMSEQS_SENSITIVITY,
                 "maximum_evalue": MMSEQS_THRESHOLDS["maximum_evalue"],
                 "configured_candidate_cap": MMSEQS_THRESHOLDS["maximum_sequences_per_query"],
-                "evaluation_target_sequences": len(queries),
-                "candidate_cap_unreachable": True,
-                "orientation_audit": _orientation_audit_contract(search),
+                **(
+                    {
+                        "evaluation_target_sequences": len(queries),
+                        "candidate_cap_unreachable": True,
+                        "orientation_audit": _orientation_audit_contract(search),
+                    }
+                    if search_orientation == SCREEN_SEARCH_ORIENTATION
+                    else {
+                        "maximum_emitted_hits_for_one_evaluation_query": max(
+                            report["maximum_excluded_representatives_for_one_evaluation_query"]
+                            for report in source_reports.values()
+                        ),
+                        "all_emitted_hit_counts_below_cap": True,
+                    }
+                ),
             }
         },
         "evaluation_all_split_queries": len(queries),
@@ -2697,9 +2936,7 @@ def reproduce_full_corpus(
         "validation_per_source": validation_per_source,
         "shard_residues": shard_residues,
         "raw_download_status": download_receipt["status"],
-        "normalization_status": {
-            source: normalization[source]["status"] for source in SOURCES
-        },
+        "normalization_status": {source: normalization[source]["status"] for source in SOURCES},
         "deduplication_status": deduplication["status"],
         "clustering_status": {source: clustering[source]["status"] for source in SOURCES},
         "evaluation_union_unique_sequences": evaluation["union_unique_sequences"],
@@ -2784,6 +3021,16 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--resume",
         action="store_true",
         help="reuse receipt-bound source searches and retry missing sources create-once",
+    )
+    screen.add_argument(
+        "--reuse-incomplete-forward-checkpoint",
+        action="store_true",
+        help="resume the preserved forward MMseqs tmp/latest state after DB verification",
+    )
+    screen.add_argument(
+        "--checkpoint-reference-db",
+        type=Path,
+        help="independently recreated evaluation DB matching the preserved checkpoint DB",
     )
     full_screen = sub.add_parser("full-screen")
     full_screen.add_argument("--query-fasta", type=Path, required=True)
@@ -2876,6 +3123,9 @@ def main(argv: Sequence[str] | None = None) -> None:
             threads=args.threads,
             concurrent_sources=args.concurrent_sources,
             resume=args.resume,
+            forward_search=True,
+            reuse_incomplete_forward_checkpoint=(args.reuse_incomplete_forward_checkpoint),
+            checkpoint_reference_db=args.checkpoint_reference_db,
         )
     elif args.command == "full-screen":
         result = run_delta_screen(
@@ -2886,6 +3136,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             threads=args.threads,
             concurrent_sources=False,
             resume=args.resume,
+            forward_search=True,
             receipt_name="MMSEQS_FULL_SEARCH_COMPLETE.json",
             receipt_protocol="mmseqs2-evaluation-full-search-v1",
             query_scope="all-evaluation-splits",

@@ -182,6 +182,48 @@ class ShardedDataTests(unittest.TestCase):
             )
             self.assertEqual(plan["total_training_samples"], 3)
 
+    def test_budget_plan_accepts_forward_q9_search_with_observed_cap_proof(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            release = self._release(Path(raw))
+            normalized_schema = (
+                "evaluation_sha256,training_sha256,pident,alnlen,"
+                "evaluation_coverage,training_coverage,evalue,bits"
+            )
+            release["decontamination"]["search_contracts"] = {
+                "legacy_parent": {
+                    "query_scope": "p-at-l-and-pcore-v0.2-all-splits",
+                    "search_orientation": (
+                        "evaluation-query-vs-training-representative-target"
+                    ),
+                    "normalized_hit_table_schema": normalized_schema,
+                    "sensitivity": 7.5,
+                    "maximum_evalue": 0.001,
+                    "configured_candidate_cap": 1_000_000,
+                    "maximum_emitted_hits_for_one_evaluation_query": 441_788,
+                    "all_emitted_hit_counts_below_cap": True,
+                    "command_receipt_sha256": "c" * 64,
+                    "commands_sha256": "d" * 64,
+                },
+                "q9_delta": {
+                    "query_scope": "q9-delta",
+                    "search_orientation": (
+                        "evaluation-query-vs-training-representative-target"
+                    ),
+                    "normalized_hit_table_schema": normalized_schema,
+                    "sensitivity": 7.5,
+                    "maximum_evalue": 0.001,
+                    "configured_candidate_cap": 1_000_000,
+                    "maximum_emitted_hits_for_one_evaluation_query": 91_337,
+                    "all_emitted_hit_counts_below_cap": True,
+                },
+            }
+            plan = plan_shards(
+                release,
+                total_training_samples=3,
+                weights={source: 1.0 for source in SOURCES},
+            )
+            self.assertEqual(plan["total_training_samples"], 3)
+
     def test_budget_plan_rejects_missing_search_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             release = self._release(Path(raw))
@@ -196,9 +238,9 @@ class ShardedDataTests(unittest.TestCase):
     def test_budget_plan_rejects_unaudited_reverse_orientation(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             release = self._release(Path(raw))
-            del release["decontamination"]["search_contracts"][
-                "all_evaluation_splits"
-            ]["orientation_audit"]
+            del release["decontamination"]["search_contracts"]["all_evaluation_splits"][
+                "orientation_audit"
+            ]
             with self.assertRaisesRegex(ValueError, "unknown MMseqs"):
                 plan_shards(
                     release,

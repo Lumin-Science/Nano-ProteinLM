@@ -24,7 +24,8 @@ representative reservoir after length filtering and decontamination. The older
 predates the Q9 evaluation-union screen.
 
 Preparation verifies sequence hashes, excludes exact evaluation matches, runs
-the symmetric all-splits MMseqs2 screen, applies the 32--16,384-residue filter,
+the safe evaluation-query all-splits MMseqs2 screen, applies the
+32--16,384-residue filter,
 constructs globally disjoint validation sets, and independently re-reads every
 released row. The homology contract is 30% identity with both 80% query and 80%
 target coverage. It protects contact P@L, P-CORE v0.2, and every P-CORE

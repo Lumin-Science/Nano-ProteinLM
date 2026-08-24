@@ -92,22 +92,21 @@ The frozen MMseqs2 criterion is:
 ```
 
 `--cov-mode 0` requires the 80% coverage threshold on both query and target. The
-production search places each complete training representative on the MMseqs
-query side and the frozen evaluation union on the indexed target side. This
-orientation avoids materializing millions of training hits for one common
-evaluation sequence. Identity and dual coverage are symmetric; `convertalis`
-swaps `query,target` and `qcov,tcov` back to the historical
-evaluation-to-training TSV schema before verification. The finalizer rejects
-unknown evaluation IDs and every row below identity or either coverage
-threshold. Because the target contains only 317,000 sequences for a full screen
-(200,159 for the Q9 delta), fewer than the one-million candidate cap, truncation
-is impossible by construction. Exact SHA-256 exclusions are also applied
-independently. MMseqs does not document its heuristic prefilter as
-query/target-invariant, so each source first runs an 8,192-training-sequence
-preflight in both orientations. The reversed production search is allowed only
-when it recovers every forward-orientation pair on that SHA-ordered sample. The
-sample counts, both hit counts, commands, TSV hashes, and zero forward-only
-pairs are receipt-bound and required by the downloader and trainer.
+production search keeps the frozen evaluation union on the MMseqs query side
+and each complete training representative database on the target side. The
+finalizer rejects unknown evaluation IDs and every row below identity, either
+coverage threshold, or the E-value threshold. It also counts emitted hits per
+evaluation query and rejects any source that reaches the one-million candidate
+cap. Exact SHA-256 exclusions are applied independently.
+
+The apparently cheaper reversed orientation is not used. On an 8,192-training
+sequence by 200,159-evaluation-sequence audit, the default reversed search lost
+328 of 5,005 forward pairs. Increasing sensitivity to 12 still lost 325 pairs;
+disabling composition-bias correction reduced but did not eliminate the loss
+(71 forward-only pairs). Identity and dual coverage are symmetric, but the
+MMseqs heuristic prefilter is not query/target invariant. The release contract
+therefore accepts a reversed search only with a receipt proving zero
+forward-only pairs, which these audits cannot provide.
 
 ### Verified parent screen
 
@@ -168,18 +167,17 @@ the parent run. Its validated training-digest union is externalized with the
 immutable parent exclusions, preserving the same identity and dual-coverage
 relation without repeating the 116,841-sequence parent work.
 
-Full delta screen execution: attempt `10096` used the old evaluation-query
-orientation and concurrent source indexes. MGnify was killed, the two survivors
-were still in prefilter at the 2026-08-24 audit, and MMseqs estimated that one
-prefilter could require up to 7 TB of disk. No bare TSV from that interrupted
-attempt is considered complete. Recovery job `10098` uses the reversed,
-source-serial search above. A source becomes reusable only after an atomic
-sidecar binds the evaluation FASTA, representative database, exact command,
-normalized TSV size, and SHA-256; later retries retain failed attempts and reuse
-only such receipt-backed completions. Verified sharding (`10099`) and metadata
-staging (`10100`) remain dependency-gated on recovery. Final measured
-hit/exclusion counts are written here only after
-`HOMOLOGY_EXCLUSION_VERIFIED.json` exists.
+The interrupted forward attempt left 390 GiB of MMseqs temporary state. The
+UniRef90 prefilter has MMseqs's completed `.dbtype` marker; MGnify and OMG/IMG
+contain only incomplete fragments and are not treated as completed work. The
+recovery first proves that the preserved `db/query` is byte-identical to an
+independently recreated database from the frozen Q9 FASTA, then invokes the
+same safe orientation serially with MMseqs checkpoint reuse. MMseqs may skip a
+stage only when its own completion marker exists. Each completed source is then
+bound by an atomic sidecar to the evaluation FASTA, representative database,
+exact command, normalized TSV size, SHA-256, and measured maximum hits per
+evaluation query. Final measured hit/exclusion counts are written here only
+after `HOMOLOGY_EXCLUSION_VERIFIED.json` exists.
 
 ## 4. Final train/validation selection and sharding
 
