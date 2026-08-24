@@ -914,7 +914,12 @@ def finalize_screen(
     if file_hash(parent_exclusions) != parent["excluded_digest_file_sha256"]:
         raise ValueError("parent exclusion file changed")
     delta = json.loads((delta_root / "MMSEQS_DELTA_SEARCH_COMPLETE.json").read_text())
-    if delta.get("status") != "complete" or delta.get("thresholds") != MMSEQS_THRESHOLDS:
+    if (
+        delta.get("status") != "complete"
+        or delta.get("protocol") != "mmseqs2-evaluation-delta-search-v1"
+        or delta.get("query_scope") != "q9-delta"
+        or delta.get("thresholds") != MMSEQS_THRESHOLDS
+    ):
         raise ValueError("delta search receipt is incomplete or uses different thresholds")
     ledger = json.loads((evaluation_root / "EVALUATION_SPLIT_LEDGER.json").read_text())
     if (
@@ -931,9 +936,13 @@ def finalize_screen(
     source_reports: dict[str, Any] = {}
     delta_targets: set[str] = set()
     for source in SOURCES:
+        artifact = delta["artifacts"][source]
         path = delta_root / f"results/{source}.tsv"
-        if file_hash(path) != delta["artifacts"][source]["sha256"]:
+        if file_hash(path) != artifact["sha256"]:
             raise ValueError(f"delta hit file changed: {source}")
+        expected_target = (parent_receipt.parent / "db" / source).resolve()
+        if Path(artifact.get("target_database", "")).resolve() != expected_target:
+            raise ValueError(f"delta search did not reuse the parent {source} target database")
         per_query: Counter[str] = Counter()
         targets: set[str] = set()
         rows = 0
@@ -975,6 +984,7 @@ def finalize_screen(
             "maximum_hits_for_one_query": largest,
             "complete_representative_sequences": verification["clusters"],
             "representative_fasta_sha256": verification["representative_fasta_sha256"],
+            "target_database": str(expected_target),
         }
         delta_targets.update(targets)
     union.update(delta_targets)
@@ -1044,6 +1054,9 @@ def finalize_full_screen(
         path = search_root / f"results/{source}.tsv"
         if file_hash(path) != artifact["sha256"]:
             raise ValueError(f"full-screen hit file changed: {source}")
+        expected_target = (cluster_root / source / "db/representatives").resolve()
+        if Path(artifact.get("target_database", "")).resolve() != expected_target:
+            raise ValueError(f"full screen did not use the fresh {source} target database")
         verification_path = cluster_root / source / "verification.json"
         verification = json.loads(verification_path.read_text())
         if (
@@ -1087,6 +1100,7 @@ def finalize_full_screen(
             "maximum_hits_for_one_query": largest,
             "complete_representative_sequences": verification["clusters"],
             "representative_fasta_sha256": verification["representative_fasta_sha256"],
+            "target_database": str(expected_target),
         }
         targets_union.update(targets)
 

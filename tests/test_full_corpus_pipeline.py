@@ -390,7 +390,10 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 expected.add(target)
                 hit = delta / "results" / f"{source}.tsv"
                 hit.write_text(f"{query_digest}\t{target}\t30.0\t60\t0.8\t0.8\t1e-9\t100\n")
-                artifacts[source] = {"sha256": hashlib.sha256(hit.read_bytes()).hexdigest()}
+                artifacts[source] = {
+                    "sha256": hashlib.sha256(hit.read_bytes()).hexdigest(),
+                    "target_database": str((root / "db" / source).resolve()),
+                }
                 source_root = clusters / source
                 source_root.mkdir(parents=True)
                 (source_root / "verification.json").write_text(
@@ -405,6 +408,8 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 json.dumps(
                     {
                         "status": "complete",
+                        "protocol": "mmseqs2-evaluation-delta-search-v1",
+                        "query_scope": "q9-delta",
                         "thresholds": self.pipeline.MMSEQS_THRESHOLDS,
                         "query_fasta_sha256": hashlib.sha256(
                             query_fasta.read_bytes()
@@ -436,6 +441,9 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 verification = clusters / source / "verification.json"
                 artifacts[source].update(
                     {
+                        "target_database": str(
+                            (clusters / source / "db/representatives").resolve()
+                        ),
                         "target_verification_sha256": hashlib.sha256(
                             verification.read_bytes()
                         ).hexdigest(),
