@@ -6,7 +6,11 @@ from pathlib import Path
 
 import numpy as np
 
-from nano_protein.evaluate import bootstrap_mean_interval, merge_full_evaluation
+from nano_protein.evaluate import (
+    bootstrap_mean_interval,
+    merge_contact_evaluation,
+    merge_full_evaluation,
+)
 
 
 class EvaluationContractTests(unittest.TestCase):
@@ -80,6 +84,57 @@ class EvaluationContractTests(unittest.TestCase):
             self.assertEqual(report["contact"]["evaluation_chains"], 3)
             self.assertEqual(report["contact"]["precision_at_l"], 0.5)
             self.assertEqual(report["timing_seconds"]["parallel_critical_path"], 4.0)
+
+    def test_contact_only_merge_is_exact_across_oversubscribed_shards(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            checkpoint_sha = "b" * 64
+            chains = [f"chain-{index}" for index in range(7)]
+            ranked = sorted(
+                chains,
+                key=lambda chain: hashlib.sha256(f"20260820:{chain}".encode()).digest(),
+            )
+            contact_paths = []
+            shard_count = 4
+            for shard in range(shard_count):
+                shard_rows = [
+                    {
+                        "chain_id": chain,
+                        "precision_at_l": (position + 1) / 10,
+                        "random_precision_at_l": 0.1,
+                    }
+                    for position, chain in enumerate(ranked)
+                    if position % shard_count == shard
+                ]
+                path = root / f"contact-{shard}.json"
+                path.write_text(
+                    json.dumps(
+                        {
+                            "checkpoint_sha256": checkpoint_sha,
+                            "contact": {
+                                "protocol": "esmc-paper-contact-lite-v1",
+                                "shard_index": shard,
+                                "shard_count": shard_count,
+                                "selection_total_chains": len(chains),
+                                "evaluation_chains": len(shard_rows),
+                                "precision_at_l_uncertainty": {"replicates": 0},
+                                "selected_C": 1.0,
+                                "validation_trace": [{"C": 1.0}],
+                                "rows": shard_rows,
+                            },
+                        }
+                    )
+                )
+                contact_paths.append(path)
+            receipt = merge_contact_evaluation(
+                contact_paths=contact_paths,
+                expected_contact_chains=len(chains),
+            )
+            self.assertEqual(receipt["checkpoint_sha256"], checkpoint_sha)
+            self.assertEqual(receipt["evaluation_chains"], len(chains))
+            self.assertAlmostEqual(receipt["p_at_l"], 0.4)
+            self.assertAlmostEqual(receipt["random_p_at_l"], 0.1)
+            self.assertEqual(len(receipt["components"]), shard_count)
 
 
 if __name__ == "__main__":

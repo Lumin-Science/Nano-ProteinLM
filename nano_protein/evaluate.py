@@ -7,6 +7,7 @@ import concurrent.futures
 import gc
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -750,6 +751,105 @@ def run_contact_lite(
         "selected_C": selected_c,
         "validation_trace": trace,
         "rows": rows,
+    }
+
+
+def merge_contact_evaluation(
+    *,
+    contact_paths: list[Path],
+    expected_contact_chains: int,
+) -> dict[str, object]:
+    """Strictly merge exact deterministic P@L shards without P-CORE."""
+
+    if not contact_paths or expected_contact_chains <= 0:
+        raise ValueError("invalid contact-only merge contract")
+    checkpoint_sha256: str | None = None
+    selected_c: object | None = None
+    validation_trace: object | None = None
+    shards: dict[int, tuple[Path, dict[str, object], dict[str, object]]] = {}
+    for path in contact_paths:
+        report = json.loads(path.read_text())
+        contact = report.get("contact") if isinstance(report, dict) else None
+        if not isinstance(contact, dict):
+            raise ValueError(f"missing contact receipt: {path}")
+        if contact.get("protocol") != "esmc-paper-contact-lite-v1":
+            raise ValueError(f"unexpected contact protocol: {path}")
+        observed_checkpoint = str(report.get("checkpoint_sha256"))
+        if checkpoint_sha256 is None:
+            checkpoint_sha256 = observed_checkpoint
+        elif observed_checkpoint != checkpoint_sha256:
+            raise ValueError("contact shards use different checkpoints")
+        shard_index = int(contact["shard_index"])
+        if shard_index in shards:
+            raise ValueError(f"duplicate contact shard {shard_index}")
+        shards[shard_index] = (path, report, contact)
+
+    shard_count = len(shards)
+    if set(shards) != set(range(shard_count)):
+        raise ValueError("contact shard indices are incomplete")
+    rows: list[dict[str, object]] = []
+    shard_ids: dict[int, set[str]] = {}
+    components: list[dict[str, object]] = []
+    for shard_index in range(shard_count):
+        path, _report, contact = shards[shard_index]
+        if (
+            int(contact["shard_count"]) != shard_count
+            or int(contact["selection_total_chains"]) != expected_contact_chains
+            or int(contact["evaluation_chains"])
+            != len(range(shard_index, expected_contact_chains, shard_count))
+        ):
+            raise ValueError(f"shard contract mismatch: {path}")
+        uncertainty = contact.get("precision_at_l_uncertainty")
+        if not isinstance(uncertainty, dict) or int(uncertainty["replicates"]) != 0:
+            raise ValueError("contact shards must defer uncertainty aggregation")
+        if selected_c is None:
+            selected_c = contact["selected_C"]
+            validation_trace = contact["validation_trace"]
+        elif (
+            contact["selected_C"] != selected_c
+            or contact["validation_trace"] != validation_trace
+        ):
+            raise ValueError("frozen probe fit differs between shards")
+        shard_rows = contact.get("rows")
+        if not isinstance(shard_rows, list):
+            raise ValueError(f"missing contact rows: {path}")
+        rows.extend(shard_rows)
+        shard_ids[shard_index] = {str(row["chain_id"]) for row in shard_rows}
+        components.append(
+            {
+                "shard_index": shard_index,
+                "path": str(path.resolve()),
+                "sha256": file_sha256(path),
+                "chains": len(shard_rows),
+            }
+        )
+
+    chain_ids = [str(row["chain_id"]) for row in rows]
+    if len(rows) != expected_contact_chains or len(set(chain_ids)) != len(rows):
+        raise ValueError("merged contact rows are incomplete or duplicated")
+    rows.sort(key=lambda row: hashlib.sha256(f"20260820:{row['chain_id']}".encode()).digest())
+    for position, row in enumerate(rows):
+        if str(row["chain_id"]) not in shard_ids[position % shard_count]:
+            raise ValueError("rows violate the frozen deterministic sharding")
+    precision = [float(row["precision_at_l"]) for row in rows]
+    random_precision = [float(row["random_precision_at_l"]) for row in rows]
+    if not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in precision):
+        raise ValueError("invalid P@L values")
+    if not all(
+        math.isfinite(value) and 0.0 <= value <= 1.0 for value in random_precision
+    ):
+        raise ValueError("invalid random P@L values")
+    return {
+        "schema_version": 1,
+        "protocol": "autoresearch-frozen-full-contact-merge-v1",
+        "checkpoint_sha256": checkpoint_sha256,
+        "evaluation_chains": len(rows),
+        "p_at_l": float(np.asarray(precision, dtype=np.float64).mean()),
+        "random_p_at_l": float(np.asarray(random_precision, dtype=np.float64).mean()),
+        "selected_C": selected_c,
+        "validation_trace": validation_trace,
+        "selection_seed": 20260820,
+        "components": components,
     }
 
 
