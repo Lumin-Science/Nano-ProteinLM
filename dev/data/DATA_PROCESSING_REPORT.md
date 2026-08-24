@@ -1,7 +1,7 @@
 # Full open-protein corpus: processing and release report
 
-Status date: 2026-08-23  
-Build host: `tmoss` (`moss`; 255 online logical CPUs, 1 TB RAM)  
+Status date: 2026-08-24
+Build host: `tmoss` (`moss`; 255 online logical CPUs, 1 TB RAM)
 Canonical builder: `dev/data/process_full_corpus.py`  
 Python environment: repository `uv.lock`; no ad-hoc pip environment
 
@@ -92,9 +92,17 @@ The frozen MMseqs2 criterion is:
 ```
 
 `--cov-mode 0` requires the 80% coverage threshold on both query and target. The
-finalizer rejects any emitted row below identity or either coverage threshold,
-rejects unknown query IDs, and fails if any query reaches the one-million-hit cap.
-Exact SHA-256 exclusions are also applied independently.
+production search places each complete training representative on the MMseqs
+query side and the frozen evaluation union on the indexed target side. This
+orientation avoids materializing millions of training hits for one common
+evaluation sequence. Identity and dual coverage are symmetric; `convertalis`
+swaps `query,target` and `qcov,tcov` back to the historical
+evaluation-to-training TSV schema before verification. The finalizer rejects
+unknown evaluation IDs and every row below identity or either coverage
+threshold. Because the target contains only 317,000 sequences for a full screen
+(200,159 for the Q9 delta), fewer than the one-million candidate cap, truncation
+is impossible by construction. Exact SHA-256 exclusions are also applied
+independently.
 
 ### Verified parent screen
 
@@ -113,6 +121,11 @@ The global count is lower than the source sum because identical digest IDs can
 retain membership in more than one source arm. The parent exclusion digest file
 is 4,044,893,255 bytes with SHA-256
 `3738a5bcab185f553613480a17d3ecbdd309323b9920ed66a7d6fb5700fecaab`.
+Its three source-search commands are independently bound by
+`MMSEQS_COMMANDS.txt` SHA-256
+`3dbb4439699894c90046b3a6d726b8929858395bf69268c35ae31051cb2d7662`;
+the finalizer parses that ledger and requires the forward orientation, all four
+identity/coverage/cap settings, and sensitivity 7.5 for every source.
 
 ### Q9 extension
 
@@ -140,19 +153,22 @@ relative to the parent screen. The union artifacts are:
 | `sequence_memberships.jsonl` | 77,449,335 | `3d41b4bf311da1c7144c4d4e362f6316e9e2e11427c8f72b085fb43717025a71` |
 | `evaluation_exact_sha256.txt` | 20,605,000 | `45b352a403b9b8456ad31d14e441a351acfa358bea9939e60690cc5c479f11e1` |
 
-The Q9-only delta is searched against the same verified complete MMseqs target
-databases used by the parent run. Its validated target digest union is then
-externalized with the immutable parent exclusions. This is set-equivalent to
-rerunning all 317,000 queries and avoids repeating the 116,841-query parent work.
+The Q9-only delta uses the same verified complete representative databases as
+the parent run. Its validated training-digest union is externalized with the
+immutable parent exclusions, preserving the same identity and dual-coverage
+relation without repeating the 116,841-sequence parent work.
 
-Full delta screen execution: the first attempt (`10096`) opted into concurrent
-source indexes and demonstrated that their combined peak exceeds a 1 TB host;
-the MGnify prefilter died while the other completed source outputs remained
-valid. Recovery job `10098` preserves completed TSVs and serially runs only the
-missing source under the identical query, threshold, sensitivity, coverage, and
-one-million-hit-cap contract. Production defaults are now serialized. Verified
-sharding (`10099`) and metadata staging (`10100`) are dependency-gated on that
-recovery. Final measured hit/exclusion counts are written here only after
+Full delta screen execution: attempt `10096` used the old evaluation-query
+orientation and concurrent source indexes. MGnify was killed, the two survivors
+were still in prefilter at the 2026-08-24 audit, and MMseqs estimated that one
+prefilter could require up to 7 TB of disk. No bare TSV from that interrupted
+attempt is considered complete. Recovery job `10098` uses the reversed,
+source-serial search above. A source becomes reusable only after an atomic
+sidecar binds the evaluation FASTA, representative database, exact command,
+normalized TSV size, and SHA-256; later retries retain failed attempts and reuse
+only such receipt-backed completions. Verified sharding (`10099`) and metadata
+staging (`10100`) remain dependency-gated on recovery. Final measured
+hit/exclusion counts are written here only after
 `HOMOLOGY_EXCLUSION_VERIFIED.json` exists.
 
 ## 4. Final train/validation selection and sharding
@@ -219,8 +235,13 @@ guess filenames.
 
 ## 6. Reproduction commands on a 64-CPU host
 
-The exact pinned OMG manifest is checked into this directory. Representative
-commands are below; all outputs should be placed outside Git.
+The exact pinned OMG manifest is checked into this directory. The canonical
+fresh build is one command; all outputs must be placed outside Git. It consumes
+the already-frozen P@L/P-CORE v0.2 and Q9 evaluation bundles, uses all 64 CPUs,
+and writes `FULL_CORPUS_REPRODUCTION_VERIFIED.json` only after raw downloads,
+cleaning, global exact deduplication, 70% clustering, the fresh full homology
+screen, release sharding, independent verification, and metadata staging all
+succeed.
 
 ```bash
 uv sync --frozen
@@ -230,6 +251,22 @@ MMSEQS=/absolute/path/to/mmseqs
 LEGACY_EVAL=/absolute/path/to/frozen-p-at-l-and-pcore-v0.2-bundle
 Q9_EVAL=/absolute/path/to/pcore-v0.5-alpha-q9
 
+uv run --frozen python "$PIPE" reproduce \
+  --data-root "$ROOT" \
+  --omg-manifest dev/data/omg_upstream_shards.tsv \
+  --legacy-evaluation-root "$LEGACY_EVAL" \
+  --q9-evaluation-root "$Q9_EVAL" \
+  --template-root release/huggingface/full-open-v2 \
+  --mmseqs "$MMSEQS" --threads 64 --download-workers 8 \
+  --partitions 256 --validation-per-source 4096 \
+  --shard-residues 268435456
+```
+
+The individual stage commands below are the inspectable recovery/debug form of
+the same build. They are useful when a create-once long stage needs manual
+review; they are not a different data recipe.
+
+```bash
 uv run --frozen python "$PIPE" download \
   --data-root "$ROOT" --omg-manifest dev/data/omg_upstream_shards.tsv \
   --download-workers 8
@@ -268,8 +305,9 @@ uv run --frozen python "$PIPE" evaluation-union \
   --legacy-root "$LEGACY_EVAL" --q9-root "$Q9_EVAL" \
   --output "$ROOT/evaluation"
 
-# Fresh, self-contained path: screen all 317,000 protected sequences. Source
-# databases are deliberately serialized so peak index memory stays bounded.
+# Fresh, self-contained path: use all 317,000 protected sequences as the small
+# indexed target and stream each complete representative DB as queries. Source
+# searches are serialized so memory bandwidth and temporary disk stay bounded.
 uv run --frozen python "$PIPE" full-screen \
   --query-fasta "$ROOT/evaluation/evaluation_all_splits.fasta" \
   --target-db-root "$ROOT/clusters" \
@@ -299,7 +337,9 @@ path because its 116,841-query parent screen is already verified against the
 identical representative FASTAs. A from-scratch rebuild should use the full
 commands above and therefore has no dependency on that parent artifact. Every
 output directory is create-once; only homology-search recovery has an explicit
-`--resume` mode that reuses checksum-bound completed source TSVs.
+`--resume` mode. It reuses a source only when an atomic completion receipt binds
+that TSV, and otherwise writes a new numbered recovery attempt without
+overwriting forensic state.
 
 ## 7. Hugging Face publication procedure
 
@@ -322,6 +362,9 @@ downstream download smoke test pass.
 The uploader refuses to run unless the independent receipt binds the final
 manifest, every required metadata file is present, Xet high-performance mode is
 enabled, and the confirmation value exactly matches the destination repo.
+The training-side gate likewise rejects legacy v1/exact-only prepared corpora:
+only a v2 all-evaluation-split receipt with P@L, P-CORE v0.2, Q9, and validated
+per-search provenance can be materialized and consumed.
 
 ## 8. Fail-closed release gates
 
@@ -333,7 +376,10 @@ Publication is blocked unless all of the following are true:
 - the 317,000-sequence evaluation ledger hashes match;
 - a fresh full screen binds each target MMseqs database to the corresponding
   representative-FASTA receipt;
-- all delta hit rows meet the frozen MMseqs thresholds and no query reaches the cap;
+- the legacy shortcut, when used, binds and parses its exact three-command
+  ledger rather than trusting an unversioned narrative;
+- all normalized hit rows meet the frozen MMseqs thresholds, and the evaluation
+  target cardinality proves the candidate cap cannot be reached;
 - the final exclusion file is the exact parent-plus-delta set union;
 - all Parquet file and sequence hashes pass;
 - every released training digest has exactly one source owner;

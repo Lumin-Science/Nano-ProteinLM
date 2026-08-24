@@ -67,6 +67,22 @@ class ShardedDataTests(unittest.TestCase):
                 ],
                 "blocked_benchmark_candidates_are_protected": True,
                 "homology_exclusion_receipt_sha256": "a" * 64,
+                "search_contracts": {
+                    "all_evaluation_splits": {
+                        "query_scope": "all-evaluation-splits",
+                        "search_orientation": (
+                            "training-representative-query-vs-evaluation-target"
+                        ),
+                        "normalized_hit_table_schema": (
+                            "evaluation_sha256,training_sha256,pident,alnlen,"
+                            "evaluation_coverage,training_coverage,evalue,bits"
+                        ),
+                        "sensitivity": 7.5,
+                        "configured_candidate_cap": 1_000_000,
+                        "evaluation_target_sequences": 317_000,
+                        "candidate_cap_unreachable": True,
+                    }
+                },
                 "thresholds": {
                     "coverage_mode": 0,
                     "minimum_sequence_identity": 0.3,
@@ -100,6 +116,57 @@ class ShardedDataTests(unittest.TestCase):
                     for source in plan["sources"].values()
                 ),
             )
+
+    def test_budget_plan_accepts_audited_legacy_plus_q9_searches(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            release = self._release(root)
+            normalized_schema = (
+                "evaluation_sha256,training_sha256,pident,alnlen,"
+                "evaluation_coverage,training_coverage,evalue,bits"
+            )
+            release["decontamination"]["search_contracts"] = {
+                "legacy_parent": {
+                    "query_scope": "p-at-l-and-pcore-v0.2-all-splits",
+                    "search_orientation": (
+                        "evaluation-query-vs-training-representative-target"
+                    ),
+                    "normalized_hit_table_schema": normalized_schema,
+                    "sensitivity": 7.5,
+                    "configured_candidate_cap": 1_000_000,
+                    "maximum_emitted_hits_for_one_evaluation_query": 441_788,
+                    "all_emitted_hit_counts_below_cap": True,
+                    "command_receipt_sha256": "c" * 64,
+                },
+                "q9_delta": {
+                    "query_scope": "q9-delta",
+                    "search_orientation": (
+                        "training-representative-query-vs-evaluation-target"
+                    ),
+                    "normalized_hit_table_schema": normalized_schema,
+                    "sensitivity": 7.5,
+                    "configured_candidate_cap": 1_000_000,
+                    "evaluation_target_sequences": 200_159,
+                    "candidate_cap_unreachable": True,
+                },
+            }
+            plan = plan_shards(
+                release,
+                total_training_samples=3,
+                weights={source: 1.0 for source in SOURCES},
+            )
+            self.assertEqual(plan["total_training_samples"], 3)
+
+    def test_budget_plan_rejects_missing_search_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            release = self._release(Path(raw))
+            del release["decontamination"]["search_contracts"]
+            with self.assertRaisesRegex(ValueError, "search provenance"):
+                plan_shards(
+                    release,
+                    total_training_samples=3,
+                    weights={source: 1.0 for source in SOURCES},
+                )
 
     def test_materialized_prefix_passes_training_gate(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

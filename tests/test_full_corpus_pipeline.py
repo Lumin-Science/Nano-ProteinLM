@@ -42,6 +42,129 @@ class FullCorpusPipelineTests(unittest.TestCase):
             Path("/tmp/data"), Path("/tmp/omg.tsv"), download_workers=16
         )
 
+    def test_reproduce_cli_routes_64_cpu_parent_independent_build(self) -> None:
+        with mock.patch.object(
+            self.pipeline, "reproduce_full_corpus", return_value={"status": "test"}
+        ) as reproduce:
+            self.pipeline.main(
+                [
+                    "reproduce",
+                    "--data-root",
+                    "/tmp/data",
+                    "--omg-manifest",
+                    "/tmp/omg.tsv",
+                    "--legacy-evaluation-root",
+                    "/tmp/legacy-eval",
+                    "--q9-evaluation-root",
+                    "/tmp/q9-eval",
+                    "--template-root",
+                    "/tmp/template",
+                    "--mmseqs",
+                    "/tmp/mmseqs",
+                ]
+            )
+
+        reproduce.assert_called_once_with(
+            data_root=Path("/tmp/data"),
+            omg_manifest=Path("/tmp/omg.tsv"),
+            legacy_evaluation_root=Path("/tmp/legacy-eval"),
+            q9_evaluation_root=Path("/tmp/q9-eval"),
+            template_root=Path("/tmp/template"),
+            mmseqs=Path("/tmp/mmseqs"),
+            threads=64,
+            download_workers=8,
+            partitions=256,
+            validation_per_source=4096,
+            shard_residues=268435456,
+        )
+
+    def test_reproduce_executes_fresh_all_split_pipeline_in_order(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            data_root = root / "build"
+            omg_file = data_root / "raw/omg/chunk.parquet"
+            omg_file.parent.mkdir(parents=True)
+            omg_file.write_bytes(b"fixture")
+            omg_manifest = root / "omg.tsv"
+            omg_manifest.write_text(
+                "path\tbytes\tsha256\nchunk.parquet\t7\t" + "a" * 64 + "\n"
+            )
+            verified = {"status": "verified"}
+            with (
+                mock.patch.object(
+                    self.pipeline, "download_raw", return_value=verified
+                ) as download,
+                mock.patch.object(
+                    self.pipeline, "normalize_source", return_value=verified
+                ) as normalize,
+                mock.patch.object(
+                    self.pipeline, "deduplicate", return_value=verified
+                ) as deduplicate,
+                mock.patch.object(
+                    self.pipeline, "run_cluster", return_value=verified
+                ) as cluster,
+                mock.patch.object(
+                    self.pipeline,
+                    "build_evaluation_union",
+                    return_value={"union_unique_sequences": 317_000},
+                ) as evaluation,
+                mock.patch.object(
+                    self.pipeline, "run_delta_screen", return_value={"status": "complete"}
+                ) as search,
+                mock.patch.object(
+                    self.pipeline,
+                    "finalize_full_screen",
+                    return_value={"excluded_training_representatives": 123},
+                ) as finalize,
+                mock.patch.object(self.pipeline, "shard_release") as shard,
+                mock.patch.object(
+                    self.pipeline,
+                    "verify_release",
+                    return_value={"manifest_sha256": "b" * 64},
+                ) as verify,
+                mock.patch.object(
+                    self.pipeline, "stage_release_metadata", return_value=verified
+                ) as metadata,
+                mock.patch.object(self.pipeline, "file_hash", return_value="c" * 64),
+            ):
+                receipt = self.pipeline.reproduce_full_corpus(
+                    data_root=data_root,
+                    omg_manifest=omg_manifest,
+                    legacy_evaluation_root=root / "legacy",
+                    q9_evaluation_root=root / "q9",
+                    template_root=root / "template",
+                    mmseqs=root / "mmseqs",
+                )
+
+            download.assert_called_once()
+            self.assertEqual(normalize.call_count, 3)
+            deduplicate.assert_called_once()
+            self.assertEqual(cluster.call_count, 3)
+            evaluation.assert_called_once()
+            self.assertEqual(search.call_args.kwargs["query_scope"], "all-evaluation-splits")
+            self.assertFalse(search.call_args.kwargs["concurrent_sources"])
+            finalize.assert_called_once()
+            shard.assert_called_once()
+            verify.assert_called_once()
+            metadata.assert_called_once()
+            self.assertEqual(receipt["status"], "verified")
+            self.assertEqual(receipt["evaluation_union_unique_sequences"], 317_000)
+            self.assertTrue((data_root / "FULL_CORPUS_REPRODUCTION_VERIFIED.json").is_file())
+
+    def test_reproduce_rejects_existing_derived_state(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            data_root = Path(raw)
+            (data_root / "normalized").mkdir()
+            with self.assertRaisesRegex(FileExistsError, "fresh derived-stage root"):
+                self.pipeline.reproduce_full_corpus(
+                    data_root=data_root,
+                    omg_manifest=data_root / "omg.tsv",
+                    legacy_evaluation_root=data_root / "legacy",
+                    q9_evaluation_root=data_root / "q9",
+                    template_root=data_root / "template",
+                    mmseqs=data_root / "mmseqs",
+                )
+
     def test_download_rejects_nonpositive_workers_before_io(self) -> None:
         with self.assertRaisesRegex(ValueError, "download_workers must be positive"):
             self.pipeline.download_raw(
@@ -83,6 +206,90 @@ class FullCorpusPipelineTests(unittest.TestCase):
         self.assertTrue(run.call_args.kwargs["resume"])
         self.assertFalse(run.call_args.kwargs["concurrent_sources"])
         self.assertEqual(run.call_args.kwargs["threads"], 64)
+
+    def test_screen_reverses_search_and_normalizes_hit_orientation(self) -> None:
+        search, convert = self.pipeline._screen_commands(
+            mmseqs=Path("/opt/mmseqs"),
+            representative_db=Path("/data/train-representatives"),
+            evaluation_db=Path("/data/evaluation-union"),
+            result_db=Path("/work/result"),
+            temporary=Path("/work/tmp"),
+            hit_table=Path("/work/hits.tsv"),
+            threads=64,
+        )
+        self.assertEqual(search[2:4], ["/data/train-representatives", "/data/evaluation-union"])
+        self.assertEqual(
+            convert[2:4], ["/data/train-representatives", "/data/evaluation-union"]
+        )
+        self.assertEqual(convert[-1], "target,query,pident,alnlen,tcov,qcov,evalue,bits")
+        self.assertEqual(search[search.index("-s") + 1], "7.5")
+        self.assertEqual(search[search.index("--max-seqs") + 1], "1000000")
+
+    def test_screen_recovery_never_trusts_a_bare_interrupted_tsv(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            output = Path(raw)
+            (output / "results").mkdir()
+            (output / "tmp").mkdir()
+            (output / "results/uniref90.tsv").write_text("unverified\n")
+            (output / "results/uniref90-recovery-01.index").write_text("partial\n")
+
+            result, temporary, hit_table = self.pipeline._next_screen_attempt(
+                output, "uniref90", resume=True
+            )
+
+            self.assertEqual(result.name, "uniref90-recovery-02")
+            self.assertEqual(temporary.name, "uniref90-recovery-02")
+            self.assertEqual(hit_table.name, "uniref90-recovery-02.tsv")
+
+    def test_completed_source_search_is_checksum_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            output = Path(raw)
+            results = output / "results"
+            results.mkdir()
+            hit_table = results / "mgnify-recovery-01.tsv"
+            hit_table.write_text("normalized-hit\n")
+            target_binding = {"target_database": "/verified/mgnify"}
+            artifact = {
+                "relative_path": "results/mgnify-recovery-01.tsv",
+                "sha256": hashlib.sha256(hit_table.read_bytes()).hexdigest(),
+                **target_binding,
+            }
+            source_receipt = results / "mgnify.complete.json"
+            source_receipt.write_text(
+                json.dumps(
+                    {
+                        "status": "complete",
+                        "protocol": self.pipeline.SOURCE_SEARCH_PROTOCOL,
+                        "source": "mgnify",
+                        "query_fasta_sha256": "a" * 64,
+                        "search_orientation": self.pipeline.SCREEN_SEARCH_ORIENTATION,
+                        "normalized_hit_table_schema": (
+                            self.pipeline.NORMALIZED_HIT_TABLE_SCHEMA
+                        ),
+                        "thresholds": self.pipeline.MMSEQS_THRESHOLDS,
+                        "sensitivity": self.pipeline.MMSEQS_SENSITIVITY,
+                        "artifact": artifact,
+                    }
+                )
+            )
+
+            observed = self.pipeline._validated_source_search(
+                output=output,
+                source="mgnify",
+                source_receipt=source_receipt,
+                query_fasta_sha256="a" * 64,
+                target_binding=target_binding,
+            )
+            self.assertTrue(observed["reused_from_interrupted_parent"])
+            hit_table.write_text("changed\n")
+            with self.assertRaisesRegex(ValueError, "hit table changed"):
+                self.pipeline._validated_source_search(
+                    output=output,
+                    source="mgnify",
+                    source_receipt=source_receipt,
+                    query_fasta_sha256="a" * 64,
+                    target_binding=target_binding,
+                )
 
     def test_screen_target_resolves_fresh_cluster_representative_db(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -242,6 +449,19 @@ class FullCorpusPipelineTests(unittest.TestCase):
                             "pcore-v0.5-alpha-q9",
                         ],
                         "thresholds": self.pipeline.MMSEQS_THRESHOLDS,
+                        "search_contracts": {
+                            "all_evaluation_splits": {
+                                "query_scope": "all-evaluation-splits",
+                                "search_orientation": (self.pipeline.SCREEN_SEARCH_ORIENTATION),
+                                "normalized_hit_table_schema": (
+                                    self.pipeline.NORMALIZED_HIT_TABLE_SCHEMA
+                                ),
+                                "sensitivity": self.pipeline.MMSEQS_SENSITIVITY,
+                                "configured_candidate_cap": 1_000_000,
+                                "evaluation_target_sequences": 1,
+                                "candidate_cap_unreachable": True,
+                            }
+                        },
                     }
                 )
             )
@@ -376,6 +596,15 @@ class FullCorpusPipelineTests(unittest.TestCase):
             clusters = root / "clusters"
             evaluation.mkdir()
             (delta / "results").mkdir(parents=True)
+            (delta / "db").mkdir()
+            evaluation_dbtype = delta / "db/evaluation.dbtype"
+            evaluation_dbtype.write_bytes(b"\x00\x00\x00\x00")
+            evaluation_database_artifacts = {
+                "db/evaluation.dbtype": {
+                    "bytes": evaluation_dbtype.stat().st_size,
+                    "sha256": hashlib.sha256(evaluation_dbtype.read_bytes()).hexdigest(),
+                }
+            }
 
             query_sequence = "ACDEFGHIKLMNPQRSTVWY" * 3
             query_digest = sequence_digest(query_sequence)
@@ -413,6 +642,18 @@ class FullCorpusPipelineTests(unittest.TestCase):
             parent_exclusions.write_text(parent_digest + "\n")
             representative_hash = "a" * 64
             parent_receipt = root / "parent.json"
+            parent_commands = root / "MMSEQS_COMMANDS.txt"
+            parent_commands.write_text(
+                "".join(
+                    (
+                        f"/opt/mmseqs search {root / 'db/query'} {root / 'db' / source} "
+                        f"{root / 'results' / source} {root / 'tmp' / source} "
+                        "--min-seq-id 0.30 -c 0.80 --cov-mode 0 "
+                        "--max-seqs 1000000 -s 7.5 --threads 64\n"
+                    )
+                    for source in self.pipeline.SOURCES
+                )
+            )
             parent_receipt.write_text(
                 json.dumps(
                     {
@@ -423,8 +664,16 @@ class FullCorpusPipelineTests(unittest.TestCase):
                         "excluded_digest_file_sha256": hashlib.sha256(
                             parent_exclusions.read_bytes()
                         ).hexdigest(),
+                        "command_receipt": str(parent_commands),
+                        "command_receipt_sha256": hashlib.sha256(
+                            parent_commands.read_bytes()
+                        ).hexdigest(),
+                        "mmseqs_version": "test-mmseqs",
                         "sources": {
-                            source: {"representative_fasta_sha256": representative_hash}
+                            source: {
+                                "representative_fasta_sha256": representative_hash,
+                                "maximum_hits_for_one_query": 1,
+                            }
                             for source in self.pipeline.SOURCES
                         },
                     }
@@ -438,9 +687,17 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 expected.add(target)
                 hit = delta / "results" / f"{source}.tsv"
                 hit.write_text(f"{query_digest}\t{target}\t30.0\t60\t0.8\t0.8\t1e-9\t100\n")
+                source_receipt = delta / "results" / f"{source}.complete.json"
+                source_receipt.write_text(json.dumps({"status": "complete"}))
                 artifacts[source] = {
                     "sha256": hashlib.sha256(hit.read_bytes()).hexdigest(),
                     "target_database": str((root / "db" / source).resolve()),
+                    "search_orientation": self.pipeline.SCREEN_SEARCH_ORIENTATION,
+                    "normalized_hit_table_schema": self.pipeline.NORMALIZED_HIT_TABLE_SCHEMA,
+                    "source_receipt_relative_path": f"results/{source}.complete.json",
+                    "source_receipt_sha256": hashlib.sha256(
+                        source_receipt.read_bytes()
+                    ).hexdigest(),
                 }
                 source_root = clusters / source
                 source_root.mkdir(parents=True)
@@ -459,6 +716,13 @@ class FullCorpusPipelineTests(unittest.TestCase):
                         "protocol": "mmseqs2-evaluation-delta-search-v1",
                         "query_scope": "q9-delta",
                         "thresholds": self.pipeline.MMSEQS_THRESHOLDS,
+                        "sensitivity": self.pipeline.MMSEQS_SENSITIVITY,
+                        "search_orientation": self.pipeline.SCREEN_SEARCH_ORIENTATION,
+                        "normalized_hit_table_schema": (
+                            self.pipeline.NORMALIZED_HIT_TABLE_SCHEMA
+                        ),
+                        "candidate_cap_unreachable": True,
+                        "evaluation_database_artifacts": evaluation_database_artifacts,
                         "query_fasta_sha256": hashlib.sha256(
                             query_fasta.read_bytes()
                         ).hexdigest(),
@@ -505,6 +769,13 @@ class FullCorpusPipelineTests(unittest.TestCase):
                         "protocol": "mmseqs2-evaluation-full-search-v1",
                         "query_scope": "all-evaluation-splits",
                         "thresholds": self.pipeline.MMSEQS_THRESHOLDS,
+                        "sensitivity": self.pipeline.MMSEQS_SENSITIVITY,
+                        "search_orientation": self.pipeline.SCREEN_SEARCH_ORIENTATION,
+                        "normalized_hit_table_schema": (
+                            self.pipeline.NORMALIZED_HIT_TABLE_SCHEMA
+                        ),
+                        "candidate_cap_unreachable": True,
+                        "evaluation_database_artifacts": evaluation_database_artifacts,
                         "query_fasta_sha256": hashlib.sha256(
                             query_fasta.read_bytes()
                         ).hexdigest(),

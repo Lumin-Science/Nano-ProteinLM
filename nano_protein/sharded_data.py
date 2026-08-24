@@ -26,6 +26,13 @@ from .tokenizer import ProteinTokenizer
 
 PROTOCOL = "protein-corpus-parquet-shards-v1"
 DEFAULT_REPO_ID = "LuminScience/LuminBench-Nano-ESMC"
+SCREEN_SEARCH_ORIENTATION = "training-representative-query-vs-evaluation-target"
+LEGACY_SEARCH_ORIENTATION = "evaluation-query-vs-training-representative-target"
+NORMALIZED_HIT_TABLE_SCHEMA = (
+    "evaluation_sha256,training_sha256,pident,alnlen,"
+    "evaluation_coverage,training_coverage,evalue,bits"
+)
+MINIMUM_MMSEQS_SENSITIVITY = 7.5
 
 
 def _canonical_json(value: object) -> str:
@@ -40,6 +47,67 @@ def _validate_digest(value: object, *, label: str) -> str:
     except ValueError as error:
         raise ValueError(f"{label} is not a SHA-256 digest") from error
     return value
+
+
+def validate_search_contracts(value: object) -> None:
+    """Require either one fresh all-split screen or the audited parent+Q9 route."""
+
+    if not isinstance(value, Mapping):
+        raise ValueError("release is missing MMseqs search provenance")
+
+    def numeric(row: Mapping[str, Any], key: str) -> float | None:
+        observed = row.get(key)
+        if isinstance(observed, bool) or not isinstance(observed, int | float):
+            return None
+        return float(observed)
+
+    def reverse_contract(row: object, *, scope: str) -> bool:
+        if not isinstance(row, Mapping):
+            return False
+        sensitivity = numeric(row, "sensitivity")
+        targets = numeric(row, "evaluation_target_sequences")
+        return bool(
+            row.get("query_scope") == scope
+            and row.get("search_orientation") == SCREEN_SEARCH_ORIENTATION
+            and row.get("normalized_hit_table_schema") == NORMALIZED_HIT_TABLE_SCHEMA
+            and sensitivity is not None
+            and sensitivity >= MINIMUM_MMSEQS_SENSITIVITY
+            and row.get("configured_candidate_cap") == 1_000_000
+            and targets is not None
+            and 0 < targets < 1_000_000
+            and targets.is_integer()
+            and row.get("candidate_cap_unreachable") is True
+        )
+
+    if set(value) == {"all_evaluation_splits"} and reverse_contract(
+        value["all_evaluation_splits"], scope="all-evaluation-splits"
+    ):
+        return
+    if set(value) != {"legacy_parent", "q9_delta"}:
+        raise ValueError("release has an unknown MMseqs search-provenance topology")
+    legacy = value["legacy_parent"]
+    if not isinstance(legacy, Mapping):
+        raise ValueError("legacy parent MMseqs search provenance is incomplete")
+    legacy_sensitivity = numeric(legacy, "sensitivity")
+    maximum_emitted = numeric(legacy, "maximum_emitted_hits_for_one_evaluation_query")
+    if not (
+        legacy.get("query_scope") == "p-at-l-and-pcore-v0.2-all-splits"
+        and legacy.get("search_orientation") == LEGACY_SEARCH_ORIENTATION
+        and legacy.get("normalized_hit_table_schema") == NORMALIZED_HIT_TABLE_SCHEMA
+        and legacy_sensitivity is not None
+        and legacy_sensitivity >= MINIMUM_MMSEQS_SENSITIVITY
+        and legacy.get("configured_candidate_cap") == 1_000_000
+        and maximum_emitted is not None
+        and 0 <= maximum_emitted < 1_000_000
+        and maximum_emitted.is_integer()
+        and legacy.get("all_emitted_hit_counts_below_cap") is True
+    ):
+        raise ValueError("legacy parent MMseqs search provenance is incomplete")
+    _validate_digest(
+        legacy.get("command_receipt_sha256"), label="legacy MMseqs command receipt"
+    )
+    if not reverse_contract(value["q9_delta"], scope="q9-delta"):
+        raise ValueError("Q9 delta MMseqs search provenance is incomplete")
 
 
 def validate_release_manifest(manifest: Mapping[str, Any]) -> None:
@@ -72,6 +140,7 @@ def validate_release_manifest(manifest: Mapping[str, Any]) -> None:
         and decontamination.get("scope") == "all_evaluation_splits"
     ):
         raise ValueError("release does not satisfy the frozen all-split homology screen")
+    validate_search_contracts(decontamination.get("search_contracts"))
     evaluations = decontamination.get("evaluation_protocols")
     required = {"contact-p-at-l", "pcore-v0.2", "pcore-v0.5-alpha-q9"}
     if not isinstance(evaluations, list) or not required <= set(evaluations):
@@ -310,6 +379,7 @@ def materialize_plan(
                 "protocol": "mmseqs2-evaluation-homology-exclusion-v2",
                 "scope_used_for_training": "all evaluation splits",
                 "thresholds": release_decontamination["thresholds"],
+                "search_contracts": release_decontamination["search_contracts"],
                 "evaluation_protocols": release_decontamination["evaluation_protocols"],
                 "blocked_benchmark_candidates_are_protected": release_decontamination[
                     "blocked_benchmark_candidates_are_protected"

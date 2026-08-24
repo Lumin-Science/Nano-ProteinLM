@@ -22,8 +22,30 @@ class TrainingDataContractTests(unittest.TestCase):
                         "homology_exclusion_receipt_sha256": "a" * 64,
                         "homology_contract": {
                             "status": "verified",
-                            "protocol": "mmseqs2-evaluation-homology-exclusion-v1",
+                            "protocol": "mmseqs2-evaluation-homology-exclusion-v2",
                             "scope_used_for_training": "all evaluation splits",
+                            "evaluation_protocols": [
+                                "contact-p-at-l",
+                                "pcore-v0.2",
+                                "pcore-v0.5-alpha-q9",
+                            ],
+                            "blocked_benchmark_candidates_are_protected": True,
+                            "search_contracts": {
+                                "all_evaluation_splits": {
+                                    "query_scope": "all-evaluation-splits",
+                                    "search_orientation": (
+                                        "training-representative-query-vs-evaluation-target"
+                                    ),
+                                    "normalized_hit_table_schema": (
+                                        "evaluation_sha256,training_sha256,pident,alnlen,"
+                                        "evaluation_coverage,training_coverage,evalue,bits"
+                                    ),
+                                    "sensitivity": 7.5,
+                                    "configured_candidate_cap": 1_000_000,
+                                    "evaluation_target_sequences": 317_000,
+                                    "candidate_cap_unreachable": True,
+                                }
+                            },
                             "thresholds": {
                                 "coverage_mode": 0,
                                 "minimum_sequence_identity": 0.3,
@@ -48,7 +70,7 @@ class TrainingDataContractTests(unittest.TestCase):
                 json.dumps(
                     {
                         "status": "verified",
-                        "protocol": "prepared-corpus-decontamination-verification-v1",
+                        "protocol": "prepared-corpus-decontamination-verification-v2",
                         "manifest_sha256": hashlib.sha256(
                             manifest_path.read_bytes()
                         ).hexdigest(),
@@ -71,28 +93,37 @@ class TrainingDataContractTests(unittest.TestCase):
         manifest = validate_data_manifest(root)
         self.assertTrue(manifest["decontamination"]["homology_exclusion"])
 
+    def test_training_rejects_legacy_pre_q9_homology_receipt(self) -> None:
+        temporary, root = self._data_root(True)
+        self.addCleanup(temporary.cleanup)
+        manifest_path = root / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["decontamination"]["homology_contract"]["protocol"] = (
+            "mmseqs2-evaluation-homology-exclusion-v1"
+        )
+        manifest_path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(RuntimeError, "verified MMseqs2 homology"):
+            validate_data_manifest(root)
+
     def test_q9_homology_gate_requires_all_protocols_and_blocked_candidates(self) -> None:
         temporary, root = self._data_root(True)
         self.addCleanup(temporary.cleanup)
         manifest_path = root / "manifest.json"
         manifest = json.loads(manifest_path.read_text())
         contract = manifest["decontamination"]["homology_contract"]
-        contract["protocol"] = "mmseqs2-evaluation-homology-exclusion-v2"
-        contract["evaluation_protocols"] = [
-            "contact-p-at-l",
-            "pcore-v0.2",
-            "pcore-v0.5-alpha-q9",
-        ]
-        contract["blocked_benchmark_candidates_are_protected"] = True
-        manifest_path.write_text(json.dumps(manifest))
-        verification_path = root / "CORPUS_VERIFICATION.json"
-        verification = json.loads(verification_path.read_text())
-        verification["protocol"] = "prepared-corpus-decontamination-verification-v2"
-        verification["manifest_sha256"] = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
-        verification_path.write_text(json.dumps(verification))
         validate_data_manifest(root)
 
         contract["evaluation_protocols"].remove("pcore-v0.5-alpha-q9")
+        manifest_path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(RuntimeError, "verified MMseqs2 homology"):
+            validate_data_manifest(root)
+
+    def test_training_rejects_missing_search_provenance(self) -> None:
+        temporary, root = self._data_root(True)
+        self.addCleanup(temporary.cleanup)
+        manifest_path = root / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        del manifest["decontamination"]["homology_contract"]["search_contracts"]
         manifest_path.write_text(json.dumps(manifest))
         with self.assertRaisesRegex(RuntimeError, "verified MMseqs2 homology"):
             validate_data_manifest(root)

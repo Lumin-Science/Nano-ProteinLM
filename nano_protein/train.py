@@ -24,6 +24,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from .data import MixtureBatcher, file_sha256
 from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
 from .schedule import Stage, stage_for_progress, stage_for_time, wsd_multiplier
+from .sharded_data import validate_search_contracts
 from .tokenizer import ProteinTokenizer, mask_tokens
 
 
@@ -55,11 +56,19 @@ def validate_data_manifest(
     thresholds = contract.get("thresholds") if isinstance(contract, dict) else None
     protocol = contract.get("protocol") if isinstance(contract, dict) else None
     evaluations = contract.get("evaluation_protocols") if isinstance(contract, dict) else None
-    version_specific_contract = protocol == "mmseqs2-evaluation-homology-exclusion-v1" or (
+    try:
+        validate_search_contracts(
+            contract.get("search_contracts") if isinstance(contract, dict) else None
+        )
+        valid_search_contracts = True
+    except (TypeError, ValueError):
+        valid_search_contracts = False
+    version_specific_contract = (
         protocol == "mmseqs2-evaluation-homology-exclusion-v2"
         and isinstance(evaluations, list)
         and {"contact-p-at-l", "pcore-v0.2", "pcore-v0.5-alpha-q9"} <= set(evaluations)
         and contract.get("blocked_benchmark_candidates_are_protected") is True
+        and valid_search_contracts
     )
     valid_contract = (
         isinstance(contract, dict)

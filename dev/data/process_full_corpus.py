@@ -21,18 +21,21 @@ Pipeline, in order
    shorter-sequence coverage.
 5. ``evaluation-union`` freezes P@L, legacy P-CORE, and every Q9 P-CORE sequence,
    including blocked CAFA, MegaScale wild types, and both PRING partners.
-6. ``full-screen`` searches the entire evaluation union against freshly built
-   representative databases. ``delta-screen`` is the receipt-preserving shortcut
-   when an identical legacy all-splits screen already exists.
+6. ``full-screen`` searches every training representative against the much
+   smaller frozen evaluation union, then normalizes hits back to
+   evaluation-to-training rows. ``delta-screen`` is the receipt-preserving
+   shortcut when an identical legacy all-splits screen already exists.
 7. ``finalize-full-screen`` validates a fresh full search. ``finalize-screen``
    instead validates the Q9 delta and unions it with the verified legacy
-   exclusion set; the two paths are set-equivalent.
+   exclusion set under the same identity and dual-coverage policy.
 8. ``shard`` applies exact + homology exclusion, length gates and a globally
    disjoint validation set, then writes deterministic SHA-ordered Parquet shards.
 9. ``verify-release`` independently re-reads every shard and freezes the release
    manifest consumed by ``scripts/download_data.py``.
 10. ``stage-metadata`` renders the measured dataset card, attribution, and
     portable provenance receipts only after release verification succeeds.
+11. ``reproduce`` is the parent-independent 64-CPU entrypoint that executes all
+    ten stages in order from the pinned raw objects to the verified release.
 
 Examples are in ``dev/data/DATA_PROCESSING_REPORT.md``.  Run this file only via
 the repository's uv environment: ``uv run --frozen python ...``.
@@ -48,6 +51,7 @@ import hashlib
 import heapq
 import json
 import re
+import shlex
 import shutil
 import subprocess
 import tarfile
@@ -79,6 +83,14 @@ MMSEQS_THRESHOLDS = {
     "coverage_mode": 0,
     "maximum_sequences_per_query": 1_000_000,
 }
+MMSEQS_SENSITIVITY = 7.5
+SCREEN_SEARCH_ORIENTATION = "training-representative-query-vs-evaluation-target"
+LEGACY_SEARCH_ORIENTATION = "evaluation-query-vs-training-representative-target"
+NORMALIZED_HIT_TABLE_SCHEMA = (
+    "evaluation_sha256,training_sha256,pident,alnlen,"
+    "evaluation_coverage,training_coverage,evalue,bits"
+)
+SOURCE_SEARCH_PROTOCOL = "mmseqs2-source-homology-search-v2"
 PRIMARY_SOURCES = {
     "uniref90": {
         "url": (
@@ -757,6 +769,197 @@ def _resolve_screen_target(target_db_root: Path, source: str) -> tuple[Path, Pat
     raise FileNotFoundError(f"missing {source} target database; checked {direct} and {nested}")
 
 
+def _screen_commands(
+    *,
+    mmseqs: Path,
+    representative_db: Path,
+    evaluation_db: Path,
+    result_db: Path,
+    temporary: Path,
+    hit_table: Path,
+    threads: int,
+) -> tuple[list[str], list[str]]:
+    """Build the low-footprint search and its orientation-normalizing export.
+
+    Identity and cov-mode 0 are symmetric, so the complete training reservoir can
+    be the query side while the 317k-sequence evaluation union is the indexed
+    target.  ``convertalis`` deliberately swaps query/target and qcov/tcov back,
+    preserving the historical TSV contract consumed by both finalizers.
+    """
+
+    search = [
+        str(mmseqs),
+        "search",
+        str(representative_db),
+        str(evaluation_db),
+        str(result_db),
+        str(temporary),
+        "--min-seq-id",
+        "0.30",
+        "-c",
+        "0.80",
+        "--cov-mode",
+        "0",
+        "--max-seqs",
+        "1000000",
+        "-s",
+        str(MMSEQS_SENSITIVITY),
+        "--threads",
+        str(threads),
+    ]
+    convert = [
+        str(mmseqs),
+        "convertalis",
+        str(representative_db),
+        str(evaluation_db),
+        str(result_db),
+        str(hit_table),
+        "--format-output",
+        "target,query,pident,alnlen,tcov,qcov,evalue,bits",
+    ]
+    return search, convert
+
+
+def _safe_receipt_path(root: Path, relative: object, *, label: str) -> Path:
+    """Resolve one receipt path without accepting absolute or traversing values."""
+
+    if not isinstance(relative, str):
+        raise ValueError(f"invalid receipt path for {label}")
+    candidate = (root / relative).resolve()
+    try:
+        candidate.relative_to(root.resolve())
+    except ValueError as error:
+        raise ValueError(f"receipt path escapes search root for {label}") from error
+    return candidate
+
+
+def _screen_hit_path(root: Path, source: str, artifact: dict[str, Any]) -> Path:
+    """Resolve one receipt-bound hit table without accepting path traversal."""
+
+    return _safe_receipt_path(
+        root,
+        artifact.get("relative_path", f"results/{source}.tsv"),
+        label=f"{source} hit table",
+    )
+
+
+def _next_screen_attempt(output: Path, source: str, *, resume: bool) -> tuple[Path, Path, Path]:
+    """Choose create-once paths, retaining failed attempts for forensic audit."""
+
+    attempt = 0
+    while True:
+        suffix = "" if not resume else f"-recovery-{attempt + 1:02d}"
+        result = output / f"results/{source}{suffix}"
+        temporary = output / f"tmp/{source}{suffix}"
+        hit_table = output / f"results/{source}{suffix}.tsv"
+        occupied = temporary.exists() or any(result.parent.glob(result.name + "*"))
+        if not occupied:
+            return result, temporary, hit_table
+        if not resume:
+            raise FileExistsError(f"unverified search state exists for {source}")
+        attempt += 1
+
+
+def _new_evaluation_database(output: Path, *, resume: bool) -> Path:
+    """Allocate a fresh evaluation DB; interrupted databases are never trusted."""
+
+    attempt = 0
+    while True:
+        name = "evaluation" if not resume else f"evaluation-recovery-{attempt + 1:02d}"
+        database = output / "db" / name
+        if not any(database.parent.glob(database.name + "*")):
+            return database
+        if not resume:
+            raise FileExistsError("unverified evaluation database already exists")
+        attempt += 1
+
+
+def _database_artifacts(root: Path, database: Path) -> dict[str, dict[str, Any]]:
+    """Hash every regular MMseqs file sharing a database prefix."""
+
+    artifacts: dict[str, dict[str, Any]] = {}
+    for path in sorted(database.parent.glob(database.name + "*")):
+        if path.is_file():
+            relative = path.relative_to(root).as_posix()
+            artifacts[relative] = {"bytes": path.stat().st_size, "sha256": file_hash(path)}
+    if not artifacts or not database.with_suffix(".dbtype").is_file():
+        raise ValueError("MMseqs evaluation database is incomplete")
+    return artifacts
+
+
+def _validated_source_search(
+    *,
+    output: Path,
+    source: str,
+    source_receipt: Path,
+    query_fasta_sha256: str,
+    target_binding: dict[str, Any],
+) -> dict[str, Any]:
+    """Return a reusable artifact only when an atomic source receipt proves it."""
+
+    receipt = json.loads(source_receipt.read_text())
+    if not (
+        receipt.get("status") == "complete"
+        and receipt.get("protocol") == SOURCE_SEARCH_PROTOCOL
+        and receipt.get("source") == source
+        and receipt.get("query_fasta_sha256") == query_fasta_sha256
+        and receipt.get("search_orientation") == SCREEN_SEARCH_ORIENTATION
+        and receipt.get("normalized_hit_table_schema") == NORMALIZED_HIT_TABLE_SCHEMA
+        and receipt.get("thresholds") == MMSEQS_THRESHOLDS
+        and receipt.get("sensitivity") == MMSEQS_SENSITIVITY
+    ):
+        raise ValueError(f"completed source-search receipt changed for {source}")
+    artifact = receipt.get("artifact")
+    if not isinstance(artifact, dict):
+        raise ValueError(f"completed source-search artifact is missing for {source}")
+    for name, expected in target_binding.items():
+        if artifact.get(name) != expected:
+            raise ValueError(f"completed source-search target binding changed: {source}/{name}")
+    hit_table = _screen_hit_path(output, source, artifact)
+    if not hit_table.is_file() or file_hash(hit_table) != artifact.get("sha256"):
+        raise ValueError(f"completed source-search hit table changed for {source}")
+    return {
+        **artifact,
+        "source_receipt": str(source_receipt.resolve()),
+        "source_receipt_relative_path": source_receipt.relative_to(output).as_posix(),
+        "source_receipt_sha256": file_hash(source_receipt),
+        "reused_from_interrupted_parent": True,
+    }
+
+
+def _validate_search_file_bindings(root: Path, receipt: dict[str, Any]) -> None:
+    """Rehash the small evaluation DB and every atomic per-source receipt."""
+
+    database_artifacts = receipt.get("evaluation_database_artifacts")
+    if not isinstance(database_artifacts, dict) or not database_artifacts:
+        raise ValueError("search receipt lacks evaluation-database artifacts")
+    for relative, expected in database_artifacts.items():
+        path = _safe_receipt_path(root, relative, label="evaluation database")
+        expected_bytes = expected.get("bytes") if isinstance(expected, dict) else None
+        if not (
+            isinstance(expected, dict)
+            and isinstance(expected_bytes, int)
+            and not isinstance(expected_bytes, bool)
+            and path.is_file()
+            and path.stat().st_size == expected_bytes
+            and file_hash(path) == expected.get("sha256")
+        ):
+            raise ValueError(f"evaluation-database artifact changed: {relative}")
+    for source in SOURCES:
+        artifact = receipt.get("artifacts", {}).get(source)
+        if not isinstance(artifact, dict):
+            raise ValueError(f"search receipt lacks {source} artifact")
+        source_receipt = _safe_receipt_path(
+            root,
+            artifact.get("source_receipt_relative_path"),
+            label=f"{source} completion receipt",
+        )
+        if not source_receipt.is_file() or file_hash(source_receipt) != artifact.get(
+            "source_receipt_sha256"
+        ):
+            raise ValueError(f"source completion receipt changed: {source}")
+
+
 def run_delta_screen(
     *,
     query_fasta: Path,
@@ -770,29 +973,45 @@ def run_delta_screen(
     receipt_protocol: str = "mmseqs2-evaluation-delta-search-v1",
     query_scope: str = "q9-delta",
 ) -> dict[str, Any]:
-    """Search a frozen evaluation FASTA against complete representative databases."""
+    """Screen complete representatives against a frozen evaluation FASTA."""
 
+    if threads <= 0:
+        raise ValueError("threads must be positive")
     if resume:
         if not output.is_dir():
             raise FileNotFoundError(f"delta output does not exist for resume: {output}")
         if (output / receipt_name).exists():
             raise FileExistsError("homology screen already has a complete receipt")
+        for child in ("db", "results", "tmp"):
+            if not (output / child).is_dir():
+                raise FileNotFoundError(f"resume output lacks {child}/")
     else:
         output.mkdir(parents=True, exist_ok=False)
         (output / "db").mkdir()
         (output / "results").mkdir()
         (output / "tmp").mkdir()
-    query_db = output / "db/query"
-    if resume:
-        if not query_db.with_suffix(".dbtype").is_file():
-            raise FileNotFoundError("resume output lacks the original MMseqs query database")
-    else:
-        subprocess.run([str(mmseqs), "createdb", str(query_fasta), str(query_db)], check=True)
+    query_fasta_sha256 = file_hash(query_fasta)
+    evaluation_sequences = sum(1 for _header, _sequence in iter_fasta(query_fasta))
+    if not 0 < evaluation_sequences < MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+        raise ValueError("evaluation target cardinality does not prove max-seqs is unreachable")
+    evaluation_db = _new_evaluation_database(output, resume=resume)
+    evaluation_createdb_command = [
+        str(mmseqs),
+        "createdb",
+        str(query_fasta),
+        str(evaluation_db),
+    ]
+    subprocess.run(evaluation_createdb_command, check=True)
+    evaluation_database_artifacts = _database_artifacts(output, evaluation_db)
     threads_per_source = max(1, threads // len(SOURCES)) if concurrent_sources else threads
 
     def screen_source(source: str) -> tuple[str, list[str], dict[str, Any]]:
-        target, target_verification = _resolve_screen_target(target_db_root, source)
-        target_binding: dict[str, Any] = {"target_database": str(target.resolve())}
+        representative_db, target_verification = _resolve_screen_target(target_db_root, source)
+        target_binding: dict[str, Any] = {
+            # This legacy field means the logical training target of exclusion,
+            # even though it is now the MMseqs query database for efficiency.
+            "target_database": str(representative_db.resolve())
+        }
         if target_verification is not None:
             verification = json.loads(target_verification.read_text())
             target_binding.update(
@@ -803,71 +1022,70 @@ def run_delta_screen(
                     ],
                 }
             )
-        hits = output / f"results/{source}.tsv"
-        if resume and hits.is_file():
-            return (
-                source,
-                ["reuse-completed-hit-table", source],
-                {
-                    "path": str(hits.resolve()),
-                    "bytes": hits.stat().st_size,
-                    "sha256": file_hash(hits),
-                    "reused_from_interrupted_parent": True,
-                    **target_binding,
-                },
+        source_receipt = output / f"results/{source}.complete.json"
+        if resume and source_receipt.is_file():
+            artifact = _validated_source_search(
+                output=output,
+                source=source,
+                source_receipt=source_receipt,
+                query_fasta_sha256=query_fasta_sha256,
+                target_binding=target_binding,
             )
-        suffix = "-recovery" if resume else ""
-        result = output / f"results/{source}{suffix}"
-        temporary = output / f"tmp/{source}{suffix}"
-        if result.exists() or temporary.exists():
-            raise FileExistsError(f"unverified recovery state exists for {source}")
-        command = [
-            str(mmseqs),
-            "search",
-            str(query_db),
-            str(target),
-            str(result),
-            str(temporary),
-            "--min-seq-id",
-            "0.30",
-            "-c",
-            "0.80",
-            "--cov-mode",
-            "0",
-            "--max-seqs",
-            "1000000",
-            "-s",
-            "7.5",
-            "--threads",
-            str(threads_per_source),
-        ]
-        subprocess.run(command, check=True)
-        subprocess.run(
-            [
-                str(mmseqs),
-                "convertalis",
-                str(query_db),
-                str(target),
-                str(result),
-                str(hits),
-                "--format-output",
-                "query,target,pident,alnlen,qcov,tcov,evalue,bits",
-            ],
-            check=True,
+            return source, ["reuse-completed-source-receipt", source], artifact
+
+        result, temporary, hit_table = _next_screen_attempt(output, source, resume=resume)
+        search_command, convert_command = _screen_commands(
+            mmseqs=mmseqs,
+            representative_db=representative_db,
+            evaluation_db=evaluation_db,
+            result_db=result,
+            temporary=temporary,
+            hit_table=hit_table,
+            threads=threads_per_source,
         )
+        subprocess.run(search_command, check=True)
+        subprocess.run(convert_command, check=True)
         artifact = {
-            "path": str(hits.resolve()),
-            "bytes": hits.stat().st_size,
-            "sha256": file_hash(hits),
+            "path": str(hit_table.resolve()),
+            "relative_path": hit_table.relative_to(output).as_posix(),
+            "bytes": hit_table.stat().st_size,
+            "sha256": file_hash(hit_table),
+            "search_orientation": SCREEN_SEARCH_ORIENTATION,
+            "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
             **target_binding,
         }
-        return source, command, artifact
+        source_report = {
+            "schema_version": 2,
+            "status": "complete",
+            "protocol": SOURCE_SEARCH_PROTOCOL,
+            "source": source,
+            "query_fasta_sha256": query_fasta_sha256,
+            "evaluation_target_sequences": evaluation_sequences,
+            "search_orientation": SCREEN_SEARCH_ORIENTATION,
+            "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
+            "thresholds": MMSEQS_THRESHOLDS,
+            "sensitivity": MMSEQS_SENSITIVITY,
+            "commands": [search_command, convert_command],
+            "artifact": artifact,
+        }
+        atomic_json(source_receipt, source_report)
+        return (
+            source,
+            search_command,
+            {
+                **artifact,
+                "source_receipt": str(source_receipt.resolve()),
+                "source_receipt_relative_path": source_receipt.relative_to(output).as_posix(),
+                "source_receipt_sha256": file_hash(source_receipt),
+            },
+        )
 
     commands: list[list[str]] = []
     artifacts: dict[str, Any] = {}
     if concurrent_sources:
-        # Exact but opt-in: peak RAM is the sum of all three target indexes and
-        # exceeds the practical limit of a 1 TB host.
+        # The reversed orientation indexes only the frozen evaluation DB, but
+        # serial remains the production default so large query readers do not
+        # compete for memory bandwidth or temporary disk.
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(SOURCES)) as executor:
             futures = [executor.submit(screen_source, source) for source in SOURCES]
             results = [future.result() for future in concurrent.futures.as_completed(futures)]
@@ -877,15 +1095,23 @@ def run_delta_screen(
         commands.append(command)
         artifacts[source] = artifact
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "complete",
         "protocol": receipt_protocol,
         "query_scope": query_scope,
-        "query_fasta_sha256": file_hash(query_fasta),
+        "query_fasta_sha256": query_fasta_sha256,
+        "evaluation_target_sequences": evaluation_sequences,
+        "evaluation_database": evaluation_db.relative_to(output).as_posix(),
+        "evaluation_database_artifacts": evaluation_database_artifacts,
+        "evaluation_createdb_command": evaluation_createdb_command,
+        "search_orientation": SCREEN_SEARCH_ORIENTATION,
+        "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
         "target_scope": (
             "complete 70%-identity representative FASTAs via verified parent databases"
         ),
         "thresholds": MMSEQS_THRESHOLDS,
+        "sensitivity": MMSEQS_SENSITIVITY,
+        "candidate_cap_unreachable": True,
         "mmseqs_version": subprocess.run(
             [str(mmseqs), "version"], check=True, capture_output=True, text=True
         ).stdout.strip(),
@@ -906,6 +1132,70 @@ def _read_digest_file(path: Path) -> set[str]:
     return values
 
 
+def _validate_legacy_search_contract(
+    parent: dict[str, Any], parent_receipt: Path
+) -> dict[str, Any]:
+    """Bind the legacy parent to its exact three MMseqs search commands."""
+
+    command_path = Path(parent.get("command_receipt", ""))
+    expected_hash = parent.get("command_receipt_sha256")
+    if not command_path.is_file() or file_hash(command_path) != expected_hash:
+        raise ValueError("parent MMseqs command receipt changed")
+    searches = [
+        shlex.split(line)
+        for line in command_path.read_text().splitlines()
+        if line.strip() and len(shlex.split(line)) > 1 and shlex.split(line)[1] == "search"
+    ]
+    if len(searches) != len(SOURCES):
+        raise ValueError("parent MMseqs command receipt lacks one search per source")
+    query_db = (parent_receipt.parent / "db/query").resolve()
+    observed_sources: set[str] = set()
+    for command in searches:
+        if len(command) < 6 or Path(command[2]).resolve() != query_db:
+            raise ValueError("parent MMseqs command used the wrong evaluation database")
+        matching = [
+            source
+            for source in SOURCES
+            if Path(command[3]).resolve() == (parent_receipt.parent / "db" / source).resolve()
+        ]
+        if len(matching) != 1:
+            raise ValueError("parent MMseqs command used an unknown training database")
+        source = matching[0]
+        if source in observed_sources:
+            raise ValueError(f"duplicate parent MMseqs command for {source}")
+        observed_sources.add(source)
+        expected_options = {
+            "--min-seq-id": "0.30",
+            "-c": "0.80",
+            "--cov-mode": "0",
+            "--max-seqs": "1000000",
+            "-s": str(MMSEQS_SENSITIVITY),
+        }
+        for option, expected in expected_options.items():
+            try:
+                observed = command[command.index(option) + 1]
+            except (ValueError, IndexError) as error:
+                raise ValueError(f"parent MMseqs command omitted {option}") from error
+            if observed != expected:
+                raise ValueError(f"parent MMseqs command changed {option}")
+    maximum_emitted = max(
+        int(parent["sources"][source]["maximum_hits_for_one_query"]) for source in SOURCES
+    )
+    if maximum_emitted >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+        raise ValueError("parent MMseqs output reached the configured candidate cap")
+    return {
+        "query_scope": "p-at-l-and-pcore-v0.2-all-splits",
+        "search_orientation": LEGACY_SEARCH_ORIENTATION,
+        "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
+        "sensitivity": MMSEQS_SENSITIVITY,
+        "configured_candidate_cap": MMSEQS_THRESHOLDS["maximum_sequences_per_query"],
+        "maximum_emitted_hits_for_one_evaluation_query": maximum_emitted,
+        "all_emitted_hit_counts_below_cap": True,
+        "command_receipt_sha256": expected_hash,
+        "mmseqs_version": parent.get("mmseqs_version"),
+    }
+
+
 def finalize_screen(
     *,
     evaluation_root: Path,
@@ -924,6 +1214,7 @@ def finalize_screen(
         or parent.get("scope_used_for_training") != "all evaluation splits"
     ):
         raise ValueError("parent homology screen is not the verified legacy protocol")
+    legacy_search_contract = _validate_legacy_search_contract(parent, parent_receipt)
     for name in (
         "minimum_sequence_identity",
         "minimum_query_coverage",
@@ -940,8 +1231,13 @@ def finalize_screen(
         or delta.get("protocol") != "mmseqs2-evaluation-delta-search-v1"
         or delta.get("query_scope") != "q9-delta"
         or delta.get("thresholds") != MMSEQS_THRESHOLDS
+        or delta.get("sensitivity") != MMSEQS_SENSITIVITY
+        or delta.get("search_orientation") != SCREEN_SEARCH_ORIENTATION
+        or delta.get("normalized_hit_table_schema") != NORMALIZED_HIT_TABLE_SCHEMA
+        or delta.get("candidate_cap_unreachable") is not True
     ):
         raise ValueError("delta search receipt is incomplete or uses different thresholds")
+    _validate_search_file_bindings(delta_root, delta)
     ledger = json.loads((evaluation_root / "EVALUATION_SPLIT_LEDGER.json").read_text())
     if (
         delta["query_fasta_sha256"]
@@ -958,13 +1254,19 @@ def finalize_screen(
     delta_targets: set[str] = set()
     for source in SOURCES:
         artifact = delta["artifacts"][source]
-        path = delta_root / f"results/{source}.tsv"
+        path = _screen_hit_path(delta_root, source, artifact)
         if file_hash(path) != artifact["sha256"]:
             raise ValueError(f"delta hit file changed: {source}")
+        if (
+            artifact.get("search_orientation") != SCREEN_SEARCH_ORIENTATION
+            or artifact.get("normalized_hit_table_schema") != NORMALIZED_HIT_TABLE_SCHEMA
+        ):
+            raise ValueError(f"delta hit orientation changed: {source}")
         expected_target = (parent_receipt.parent / "db" / source).resolve()
         if Path(artifact.get("target_database", "")).resolve() != expected_target:
             raise ValueError(f"delta search did not reuse the parent {source} target database")
-        per_query: Counter[str] = Counter()
+        per_evaluation: Counter[str] = Counter()
+        per_training: Counter[str] = Counter()
         targets: set[str] = set()
         rows = 0
         with path.open() as handle:
@@ -986,12 +1288,13 @@ def finalize_screen(
                     raise ValueError(
                         f"MMseqs threshold/query violation at {path}:{line_number}"
                     )
-                per_query[query] += 1
+                per_evaluation[query] += 1
+                per_training[target] += 1
                 targets.add(target)
                 rows += 1
-        largest = max(per_query.values(), default=0)
-        if largest >= 1_000_000:
-            raise ValueError(f"{source} hit the max-seqs cap")
+        maximum_training_hits = max(per_training.values(), default=0)
+        if len(queries) >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+            raise ValueError(f"{source} target cardinality can reach the max-seqs cap")
         verification = json.loads((cluster_root / source / "verification.json").read_text())
         if (
             parent.get("sources", {}).get(source, {}).get("representative_fasta_sha256")
@@ -1000,9 +1303,13 @@ def finalize_screen(
             raise ValueError(f"reused {source} target DB is not bound to this FASTA")
         source_reports[source] = {
             "alignment_rows": rows,
-            "matched_queries": len(per_query),
+            "matched_queries": len(per_evaluation),
             "delta_excluded_representatives": len(targets),
-            "maximum_hits_for_one_query": largest,
+            "maximum_excluded_representatives_for_one_evaluation_query": max(
+                per_evaluation.values(), default=0
+            ),
+            "maximum_evaluation_hits_for_one_training_query": maximum_training_hits,
+            "candidate_cap_unreachable": True,
             "complete_representative_sequences": verification["clusters"],
             "representative_fasta_sha256": verification["representative_fasta_sha256"],
             "target_database": str(expected_target),
@@ -1023,6 +1330,18 @@ def finalize_screen(
         "evaluation_protocols": ledger["evaluation_protocols"],
         "blocked_benchmark_candidates_are_protected": True,
         "thresholds": MMSEQS_THRESHOLDS,
+        "search_contracts": {
+            "legacy_parent": legacy_search_contract,
+            "q9_delta": {
+                "query_scope": "q9-delta",
+                "search_orientation": SCREEN_SEARCH_ORIENTATION,
+                "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
+                "sensitivity": MMSEQS_SENSITIVITY,
+                "configured_candidate_cap": MMSEQS_THRESHOLDS["maximum_sequences_per_query"],
+                "evaluation_target_sequences": len(queries),
+                "candidate_cap_unreachable": True,
+            },
+        },
         "evaluation_all_split_queries": ledger["union_unique_sequences"],
         "evaluation_q9_delta_queries": len(queries),
         "parent_excluded_representatives": parent_count,
@@ -1057,8 +1376,13 @@ def finalize_full_screen(
         or search.get("protocol") != "mmseqs2-evaluation-full-search-v1"
         or search.get("query_scope") != "all-evaluation-splits"
         or search.get("thresholds") != MMSEQS_THRESHOLDS
+        or search.get("sensitivity") != MMSEQS_SENSITIVITY
+        or search.get("search_orientation") != SCREEN_SEARCH_ORIENTATION
+        or search.get("normalized_hit_table_schema") != NORMALIZED_HIT_TABLE_SCHEMA
+        or search.get("candidate_cap_unreachable") is not True
     ):
         raise ValueError("full homology search receipt is incomplete or changed")
+    _validate_search_file_bindings(search_root, search)
     ledger_path = evaluation_root / "EVALUATION_SPLIT_LEDGER.json"
     ledger = json.loads(ledger_path.read_text())
     query_fasta = evaluation_root / "evaluation_all_splits.fasta"
@@ -1072,9 +1396,14 @@ def finalize_full_screen(
     targets_union: set[str] = set()
     for source in SOURCES:
         artifact = search["artifacts"][source]
-        path = search_root / f"results/{source}.tsv"
+        path = _screen_hit_path(search_root, source, artifact)
         if file_hash(path) != artifact["sha256"]:
             raise ValueError(f"full-screen hit file changed: {source}")
+        if (
+            artifact.get("search_orientation") != SCREEN_SEARCH_ORIENTATION
+            or artifact.get("normalized_hit_table_schema") != NORMALIZED_HIT_TABLE_SCHEMA
+        ):
+            raise ValueError(f"full-screen hit orientation changed: {source}")
         expected_target = (cluster_root / source / "db/representatives").resolve()
         if Path(artifact.get("target_database", "")).resolve() != expected_target:
             raise ValueError(f"full screen did not use the fresh {source} target database")
@@ -1086,7 +1415,8 @@ def finalize_full_screen(
             != verification["representative_fasta_sha256"]
         ):
             raise ValueError(f"full screen target DB is not bound to {source} representatives")
-        per_query: Counter[str] = Counter()
+        per_evaluation: Counter[str] = Counter()
+        per_training: Counter[str] = Counter()
         targets: set[str] = set()
         rows = 0
         with path.open() as handle:
@@ -1108,17 +1438,22 @@ def finalize_full_screen(
                     raise ValueError(
                         f"MMseqs threshold/query violation at {path}:{line_number}"
                     )
-                per_query[query] += 1
+                per_evaluation[query] += 1
+                per_training[target] += 1
                 targets.add(target)
                 rows += 1
-        largest = max(per_query.values(), default=0)
-        if largest >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
-            raise ValueError(f"{source} hit the max-seqs cap")
+        maximum_training_hits = max(per_training.values(), default=0)
+        if len(queries) >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+            raise ValueError(f"{source} target cardinality can reach the max-seqs cap")
         source_reports[source] = {
             "alignment_rows": rows,
-            "matched_queries": len(per_query),
+            "matched_queries": len(per_evaluation),
             "excluded_representatives": len(targets),
-            "maximum_hits_for_one_query": largest,
+            "maximum_excluded_representatives_for_one_evaluation_query": max(
+                per_evaluation.values(), default=0
+            ),
+            "maximum_evaluation_hits_for_one_training_query": maximum_training_hits,
+            "candidate_cap_unreachable": True,
             "complete_representative_sequences": verification["clusters"],
             "representative_fasta_sha256": verification["representative_fasta_sha256"],
             "target_database": str(expected_target),
@@ -1139,6 +1474,17 @@ def finalize_full_screen(
         "evaluation_protocols": ledger["evaluation_protocols"],
         "blocked_benchmark_candidates_are_protected": True,
         "thresholds": MMSEQS_THRESHOLDS,
+        "search_contracts": {
+            "all_evaluation_splits": {
+                "query_scope": "all-evaluation-splits",
+                "search_orientation": SCREEN_SEARCH_ORIENTATION,
+                "normalized_hit_table_schema": NORMALIZED_HIT_TABLE_SCHEMA,
+                "sensitivity": MMSEQS_SENSITIVITY,
+                "configured_candidate_cap": MMSEQS_THRESHOLDS["maximum_sequences_per_query"],
+                "evaluation_target_sequences": len(queries),
+                "candidate_cap_unreachable": True,
+            }
+        },
         "evaluation_all_split_queries": len(queries),
         "parent_excluded_representatives": 0,
         "full_screen_unique_targets": len(targets_union),
@@ -1588,6 +1934,7 @@ def shard_release(
             "evaluation_protocols": screen_receipt["evaluation_protocols"],
             "blocked_benchmark_candidates_are_protected": True,
             "thresholds": screen_receipt["thresholds"],
+            "search_contracts": screen_receipt["search_contracts"],
             "homology_exclusion_receipt_sha256": file_hash(
                 screen_root / "HOMOLOGY_EXCLUSION_VERIFIED.json"
             ),
@@ -1895,6 +2242,164 @@ def stage_release_metadata(
     return receipt
 
 
+def reproduce_full_corpus(
+    *,
+    data_root: Path,
+    omg_manifest: Path,
+    legacy_evaluation_root: Path,
+    q9_evaluation_root: Path,
+    template_root: Path,
+    mmseqs: Path,
+    threads: int = 64,
+    download_workers: int = 8,
+    partitions: int = DEFAULT_PARTITIONS,
+    validation_per_source: int = 4096,
+    shard_residues: int = DEFAULT_SHARD_RESIDUES,
+) -> dict[str, Any]:
+    """Run the fresh, parent-independent raw-to-release pipeline end to end.
+
+    This is intentionally strict rather than an implicit recovery controller:
+    downloads resume safely, but every derived stage is create-once. If a long
+    stage is interrupted, inspect its receipt and invoke the corresponding
+    subcommand (``full-screen --resume`` is the only derived-stage recovery)
+    instead of silently accepting or overwriting partial state.
+    """
+
+    if threads <= 0:
+        raise ValueError("threads must be positive")
+    if data_root.exists() and any(data_root.iterdir()):
+        allowed = {"raw", "RAW_DOWNLOAD_VERIFIED.json"}
+        unexpected = {path.name for path in data_root.iterdir()} - allowed
+        if unexpected:
+            raise FileExistsError(
+                f"reproduce requires a fresh derived-stage root; found {sorted(unexpected)}"
+            )
+    download_receipt = download_raw(
+        data_root,
+        omg_manifest,
+        download_workers=download_workers,
+    )
+    normalized_root = data_root / "normalized"
+    normalization: dict[str, Any] = {}
+    normalization["uniref90"] = normalize_source(
+        source="uniref90",
+        inputs=[data_root / str(PRIMARY_SOURCES["uniref90"]["relative"])],
+        output=normalized_root / "uniref90",
+        partitions=partitions,
+    )
+    normalization["mgnify"] = normalize_source(
+        source="mgnify",
+        inputs=[data_root / str(PRIMARY_SOURCES["mgnify"]["relative"])],
+        output=normalized_root / "mgnify",
+        partitions=partitions,
+    )
+    with omg_manifest.open(newline="") as handle:
+        omg_rows = list(csv.DictReader(handle, delimiter="\t"))
+    omg_inputs = [data_root / "raw/omg" / row["path"] for row in omg_rows]
+    normalization["omg_img"] = normalize_source(
+        source="omg_img",
+        inputs=_paths([str(path) for path in omg_inputs]),
+        output=normalized_root / "omg_img",
+        partitions=partitions,
+    )
+
+    deduplicated_root = data_root / "deduplicated"
+    deduplication = deduplicate(
+        [normalized_root / source for source in SOURCES],
+        deduplicated_root,
+        partitions,
+    )
+    cluster_root = data_root / "clusters"
+    clustering = {
+        source: run_cluster(
+            dedup_root=deduplicated_root,
+            output=cluster_root / source,
+            source=source,
+            mmseqs=mmseqs,
+            threads=threads,
+        )
+        for source in SOURCES
+    }
+    evaluation_root = data_root / "evaluation"
+    evaluation = build_evaluation_union(
+        legacy_root=legacy_evaluation_root,
+        q9_root=q9_evaluation_root,
+        output=evaluation_root,
+    )
+    search_root = data_root / "full-screen-search"
+    run_delta_screen(
+        query_fasta=evaluation_root / "evaluation_all_splits.fasta",
+        target_db_root=cluster_root,
+        output=search_root,
+        mmseqs=mmseqs,
+        threads=threads,
+        concurrent_sources=False,
+        resume=False,
+        receipt_name="MMSEQS_FULL_SEARCH_COMPLETE.json",
+        receipt_protocol="mmseqs2-evaluation-full-search-v1",
+        query_scope="all-evaluation-splits",
+    )
+    screen_root = data_root / "homology-screen"
+    screen = finalize_full_screen(
+        evaluation_root=evaluation_root,
+        search_root=search_root,
+        cluster_root=cluster_root,
+        output=screen_root,
+    )
+    release_root = data_root / "release"
+    shard_release(
+        cluster_root=cluster_root,
+        screen_root=screen_root,
+        evaluation_root=evaluation_root,
+        output=release_root,
+        validation_per_source=validation_per_source,
+        shard_residues=shard_residues,
+    )
+    verification = verify_release(
+        release_root,
+        screen_root=screen_root,
+        evaluation_root=evaluation_root,
+    )
+    metadata = stage_release_metadata(
+        release_root=release_root,
+        template_root=template_root,
+        omg_manifest=omg_manifest,
+        screen_root=screen_root,
+        evaluation_root=evaluation_root,
+    )
+    receipt = {
+        "schema_version": 1,
+        "status": "verified",
+        "protocol": "open-protein-full-reproduction-v1",
+        "threads": threads,
+        "download_workers": download_workers,
+        "partitions": partitions,
+        "validation_per_source": validation_per_source,
+        "shard_residues": shard_residues,
+        "raw_download_status": download_receipt["status"],
+        "normalization_status": {
+            source: normalization[source]["status"] for source in SOURCES
+        },
+        "deduplication_status": deduplication["status"],
+        "clustering_status": {source: clustering[source]["status"] for source in SOURCES},
+        "evaluation_union_unique_sequences": evaluation["union_unique_sequences"],
+        "full_search_receipt_sha256": file_hash(
+            search_root / "MMSEQS_FULL_SEARCH_COMPLETE.json"
+        ),
+        "homology_screen_receipt_sha256": file_hash(
+            screen_root / "HOMOLOGY_EXCLUSION_VERIFIED.json"
+        ),
+        "excluded_training_representatives": screen["excluded_training_representatives"],
+        "release_manifest_sha256": verification["manifest_sha256"],
+        "release_metadata_receipt_sha256": file_hash(
+            release_root / "RELEASE_METADATA_VERIFIED.json"
+        ),
+        "release_metadata_status": metadata["status"],
+    }
+    atomic_json(data_root / "FULL_CORPUS_REPRODUCTION_VERIFIED.json", receipt)
+    return receipt
+
+
 def _paths(values: Sequence[str]) -> list[Path]:
     paths = [Path(value) for value in values]
     missing = [path for path in paths if not path.exists()]
@@ -1906,6 +2411,21 @@ def _paths(values: Sequence[str]) -> list[Path]:
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
+    reproduce = sub.add_parser(
+        "reproduce",
+        help="run the fresh parent-independent raw-to-release pipeline",
+    )
+    reproduce.add_argument("--data-root", type=Path, required=True)
+    reproduce.add_argument("--omg-manifest", type=Path, required=True)
+    reproduce.add_argument("--legacy-evaluation-root", type=Path, required=True)
+    reproduce.add_argument("--q9-evaluation-root", type=Path, required=True)
+    reproduce.add_argument("--template-root", type=Path, required=True)
+    reproduce.add_argument("--mmseqs", type=Path, required=True)
+    reproduce.add_argument("--threads", type=int, default=64)
+    reproduce.add_argument("--download-workers", type=int, default=8)
+    reproduce.add_argument("--partitions", type=int, default=DEFAULT_PARTITIONS)
+    reproduce.add_argument("--validation-per-source", type=int, default=4096)
+    reproduce.add_argument("--shard-residues", type=int, default=DEFAULT_SHARD_RESIDUES)
     download = sub.add_parser("download")
     download.add_argument("--data-root", type=Path, required=True)
     download.add_argument("--omg-manifest", type=Path, required=True)
@@ -1943,7 +2463,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     screen.add_argument(
         "--resume",
         action="store_true",
-        help="reuse completed source TSVs and run only missing sources in an existing output",
+        help="reuse receipt-bound source searches and retry missing sources create-once",
     )
     full_screen = sub.add_parser("full-screen")
     full_screen.add_argument("--query-fasta", type=Path, required=True)
@@ -1954,7 +2474,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     full_screen.add_argument(
         "--resume",
         action="store_true",
-        help="reuse completed source TSVs and run only missing sources in an existing output",
+        help="reuse receipt-bound source searches and retry missing sources create-once",
     )
     finalize = sub.add_parser("finalize-screen")
     finalize.add_argument("--evaluation-root", type=Path, required=True)
@@ -1986,7 +2506,21 @@ def main(argv: Sequence[str] | None = None) -> None:
     metadata.add_argument("--screen-root", type=Path, required=True)
     metadata.add_argument("--evaluation-root", type=Path, required=True)
     args = parser.parse_args(argv)
-    if args.command == "download":
+    if args.command == "reproduce":
+        result = reproduce_full_corpus(
+            data_root=args.data_root,
+            omg_manifest=args.omg_manifest,
+            legacy_evaluation_root=args.legacy_evaluation_root,
+            q9_evaluation_root=args.q9_evaluation_root,
+            template_root=args.template_root,
+            mmseqs=args.mmseqs,
+            threads=args.threads,
+            download_workers=args.download_workers,
+            partitions=args.partitions,
+            validation_per_source=args.validation_per_source,
+            shard_residues=args.shard_residues,
+        )
+    elif args.command == "download":
         result = download_raw(
             args.data_root,
             args.omg_manifest,
