@@ -1616,6 +1616,8 @@ def verify_release(root: Path, *, screen_root: Path, evaluation_root: Path) -> d
             previous = ""
             for shard in manifest["sources"][source][split]:
                 path = root / shard["path"]
+                if path.stat().st_size != int(shard["bytes"]):
+                    raise ValueError(f"shard byte count mismatch: {path}")
                 if file_hash(path) != shard["sha256"]:
                     raise ValueError(f"shard checksum mismatch: {path}")
                 table = pq.read_table(path, columns=["sequence", "sha256", "length"])
@@ -1646,8 +1648,20 @@ def verify_release(root: Path, *, screen_root: Path, evaluation_root: Path) -> d
                 "residues": residues,
                 "shards": len(manifest["sources"][source][split]),
             }
+            if split == "train" and (
+                records != int(manifest["sources"][source]["train_records"])
+                or residues != int(manifest["sources"][source]["train_residues"])
+            ):
+                raise ValueError(f"source train totals differ from shards: {source}")
             if split == "validation":
+                if global_validation & validation_digests:
+                    raise ValueError(f"cross-source validation duplicate: {source}")
                 global_validation.update(validation_digests)
+        accounted = int(manifest["sources"][source]["train_records"]) + sum(
+            int(value) for value in manifest["sources"][source]["rejected"].values()
+        )
+        if accounted != int(manifest["sources"][source]["representative_records_scanned"]):
+            raise ValueError(f"source rejection accounting is incomplete: {source}")
         sources[source] = observed
     # Validation sequences from any source must be absent from every train arm.
     for source in SOURCES:

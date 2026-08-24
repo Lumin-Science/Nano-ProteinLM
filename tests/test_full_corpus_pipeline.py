@@ -233,6 +233,7 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 manifest["verification"]["global_train_exact_duplicate_intersection"],
                 0,
             )
+            self.assertEqual(manifest["verification"]["global_train_records"], 12)
 
     def test_stage_metadata_removes_template_warning_and_binds_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
