@@ -2,10 +2,12 @@
 """Reproduce the complete open-protein corpus and its release shards.
 
 This deliberately lives in ``dev/``: it is the annotated, heavyweight build
-pipeline, not code imported by model training.  Every subcommand is restartable
-and writes a content-addressed JSON receipt.  The intended host has 64 CPU cores,
-MMseqs2 v18 or newer, enough RAM for one of 256 hash partitions, and roughly
-3 TB of temporary disk if rebuilding all sources from their raw distributions.
+pipeline, not code imported by model training.  Transformations are fail-closed,
+create-once stages that write content-addressed JSON receipts; downloads and
+homology searches additionally support safe interrupted-run recovery.  The
+intended host has 64 CPU cores, MMseqs2 v18 or newer, enough RAM for one of 256
+hash partitions, and roughly 3 TB of temporary disk if rebuilding all sources
+from their raw distributions.
 
 Pipeline, in order
 ------------------
