@@ -54,7 +54,8 @@ Every sequence is processed in this fixed order:
 5. SHA-256 partition all accepted records into 256 buckets;
 6. globally collapse identical normalized strings while retaining every source
    and original identifier in membership Parquet;
-7. emit a source view for each source membership; and
+7. emit a source view for each source membership for source-specific diversity
+   clustering; and
 8. independently run MMseqs2 Linclust per source at 70% identity and 80%
    shorter-sequence coverage (`--cov-mode 1 --cluster-mode 2`).
 
@@ -161,13 +162,16 @@ For each source's 70%-cluster representatives, the release builder:
 1. recomputes the sequence SHA-256 and verifies the FASTA header;
 2. externally sorts the deterministic-but-not-lexical MMseqs output through 256
    leading-byte digest buckets, then sorts each bounded bucket in memory;
-3. removes every exact evaluation digest;
-4. removes every parent-or-Q9 MMseqs target digest;
-5. applies the training storage length range 32--16,384 residues;
-6. takes 4,096 eligible SHA-ordered representatives per source for validation;
-7. removes the union of all validation digests from every source's training arm;
-8. writes the remaining complete reservoir in ascending SHA-256 order; and
-9. starts a new Parquet shard before crossing 268,435,456 uncompressed residues.
+3. performs a streaming three-way merge and assigns a digest represented in
+   multiple source arms to exactly one deterministic owner (UniRef90, then
+   MGnify, then OMG/IMG priority);
+4. removes every exact evaluation digest;
+5. removes every parent-or-Q9 MMseqs target digest;
+6. applies the training storage length range 32--16,384 residues;
+7. takes 4,096 eligible SHA-ordered representatives per source for validation;
+8. removes the union of all validation digests from every source's training arm;
+9. writes the remaining complete reservoir in ascending SHA-256 order; and
+10. starts a new Parquet shard before crossing 268,435,456 uncompressed residues.
 
 The Parquet schema is deliberately minimal:
 
@@ -180,9 +184,10 @@ length: int32
 Each shard receipt records rows, residues, bytes, SHA-256, minimum sequence
 digest, and maximum sequence digest. The independent verifier rehashes every
 file and sequence, checks length and strict order, rejects duplicates within a
-source split, recomputes the exact/homology intersection, and checks global
-train-validation separation before promoting `manifest.generated.json` to the
-downloadable `manifest.json`.
+source split, performs another streaming three-way merge to prove zero exact
+duplicates across training arms, recomputes the exact/homology intersection,
+and checks global train-validation separation before promoting
+`manifest.generated.json` to the downloadable `manifest.json`.
 
 ## 5. Partial download for a training budget
 
@@ -194,6 +199,7 @@ uv run --frozen python scripts/download_data.py \
   --repo-id LuminScience/LuminBench-Nano-ESMC \
   --revision <immutable-HF-commit> \
   --training-samples 5376000 \
+  --download-workers 8 \
   --cache-root data/cache/full-open-v2 \
   --output-root data/processed/run-prefix
 ```
@@ -220,12 +226,13 @@ commands are below; all outputs should be placed outside Git.
 uv sync --frozen
 PIPE=dev/data/process_full_corpus.py
 ROOT=/absolute/path/to/protein-corpus
+MMSEQS=/absolute/path/to/mmseqs
+LEGACY_EVAL=/absolute/path/to/frozen-p-at-l-and-pcore-v0.2-bundle
+Q9_EVAL=/absolute/path/to/pcore-v0.5-alpha-q9
 
 uv run --frozen python "$PIPE" download \
   --data-root "$ROOT" --omg-manifest dev/data/omg_upstream_shards.tsv
 
-# Run UniRef and MGnify concurrently. Split the 959 OMG paths into several
-# normalize invocations; each writes its own normalized directory.
 uv run --frozen python "$PIPE" normalize --source uniref90 \
   --input "$ROOT/raw/uniref90_2023_02/uniref2023_02.tar.gz" \
   --output "$ROOT/normalized/uniref90"
@@ -233,24 +240,65 @@ uv run --frozen python "$PIPE" normalize --source mgnify \
   --input "$ROOT/raw/mgnify_2023_02/mgy_clusters.fa.gz" \
   --output "$ROOT/normalized/mgnify"
 
+# The manifest is authoritative: pass all 959 downloaded OMG objects rather
+# than a hand-maintained glob or an arbitrary subset.
+omg_inputs=()
+while IFS=$'\t' read -r path _bytes _sha256 _priority _url; do
+  [[ "$path" == path ]] && continue
+  omg_inputs+=(--input "$ROOT/raw/omg/$path")
+done < dev/data/omg_upstream_shards.tsv
+uv run --frozen python "$PIPE" normalize --source omg_img \
+  "${omg_inputs[@]}" --output "$ROOT/normalized/omg_img"
+
 uv run --frozen python "$PIPE" deduplicate \
   --input "$ROOT/normalized/uniref90" \
   --input "$ROOT/normalized/mgnify" \
-  --input "$ROOT/normalized/omg-batch-00" \
+  --input "$ROOT/normalized/omg_img" \
   --output "$ROOT/deduplicated"
 
 for source in uniref90 mgnify omg_img; do
   uv run --frozen python "$PIPE" cluster \
     --dedup-root "$ROOT/deduplicated" \
     --source "$source" --output "$ROOT/clusters/$source" \
-    --mmseqs /absolute/path/to/mmseqs --threads 64
+    --mmseqs "$MMSEQS" --threads 64
 done
+
+uv run --frozen python "$PIPE" evaluation-union \
+  --legacy-root "$LEGACY_EVAL" --q9-root "$Q9_EVAL" \
+  --output "$ROOT/evaluation"
+
+# Fresh, self-contained path: screen all 317,000 protected sequences. Source
+# databases are deliberately serialized so peak index memory stays bounded.
+uv run --frozen python "$PIPE" full-screen \
+  --query-fasta "$ROOT/evaluation/evaluation_all_splits.fasta" \
+  --target-db-root "$ROOT/clusters" \
+  --output "$ROOT/full-screen" --mmseqs "$MMSEQS" --threads 64
+uv run --frozen python "$PIPE" finalize-full-screen \
+  --evaluation-root "$ROOT/evaluation" \
+  --search-root "$ROOT/full-screen" --cluster-root "$ROOT/clusters" \
+  --output "$ROOT/homology-screen"
+
+uv run --frozen python "$PIPE" shard \
+  --cluster-root "$ROOT/clusters" --screen-root "$ROOT/homology-screen" \
+  --evaluation-root "$ROOT/evaluation" --output "$ROOT/release" \
+  --validation-per-source 4096 --shard-residues 268435456
+uv run --frozen python "$PIPE" verify-release \
+  --root "$ROOT/release" --screen-root "$ROOT/homology-screen" \
+  --evaluation-root "$ROOT/evaluation"
+uv run --frozen python "$PIPE" stage-metadata \
+  --release-root "$ROOT/release" \
+  --template-root release/huggingface/full-open-v2 \
+  --omg-manifest dev/data/omg_upstream_shards.tsv \
+  --screen-root "$ROOT/homology-screen" \
+  --evaluation-root "$ROOT/evaluation"
 ```
 
-The evaluation-union, delta-screen, finalization, sharding, and verification
-commands are fully enumerated in `run_q9_delta_screen_tmoss.sbatch` and the CLI
-help. Every output directory is create-once: the script refuses to overwrite an
-existing result, making resume decisions explicit.
+The released tmoss build uses the cheaper `delta-screen` plus `finalize-screen`
+path because its 116,841-query parent screen is already verified against the
+identical representative FASTAs. A from-scratch rebuild should use the full
+commands above and therefore has no dependency on that parent artifact. Every
+output directory is create-once; only homology-search recovery has an explicit
+`--resume` mode that reuses checksum-bound completed source TSVs.
 
 ## 7. Hugging Face publication procedure
 
@@ -264,11 +312,12 @@ HF_XET_HIGH_PERFORMANCE=1 uv run --frozen python scripts/upload_data.py \
   --confirm-public-repo LuminScience/LuminBench-Nano-ESMC
 ```
 
-Hugging Face recommends Parquet for large datasets, `upload_large_folder` for
-prepared large directories, fewer than 10,000 files per folder, and files below
-200 GB. This design is far below the per-file and per-folder limits. The final
-upload remains a separate, explicit public-publication action after the manifest,
-license/attribution card, dataset viewer, and downstream download smoke test pass.
+Hugging Face recommends Parquet for large datasets and its Xet-backed resumable
+folder upload for prepared large directories, fewer than 10,000 files per
+folder, and files below 200 GB. This design is far below the per-file and
+per-folder limits. The final upload remains a separate, explicit publication
+action after the manifest, license/attribution card, dataset viewer, and
+downstream download smoke test pass.
 The uploader refuses to run unless the independent receipt binds the final
 manifest, every required metadata file is present, Xet high-performance mode is
 enabled, and the confirmation value exactly matches the destination repo.
@@ -281,9 +330,12 @@ Publication is blocked unless all of the following are true:
 - cleaning accounting sums exactly to input counts;
 - representative FASTA hashes and counts match Step-9 receipts;
 - the 317,000-sequence evaluation ledger hashes match;
+- a fresh full screen binds each target MMseqs database to the corresponding
+  representative-FASTA receipt;
 - all delta hit rows meet the frozen MMseqs thresholds and no query reaches the cap;
 - the final exclusion file is the exact parent-plus-delta set union;
 - all Parquet file and sequence hashes pass;
+- every released training digest has exactly one source owner;
 - exact/homology exclusion intersection is zero;
 - train-validation intersection is zero across every pair of source arms; and
 - the partial downloader passes the same training-side Q9-aware gate as the full release.

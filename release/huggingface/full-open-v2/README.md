@@ -45,7 +45,9 @@ sequence from contact P@L, P-CORE v0.2, and P-CORE v0.5-alpha-q9 is protected.
 The full representative reservoir is screened with MMseqs2 at 30% sequence
 identity and 80% query plus target coverage. Exact SHA-256 matches are excluded
 independently. The released validation union is excluded from every training
-source arm.
+source arm. Exact representative digests shared by source-specific cluster arms
+are assigned to one deterministic owner, and the release verifier proves zero
+cross-source exact duplicates in training.
 
 ## Download only what a run needs
 

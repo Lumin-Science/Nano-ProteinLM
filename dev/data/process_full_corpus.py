@@ -19,15 +19,18 @@ Pipeline, in order
    shorter-sequence coverage.
 5. ``evaluation-union`` freezes P@L, legacy P-CORE, and every Q9 P-CORE sequence,
    including blocked CAFA, MegaScale wild types, and both PRING partners.
-6. ``delta-screen`` searches only Q9 queries absent from the already verified
-   legacy query set against the *complete* representative databases.
-7. ``finalize-screen`` validates every alignment and unions it with the verified
-   legacy exclusion set.  This is mathematically equivalent to rerunning the
-   union, while preserving the expensive parent receipt.
+6. ``full-screen`` searches the entire evaluation union against freshly built
+   representative databases. ``delta-screen`` is the receipt-preserving shortcut
+   when an identical legacy all-splits screen already exists.
+7. ``finalize-full-screen`` validates a fresh full search. ``finalize-screen``
+   instead validates the Q9 delta and unions it with the verified legacy
+   exclusion set; the two paths are set-equivalent.
 8. ``shard`` applies exact + homology exclusion, length gates and a globally
    disjoint validation set, then writes deterministic SHA-ordered Parquet shards.
 9. ``verify-release`` independently re-reads every shard and freezes the release
    manifest consumed by ``scripts/download_data.py``.
+10. ``stage-metadata`` renders the measured dataset card, attribution, and
+    portable provenance receipts only after release verification succeeds.
 
 Examples are in ``dev/data/DATA_PROCESSING_REPORT.md``.  Run this file only via
 the repository's uv environment: ``uv run --frozen python ...``.
@@ -40,6 +43,7 @@ import concurrent.futures
 import csv
 import gzip
 import hashlib
+import heapq
 import json
 import re
 import shutil
@@ -717,6 +721,21 @@ def build_evaluation_union(*, legacy_root: Path, q9_root: Path, output: Path) ->
     return report
 
 
+def _resolve_screen_target(target_db_root: Path, source: str) -> tuple[Path, Path | None]:
+    """Resolve either a frozen direct DB or this builder's Linclust representative DB."""
+
+    direct = target_db_root / source
+    nested = target_db_root / source / "db/representatives"
+    if direct.with_suffix(".dbtype").is_file():
+        return direct, None
+    if nested.with_suffix(".dbtype").is_file():
+        verification = target_db_root / source / "verification.json"
+        if not verification.is_file():
+            raise FileNotFoundError(f"missing cluster receipt for target database: {nested}")
+        return nested, verification
+    raise FileNotFoundError(f"missing {source} target database; checked {direct} and {nested}")
+
+
 def run_delta_screen(
     *,
     query_fasta: Path,
@@ -726,14 +745,17 @@ def run_delta_screen(
     threads: int,
     concurrent_sources: bool = False,
     resume: bool = False,
+    receipt_name: str = "MMSEQS_DELTA_SEARCH_COMPLETE.json",
+    receipt_protocol: str = "mmseqs2-evaluation-delta-search-v1",
+    query_scope: str = "q9-delta",
 ) -> dict[str, Any]:
-    """Search Q9-only queries against already-built complete target databases."""
+    """Search a frozen evaluation FASTA against complete representative databases."""
 
     if resume:
         if not output.is_dir():
             raise FileNotFoundError(f"delta output does not exist for resume: {output}")
-        if (output / "MMSEQS_DELTA_SEARCH_COMPLETE.json").exists():
-            raise FileExistsError("delta screen already has a complete receipt")
+        if (output / receipt_name).exists():
+            raise FileExistsError("homology screen already has a complete receipt")
     else:
         output.mkdir(parents=True, exist_ok=False)
         (output / "db").mkdir()
@@ -748,9 +770,18 @@ def run_delta_screen(
     threads_per_source = max(1, threads // len(SOURCES)) if concurrent_sources else threads
 
     def screen_source(source: str) -> tuple[str, list[str], dict[str, Any]]:
-        target = target_db_root / source
-        if not target.with_suffix(".dbtype").is_file():
-            raise FileNotFoundError(f"missing reusable complete target database: {target}")
+        target, target_verification = _resolve_screen_target(target_db_root, source)
+        target_binding: dict[str, Any] = {"target_database": str(target.resolve())}
+        if target_verification is not None:
+            verification = json.loads(target_verification.read_text())
+            target_binding.update(
+                {
+                    "target_verification_sha256": file_hash(target_verification),
+                    "target_representative_fasta_sha256": verification[
+                        "representative_fasta_sha256"
+                    ],
+                }
+            )
         hits = output / f"results/{source}.tsv"
         if resume and hits.is_file():
             return (
@@ -761,6 +792,7 @@ def run_delta_screen(
                     "bytes": hits.stat().st_size,
                     "sha256": file_hash(hits),
                     "reused_from_interrupted_parent": True,
+                    **target_binding,
                 },
             )
         suffix = "-recovery" if resume else ""
@@ -806,6 +838,7 @@ def run_delta_screen(
             "path": str(hits.resolve()),
             "bytes": hits.stat().st_size,
             "sha256": file_hash(hits),
+            **target_binding,
         }
         return source, command, artifact
 
@@ -825,7 +858,8 @@ def run_delta_screen(
     report = {
         "schema_version": 1,
         "status": "complete",
-        "protocol": "mmseqs2-evaluation-delta-search-v1",
+        "protocol": receipt_protocol,
+        "query_scope": query_scope,
         "query_fasta_sha256": file_hash(query_fasta),
         "target_scope": (
             "complete 70%-identity representative FASTAs via verified parent databases"
@@ -841,7 +875,7 @@ def run_delta_screen(
         "commands": sorted(commands, key=canonical_json),
         "artifacts": dict(sorted(artifacts.items())),
     }
-    atomic_json(output / "MMSEQS_DELTA_SEARCH_COMPLETE.json", report)
+    atomic_json(output / receipt_name, report)
     return report
 
 
@@ -976,6 +1010,116 @@ def finalize_screen(
     return receipt
 
 
+def finalize_full_screen(
+    *,
+    evaluation_root: Path,
+    search_root: Path,
+    cluster_root: Path,
+    output: Path,
+) -> dict[str, Any]:
+    """Validate a fresh all-query screen without relying on a parent exclusion set."""
+
+    search_path = search_root / "MMSEQS_FULL_SEARCH_COMPLETE.json"
+    search = json.loads(search_path.read_text())
+    if (
+        search.get("status") != "complete"
+        or search.get("protocol") != "mmseqs2-evaluation-full-search-v1"
+        or search.get("query_scope") != "all-evaluation-splits"
+        or search.get("thresholds") != MMSEQS_THRESHOLDS
+    ):
+        raise ValueError("full homology search receipt is incomplete or changed")
+    ledger_path = evaluation_root / "EVALUATION_SPLIT_LEDGER.json"
+    ledger = json.loads(ledger_path.read_text())
+    query_fasta = evaluation_root / "evaluation_all_splits.fasta"
+    if search["query_fasta_sha256"] != ledger["artifacts"][query_fasta.name]["sha256"]:
+        raise ValueError("full screen did not use the frozen all-splits FASTA")
+    queries = {valid_digest(header) for header, _sequence in iter_fasta(query_fasta)}
+    if len(queries) != int(ledger["union_unique_sequences"]):
+        raise ValueError("all-splits query count differs from the evaluation ledger")
+
+    source_reports: dict[str, Any] = {}
+    targets_union: set[str] = set()
+    for source in SOURCES:
+        artifact = search["artifacts"][source]
+        path = search_root / f"results/{source}.tsv"
+        if file_hash(path) != artifact["sha256"]:
+            raise ValueError(f"full-screen hit file changed: {source}")
+        verification_path = cluster_root / source / "verification.json"
+        verification = json.loads(verification_path.read_text())
+        if (
+            artifact.get("target_verification_sha256") != file_hash(verification_path)
+            or artifact.get("target_representative_fasta_sha256")
+            != verification["representative_fasta_sha256"]
+        ):
+            raise ValueError(f"full screen target DB is not bound to {source} representatives")
+        per_query: Counter[str] = Counter()
+        targets: set[str] = set()
+        rows = 0
+        with path.open() as handle:
+            for line_number, line in enumerate(handle, start=1):
+                fields = line.rstrip("\n").split("\t")
+                if len(fields) != 8:
+                    raise ValueError(f"malformed MMseqs row at {path}:{line_number}")
+                query, target = valid_digest(fields[0]), valid_digest(fields[1])
+                identity = float(fields[2]) / 100.0
+                qcov, tcov = float(fields[4]), float(fields[5])
+                qcov = qcov / 100 if qcov > 1 else qcov
+                tcov = tcov / 100 if tcov > 1 else tcov
+                if (
+                    query not in queries
+                    or identity + 1e-12 < MMSEQS_THRESHOLDS["minimum_sequence_identity"]
+                    or qcov + 1e-12 < MMSEQS_THRESHOLDS["minimum_query_coverage"]
+                    or tcov + 1e-12 < MMSEQS_THRESHOLDS["minimum_target_coverage"]
+                ):
+                    raise ValueError(
+                        f"MMseqs threshold/query violation at {path}:{line_number}"
+                    )
+                per_query[query] += 1
+                targets.add(target)
+                rows += 1
+        largest = max(per_query.values(), default=0)
+        if largest >= MMSEQS_THRESHOLDS["maximum_sequences_per_query"]:
+            raise ValueError(f"{source} hit the max-seqs cap")
+        source_reports[source] = {
+            "alignment_rows": rows,
+            "matched_queries": len(per_query),
+            "excluded_representatives": len(targets),
+            "maximum_hits_for_one_query": largest,
+            "complete_representative_sequences": verification["clusters"],
+            "representative_fasta_sha256": verification["representative_fasta_sha256"],
+        }
+        targets_union.update(targets)
+
+    output.mkdir(parents=True, exist_ok=False)
+    exclusions = output / "homology_excluded_all_splits.txt"
+    with exclusions.open("w") as handle:
+        for digest in sorted(targets_union):
+            handle.write(digest + "\n")
+    exact = evaluation_root / "evaluation_exact_sha256.txt"
+    receipt = {
+        "schema_version": 2,
+        "status": "verified",
+        "protocol": SCREEN_PROTOCOL,
+        "scope_used_for_training": "all evaluation splits",
+        "evaluation_protocols": ledger["evaluation_protocols"],
+        "blocked_benchmark_candidates_are_protected": True,
+        "thresholds": MMSEQS_THRESHOLDS,
+        "evaluation_all_split_queries": len(queries),
+        "parent_excluded_representatives": 0,
+        "full_screen_unique_targets": len(targets_union),
+        "excluded_training_representatives": len(targets_union),
+        "excluded_digest_file": str(exclusions.resolve()),
+        "excluded_digest_file_sha256": file_hash(exclusions),
+        "exact_exclusion_file": str(exact.resolve()),
+        "exact_exclusion_file_sha256": file_hash(exact),
+        "full_search_receipt_sha256": file_hash(search_path),
+        "evaluation_ledger_sha256": file_hash(ledger_path),
+        "sources": source_reports,
+    }
+    atomic_json(output / "HOMOLOGY_EXCLUSION_VERIFIED.json", receipt)
+    return receipt
+
+
 def prepare_sha_buckets(cluster_root: Path, work_root: Path) -> dict[str, Any]:
     """Externally order representative FASTAs using 256 digest-prefix buckets.
 
@@ -1081,30 +1225,125 @@ def prepare_sha_buckets(cluster_root: Path, work_root: Path) -> dict[str, Any]:
     return receipt
 
 
+def iter_sha_sorted_bucket(
+    work_root: Path, source: str, index: int
+) -> Iterator[tuple[str, str]]:
+    """Yield one bounded leading-byte bucket in strict digest order."""
+
+    path = work_root / source / f"bucket-{index:02x}.tsv"
+    rows: list[tuple[str, str]] = []
+    with path.open(encoding="ascii") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            fields = line.rstrip("\n").split("\t", 1)
+            if len(fields) != 2:
+                raise ValueError(f"malformed SHA bucket row at {path}:{line_number}")
+            digest = valid_digest(fields[0])
+            if int(digest[:2], 16) != index:
+                raise ValueError(f"digest is in the wrong SHA bucket: {path}:{digest}")
+            rows.append((digest, fields[1]))
+    rows.sort(key=lambda row: row[0])
+    previous = ""
+    for digest, sequence in rows:
+        if previous and digest <= previous:
+            raise ValueError(f"duplicate/non-increasing representative in {source}: {digest}")
+        previous = digest
+        yield digest, sequence
+
+
 def iter_sha_sorted_buckets(work_root: Path, source: str) -> Iterator[tuple[str, str]]:
     """Yield one source in strict global digest order from its external-sort buckets."""
 
     previous = ""
     for index in range(256):
-        path = work_root / source / f"bucket-{index:02x}.tsv"
-        rows: list[tuple[str, str]] = []
-        with path.open(encoding="ascii") as handle:
-            for line_number, line in enumerate(handle, start=1):
-                fields = line.rstrip("\n").split("\t", 1)
-                if len(fields) != 2:
-                    raise ValueError(f"malformed SHA bucket row at {path}:{line_number}")
-                digest = valid_digest(fields[0])
-                if int(digest[:2], 16) != index:
-                    raise ValueError(f"digest is in the wrong SHA bucket: {path}:{digest}")
-                rows.append((digest, fields[1]))
-        rows.sort(key=lambda row: row[0])
-        for digest, sequence in rows:
+        for digest, sequence in iter_sha_sorted_bucket(work_root, source, index):
             if previous and digest <= previous:
                 raise ValueError(
                     f"duplicate/non-increasing representative in {source}: {digest}"
                 )
             previous = digest
             yield digest, sequence
+
+
+def build_cross_source_ownership(work_root: Path) -> dict[str, Any]:
+    """Assign every exact digest to one source arm without loading the corpus."""
+
+    output = work_root / "cross-source-ownership"
+    receipt_path = output / "CROSS_SOURCE_OWNERSHIP_VERIFIED.json"
+    ordering_path = work_root / "SHA_BUCKETS_VERIFIED.json"
+    ordering_sha256 = file_hash(ordering_path)
+    if receipt_path.is_file():
+        receipt = json.loads(receipt_path.read_text())
+        if receipt.get("ordering_receipt_sha256") != ordering_sha256:
+            raise ValueError("cross-source ownership was built from different SHA buckets")
+        for source in SOURCES:
+            path = output / f"{source}.nonowner.txt"
+            if file_hash(path) != receipt["nonowner_artifacts"][source]["sha256"]:
+                raise ValueError(f"cross-source ownership artifact changed: {source}")
+        return receipt
+    if output.exists():
+        raise FileExistsError(f"unverified cross-source ownership state exists: {output}")
+    output.mkdir()
+    handles = {source: (output / f"{source}.nonowner.txt").open("w") for source in SOURCES}
+    nonowner_counts: Counter[str] = Counter()
+    shared_unique = duplicate_memberships = 0
+    try:
+        for index in range(256):
+            iterators = {
+                source: iter(iter_sha_sorted_bucket(work_root, source, index))
+                for source in SOURCES
+            }
+            heap: list[tuple[str, str, str]] = []
+            for source, iterator in iterators.items():
+                try:
+                    digest, sequence = next(iterator)
+                except StopIteration:
+                    continue
+                heapq.heappush(heap, (digest, source, sequence))
+            while heap:
+                digest = heap[0][0]
+                group: list[tuple[str, str]] = []
+                while heap and heap[0][0] == digest:
+                    _digest, source, sequence = heapq.heappop(heap)
+                    group.append((source, sequence))
+                    try:
+                        next_digest, next_sequence = next(iterators[source])
+                    except StopIteration:
+                        continue
+                    heapq.heappush(heap, (next_digest, source, next_sequence))
+                if len({sequence for _source, sequence in group}) != 1:
+                    raise ValueError(f"SHA-256 collision across source arms: {digest}")
+                if len(group) == 1:
+                    continue
+                shared_unique += 1
+                duplicate_memberships += len(group) - 1
+                owner = min((source for source, _sequence in group), key=SOURCES.index)
+                for source, _sequence in group:
+                    if source != owner:
+                        handles[source].write(digest + "\n")
+                        nonowner_counts[source] += 1
+    finally:
+        for handle in handles.values():
+            handle.close()
+    artifacts = {
+        source: {
+            "path": str((output / f"{source}.nonowner.txt").relative_to(work_root)),
+            "records": nonowner_counts[source],
+            "sha256": file_hash(output / f"{source}.nonowner.txt"),
+        }
+        for source in SOURCES
+    }
+    receipt = {
+        "schema_version": 1,
+        "status": "verified",
+        "protocol": "global-exact-representative-ownership-v1",
+        "policy": "first source in uniref90,mgnify,omg_img order owns shared digest",
+        "ordering_receipt_sha256": ordering_sha256,
+        "cross_source_shared_unique_sequences": shared_unique,
+        "removed_duplicate_source_memberships": duplicate_memberships,
+        "nonowner_artifacts": artifacts,
+    }
+    atomic_json(receipt_path, receipt)
+    return receipt
 
 
 class ParquetShardWriter:
@@ -1179,6 +1418,13 @@ def shard_release(
     output.mkdir(parents=True)
     sort_work = output.parent / f"{output.name}.sha-sort-work"
     ordering_receipt = prepare_sha_buckets(cluster_root, sort_work)
+    ownership_receipt = build_cross_source_ownership(sort_work)
+    cross_source_nonowner = {
+        source: _read_digest_file(
+            sort_work / ownership_receipt["nonowner_artifacts"][source]["path"]
+        )
+        for source in SOURCES
+    }
     homology = _read_digest_file(screen_root / "homology_excluded_all_splits.txt")
     exact = _read_digest_file(evaluation_root / "evaluation_exact_sha256.txt")
     excluded = homology | exact
@@ -1191,6 +1437,7 @@ def shard_release(
                 raise ValueError(f"representative/header mismatch in {source}: {digest}")
             if (
                 digest in excluded
+                or digest in cross_source_nonowner[source]
                 or digest in global_validation
                 or not 32 <= len(sequence) <= 16_384
             ):
@@ -1226,6 +1473,8 @@ def shard_release(
                 rejected["evaluation_exact"] += 1
             elif digest in homology:
                 rejected["evaluation_homology"] += 1
+            elif digest in cross_source_nonowner[source]:
+                rejected["cross_source_exact_nonowner"] += 1
             elif not 32 <= len(sequence) <= 16_384:
                 rejected["length"] += 1
             elif digest in global_validation:
@@ -1277,6 +1526,19 @@ def shard_release(
         "ordering_receipt_sha256": hashlib.sha256(
             canonical_json(ordering_receipt).encode()
         ).hexdigest(),
+        "global_exact_ownership": {
+            "protocol": ownership_receipt["protocol"],
+            "policy": ownership_receipt["policy"],
+            "cross_source_shared_unique_sequences": ownership_receipt[
+                "cross_source_shared_unique_sequences"
+            ],
+            "removed_duplicate_source_memberships": ownership_receipt[
+                "removed_duplicate_source_memberships"
+            ],
+            "receipt_sha256": file_hash(
+                sort_work / "cross-source-ownership/CROSS_SOURCE_OWNERSHIP_VERIFIED.json"
+            ),
+        },
         "partial_download": (
             "smallest deterministic per-source shard prefix satisfying a run budget"
         ),
@@ -1306,6 +1568,13 @@ def shard_release(
     }
     atomic_json(output / "manifest.generated.json", manifest)
     return manifest
+
+
+def _iter_released_digests(root: Path, shards: Sequence[dict[str, Any]]) -> Iterator[str]:
+    for shard in shards:
+        parquet = pq.ParquetFile(root / shard["path"])
+        for batch in parquet.iter_batches(columns=["sha256"], batch_size=262_144):
+            yield from batch.column(0).to_pylist()
 
 
 def verify_release(root: Path, *, screen_root: Path, evaluation_root: Path) -> dict[str, Any]:
@@ -1372,6 +1641,35 @@ def verify_release(root: Path, *, screen_root: Path, evaluation_root: Path) -> d
             table = pq.read_table(root / shard["path"], columns=["sha256"])
             if global_validation & set(table["sha256"].to_pylist()):
                 raise ValueError(f"global validation leaks into {source} training")
+    # Merge the three already-sorted source arms without materializing hundreds
+    # of millions of digests. Equal adjacent values prove cross-source leakage.
+    train_iterators = {
+        source: iter(_iter_released_digests(root, manifest["sources"][source]["train"]))
+        for source in SOURCES
+    }
+    heap: list[tuple[str, str]] = []
+    for source, iterator in train_iterators.items():
+        try:
+            heapq.heappush(heap, (next(iterator), source))
+        except StopIteration:
+            raise ValueError(f"empty release training arm: {source}") from None
+    previous_digest = ""
+    global_train_records = 0
+    while heap:
+        digest, source = heapq.heappop(heap)
+        if digest == previous_digest:
+            raise ValueError(f"cross-source exact duplicate in training: {digest}")
+        previous_digest = digest
+        global_train_records += 1
+        try:
+            heapq.heappush(heap, (next(train_iterators[source]), source))
+        except StopIteration:
+            pass
+    expected_train_records = sum(
+        int(manifest["sources"][source]["train_records"]) for source in SOURCES
+    )
+    if global_train_records != expected_train_records:
+        raise ValueError("global train-record count differs from source manifests")
     manifest["status"] = "verified"
     manifest["verification"] = {
         "protocol": "protein-corpus-parquet-verification-v1",
@@ -1379,6 +1677,8 @@ def verify_release(root: Path, *, screen_root: Path, evaluation_root: Path) -> d
         "all_shard_hashes_recomputed": True,
         "all_sequence_hashes_recomputed": True,
         "exact_and_homology_exclusion_intersection": 0,
+        "global_train_exact_duplicate_intersection": 0,
+        "global_train_records": global_train_records,
         "global_train_validation_intersection": 0,
         "sources": sources,
     }
@@ -1554,6 +1854,17 @@ def main(argv: Sequence[str] | None = None) -> None:
         action="store_true",
         help="reuse completed source TSVs and run only missing sources in an existing output",
     )
+    full_screen = sub.add_parser("full-screen")
+    full_screen.add_argument("--query-fasta", type=Path, required=True)
+    full_screen.add_argument("--target-db-root", type=Path, required=True)
+    full_screen.add_argument("--output", type=Path, required=True)
+    full_screen.add_argument("--mmseqs", type=Path, required=True)
+    full_screen.add_argument("--threads", type=int, default=64)
+    full_screen.add_argument(
+        "--resume",
+        action="store_true",
+        help="reuse completed source TSVs and run only missing sources in an existing output",
+    )
     finalize = sub.add_parser("finalize-screen")
     finalize.add_argument("--evaluation-root", type=Path, required=True)
     finalize.add_argument("--parent-receipt", type=Path, required=True)
@@ -1561,6 +1872,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     finalize.add_argument("--delta-root", type=Path, required=True)
     finalize.add_argument("--cluster-root", type=Path, required=True)
     finalize.add_argument("--output", type=Path, required=True)
+    finalize_full = sub.add_parser("finalize-full-screen")
+    finalize_full.add_argument("--evaluation-root", type=Path, required=True)
+    finalize_full.add_argument("--search-root", type=Path, required=True)
+    finalize_full.add_argument("--cluster-root", type=Path, required=True)
+    finalize_full.add_argument("--output", type=Path, required=True)
     shard = sub.add_parser("shard")
     shard.add_argument("--cluster-root", type=Path, required=True)
     shard.add_argument("--screen-root", type=Path, required=True)
@@ -1612,12 +1928,32 @@ def main(argv: Sequence[str] | None = None) -> None:
             concurrent_sources=args.concurrent_sources,
             resume=args.resume,
         )
+    elif args.command == "full-screen":
+        result = run_delta_screen(
+            query_fasta=args.query_fasta,
+            target_db_root=args.target_db_root,
+            output=args.output,
+            mmseqs=args.mmseqs,
+            threads=args.threads,
+            concurrent_sources=False,
+            resume=args.resume,
+            receipt_name="MMSEQS_FULL_SEARCH_COMPLETE.json",
+            receipt_protocol="mmseqs2-evaluation-full-search-v1",
+            query_scope="all-evaluation-splits",
+        )
     elif args.command == "finalize-screen":
         result = finalize_screen(
             evaluation_root=args.evaluation_root,
             parent_receipt=args.parent_receipt,
             parent_exclusions=args.parent_exclusions,
             delta_root=args.delta_root,
+            cluster_root=args.cluster_root,
+            output=args.output,
+        )
+    elif args.command == "finalize-full-screen":
+        result = finalize_full_screen(
+            evaluation_root=args.evaluation_root,
+            search_root=args.search_root,
             cluster_root=args.cluster_root,
             output=args.output,
         )
@@ -1636,7 +1972,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             screen_root=args.screen_root,
             evaluation_root=args.evaluation_root,
         )
-    else:
+    elif args.command == "stage-metadata":
         result = stage_release_metadata(
             release_root=args.release_root,
             template_root=args.template_root,
@@ -1644,6 +1980,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             screen_root=args.screen_root,
             evaluation_root=args.evaluation_root,
         )
+    else:
+        raise AssertionError(f"unhandled command: {args.command}")
     print(json.dumps(result, sort_keys=True))
 
 

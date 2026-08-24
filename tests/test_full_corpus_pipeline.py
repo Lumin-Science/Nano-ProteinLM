@@ -48,6 +48,51 @@ class FullCorpusPipelineTests(unittest.TestCase):
         self.assertFalse(run.call_args.kwargs["concurrent_sources"])
         self.assertEqual(run.call_args.kwargs["threads"], 64)
 
+    def test_screen_target_resolves_fresh_cluster_representative_db(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source_root = root / "uniref90"
+            database = source_root / "db/representatives"
+            database.parent.mkdir(parents=True)
+            database.with_suffix(".dbtype").write_bytes(b"\x00\x00\x00\x00")
+            verification = source_root / "verification.json"
+            verification.write_text("{}\n")
+            observed_db, observed_verification = self.pipeline._resolve_screen_target(
+                root, "uniref90"
+            )
+            self.assertEqual(observed_db, database)
+            self.assertEqual(observed_verification, verification)
+
+    def test_cross_source_ownership_keeps_one_exact_representative(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            work = Path(raw)
+            (work / "SHA_BUCKETS_VERIFIED.json").write_text("{}\n")
+            shared_sequence = "ACDEFGHIKLMNPQRSTVWY" * 3
+            shared_digest = sequence_digest(shared_sequence)
+            shared_bucket = int(shared_digest[:2], 16)
+            for source_index, source in enumerate(self.pipeline.SOURCES):
+                source_root = work / source
+                source_root.mkdir()
+                for bucket in range(256):
+                    path = source_root / f"bucket-{bucket:02x}.tsv"
+                    if bucket == shared_bucket:
+                        unique_sequence = chr(65 + source_index) * (60 + source_index)
+                        unique_digest = sequence_digest(unique_sequence)
+                        rows = [(shared_digest, shared_sequence)]
+                        if int(unique_digest[:2], 16) == bucket:
+                            rows.append((unique_digest, unique_sequence))
+                        path.write_text(
+                            "".join(f"{digest}\t{sequence}\n" for digest, sequence in rows)
+                        )
+                    else:
+                        path.write_text("")
+            receipt = self.pipeline.build_cross_source_ownership(work)
+            self.assertEqual(receipt["cross_source_shared_unique_sequences"], 1)
+            self.assertEqual(receipt["removed_duplicate_source_memberships"], 2)
+            self.assertEqual(receipt["nonowner_artifacts"]["uniref90"]["records"], 0)
+            self.assertEqual(receipt["nonowner_artifacts"]["mgnify"]["records"], 1)
+            self.assertEqual(receipt["nonowner_artifacts"]["omg_img"]["records"], 1)
+
     def test_evaluation_union_protects_blocked_pairs_and_wildtypes(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -184,6 +229,10 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 manifest["verification"]["exact_and_homology_exclusion_intersection"],
                 0,
             )
+            self.assertEqual(
+                manifest["verification"]["global_train_exact_duplicate_intersection"],
+                0,
+            )
 
     def test_stage_metadata_removes_template_warning_and_binds_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -259,6 +308,158 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 self.assertEqual(
                     hashlib.sha256(path.read_bytes()).hexdigest(), artifact["sha256"]
                 )
+
+    def test_finalize_screen_unions_parent_and_q9_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            evaluation = root / "evaluation"
+            delta = root / "delta"
+            clusters = root / "clusters"
+            evaluation.mkdir()
+            (delta / "results").mkdir(parents=True)
+
+            query_sequence = "ACDEFGHIKLMNPQRSTVWY" * 3
+            query_digest = sequence_digest(query_sequence)
+            query_fasta = evaluation / "evaluation_q9_delta.fasta"
+            query_fasta.write_text(f">sha256_{query_digest}\n{query_sequence}\n")
+            all_query_fasta = evaluation / "evaluation_all_splits.fasta"
+            all_query_fasta.write_bytes(query_fasta.read_bytes())
+            exact = evaluation / "evaluation_exact_sha256.txt"
+            exact.write_text(query_digest + "\n")
+            (evaluation / "EVALUATION_SPLIT_LEDGER.json").write_text(
+                json.dumps(
+                    {
+                        "evaluation_protocols": [
+                            "contact-p-at-l",
+                            "pcore-v0.2",
+                            "pcore-v0.5-alpha-q9",
+                        ],
+                        "union_unique_sequences": 1,
+                        "artifacts": {
+                            "evaluation_q9_delta.fasta": {
+                                "sha256": hashlib.sha256(query_fasta.read_bytes()).hexdigest()
+                            },
+                            "evaluation_all_splits.fasta": {
+                                "sha256": hashlib.sha256(
+                                    all_query_fasta.read_bytes()
+                                ).hexdigest()
+                            },
+                        },
+                    }
+                )
+            )
+
+            parent_digest = sequence_digest("PARENT")
+            parent_exclusions = root / "parent-exclusions.txt"
+            parent_exclusions.write_text(parent_digest + "\n")
+            representative_hash = "a" * 64
+            parent_receipt = root / "parent.json"
+            parent_receipt.write_text(
+                json.dumps(
+                    {
+                        "status": "verified",
+                        "protocol": self.pipeline.LEGACY_SCREEN_PROTOCOL,
+                        "scope_used_for_training": "all evaluation splits",
+                        "thresholds": self.pipeline.MMSEQS_THRESHOLDS,
+                        "excluded_digest_file_sha256": hashlib.sha256(
+                            parent_exclusions.read_bytes()
+                        ).hexdigest(),
+                        "sources": {
+                            source: {"representative_fasta_sha256": representative_hash}
+                            for source in self.pipeline.SOURCES
+                        },
+                    }
+                )
+            )
+
+            artifacts = {}
+            expected = {parent_digest}
+            for index, source in enumerate(self.pipeline.SOURCES):
+                target = sequence_digest(f"target-{index}")
+                expected.add(target)
+                hit = delta / "results" / f"{source}.tsv"
+                hit.write_text(f"{query_digest}\t{target}\t30.0\t60\t0.8\t0.8\t1e-9\t100\n")
+                artifacts[source] = {"sha256": hashlib.sha256(hit.read_bytes()).hexdigest()}
+                source_root = clusters / source
+                source_root.mkdir(parents=True)
+                (source_root / "verification.json").write_text(
+                    json.dumps(
+                        {
+                            "clusters": 10,
+                            "representative_fasta_sha256": representative_hash,
+                        }
+                    )
+                )
+            (delta / "MMSEQS_DELTA_SEARCH_COMPLETE.json").write_text(
+                json.dumps(
+                    {
+                        "status": "complete",
+                        "thresholds": self.pipeline.MMSEQS_THRESHOLDS,
+                        "query_fasta_sha256": hashlib.sha256(
+                            query_fasta.read_bytes()
+                        ).hexdigest(),
+                        "artifacts": artifacts,
+                    }
+                )
+            )
+
+            output = root / "screen"
+            receipt = self.pipeline.finalize_screen(
+                evaluation_root=evaluation,
+                parent_receipt=parent_receipt,
+                parent_exclusions=parent_exclusions,
+                delta_root=delta,
+                cluster_root=clusters,
+                output=output,
+            )
+
+            observed = set(
+                (output / "homology_excluded_all_splits.txt").read_text().splitlines()
+            )
+            self.assertEqual(observed, expected)
+            self.assertEqual(receipt["parent_excluded_representatives"], 1)
+            self.assertEqual(receipt["delta_unique_targets"], 3)
+            self.assertEqual(receipt["excluded_training_representatives"], 4)
+
+            for source in self.pipeline.SOURCES:
+                verification = clusters / source / "verification.json"
+                artifacts[source].update(
+                    {
+                        "target_verification_sha256": hashlib.sha256(
+                            verification.read_bytes()
+                        ).hexdigest(),
+                        "target_representative_fasta_sha256": representative_hash,
+                    }
+                )
+            (delta / "MMSEQS_FULL_SEARCH_COMPLETE.json").write_text(
+                json.dumps(
+                    {
+                        "status": "complete",
+                        "protocol": "mmseqs2-evaluation-full-search-v1",
+                        "query_scope": "all-evaluation-splits",
+                        "thresholds": self.pipeline.MMSEQS_THRESHOLDS,
+                        "query_fasta_sha256": hashlib.sha256(
+                            query_fasta.read_bytes()
+                        ).hexdigest(),
+                        "artifacts": artifacts,
+                    }
+                )
+            )
+            full_output = root / "full-screen"
+            full_receipt = self.pipeline.finalize_full_screen(
+                evaluation_root=evaluation,
+                search_root=delta,
+                cluster_root=clusters,
+                output=full_output,
+            )
+            self.assertEqual(full_receipt["parent_excluded_representatives"], 0)
+            self.assertEqual(full_receipt["full_screen_unique_targets"], 3)
+            self.assertEqual(
+                set(
+                    (full_output / "homology_excluded_all_splits.txt").read_text().splitlines()
+                ),
+                expected - {parent_digest},
+            )
 
 
 if __name__ == "__main__":

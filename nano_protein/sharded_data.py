@@ -47,6 +47,15 @@ def validate_release_manifest(manifest: Mapping[str, Any]) -> None:
 
     if manifest.get("protocol") != PROTOCOL or manifest.get("status") != "verified":
         raise ValueError(f"manifest must be a verified {PROTOCOL} release")
+    ownership = manifest.get("global_exact_ownership")
+    verification = manifest.get("verification")
+    if not (
+        isinstance(ownership, Mapping)
+        and ownership.get("protocol") == "global-exact-representative-ownership-v1"
+        and isinstance(verification, Mapping)
+        and verification.get("global_train_exact_duplicate_intersection") == 0
+    ):
+        raise ValueError("release does not prove globally unique training sequences")
     decontamination = manifest.get("decontamination")
     if not isinstance(decontamination, Mapping):
         raise ValueError("manifest is missing its decontamination contract")

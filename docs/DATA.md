@@ -29,6 +29,9 @@ constructs globally disjoint validation sets, and independently re-reads every
 released row. The homology contract is 30% identity with both 80% query and 80%
 target coverage. It protects contact P@L, P-CORE v0.2, and every P-CORE
 v0.5-alpha-q9 sequence, including blocked future evaluation candidates.
+An exact digest retained as a representative by multiple source-specific
+clusters is assigned to one deterministic source owner before release, so the
+36:11:54 sampler cannot overweight cross-source duplicates.
 
 The distribution format is source/split-partitioned Parquet with `sequence`,
 `sha256`, and `length` fields. Shards are ordered by sequence digest and sized by

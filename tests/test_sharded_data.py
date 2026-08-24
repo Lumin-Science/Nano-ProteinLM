@@ -56,6 +56,8 @@ class ShardedDataTests(unittest.TestCase):
             "protocol": "protein-corpus-parquet-shards-v1",
             "release_id": "tiny",
             "sampling_unit": "test sequence",
+            "global_exact_ownership": {"protocol": "global-exact-representative-ownership-v1"},
+            "verification": {"global_train_exact_duplicate_intersection": 0},
             "decontamination": {
                 "scope": "all_evaluation_splits",
                 "evaluation_protocols": [
