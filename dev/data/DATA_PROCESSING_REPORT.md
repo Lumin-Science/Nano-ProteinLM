@@ -231,7 +231,8 @@ LEGACY_EVAL=/absolute/path/to/frozen-p-at-l-and-pcore-v0.2-bundle
 Q9_EVAL=/absolute/path/to/pcore-v0.5-alpha-q9
 
 uv run --frozen python "$PIPE" download \
-  --data-root "$ROOT" --omg-manifest dev/data/omg_upstream_shards.tsv
+  --data-root "$ROOT" --omg-manifest dev/data/omg_upstream_shards.tsv \
+  --download-workers 8
 
 uv run --frozen python "$PIPE" normalize --source uniref90 \
   --input "$ROOT/raw/uniref90_2023_02/uniref2023_02.tar.gz" \

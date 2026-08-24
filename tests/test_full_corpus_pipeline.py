@@ -23,6 +23,33 @@ class FullCorpusPipelineTests(unittest.TestCase):
         spec.loader.exec_module(module)
         cls.pipeline = module
 
+    def test_download_cli_routes_bounded_workers(self) -> None:
+        with mock.patch.object(
+            self.pipeline, "download_raw", return_value={"status": "test"}
+        ) as download:
+            self.pipeline.main(
+                [
+                    "download",
+                    "--data-root",
+                    "/tmp/data",
+                    "--omg-manifest",
+                    "/tmp/omg.tsv",
+                    "--download-workers",
+                    "16",
+                ]
+            )
+        download.assert_called_once_with(
+            Path("/tmp/data"), Path("/tmp/omg.tsv"), download_workers=16
+        )
+
+    def test_download_rejects_nonpositive_workers_before_io(self) -> None:
+        with self.assertRaisesRegex(ValueError, "download_workers must be positive"):
+            self.pipeline.download_raw(
+                Path("/does/not/matter"),
+                Path("/does/not/matter.tsv"),
+                download_workers=0,
+            )
+
     def test_delta_resume_cli_routes_recovery_flags(self) -> None:
         with mock.patch.object(
             self.pipeline, "run_delta_screen", return_value={"status": "test"}

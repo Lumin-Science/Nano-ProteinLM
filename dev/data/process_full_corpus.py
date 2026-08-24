@@ -251,9 +251,13 @@ def _download_with_curl(url: str, destination: Path) -> None:
     partial.replace(destination)
 
 
-def download_raw(data_root: Path, omg_manifest: Path) -> dict[str, Any]:
+def download_raw(
+    data_root: Path, omg_manifest: Path, *, download_workers: int = 8
+) -> dict[str, Any]:
     """Fetch immutable upstream objects and verify size plus content hashes."""
 
+    if download_workers <= 0:
+        raise ValueError("download_workers must be positive")
     artifacts: list[dict[str, Any]] = []
     for source, spec in PRIMARY_SOURCES.items():
         target = data_root / str(spec["relative"])
@@ -269,7 +273,8 @@ def download_raw(data_root: Path, omg_manifest: Path) -> dict[str, Any]:
         rows = list(csv.DictReader(handle, delimiter="\t"))
     if len(rows) != 959:
         raise ValueError(f"expected 959 pinned OMG shards, found {len(rows)}")
-    for row in rows:
+
+    def fetch_omg(row: dict[str, str]) -> dict[str, Any]:
         local = Path(
             hf_hub_download(
                 repo_id=OMG_REPO_ID,
@@ -280,11 +285,17 @@ def download_raw(data_root: Path, omg_manifest: Path) -> dict[str, Any]:
         )
         if local.stat().st_size != int(row["bytes"]) or file_hash(local) != row["sha256"]:
             raise ValueError(f"OMG object fails its pin: {row['path']}")
-        artifacts.append({"source": "omg", "path": str(local), "sha256": row["sha256"]})
+        return {"source": "omg", "path": str(local), "sha256": row["sha256"]}
+
+    # ``executor.map`` preserves manifest order in the receipt even though the
+    # independent Xet-backed object transfers run concurrently.
+    with concurrent.futures.ThreadPoolExecutor(max_workers=download_workers) as executor:
+        artifacts.extend(executor.map(fetch_omg, rows))
     receipt = {
         "schema_version": 1,
         "status": "verified",
         "protocol": "open-protein-raw-download-v1",
+        "omg_download_workers": download_workers,
         "omg_manifest_sha256": file_hash(omg_manifest),
         "artifacts": artifacts,
     }
@@ -1883,6 +1894,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     download = sub.add_parser("download")
     download.add_argument("--data-root", type=Path, required=True)
     download.add_argument("--omg-manifest", type=Path, required=True)
+    download.add_argument("--download-workers", type=int, default=8)
     normalize = sub.add_parser("normalize")
     normalize.add_argument("--source", choices=SOURCES, required=True)
     normalize.add_argument("--input", action="append", required=True)
@@ -1960,7 +1972,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     metadata.add_argument("--evaluation-root", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == "download":
-        result = download_raw(args.data_root, args.omg_manifest)
+        result = download_raw(
+            args.data_root,
+            args.omg_manifest,
+            download_workers=args.download_workers,
+        )
     elif args.command == "normalize":
         result = normalize_source(
             source=args.source,
