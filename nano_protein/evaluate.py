@@ -835,9 +835,7 @@ def merge_contact_evaluation(
     random_precision = [float(row["random_precision_at_l"]) for row in rows]
     if not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in precision):
         raise ValueError("invalid P@L values")
-    if not all(
-        math.isfinite(value) and 0.0 <= value <= 1.0 for value in random_precision
-    ):
+    if not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in random_precision):
         raise ValueError("invalid random P@L values")
     return {
         "schema_version": 1,

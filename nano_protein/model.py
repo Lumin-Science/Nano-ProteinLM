@@ -257,12 +257,8 @@ class ESMCAttention(nn.Module):
         # bias-free. Q/K normalizers themselves are bias-free.
         self.norm = _transformer_norm(config.d_model, config.transformer_norm)
         self.qkv = nn.Linear(config.d_model, 3 * config.d_model, bias=False)
-        self.q_norm = _transformer_norm(
-            config.d_model, config.transformer_norm, bias=False
-        )
-        self.k_norm = _transformer_norm(
-            config.d_model, config.transformer_norm, bias=False
-        )
+        self.q_norm = _transformer_norm(config.d_model, config.transformer_norm, bias=False)
+        self.k_norm = _transformer_norm(config.d_model, config.transformer_norm, bias=False)
         self.proj = nn.Linear(config.d_model, config.d_model, bias=False)
         self.rotary = ESMCRotaryEmbedding(config.head_dim)
 
@@ -392,9 +388,7 @@ class ESMCForMaskedLM(nn.Module):
         self.config = config
         self.embedding = nn.Embedding(config.vocab_size, config.d_model)
         self.blocks = nn.ModuleList([ESMCBlock(config) for _ in range(config.n_layers)])
-        self.final_norm = _transformer_norm(
-            config.d_model, config.transformer_norm, bias=False
-        )
+        self.final_norm = _transformer_norm(config.d_model, config.transformer_norm, bias=False)
         self.head_dense = nn.Linear(config.d_model, config.d_model)
         self.head_norm = nn.LayerNorm(config.d_model)
         self.head_out = nn.Linear(config.d_model, config.vocab_size)
