@@ -1754,6 +1754,8 @@ def stage_release_metadata(
 ) -> dict[str, Any]:
     """Render portable attribution and measured dataset-card metadata."""
 
+    if file_hash(omg_manifest) != OMG_MANIFEST_SHA256:
+        raise ValueError("release metadata requires the authoritative OMG manifest")
     manifest_path = release_root / "manifest.json"
     verification_path = release_root / "RELEASE_VERIFIED.json"
     manifest = json.loads(manifest_path.read_text())
@@ -1767,6 +1769,11 @@ def stage_release_metadata(
     screen = json.loads((screen_root / "HOMOLOGY_EXCLUSION_VERIFIED.json").read_text())
     evaluation = json.loads((evaluation_root / "EVALUATION_SPLIT_LEDGER.json").read_text())
     provenance = json.loads((template_root / "SOURCE_PROVENANCE.template.json").read_text())
+    if (
+        provenance.get("source_arms", {}).get("omg_img", {}).get("raw_manifest_sha256")
+        != OMG_MANIFEST_SHA256
+    ):
+        raise ValueError("source-provenance template has the wrong OMG manifest pin")
     provenance.pop("warning", None)
     provenance["release_manifest_sha256"] = file_hash(manifest_path)
     provenance["homology_exclusion_receipt_sha256"] = file_hash(

@@ -311,14 +311,6 @@ class FullCorpusPipelineTests(unittest.TestCase):
             )
             (template / "README.md").write_text("# Card\n\n" + warning)
             (template / "LICENSE_AND_ATTRIBUTION.md").write_text("license\n")
-            (template / "SOURCE_PROVENANCE.template.json").write_text(
-                json.dumps(
-                    {
-                        "warning": "template",
-                        "source_arms": {source: {} for source in self.pipeline.SOURCES},
-                    }
-                )
-            )
             (screen / "HOMOLOGY_EXCLUSION_VERIFIED.json").write_text(
                 json.dumps({"excluded_training_representatives": 7})
             )
@@ -328,13 +320,32 @@ class FullCorpusPipelineTests(unittest.TestCase):
             omg_manifest = root / "omg.tsv"
             omg_manifest.write_text("path\tbytes\tsha256\n")
 
-            receipt = self.pipeline.stage_release_metadata(
-                release_root=release,
-                template_root=template,
-                omg_manifest=omg_manifest,
-                screen_root=screen,
-                evaluation_root=evaluation,
+            observed_manifest_sha256 = hashlib.sha256(omg_manifest.read_bytes()).hexdigest()
+            (template / "SOURCE_PROVENANCE.template.json").write_text(
+                json.dumps(
+                    {
+                        "warning": "template",
+                        "source_arms": {
+                            source: (
+                                {"raw_manifest_sha256": observed_manifest_sha256}
+                                if source == "omg_img"
+                                else {}
+                            )
+                            for source in self.pipeline.SOURCES
+                        },
+                    }
+                )
             )
+            with mock.patch.object(
+                self.pipeline, "OMG_MANIFEST_SHA256", observed_manifest_sha256
+            ):
+                receipt = self.pipeline.stage_release_metadata(
+                    release_root=release,
+                    template_root=template,
+                    omg_manifest=omg_manifest,
+                    screen_root=screen,
+                    evaluation_root=evaluation,
+                )
 
             self.assertEqual(receipt["status"], "verified")
             card = (release / "README.md").read_text()
