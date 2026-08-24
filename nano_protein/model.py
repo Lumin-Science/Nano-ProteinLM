@@ -31,6 +31,7 @@ class ESMCConfig:
     gradient_checkpointing: bool = False
     learned_residual_routing: bool = False
     transformer_norm: str = "layernorm"
+    depth_scaled_residual_init: bool = False
 
     def __post_init__(self) -> None:
         if self.d_model != self.n_heads * self.head_dim:
@@ -402,6 +403,11 @@ class ESMCForMaskedLM(nn.Module):
             self.register_parameter("residual_lambdas", None)
             self.register_parameter("input_lambdas", None)
         self.apply(self._initialize)
+        if config.depth_scaled_residual_init:
+            residual_std = 0.02 / math.sqrt(2 * config.n_layers)
+            for block in self.blocks:
+                nn.init.normal_(block.attention.proj.weight, mean=0.0, std=residual_std)
+                nn.init.normal_(block.ffn.down.weight, mean=0.0, std=residual_std)
 
     @staticmethod
     def _initialize(module: nn.Module) -> None:

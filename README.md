@@ -43,9 +43,10 @@ OUTPUT_ROOT=$PWD/outputs/stage1-300m-4xa100-4h-best \
   bash runs/stage1_300m_4xa100_4h.sh
 ```
 
-That preset combines learned residual/input routing with parameter-free
-transformer RMSNorm, the improvements selected by frozen full-chain P@L in
-AutoResearch rounds 2 and 6. Its provenance is documented in
+That preset combines learned residual/input routing, parameter-free transformer
+RMSNorm, depth-scaled residual-output initialization, and a final-20% linear
+learning-rate cooldown. Every addition was selected by frozen full-chain P@L;
+its provenance is documented in
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 Every training command fails closed unless the corpus has matching content

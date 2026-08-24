@@ -80,6 +80,31 @@ class ModelContractTests(unittest.TestCase):
             1.15 * hidden + 0.20 * initial,
         )
 
+    def test_depth_scaled_residual_initialization_contract(self) -> None:
+        torch.manual_seed(7)
+        model = build_model(
+            "tiny",
+            attention_backend="math",
+            depth_scaled_residual_init=True,
+        )
+        expected_std = 0.02 / (2 * model.config.n_layers) ** 0.5
+        self.assertAlmostEqual(
+            float(model.blocks[0].attention.proj.weight.std().detach()),
+            expected_std,
+            delta=0.0005,
+        )
+        self.assertAlmostEqual(
+            float(model.blocks[0].ffn.down.weight.std().detach()),
+            expected_std,
+            delta=0.0005,
+        )
+        self.assertAlmostEqual(
+            float(model.blocks[0].attention.qkv.weight.std().detach()),
+            0.02,
+            delta=0.0005,
+        )
+        self.assertEqual(count_parameters(model), expected_parameter_count(model.config))
+
     def test_rope_preserves_vector_norm(self) -> None:
         generator = torch.Generator().manual_seed(7)
         query = torch.randn(2, 2, 11, 64, generator=generator)

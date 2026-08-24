@@ -3,9 +3,10 @@ model: esmc_300m
 expected_parameter_count: 332823484
 seed: 20260821
 
-# Current P@L-selected architecture (AutoResearch rounds 2 and 6): learned
-# residual/input routing plus parameter-free transformer RMSNorm. The original
-# ESMC-compatible production setting remains in esmc_300m_stage1_4xa100_4h.yaml.
+# Current P@L-selected setting: learned residual/input routing, parameter-free
+# transformer RMSNorm, depth-scaled residual-output initialization, and a
+# final-20% linear learning-rate cooldown. The original ESMC-compatible
+# production setting remains in esmc_300m_stage1_4xa100_4h.yaml.
 # Four-A100 smoke f19f801 measured 0.652124781901 s/step.
 # ceil(1.02 * 14400 / rate) = 22,524; warmup is 10%.
 learning_rate: 0.000233695
@@ -15,11 +16,13 @@ gradient_clip_norm: 1.0
 minimum_lr_ratio: 0.1
 max_steps: 22524
 warmup_steps: 2253
+stage1_cooldown_fraction: 0.2
 
 attention_backend: flash
 gradient_checkpointing: false
 learned_residual_routing: true
 transformer_norm: rmsnorm
+depth_scaled_residual_init: true
 compile: false
 compile_mode: default
 walltime_seconds: 14400

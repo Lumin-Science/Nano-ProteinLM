@@ -52,6 +52,31 @@ class ScheduleTests(unittest.TestCase):
             0.1,
         )
 
+    def test_one_stage_optional_linear_cooldown(self) -> None:
+        arguments = {
+            "optimizer_step": 100,
+            "warmup_steps": 10,
+            "stage_name": "stage1",
+            "minimum_ratio": 0.1,
+            "stage1_cooldown_fraction": 0.2,
+        }
+        self.assertAlmostEqual(wsd_multiplier(stage_progress=0.79, **arguments), 1.0)
+        self.assertAlmostEqual(wsd_multiplier(stage_progress=0.80, **arguments), 1.0)
+        self.assertAlmostEqual(wsd_multiplier(stage_progress=0.90, **arguments), 0.55)
+        self.assertAlmostEqual(wsd_multiplier(stage_progress=1.00, **arguments), 0.1)
+
+    def test_rejects_invalid_one_stage_cooldown(self) -> None:
+        for fraction in (-0.1, 1.0):
+            with self.subTest(fraction=fraction):
+                with self.assertRaisesRegex(ValueError, "cooldown fraction"):
+                    wsd_multiplier(
+                        optimizer_step=20,
+                        warmup_steps=10,
+                        stage_name="stage1",
+                        stage_progress=0.5,
+                        stage1_cooldown_fraction=fraction,
+                    )
+
 
 if __name__ == "__main__":
     unittest.main()

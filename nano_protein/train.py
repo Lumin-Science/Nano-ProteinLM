@@ -299,6 +299,9 @@ def train(
         "gradient_checkpointing": bool(config.get("gradient_checkpointing", False)),
         "learned_residual_routing": bool(config.get("learned_residual_routing", False)),
         "transformer_norm": str(config.get("transformer_norm", "layernorm")),
+        "depth_scaled_residual_init": bool(
+            config.get("depth_scaled_residual_init", False)
+        ),
     }
     model = build_model(str(config["model"]), **model_options).to(device)
     parameter_count = count_parameters(model)
@@ -420,6 +423,9 @@ def train(
             stage_name=stage.name,
             stage_progress=stage_progress,
             minimum_ratio=float(config.get("minimum_lr_ratio", 0.1)),
+            stage1_cooldown_fraction=float(
+                config.get("stage1_cooldown_fraction", 0.0)
+            ),
         )
         for group in optimizer.param_groups:
             group["lr"] = peak_learning_rate * multiplier

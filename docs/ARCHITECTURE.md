@@ -24,13 +24,17 @@ architecture: learned residual routing is off and transformer normalization is
 LayerNorm. `configs/esmc_300m_stage1_4xa100_4h.yaml` preserves that setting.
 
 The separately named `configs/esmc_300m_stage1_4xa100_4h_best.yaml` is the
-current opt-in P@L-selected setting. AutoResearch round 2 added one learned
-residual-stream scalar and one learned input-embedding scalar per layer; round
-6 replaced transformer attention, Q/K, FFN, and final norms with parameter-free
+current opt-in P@L-selected setting. The first campaign added one learned
+residual-stream scalar and one learned input-embedding scalar per layer, then
+replaced transformer attention, Q/K, FFN, and final norms with parameter-free
 RMSNorm while retaining the LayerNorm MLM head. Their two-hour frozen full-chain
 P@L scores were 0.0973519991 and 0.0987442911 respectively, versus 0.0958063581
-for the original baseline. The combined 300M variant has 332,823,484 parameters.
-Rejected or not-yet-qualified variants remain isolated under `dev/` or on the
+for the original baseline. Under the second campaign's stricter decontaminated
+one-hour contract, the previous winner re-baselined at 0.0896190356. Depth-scaled
+attention-output and FFN-down initialization improved P@L to 0.0981775134, and a
+final-20% linear cooldown toward 0.1x peak improved it again to 0.0987620524.
+The selected 300M variant remains at 332,823,484 parameters. Rejected or
+not-yet-qualified variants remain isolated under `dev/` or on the
 `auto-research` branch.
 
 ## Recorded source discrepancy

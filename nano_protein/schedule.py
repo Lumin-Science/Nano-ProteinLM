@@ -63,11 +63,19 @@ def wsd_multiplier(
     stage_name: str,
     stage_progress: float,
     minimum_ratio: float = 0.1,
+    stage1_cooldown_fraction: float = 0.0,
 ) -> float:
+    if not 0.0 <= stage1_cooldown_fraction < 1.0:
+        raise ValueError("Stage-1 cooldown fraction must be in [0, 1)")
     if optimizer_step <= warmup_steps:
         return max(optimizer_step, 1) / max(warmup_steps, 1)
     if stage_name == "stage1":
-        return 1.0
+        if stage1_cooldown_fraction == 0.0:
+            return 1.0
+        cooldown_start = 1.0 - stage1_cooldown_fraction
+        cooldown_progress = (stage_progress - cooldown_start) / stage1_cooldown_fraction
+        bounded = min(max(cooldown_progress, 0.0), 1.0)
+        return 1.0 - bounded * (1.0 - minimum_ratio)
     if stage_name != "stage2":
         raise ValueError(f"unknown stage {stage_name!r}")
     return 1.0 - min(max(stage_progress, 0.0), 1.0) * (1.0 - minimum_ratio)
