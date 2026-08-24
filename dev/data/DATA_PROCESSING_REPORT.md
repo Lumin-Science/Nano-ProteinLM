@@ -126,11 +126,13 @@ The global count is lower than the source sum because identical digest IDs can
 retain membership in more than one source arm. The parent exclusion digest file
 is 4,044,893,255 bytes with SHA-256
 `3738a5bcab185f553613480a17d3ecbdd309323b9920ed66a7d6fb5700fecaab`.
-Its three source-search commands are independently bound by
-`MMSEQS_COMMANDS.txt` SHA-256
-`3dbb4439699894c90046b3a6d726b8929858395bf69268c35ae31051cb2d7662`;
-the finalizer parses that ledger and requires the forward orientation, all four
-identity/coverage/cap settings, and sensitivity 7.5 for every source.
+The exclusion receipt binds `MMSEQS_SEARCH_COMPLETE.json` SHA-256
+`309d43502d43e411ef8ca6e989dea8863f06c12d75a71e6349153b0a7550c8c8`,
+which in turn binds the three-source `MMSEQS_COMMANDS.txt` SHA-256
+`3dbb4439699894c90046b3a6d726b8929858395bf69268c35ae31051cb2d7662`.
+The finalizer validates both receipts, parses that command ledger, and requires
+the forward orientation, all four identity/coverage/cap settings, and
+sensitivity 7.5 for every source.
 The parent command used the recorded MMseqs v17 default E-value of 0.001; new
 searches spell `-e 0.001` explicitly and the finalizer rechecks every emitted
 value.

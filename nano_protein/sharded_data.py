@@ -133,6 +133,7 @@ def validate_search_contracts(value: object) -> None:
     _validate_digest(
         legacy.get("command_receipt_sha256"), label="legacy MMseqs command receipt"
     )
+    _validate_digest(legacy.get("commands_sha256"), label="legacy MMseqs commands ledger")
     if not reverse_contract(value["q9_delta"], scope="q9-delta"):
         raise ValueError("Q9 delta MMseqs search provenance is incomplete")
 

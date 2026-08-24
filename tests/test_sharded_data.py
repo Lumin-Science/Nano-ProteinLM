@@ -159,6 +159,7 @@ class ShardedDataTests(unittest.TestCase):
                     "maximum_emitted_hits_for_one_evaluation_query": 441_788,
                     "all_emitted_hit_counts_below_cap": True,
                     "command_receipt_sha256": "c" * 64,
+                    "commands_sha256": "d" * 64,
                 },
                 "q9_delta": {
                     "query_scope": "q9-delta",

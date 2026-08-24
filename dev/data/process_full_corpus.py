@@ -1405,14 +1405,49 @@ def _validate_legacy_search_contract(
 ) -> dict[str, Any]:
     """Bind the legacy parent to its exact three MMseqs search commands."""
 
-    command_path = Path(parent.get("command_receipt", ""))
-    expected_hash = parent.get("command_receipt_sha256")
-    if not command_path.is_file() or file_hash(command_path) != expected_hash:
+    search_receipt_path = Path(parent.get("command_receipt", ""))
+    search_receipt_hash = parent.get("command_receipt_sha256")
+    if not (
+        search_receipt_path.is_file()
+        and search_receipt_path.parent.resolve() == parent_receipt.parent.resolve()
+        and file_hash(search_receipt_path) == search_receipt_hash
+    ):
         raise ValueError("parent MMseqs command receipt changed")
+    search_receipt = json.loads(search_receipt_path.read_text())
+    expected_search_receipt = {
+        "status": "complete",
+        "protocol": "mmseqs2-evaluation-homology-search-v1",
+        "mmseqs_version": parent.get("mmseqs_version"),
+        "evaluation_split_ledger_sha256": parent.get(
+            "evaluation_split_ledger_sha256"
+        ),
+        "threads": 64,
+        "maximum_sequences_per_query": 1_000_000,
+        "minimum_sequence_identity": 0.3,
+        "minimum_query_coverage": 0.8,
+        "minimum_target_coverage": 0.8,
+        "coverage_mode": 0,
+    }
+    for key, expected in expected_search_receipt.items():
+        if search_receipt.get(key) != expected:
+            raise ValueError(f"parent MMseqs search receipt changed {key}")
+    commands_hash = search_receipt.get("commands_sha256")
+    commands_path = search_receipt_path.parent / "MMSEQS_COMMANDS.txt"
+    if not (
+        isinstance(commands_hash, str)
+        and commands_path.is_file()
+        and file_hash(commands_path) == commands_hash
+    ):
+        raise ValueError("parent MMseqs commands ledger changed")
+    parsed_lines = [
+        shlex.split(line) for line in commands_path.read_text().splitlines() if line.strip()
+    ]
     searches = [
-        shlex.split(line)
-        for line in command_path.read_text().splitlines()
-        if line.strip() and len(shlex.split(line)) > 1 and shlex.split(line)[1] == "search"
+        command
+        for command in parsed_lines
+        if len(command) > 1
+        and Path(command[0]).name == "mmseqs"
+        and command[1] == "search"
     ]
     if len(searches) != len(SOURCES):
         raise ValueError("parent MMseqs command receipt lacks one search per source")
@@ -1467,7 +1502,8 @@ def _validate_legacy_search_contract(
         "configured_candidate_cap": MMSEQS_THRESHOLDS["maximum_sequences_per_query"],
         "maximum_emitted_hits_for_one_evaluation_query": maximum_emitted,
         "all_emitted_hit_counts_below_cap": True,
-        "command_receipt_sha256": expected_hash,
+        "command_receipt_sha256": search_receipt_hash,
+        "commands_sha256": commands_hash,
         "mmseqs_version": parent.get("mmseqs_version"),
     }
 

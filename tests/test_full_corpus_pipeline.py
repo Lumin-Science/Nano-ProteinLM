@@ -659,6 +659,27 @@ class FullCorpusPipelineTests(unittest.TestCase):
                     for source in self.pipeline.SOURCES
                 )
             )
+            parent_commands_sha256 = hashlib.sha256(
+                parent_commands.read_bytes()
+            ).hexdigest()
+            parent_search_receipt = root / "MMSEQS_SEARCH_COMPLETE.json"
+            parent_search_receipt.write_text(
+                json.dumps(
+                    {
+                        "status": "complete",
+                        "protocol": "mmseqs2-evaluation-homology-search-v1",
+                        "mmseqs_version": "test-mmseqs",
+                        "evaluation_split_ledger_sha256": "e" * 64,
+                        "threads": 64,
+                        "maximum_sequences_per_query": 1_000_000,
+                        "minimum_sequence_identity": 0.3,
+                        "minimum_query_coverage": 0.8,
+                        "minimum_target_coverage": 0.8,
+                        "coverage_mode": 0,
+                        "commands_sha256": parent_commands_sha256,
+                    }
+                )
+            )
             parent_receipt.write_text(
                 json.dumps(
                     {
@@ -669,10 +690,11 @@ class FullCorpusPipelineTests(unittest.TestCase):
                         "excluded_digest_file_sha256": hashlib.sha256(
                             parent_exclusions.read_bytes()
                         ).hexdigest(),
-                        "command_receipt": str(parent_commands),
+                        "command_receipt": str(parent_search_receipt),
                         "command_receipt_sha256": hashlib.sha256(
-                            parent_commands.read_bytes()
+                            parent_search_receipt.read_bytes()
                         ).hexdigest(),
+                        "evaluation_split_ledger_sha256": "e" * 64,
                         "mmseqs_version": "test-mmseqs",
                         "sources": {
                             source: {
