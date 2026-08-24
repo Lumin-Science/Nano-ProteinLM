@@ -2,12 +2,18 @@
 
 Reviewed: 2026-08-23
 
-## Mixed-terms decision
+## Distribution-license decision
 
-This dataset cannot accurately be described by one uniform Creative Commons license.
-Hugging Face metadata therefore uses `license: other` and the name
-`mixed-source-terms`. Each source arm remains governed by its own direct-source terms.
-Nothing in this file grants rights that Lumin Science does not hold, overrides an
+Lumin Science distributes the rights it holds in this database compilation—its
+selection, arrangement, decontamination ledger, binary packing, and original
+release metadata—under
+[Creative Commons Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/).
+Hugging Face metadata therefore uses `license: cc-by-sa-4.0`.
+
+This license does **not** relicense third-party protein sequence records. Each
+source arm remains governed by its direct-source terms below. The path-level
+marking is an explicit third-party-content exception to the umbrella license.
+Nothing in this file grants rights Lumin Science does not hold, overrides an
 upstream license or terms of use, or implies endorsement by an upstream provider.
 
 ## UniRef90 arm
@@ -85,8 +91,9 @@ Preferred OMG citation:
 ## Project-authored release metadata
 
 Except for upstream material, factual identifiers, quotations, and linked license text,
-the release-specific documentation and metadata authored by Lumin Science are licensed
-under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+the database compilation and release-specific documentation and metadata authored by
+Lumin Science are licensed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 
 The source code in the GitHub repository is governed separately by its repository
 `LICENSE` file. No software license changes the data terms above.

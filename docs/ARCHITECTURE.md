@@ -18,23 +18,13 @@ than silently falling back, and qualification exercises forward and backward.
 The optimized CUDA path packs once before the transformer and scatters once
 after the language-model head, so LayerNorm and SwiGLU also skip pad rows.
 
-The frozen production ESMC-300M baselines use 64 sequences/GPU at context 512
-without accumulation. AutoResearch may change architecture, batch size,
-optimizer, compilation, checkpointing, and kernels within the four-GPU,
-7,200-second contract, while retaining the frozen production corpus and P@L
-evaluator.
+The frozen production ESMC-300M baseline uses 64 sequences/GPU at context 512
+without accumulation. Experimental architecture and optimizer variants are
+isolated under `dev/` or on the `auto-research` branch.
 
 ## Recorded source discrepancy
 
 The paper text says residual updates are divided by `sqrt(n_layers)`. Biohub's
 released implementation divides by `sqrt(n_layers / 36)`. This repository uses
 the released source convention to preserve checkpoint geometry and records the
-choice in every config. A controlled residual-scale ablation belongs in the
-research queue; it must not silently alter the canonical run.
-
-## Optimizer uncertainty
-
-The paper discloses a µP rule—learning rate scales inversely with width and the
-square root of depth, while decay preserves the LR×decay product—but not the
-calibrated width-512/depth-16 values. The frozen baselines use an explicit proxy
-hypothesis; optimizer calibration is an AutoResearch target.
+choice in every production config.

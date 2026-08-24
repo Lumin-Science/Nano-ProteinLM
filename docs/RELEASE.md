@@ -10,7 +10,7 @@ source of truth until evaluation, licensing, and release gates pass.
 | Model weights, config, tokenizer, model card | content-addressed training output | `huggingface.co/LuminScience/<model-release>` | trusted evaluation, multi-seed confirmation, dual-use review |
 | Full P-CORE/contact embedding caches | controlled scratch storage | not public by default | benchmark terms and storage policy |
 | Raw UniRef/MGnify/OMG-IMG payloads | controlled source storage | never mirrored by this project | upstream terms govern access |
-| Paper source and compact result tables | `report/` and `results/` | GitHub release/tag; archival venue later | result hashes match the tagged code |
+| Paper source and compact result tables | `dev/report/` and `dev/results/` | GitHub release/tag; archival venue later | result hashes match the tagged code |
 
 ## Release transaction
 
@@ -32,13 +32,15 @@ training path. Publishing is a separate, reviewed operation.
 
 ## Stage-1 production dataset license decision
 
-`stage1-300m-production-v1` is published as `license: other` with source-specific
-terms. UniRef90 remains CC BY 4.0, the direct `tattabio/OMG` distribution makes
-the derived OMG/IMG arm CC BY-SA 4.0, and MGnify remains under the EMBL-EBI
-Terms of Use plus any original-data-owner rights. The binary token stores are
-reversible sequence representations, so tokenization does not erase these
-obligations. The release card and portable ledgers live under
-`release/huggingface/stage1-300m-production-v1/`.
+The project-authored database compilation for `stage1-300m-production-v1` is
+published under CC BY-SA 4.0. This covers only Lumin Science's selection,
+arrangement, decontamination ledger, packing, and release metadata. It does not
+relicense third-party sequence records. UniRef90 remains CC BY 4.0, the direct
+`tattabio/OMG` distribution makes the derived OMG/IMG arm CC BY-SA 4.0, and
+MGnify remains under the EMBL-EBI Terms of Use plus any original-data-owner
+rights. The binary token stores are reversible sequence representations, so
+tokenization does not erase these obligations. The release card and portable
+ledgers live under `release/huggingface/stage1-300m-production-v1/`.
 
 The canonical upload is run from the storage host with uv-managed tooling:
 

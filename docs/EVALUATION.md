@@ -8,10 +8,10 @@ Training checkpoints can be evaluated on three levels:
    a logistic probe trained on the frozen 20 structures, Cβ distance below 8 Å
    (Cα for glycine), sequence separation at least 24, and top-L precision.
 
-AutoResearch uses only the full frozen 20,775-chain P@L result for model
-selection. MLM and P-CORE results may be reported for completed reference
-checkpoints, but they cannot keep or discard an AutoResearch candidate. Human
-PPI remains quarantined from model selection.
+The full frozen 20,775-chain P@L result is the separate production promotion
+axis. MLM and P-CORE remain reportable reference metrics, and Human PPI remains
+quarantined from promotion decisions. Experiment-specific selection rules live
+under `dev/`.
 
 `EVAL_PROFILE=full` runs all six exact v0.2 probe contracts and reduces the four
 trusted tasks to P-CORE-Q4 v0.3. It
@@ -35,24 +35,13 @@ erase completed work, and the runner reuses completed MLM/contact components on
 restart. Output roots are checkpoint-specific; do not point a different
 checkpoint at an existing evaluation directory.
 
-## Next evaluator work
+## Production acceleration
 
-The next safe speed improvement is to calibrate one frozen regularization value
-per diagnostic task on released reference models, then confirm that rankings are
-unchanged across archived checkpoints. That would remove the current four-value
-grid from every routine checkpoint without silently redefining the release
-benchmark. Secondary structure needs a separate validation study comparing a
-bounded residue sample or SGD/ridge surrogate against the full LBFGS task across
-multiple model scales. Until rank preservation is demonstrated, the surrogate
-may be reported only as another diagnostic. The many-small-file NumPy cache
-should also move to content-addressed shards or LMDB after byte/numeric parity
-tests; this is primarily a metadata and storage optimization.
-
-The tmoss runner currently imports the frozen benchmark implementations from
-the adjacent `AutoResearch_ESMC` source checkout while keeping benchmark data
-outside this repository. Before a public release, the repaired
-evaluator must be versioned as an immutable dependency (or vendored with its
-tests and provenance) so a fresh clone does not depend on that sibling path.
+The production speed improvements already retained on `main` are cross-protein
+residue-budget batching, secondary-structure-only residue caches, bounded
+parallel probe processes, three-way contact sharding, deterministic global
+P@L merge, and atomic restartable receipts. These change execution only; the
+frozen examples, probe, row ordering, metric, and bootstrap remain unchanged.
 
 ## Quarantined tasks
 
@@ -72,15 +61,3 @@ record for every task and retain the old six-task number only as
 adds substantially more family-disjoint test pairs, hard negatives, a leakage
 audit, and scale/checkpoint ranking validation. EC requires independent
 reproduction and repair before reinstatement.
-
-## P-CORE Next research track
-
-The proposed CATH, CAFA5-MF, PRING, MegaScale, and CAID3 additions have zero
-selection weight until they pass the benchmark-qualification program in
-[`plans/pcore-next/FORMULATION.md`](../plans/pcore-next/FORMULATION.md).
-P-CORE-Q4 remains authoritative throughout feasibility work, falsification
-pilots, full qualification, aggregation study, and shadow deployment.
-
-The concrete proposed successor—usable now as the implementation target—is
-[`PROPOSED_PCORE_V05.md`](PROPOSED_PCORE_V05.md), with a machine-readable
-contract at [`configs/pcore_v05_proposed_q9.yaml`](../configs/pcore_v05_proposed_q9.yaml).

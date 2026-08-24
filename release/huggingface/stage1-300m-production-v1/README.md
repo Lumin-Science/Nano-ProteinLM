@@ -1,8 +1,6 @@
 ---
 pretty_name: LuminBench Nano ESMC Stage-1 300M Production v1
-license: other
-license_name: mixed-source-terms
-license_link: https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/blob/main/LICENSE_AND_ATTRIBUTION.md
+license: cc-by-sa-4.0
 size_categories:
   - 1M<n<10M
 tags:
@@ -23,15 +21,18 @@ ESMC-like protein masked language model.
 
 ## License at a glance
 
-This is a **mixed-terms dataset**, so the repository metadata deliberately uses
-`license: other`. No single repository-level license replaces the upstream terms:
+The database compilation created by Lumin Science—its selection, arrangement,
+decontamination ledger, binary packing, and release metadata—is distributed
+under **CC BY-SA 4.0**. That umbrella license covers only rights Lumin Science
+holds. It does not relicense third-party protein records, which remain marked
+under their direct-source terms:
 
 | Path | Direct source | Governing terms |
 |---|---|---|
 | `uniref90/**` | UniRef90 2023_02 | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | `mgnify/**` | MGnify Protein Database 2023_02 | [EMBL-EBI Terms of Use](https://www.ebi.ac.uk/about/terms-of-use/), including original-data-owner rights |
 | `omg_img/**` | JGI/IMG rows from `tattabio/OMG` | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) as declared by the direct OMG distribution |
-| release documentation and project-authored metadata | Lumin Science | CC BY 4.0, excluding embedded upstream material and factual identifiers |
+| database compilation and project-authored release metadata | Lumin Science | CC BY-SA 4.0, excluding upstream sequence-record rights and factual identifiers |
 
 Read [`LICENSE_AND_ATTRIBUTION.md`](LICENSE_AND_ATTRIBUTION.md) before using or
 redistributing any data. The binary token stores are reversible representations of
@@ -47,10 +48,12 @@ protein sequences; tokenization does not remove upstream obligations.
 | **Total** | **9,000,000** | **12,288** | **2,342,843,040** | **3,152,566** |
 
 The payload contains 9,012,288 proteins, 2,345,995,606 residue tokens, and about
-2.55 GiB of data before repository metadata. Each source is stocked with the same
-number of representatives; training samples the three stores using the configured
-mixture (the current Stage-1 default is 36:11:54 for UniRef90:MGnify:OMG/IMG,
-normalized at runtime).
+2.55 GiB of data before repository metadata. It is the production subset for
+the current short four-A100 campaigns, not the complete 765,290,002-representative
+70%-cluster reservoir and not the planned seven-day eight-H100 corpus. Each
+source is stocked with the same number of representatives; training samples the
+three stores using the configured mixture (the current Stage-1 default is
+36:11:54 for UniRef90:MGnify:OMG/IMG, normalized at runtime).
 
 ## File format
 

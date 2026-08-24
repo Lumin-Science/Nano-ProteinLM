@@ -2,6 +2,12 @@
   "release": "stage1-300m-production-v1",
   "reviewed_at": "2026-08-23",
   "schema_version": 1,
+  "distribution_license": {
+    "exclusions": "third-party protein sequence records retain the source-specific terms declared under source_arms",
+    "license": "CC BY-SA 4.0",
+    "scope": "Lumin Science rights in selection, arrangement, decontamination ledger, binary packing, and original release metadata",
+    "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+  },
   "source_arms": {
     "mgnify": {
       "accepted_memberships_after_source_cleaning": 611817034,

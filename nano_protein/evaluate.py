@@ -832,11 +832,7 @@ def merge_full_evaluation(
     chain_ids = [str(row["chain_id"]) for row in rows]
     if len(rows) != expected_contact_chains or len(set(chain_ids)) != len(rows):
         raise ValueError("merged contact rows are incomplete or duplicated")
-    rows.sort(
-        key=lambda row: hashlib.sha256(
-            f"20260820:{row['chain_id']}".encode()
-        ).digest()
-    )
+    rows.sort(key=lambda row: hashlib.sha256(f"20260820:{row['chain_id']}".encode()).digest())
     for position, row in enumerate(rows):
         if str(row["chain_id"]) not in shard_chain_ids[position % shard_count]:
             raise ValueError("contact rows do not follow the frozen deterministic sharding")

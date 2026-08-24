@@ -221,8 +221,7 @@ def build_bundle(
             "train_partitions": sorted(set(range(5)) - {test, (test + 1) % 5}),
             "counts": {
                 "train": sum(
-                    partition_counts[index]
-                    for index in set(range(5)) - {test, (test + 1) % 5}
+                    partition_counts[index] for index in set(range(5)) - {test, (test + 1) % 5}
                 ),
                 "validation": partition_counts[(test + 1) % 5],
                 "test": partition_counts[test],

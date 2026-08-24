@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 data_root="${DATA_ROOT:-$repo_root/data/processed/stage1-300m-production-v1}"
 output_root="${OUTPUT_ROOT:-$repo_root/outputs/stage1-300m-4xa100-16h}"
-config="${CONFIG:-$repo_root/configs/esmc_300m_stage1_4xa100_16h.yaml}"
+config="${CONFIG:-$repo_root/dev/configs/esmc_300m_stage1_4xa100_16h.yaml}"
 uv_bin="${UV_BIN:-uv}"
 uv_cache_dir="${UV_CACHE_DIR:-$repo_root/.uv-cache}"
 

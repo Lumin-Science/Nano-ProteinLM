@@ -73,9 +73,7 @@ def build_candidates(
                     if int(digest[:16], 16) % validation_modulus == validation_bucket
                     else "train"
                 )
-                target = (
-                    validation_candidates if split == "validation" else train_candidates
-                )
+                target = validation_candidates if split == "validation" else train_candidates
                 if counts[split] >= target:
                     continue
                 handle.write(f">sha256_{digest}\n")

@@ -73,7 +73,10 @@ class TrainingDataContractTests(unittest.TestCase):
 
     def test_sixteen_hour_campaign_is_step_gated(self) -> None:
         config_path = (
-            Path(__file__).resolve().parents[1] / "configs" / "esmc_300m_stage1_4xa100_16h.yaml"
+            Path(__file__).resolve().parents[1]
+            / "dev"
+            / "configs"
+            / "esmc_300m_stage1_4xa100_16h.yaml"
         )
         config = yaml.safe_load(config_path.read_text())
 
