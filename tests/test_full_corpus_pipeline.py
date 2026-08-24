@@ -50,6 +50,15 @@ class FullCorpusPipelineTests(unittest.TestCase):
                 download_workers=0,
             )
 
+    def test_download_rejects_noncanonical_manifest_before_network_io(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            manifest = Path(raw) / "omg.tsv"
+            manifest.write_text("path\tbytes\tsha256\nwrong.parquet\t1\t" + "0" * 64 + "\n")
+            with mock.patch.object(self.pipeline, "_download_with_curl") as download:
+                with self.assertRaisesRegex(ValueError, "authoritative 959-object pin"):
+                    self.pipeline.download_raw(Path(raw) / "data", manifest, download_workers=1)
+            download.assert_not_called()
+
     def test_delta_resume_cli_routes_recovery_flags(self) -> None:
         with mock.patch.object(
             self.pipeline, "run_delta_screen", return_value={"status": "test"}

@@ -100,6 +100,7 @@ PRIMARY_SOURCES = {
     },
 }
 OMG_REPO_ID = "tattabio/OMG"
+OMG_MANIFEST_SHA256 = "bb24ae4e819c92faa20767bf9f4070dfd3e27f673e77d064b7a45cc897ebd7d0"
 OMG_MGNIFY_RE = re.compile(r"(?:ERZ|ERR|ERS|ERP|MGY)[A-Z0-9_.-]*$", re.I)
 OMG_IMG_RE = re.compile(r"(?:\d{7,}|(?:Ga|IMG|JGI)[A-Z0-9_.-]+)$", re.I)
 Q9_TASKS = {
@@ -258,6 +259,18 @@ def download_raw(
 
     if download_workers <= 0:
         raise ValueError("download_workers must be positive")
+    omg_manifest_sha256 = file_hash(omg_manifest)
+    if omg_manifest_sha256 != OMG_MANIFEST_SHA256:
+        raise ValueError("OMG manifest is not the authoritative 959-object pin")
+    with omg_manifest.open(newline="") as handle:
+        rows = list(csv.DictReader(handle, delimiter="\t"))
+    required_columns = {"path", "bytes", "sha256"}
+    if len(rows) != 959 or any(not required_columns <= row.keys() for row in rows):
+        raise ValueError(f"expected 959 pinned OMG shards, found {len(rows)}")
+    paths = [row["path"] for row in rows]
+    if len(set(paths)) != len(paths) or any(not path for path in paths):
+        raise ValueError("OMG manifest paths must be nonempty and globally unique")
+
     artifacts: list[dict[str, Any]] = []
     for source, spec in PRIMARY_SOURCES.items():
         target = data_root / str(spec["relative"])
@@ -268,11 +281,6 @@ def download_raw(
         artifacts.append({"source": source, "path": str(target), "sha256": file_hash(target)})
 
     from huggingface_hub import hf_hub_download
-
-    with omg_manifest.open(newline="") as handle:
-        rows = list(csv.DictReader(handle, delimiter="\t"))
-    if len(rows) != 959:
-        raise ValueError(f"expected 959 pinned OMG shards, found {len(rows)}")
 
     def fetch_omg(row: dict[str, str]) -> dict[str, Any]:
         local = Path(
@@ -296,7 +304,7 @@ def download_raw(
         "status": "verified",
         "protocol": "open-protein-raw-download-v1",
         "omg_download_workers": download_workers,
-        "omg_manifest_sha256": file_hash(omg_manifest),
+        "omg_manifest_sha256": omg_manifest_sha256,
         "artifacts": artifacts,
     }
     atomic_json(data_root / "RAW_DOWNLOAD_VERIFIED.json", receipt)
