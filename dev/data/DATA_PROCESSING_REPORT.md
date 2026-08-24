@@ -144,8 +144,15 @@ databases used by the parent run. Its validated target digest union is then
 externalized with the immutable parent exclusions. This is set-equivalent to
 rerunning all 317,000 queries and avoids repeating the 116,841-query parent work.
 
-Full delta screen: Slurm job `10096`; final measured hit/exclusion counts are
-written here only after `HOMOLOGY_EXCLUSION_VERIFIED.json` exists.
+Full delta screen execution: the first attempt (`10096`) opted into concurrent
+source indexes and demonstrated that their combined peak exceeds a 1 TB host;
+the MGnify prefilter died while the other completed source outputs remained
+valid. Recovery job `10098` preserves completed TSVs and serially runs only the
+missing source under the identical query, threshold, sensitivity, coverage, and
+one-million-hit-cap contract. Production defaults are now serialized. Verified
+sharding (`10099`) and metadata staging (`10100`) are dependency-gated on that
+recovery. Final measured hit/exclusion counts are written here only after
+`HOMOLOGY_EXCLUSION_VERIFIED.json` exists.
 
 ## 4. Final train/validation selection and sharding
 

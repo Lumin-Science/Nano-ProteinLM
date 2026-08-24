@@ -725,24 +725,49 @@ def run_delta_screen(
     mmseqs: Path,
     threads: int,
     concurrent_sources: bool = False,
+    resume: bool = False,
 ) -> dict[str, Any]:
     """Search Q9-only queries against already-built complete target databases."""
 
-    output.mkdir(parents=True, exist_ok=False)
-    (output / "db").mkdir()
-    (output / "results").mkdir()
-    (output / "tmp").mkdir()
+    if resume:
+        if not output.is_dir():
+            raise FileNotFoundError(f"delta output does not exist for resume: {output}")
+        if (output / "MMSEQS_DELTA_SEARCH_COMPLETE.json").exists():
+            raise FileExistsError("delta screen already has a complete receipt")
+    else:
+        output.mkdir(parents=True, exist_ok=False)
+        (output / "db").mkdir()
+        (output / "results").mkdir()
+        (output / "tmp").mkdir()
     query_db = output / "db/query"
-    subprocess.run([str(mmseqs), "createdb", str(query_fasta), str(query_db)], check=True)
+    if resume:
+        if not query_db.with_suffix(".dbtype").is_file():
+            raise FileNotFoundError("resume output lacks the original MMseqs query database")
+    else:
+        subprocess.run([str(mmseqs), "createdb", str(query_fasta), str(query_db)], check=True)
     threads_per_source = max(1, threads // len(SOURCES)) if concurrent_sources else threads
 
     def screen_source(source: str) -> tuple[str, list[str], dict[str, Any]]:
         target = target_db_root / source
         if not target.with_suffix(".dbtype").is_file():
             raise FileNotFoundError(f"missing reusable complete target database: {target}")
-        result = output / f"results/{source}"
-        temporary = output / f"tmp/{source}"
         hits = output / f"results/{source}.tsv"
+        if resume and hits.is_file():
+            return (
+                source,
+                ["reuse-completed-hit-table", source],
+                {
+                    "path": str(hits.resolve()),
+                    "bytes": hits.stat().st_size,
+                    "sha256": file_hash(hits),
+                    "reused_from_interrupted_parent": True,
+                },
+            )
+        suffix = "-recovery" if resume else ""
+        result = output / f"results/{source}{suffix}"
+        temporary = output / f"tmp/{source}{suffix}"
+        if result.exists() or temporary.exists():
+            raise FileExistsError(f"unverified recovery state exists for {source}")
         command = [
             str(mmseqs),
             "search",
@@ -811,8 +836,9 @@ def run_delta_screen(
         ).stdout.strip(),
         "total_threads": threads,
         "concurrent_sources": concurrent_sources,
+        "resumed_after_interrupted_attempt": resume,
         "threads_per_source": threads_per_source,
-        "commands": sorted(commands, key=lambda command: command[3]),
+        "commands": sorted(commands, key=canonical_json),
         "artifacts": dict(sorted(artifacts.items())),
     }
     atomic_json(output / "MMSEQS_DELTA_SEARCH_COMPLETE.json", report)
@@ -1163,7 +1189,11 @@ def shard_release(
         for digest, sequence in iter_sha_sorted_buckets(sort_work, source):
             if sequence_hash(sequence) != digest:
                 raise ValueError(f"representative/header mismatch in {source}: {digest}")
-            if digest in excluded or not 32 <= len(sequence) <= 16_384:
+            if (
+                digest in excluded
+                or digest in global_validation
+                or not 32 <= len(sequence) <= 16_384
+            ):
                 continue
             selected.append((digest, sequence))
             if len(selected) == validation_per_source:
@@ -1172,6 +1202,8 @@ def shard_release(
             raise ValueError(f"not enough validation representatives for {source}")
         validation[source] = selected
         global_validation.update(digest for digest, _sequence in selected)
+    if len(global_validation) != validation_per_source * len(SOURCES):
+        raise AssertionError("validation sequences are not globally unique")
 
     def shard_source(source: str) -> tuple[str, dict[str, Any], Counter[str]]:
         train_writer = ParquetShardWriter(output, source, "train", shard_residues)
@@ -1363,6 +1395,110 @@ def verify_release(root: Path, *, screen_root: Path, evaluation_root: Path) -> d
     return receipt
 
 
+def stage_release_metadata(
+    *,
+    release_root: Path,
+    template_root: Path,
+    omg_manifest: Path,
+    screen_root: Path,
+    evaluation_root: Path,
+) -> dict[str, Any]:
+    """Render portable attribution and measured dataset-card metadata."""
+
+    manifest_path = release_root / "manifest.json"
+    verification_path = release_root / "RELEASE_VERIFIED.json"
+    manifest = json.loads(manifest_path.read_text())
+    verification = json.loads(verification_path.read_text())
+    if (
+        manifest.get("status") != "verified"
+        or manifest.get("protocol") != RELEASE_PROTOCOL
+        or verification.get("manifest_sha256") != file_hash(manifest_path)
+    ):
+        raise ValueError("release metadata cannot be staged before full verification")
+    screen = json.loads((screen_root / "HOMOLOGY_EXCLUSION_VERIFIED.json").read_text())
+    evaluation = json.loads((evaluation_root / "EVALUATION_SPLIT_LEDGER.json").read_text())
+    provenance = json.loads((template_root / "SOURCE_PROVENANCE.template.json").read_text())
+    provenance.pop("warning", None)
+    provenance["release_manifest_sha256"] = file_hash(manifest_path)
+    provenance["homology_exclusion_receipt_sha256"] = file_hash(
+        screen_root / "HOMOLOGY_EXCLUSION_VERIFIED.json"
+    )
+    provenance["evaluation_ledger_sha256"] = file_hash(
+        evaluation_root / "EVALUATION_SPLIT_LEDGER.json"
+    )
+    provenance["evaluation_union_unique_sequences"] = evaluation["union_unique_sequences"]
+    provenance["homology_excluded_representatives"] = screen[
+        "excluded_training_representatives"
+    ]
+    for source in SOURCES:
+        row = manifest["sources"][source]
+        provenance["source_arms"][source].update(
+            {
+                "pre_screen_70pct_representatives": row["representative_records_scanned"],
+                "release_train_records": row["train_records"],
+                "release_train_residues": row["train_residues"],
+                "release_validation_records": sum(
+                    int(shard["records"]) for shard in row["validation"]
+                ),
+                "release_rejections": row["rejected"],
+            }
+        )
+    atomic_json(release_root / "SOURCE_PROVENANCE.json", provenance)
+    shutil.copyfile(
+        template_root / "LICENSE_AND_ATTRIBUTION.md",
+        release_root / "LICENSE_AND_ATTRIBUTION.md",
+    )
+    total_records = sum(int(manifest["sources"][source]["train_records"]) for source in SOURCES)
+    total_residues = sum(
+        int(manifest["sources"][source]["train_residues"]) for source in SOURCES
+    )
+    card = (template_root / "README.md").read_text()
+    card += (
+        "\n## Verified release measurements\n\n"
+        f"- Training representatives: **{total_records:,}**\n"
+        f"- Training residues: **{total_residues:,}**\n"
+        f"- Evaluation-query union: **{evaluation['union_unique_sequences']:,}** sequences\n"
+        f"- Homology-excluded representative digests: "
+        f"**{screen['excluded_training_representatives']:,}**\n"
+        f"- Manifest SHA-256: `{file_hash(manifest_path)}`\n"
+    )
+    (release_root / "README.md").write_text(card)
+    provenance_root = release_root / "provenance"
+    provenance_root.mkdir(exist_ok=True)
+    shutil.copyfile(omg_manifest, provenance_root / "omg_upstream_shards.tsv")
+    shutil.copyfile(
+        screen_root / "HOMOLOGY_EXCLUSION_VERIFIED.json",
+        provenance_root / "HOMOLOGY_EXCLUSION_VERIFIED.json",
+    )
+    shutil.copyfile(
+        evaluation_root / "EVALUATION_SPLIT_LEDGER.json",
+        provenance_root / "EVALUATION_SPLIT_LEDGER.json",
+    )
+    artifacts = [
+        release_root / "README.md",
+        release_root / "LICENSE_AND_ATTRIBUTION.md",
+        release_root / "SOURCE_PROVENANCE.json",
+        provenance_root / "omg_upstream_shards.tsv",
+        provenance_root / "HOMOLOGY_EXCLUSION_VERIFIED.json",
+        provenance_root / "EVALUATION_SPLIT_LEDGER.json",
+    ]
+    receipt = {
+        "schema_version": 1,
+        "status": "verified",
+        "protocol": "protein-corpus-release-metadata-v1",
+        "release_manifest_sha256": file_hash(manifest_path),
+        "artifacts": {
+            str(path.relative_to(release_root)): {
+                "bytes": path.stat().st_size,
+                "sha256": file_hash(path),
+            }
+            for path in artifacts
+        },
+    }
+    atomic_json(release_root / "RELEASE_METADATA_VERIFIED.json", receipt)
+    return receipt
+
+
 def _paths(values: Sequence[str]) -> list[Path]:
     paths = [Path(value) for value in values]
     missing = [path for path in paths if not path.exists()]
@@ -1407,6 +1543,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         action="store_true",
         help="search all source DBs at once; requires more than 1 TB RAM",
     )
+    screen.add_argument(
+        "--resume",
+        action="store_true",
+        help="reuse completed source TSVs and run only missing sources in an existing output",
+    )
     finalize = sub.add_parser("finalize-screen")
     finalize.add_argument("--evaluation-root", type=Path, required=True)
     finalize.add_argument("--parent-receipt", type=Path, required=True)
@@ -1425,6 +1566,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     verify.add_argument("--root", type=Path, required=True)
     verify.add_argument("--screen-root", type=Path, required=True)
     verify.add_argument("--evaluation-root", type=Path, required=True)
+    metadata = sub.add_parser("stage-metadata")
+    metadata.add_argument("--release-root", type=Path, required=True)
+    metadata.add_argument("--template-root", type=Path, required=True)
+    metadata.add_argument("--omg-manifest", type=Path, required=True)
+    metadata.add_argument("--screen-root", type=Path, required=True)
+    metadata.add_argument("--evaluation-root", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == "download":
         result = download_raw(args.data_root, args.omg_manifest)
@@ -1444,7 +1591,6 @@ def main(argv: Sequence[str] | None = None) -> None:
             source=args.source,
             mmseqs=args.mmseqs,
             threads=args.threads,
-            concurrent_sources=args.concurrent_sources,
         )
     elif args.command == "evaluation-union":
         result = build_evaluation_union(
@@ -1457,6 +1603,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             output=args.output,
             mmseqs=args.mmseqs,
             threads=args.threads,
+            concurrent_sources=args.concurrent_sources,
+            resume=args.resume,
         )
     elif args.command == "finalize-screen":
         result = finalize_screen(
@@ -1476,9 +1624,17 @@ def main(argv: Sequence[str] | None = None) -> None:
             validation_per_source=args.validation_per_source,
             shard_residues=args.shard_residues,
         )
-    else:
+    elif args.command == "verify-release":
         result = verify_release(
             args.root,
+            screen_root=args.screen_root,
+            evaluation_root=args.evaluation_root,
+        )
+    else:
+        result = stage_release_metadata(
+            release_root=args.release_root,
+            template_root=args.template_root,
+            omg_manifest=args.omg_manifest,
             screen_root=args.screen_root,
             evaluation_root=args.evaluation_root,
         )

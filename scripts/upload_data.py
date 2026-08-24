@@ -21,6 +21,7 @@ def validate_upload_root(root: Path) -> dict[str, object]:
         root / "README.md",
         root / "LICENSE_AND_ATTRIBUTION.md",
         root / "SOURCE_PROVENANCE.json",
+        root / "RELEASE_METADATA_VERIFIED.json",
     ]
     missing = [path for path in required if not path.is_file()]
     if missing:
@@ -34,6 +35,17 @@ def validate_upload_root(root: Path) -> dict[str, object]:
         and verification.get("manifest_sha256") == file_sha256(manifest_path)
     ):
         raise ValueError("release verification does not bind the final manifest")
+    metadata = json.loads((root / "RELEASE_METADATA_VERIFIED.json").read_text())
+    if not (
+        metadata.get("status") == "verified"
+        and metadata.get("protocol") == "protein-corpus-release-metadata-v1"
+        and metadata.get("release_manifest_sha256") == file_sha256(manifest_path)
+    ):
+        raise ValueError("release metadata receipt does not bind the final manifest")
+    for relative, expected in metadata.get("artifacts", {}).items():
+        path = root / relative
+        if not path.is_file() or file_sha256(path) != expected.get("sha256"):
+            raise ValueError(f"release metadata artifact changed: {relative}")
     return manifest
 
 
