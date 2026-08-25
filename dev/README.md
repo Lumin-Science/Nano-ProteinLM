@@ -4,16 +4,19 @@ This directory keeps research state out of the supported `main` surface.
 
 | Path | Contents |
 |---|---|
-| `program.md` | AutoResearch contract for four GPUs and a two-hour training-loop budget |
-| `configs/` | AutoResearch, long-run, and proposed benchmark configurations |
+| `configs/` | proposed benchmark configurations; obsolete training presets are not archived here |
 | `runs/` | non-default experiment launchers |
 | `docs/` | roadmaps, experiment narratives, and proposed evaluation designs |
 | `plans/` | benchmark formulation and validation packets |
 | `report/` | NeurIPS-style paper source |
-| `results/` | completed-run logs, reports, and compact scientific receipts |
+| `results/` | current Q9 evaluation evidence, split ledgers, and compact scientific receipts |
 | `data/` | annotated raw-to-shard corpus builder, source pins, Slurm launchers, and processing report |
 
-Production code, the frozen evaluator, the four-hour baseline configuration,
-tests, and release metadata stay at the repository root. Moving a research
-change from `dev/` into the production surface requires metric parity tests and
-a focused commit that does not pull report or experiment state with it.
+Production code, the frozen evaluator, supported production configurations,
+tests, and release metadata stay at the repository root. Pre-Q9 training
+receipts and obsolete two-hour/16-hour presets are intentionally excluded from
+this archive. AutoResearch contracts and ledgers remain on the dedicated
+`auto-research` branch until their selected setting is promoted. Moving a
+research change from `dev/` into the production surface requires metric parity
+tests and a focused commit that does not pull report or experiment state with
+it.

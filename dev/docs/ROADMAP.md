@@ -3,9 +3,10 @@
 The objective is not “train once”; it is a trustworthy model-development
 system. The ordered work is:
 
-1. **Prove AutoResearch reproducibility.** Reproduce the four-A100, two-hour
-   baseline from a fresh clone; verify Flash SDPA, memory headroom, checkpoint
-   integrity, deterministic data receipts, and frozen P@L.
+1. **Prove selected-setting reproducibility.** Reproduce the promoted
+   four-A100 setting from a fresh clone; verify Flash SDPA, memory headroom,
+   checkpoint integrity, Q9-decontaminated data receipts, and frozen full-chain
+   P@L while preserving the original ESMC-compatible default.
 2. **Calibrate compute.** Sweep microbatch/accumulation, activation
    checkpointing, and `torch.compile` with short, predeclared trials. Select on
    tokens/s, MFU proxy, memory margin, and identical loss—not downstream test
@@ -17,13 +18,12 @@ system. The ordered work is:
    decontamination; finish source provenance, license review, corpus statistics,
    immutable manifests, and a Hugging Face dataset card. Keep raw licensed
    corpora out of public hosting.
-5. **Make evaluation decision-grade.** The routine gate is now bounded and
-   writes restartable component receipts, but it is deliberately not a P-CORE
-   score. Repair EC, validate a faster secondary-structure estimator before any
-   protocol change, add confidence intervals and seed replication, freeze the
-   evaluator as an immutable repository dependency, finish task-parallel full
-   P-CORE and 20,775-chain P@L, and define one frozen aggregate before comparing
-   data or architecture variants.
+5. **Keep evaluation decision-grade.** Preserve exact deterministic
+   20,775-chain P@L for selected-setting provenance, and report the broader Q9
+   P-CORE suite separately without allowing quarantined tasks into model
+   selection. Add confidence intervals and seed replication for claims beyond
+   the fixed-budget search, and version every evaluator/data receipt before
+   comparing data or architecture variants.
 6. **Run controlled science.** Source-mixture ablations, stage-duration/context
    ablations, and 300M/600M scaling comparisons. Change one scientific variable
    at a time and preserve compute/token parity.

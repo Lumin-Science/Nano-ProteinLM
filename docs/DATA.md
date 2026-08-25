@@ -19,9 +19,10 @@ sampling.
 
 The supported corpus is `full-open-v2`: the complete transferred 70%-identity
 representative reservoir after length filtering and decontamination. The older
-2.55-GiB Stage-1 subset is retained only as a historical experiment record under
-`dev/results/`; it is not a supported or publishable training corpus because it
-predates the Q9 evaluation-union screen.
+2.55-GiB Stage-1 subset and its experiment receipts were removed from the
+supported tree because they predate the Q9 evaluation-union screen; their
+provenance remains recoverable from repository history. They are not supported
+or publishable training corpora.
 
 Preparation verifies sequence hashes, excludes exact evaluation matches, runs
 the safe evaluation-query all-splits MMseqs2 screen, applies the

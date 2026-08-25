@@ -1,5 +1,0 @@
-/home/muchenli/projects/nano-protein-embedding/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:227: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 1.906983682076202e-09.
-  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T
-/home/muchenli/projects/nano-protein-embedding/.venv/lib/python3.11/site-packages/sklearn/linear_model/_ridge.py:227: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 2.075621630126534e-08.
-  return linalg.solve(A, Xy, assume_a="pos", overwrite_a=True).T
-{"event": "pcore_task_complete", "partial_sha256": "2b8076e6c8284bc152006bed04d658a6feb68b4e8f58a606552934c4a8aa8104", "resumed": false, "task": "flip2_hydro_low_to_high"}

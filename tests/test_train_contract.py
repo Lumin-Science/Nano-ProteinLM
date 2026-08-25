@@ -150,22 +150,22 @@ class TrainingDataContractTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "verified MMseqs2 homology"):
             validate_data_manifest(root)
 
-    def test_sixteen_hour_campaign_is_step_gated(self) -> None:
-        config_path = (
-            Path(__file__).resolve().parents[1]
-            / "dev"
-            / "configs"
-            / "esmc_300m_stage1_4xa100_16h.yaml"
-        )
-        config = yaml.safe_load(config_path.read_text())
+    def test_only_supported_production_budget_is_shipped(self) -> None:
+        project_root = Path(__file__).resolve().parents[1]
+        for legacy_path in (
+            project_root / "dev" / "configs" / "autoresearch_300m_4xa100_2h.yaml",
+            project_root / "dev" / "configs" / "esmc_300m_stage1_4xa100_16h.yaml",
+        ):
+            with self.subTest(path=legacy_path):
+                self.assertFalse(legacy_path.exists())
 
-        self.assertEqual(config["max_steps"], 84_000)
-        self.assertEqual(config["warmup_steps"], 8_400)
-        self.assertEqual(config["walltime_seconds"], 57_600)
-        self.assertEqual(config["evaluation"]["pcore_tasks"], "all_six")
-        self.assertEqual(config["evaluation"]["pcore_bootstrap"], 10_000)
+        config = yaml.safe_load(
+            (project_root / "configs" / "esmc_300m_stage1_4xa100_4h.yaml").read_text()
+        )
+        self.assertEqual(config["max_steps"], 21_000)
+        self.assertEqual(config["warmup_steps"], 2_100)
+        self.assertEqual(config["walltime_seconds"], 14_400)
         self.assertEqual(config["evaluation"]["contact_chains"], 20_775)
-        self.assertEqual(config["evaluation"]["contact_bootstrap"], 5_000)
 
 
 if __name__ == "__main__":
