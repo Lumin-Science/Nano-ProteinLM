@@ -1,12 +1,13 @@
 # Publication and artifact layout
 
-Nothing is published automatically. The local repository is the development
-source of truth until evaluation, licensing, and release gates pass.
+Publishing remains a separate reviewed action; training never receives GitHub
+or Hugging Face credentials. The code repository and verified training dataset
+are public, while model promotion remains pilot-gated.
 
-| Artifact | Local location | Proposed public destination | Gate |
+| Artifact | Canonical location | Public destination | State / gate |
 |---|---|---|---|
-| Source, configs, docs, compact receipts | this Git repository | `github.com/Lumin-Science/LuminBench-Nano-ESMC` | clean CI and reproducibility review |
-| Prepared-data manifest and dataset card | `data/processed/<version>/manifest.json` plus provenance | `huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC` | mixed-terms card, hash verification, and immutable revision receipt |
+| Source, configs, docs, compact receipts | this Git repository | `github.com/Lumin-Science/LuminBench-Nano-ESMC` | public; reviewed commits only |
+| Prepared-data manifest and dataset card | immutable Hub revision plus provenance | `huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC` | released at `bd38448d…`; mixed-terms notices and hash verification complete |
 | Model weights, config, tokenizer, model card | content-addressed training output | `huggingface.co/LuminScience/<model-release>` | trusted evaluation, multi-seed confirmation, dual-use review |
 | Full P-CORE/contact embedding caches | controlled scratch storage | not public by default | benchmark terms and storage policy |
 | Raw UniRef/MGnify/OMG-IMG payloads | controlled source storage | never mirrored by this project | upstream terms govern access |
@@ -15,8 +16,8 @@ source of truth until evaluation, licensing, and release gates pass.
 ## Release transaction
 
 1. Freeze a clean Git commit and exact `uv.lock`.
-2. Reproduce the canonical production baseline from a fresh clone and verify every receipt
-   hash against the candidate artifacts.
+2. Follow [`REPRODUCTION.md`](REPRODUCTION.md) from a fresh clone and verify
+   every receipt hash against the candidate artifacts.
 3. Pass homology decontamination, repaired evaluation, confidence-interval, and
    multi-seed promotion gates.
 4. Export inference-only weights as `safetensors`; verify a load-and-embed smoke
@@ -28,7 +29,9 @@ source of truth until evaluation, licensing, and release gates pass.
    scientific result only at a mutable `main` branch or Hugging Face revision.
 
 Git and Hugging Face credentials are intentionally absent from the canonical
-training path. Publishing is a separate, reviewed operation.
+training path. The task remains pilot-ready until the scientific, ML/task,
+evaluation, and pilot-run roles sign off on the same version in
+[`TASK.md`](TASK.md).
 
 ## Full-reservoir dataset license decision
 
