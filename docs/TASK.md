@@ -31,7 +31,7 @@ and compute clock.
 An instance occurs whenever a new model, optimizer, training schedule, batching
 strategy, kernel, or efficiency technique is proposed. Representative
 instances are the original checkpoint-compatible ESMC-300M recipe, the current
-P@L-selected 300M setting, and future committed AutoResearch candidates.
+P@L-selected 300M setting, and future AutoResearch experiments.
 
 The target is stable enough for benchmark evaluation because every candidate
 uses a versioned corpus release, tokenizer, masking objective, hardware count,
@@ -108,23 +108,24 @@ not authorize adaptive use of final test labels.
 | Component | Contract |
 |---|---|
 | Public resources | The pinned training release, released ESMC baselines, named evaluation sources, public literature, and packages in `uv.lock` |
-| Mutable | Model internals, optimizer, learning-rate schedule, batching, kernels, compilation, precision strategy, packing, and checkpointing |
-| Fixed | Corpus revision and mixture, tokenizer, masking/loss contract, dependency lock, GPU count, synchronized clock, evaluation rows, probe definitions, metrics, and reductions |
-| Candidate record | One committed code state, fresh output directory, config, data/environment receipts, checkpoint, and result row |
+| Mutable | Model internals, optimizer, training loss, learning-rate schedule, batching, kernels, compilation, precision strategy, packing, and checkpointing |
+| Fixed | Corpus revision and mixture, tokenizer, dependency lock, GPU count, synchronized clock, evaluation rows and masking seed, probe definitions, metrics, and reductions |
+| Candidate record | One tested working-tree change, fresh output directory, config, data/environment receipts, checkpoint, and result row; only improvements become commits |
 
 The exact AutoResearch permissions are narrower where required and are
-authoritative in [`dev/program.md`](../dev/program.md).
+authoritative in [`program.md` on the `auto-research` branch](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/blob/auto-research/program.md).
 
 ### Development feedback
 
-Each committed candidate returns full-manifest long-range contact precision at
-L as its development-selection score. The run log also records training time,
-smoke-test step time, estimated and realized steps, model tokens, parameter
-count, and peak memory. These diagnostics explain resource use but do not
-replace the selection score.
+Each candidate returns full-manifest long-range contact precision at L as its
+development-selection score, plus final-window training loss and frozen
+held-out validation loss. The run log also records training time, realized
+steps, model tokens, parameter count, peak memory, and evaluation time. These
+diagnostics explain learning and resource use but do not replace P@L selection.
 
-One result is associated with one committed candidate and fresh output root.
-Failed runs are recorded rather than silently retried under modified settings.
+One result is associated with one tested change and fresh output root. Only a
+strict P@L improvement is committed; failed and discarded attempts use `NA` as
+their commit and remain in the untracked result ledger.
 The most plausible adaptive-overfitting route is repeated selection on the same
 contact population; the safeguards are an immutable evaluator, single-concept
 candidate changes, a complete query log, separate trusted guardrails, and
@@ -134,7 +135,7 @@ controlled repeated evaluation before promotion.
 
 | Phase | Accelerator and clock | Included in comparison |
 |---|---|---|
-| AutoResearch candidate | Four matched GPUs; exactly 3,600 seconds of synchronized training-loop time | Training only; startup, smoke timing, checkpoint writing, and evaluation are logged separately |
+| AutoResearch candidate | Four matched GPUs; exactly 3,600 seconds of synchronized training-loop time | Training only; startup, checkpoint writing, and evaluation are logged separately; no timing dry run |
 | Public production reference | Four GPUs; 14,400-second training-loop limit | The original ESMC-300M speedrun configuration |
 | Development evaluation | Same four-GPU allocation where practical | Frozen full contact evaluator; execution may be accelerated only after exact parity |
 

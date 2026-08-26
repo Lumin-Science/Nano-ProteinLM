@@ -42,18 +42,19 @@ training data, evaluation-set adaptation, and changes to the frozen evaluator.
 
 ### Agent interface and evaluation
 
-Candidate work may change the model, optimizer, schedule, batching, kernels,
-and other training-efficiency components. It may not change the protected data
-release, tokenizer and masking objective, locked dependencies, compute clock,
-or evaluation definitions.
+Candidate work may change the model, optimizer, training loss, schedule,
+batching, kernels, and other training-efficiency components. It may not change
+the protected data release, tokenizer, locked dependencies, compute clock, or
+evaluation definitions.
 
-AutoResearch development compares committed candidates under four GPUs and a
-one-hour synchronized training clock. The public production reference uses the
-same task with a four-hour training budget. Development selection maximizes
-full long-range contact precision at L; final reporting also includes the
-trusted P-CORE-Q4 representation panel and held-out MLM guardrails. A result is
-promotable only when it beats the incumbent under the frozen protocol, leaves
-no trusted-task regression unexplained, and passes controlled reproduction.
+AutoResearch development compares one-hour experiments under four GPUs and
+commits only improvements. The public production reference uses the same task
+with a four-hour training budget. Development selection maximizes full
+long-range contact precision at L while also reporting training and held-out
+validation loss; final reporting includes the trusted P-CORE-Q4 representation
+panel. A result is promotable only when it beats the incumbent under the frozen
+protocol, leaves no trusted-task regression unexplained, and passes controlled
+reproduction.
 
 ### Baselines and release
 
@@ -102,7 +103,7 @@ for smoke runs, receipts, hardware verification, and full evaluation.
 | Baseline versions and results | [`docs/BASELINES.md`](docs/BASELINES.md) |
 | Fresh-environment reproduction | [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md) |
 | Publication and governance | [`docs/RELEASE.md`](docs/RELEASE.md) |
-| AutoResearch loop | [`dev/program.md`](dev/program.md) |
+| AutoResearch loop and end-to-end round command | [`program.md` on `auto-research`](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/blob/auto-research/program.md) |
 
 `main` contains the supported task. Active experiments, reports, plans, and
 research receipts are isolated under `dev/` and on the `auto-research` branch.
