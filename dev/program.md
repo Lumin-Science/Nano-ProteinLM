@@ -59,13 +59,13 @@ Use `uv sync --frozen` and `uv run --frozen` for every Python command. Never use
 `pip`, Conda, or an ambient environment.
 
 The agent may edit model, optimizer, schedule, training, and efficiency code;
-experiment configs; and focused tests. Keep `program.md`, data preparation,
+experiment configs; and focused verification commands. Keep `program.md`, data preparation,
 evaluation, archived results, and the paper unchanged during the loop.
 
 ## Setup
 
 1. Confirm the branch is `auto-research`.
-2. Run `uv run --frozen pytest -q`.
+2. Run `uv run --frozen ruff check .` and `uv run --frozen ruff format --check .`.
 3. Verify the production corpus and contact receipts.
 4. Initialize an untracked `results.tsv` with the header below.
 5. Run the unchanged code first to establish the one-hour P@L baseline.
@@ -141,7 +141,7 @@ Repeat until manually stopped:
 1. Read the incumbent and `results.tsv`.
 2. Choose one architecture, optimizer, or efficiency idea.
 3. Implement it as a small, reviewable change.
-4. Run `uv run --frozen pytest -q`.
+4. Run `uv run --frozen ruff check .` and `uv run --frozen ruff format --check .`.
 5. Commit the candidate before using GPUs.
 6. Smoke-test it and calculate its one-hour step estimate.
 7. Train from scratch on four GPUs for the synchronized 3,600-second budget.

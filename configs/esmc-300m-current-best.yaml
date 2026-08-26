@@ -1,12 +1,12 @@
 schema_version: 1
-model: esmc_300m
+model: esmc-300m
 expected_parameter_count: 332823484
 seed: 20260821
 
 # Current P@L-selected setting: learned residual/input routing, parameter-free
 # transformer RMSNorm, depth-scaled residual-output initialization, and a
 # final-20% linear learning-rate cooldown. The original ESMC-compatible
-# production setting remains in esmc_300m_stage1_4xa100_4h.yaml.
+# production setting remains in esmc-300m-original.yaml.
 # Four-A100 smoke f19f801 measured 0.652124781901 s/step.
 # ceil(1.02 * 14400 / rate) = 22,524; warmup is 10%.
 learning_rate: 0.000233695

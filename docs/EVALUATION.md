@@ -8,10 +8,49 @@ Training checkpoints can be evaluated on three levels:
    a logistic probe trained on the frozen 20 structures, Cβ distance below 8 Å
    (Cα for glycine), sequence separation at least 24, and top-L precision.
 
+Exact dataset lineage, source publications, split roles, and counts are listed
+in [`EVALUATION_DATASETS.md`](EVALUATION_DATASETS.md).
+
 The full frozen 20,775-chain P@L result is the separate production promotion
 axis. MLM and P-CORE remain reportable reference metrics, and Human PPI remains
 quarantined from promotion decisions. Experiment-specific selection rules live
 under `dev/`.
+
+## Released ESMC baselines on this evaluation
+
+The table below reports the original released Biohub checkpoints through this
+repository's frozen embedding, split, probe, and metric implementations. These
+are local reproductions, not values copied from the ESMC paper. Checkpoints are
+pinned to Biohub revisions `a59b831…` (300M), `a7e8201…` (600M), and
+`45b0fa5…` (6B). All six raw probes remain visible, while only the four rows
+marked **trusted** enter P-CORE-Q4 v0.3.
+
+| Task / metric | Trust | ESMC-300M | ESMC-600M | ESMC-6B |
+|---|---|---:|---:|---:|
+| Remote homology / balanced accuracy | **trusted** | 0.1159 | 0.1152 | 0.1186 |
+| Secondary structure / residue macro-F1 | **trusted** | 0.8315 | 0.8407 | 0.8780 |
+| Enzyme Commission / macro average precision | quarantined | 0.7174 | 0.7096 | 0.0237 |
+| DeepLoc2 / macro average precision | **trusted** | 0.6442 | 0.6568 | 0.6942 |
+| Human PPI / average precision | quarantined | 0.8155 | 0.8026 | 0.8345 |
+| FLIP2 Hydro low-to-high / Spearman correlation | **trusted** | 0.4132 | 0.4276 | 0.4616 |
+| **P-CORE-Q4 v0.3** / four-task null-normalized geometric mean | **selection** | **37.4847** | **38.1553** | **40.6011** |
+| Legacy P-CORE v0.2 / six-task geometric mean | diagnostic | 45.5503 | 45.6899 | 25.7677 |
+
+Contact P@L is reported separately because it probes attention maps rather than
+final-layer frozen embeddings. The full column uses the exact 20,775-chain
+manifest. The diagnostic column uses the same frozen SHA-ranked 1,024-chain
+subset for every model and includes its 95% chain-bootstrap interval.
+
+| Model | Local 1,024-chain P@L | Local full 20,775-chain P@L |
+|---|---:|---:|
+| ESMC-300M | 0.5340 [0.5229, 0.5445] | 0.5387 |
+| ESMC-600M | 0.5778 [0.5668, 0.5881] | 0.5803 |
+| ESMC-6B | 0.7097 [0.6997, 0.7195] | not completed |
+
+The missing 6B full-manifest value is left explicit rather than estimated from
+the 1,024-chain diagnostic. Protocol and dataset differences also mean these
+local contact values should not be substituted for the ESMC paper's published
+P@L-LR column.
 
 `EVAL_PROFILE=full` runs all six exact v0.2 probe contracts and reduces the four
 trusted tasks to P-CORE-Q4 v0.3. It

@@ -1,5 +1,7 @@
 .venv/
 .uv-cache/
+.env
+.exps/
 .DS_Store
 __pycache__/
 *.py[cod]

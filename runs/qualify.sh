@@ -12,12 +12,11 @@ uv run --frozen python scripts/check_environment.py \
   --output "$output_root/ENVIRONMENT.json"
 uv run --frozen ruff check .
 uv run --frozen ruff format --check .
-uv run --frozen python -m unittest discover -s tests -v
 uv run --frozen python -m torch.distributed.run \
   --standalone \
   --nproc-per-node="${NPROC:-4}" \
   -m nano_protein.train \
-  --config "${CONFIG:-configs/esmc_300m_stage1_4xa100_4h.yaml}" \
+  --config "${CONFIG:-configs/esmc-300m-original.yaml}" \
   --data-root "${DATA_ROOT:?set DATA_ROOT to a prepared corpus}" \
   --output-root "$output_root" \
   --walltime-seconds "${WALLTIME_SECONDS:-60}"

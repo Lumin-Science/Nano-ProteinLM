@@ -21,9 +21,9 @@ after the language-model head, so LayerNorm and SwiGLU also skip pad rows.
 The frozen production ESMC-300M baseline uses 64 sequences/GPU at context 512
 without accumulation. `ESMCConfig` defaults remain the original released
 architecture: learned residual routing is off and transformer normalization is
-LayerNorm. `configs/esmc_300m_stage1_4xa100_4h.yaml` preserves that setting.
+LayerNorm. `configs/esmc-300m-original.yaml` preserves that setting.
 
-The separately named `configs/esmc_300m_stage1_4xa100_4h_best.yaml` is the
+The separately named `configs/esmc-300m-current-best.yaml` is the
 current opt-in P@L-selected setting. The first campaign added one learned
 residual-stream scalar and one learned input-embedding scalar per layer, then
 replaced transformer attention, Q/K, FFN, and final norms with parameter-free

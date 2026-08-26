@@ -12,6 +12,34 @@ final scoring are separate roles:
 - **Test:** is touched only after selection and supplies the reported metric and
   bootstrap uncertainty.
 
+## Dataset and publication provenance
+
+Every evaluation payload is an adaptation of a named public source. The source
+publication establishes where the sequences, structures, or labels originated;
+the frozen split ledger below establishes exactly how this repository uses
+them. Source-paper metrics are not silently imported: all reported values are
+recomputed with the probes and metrics declared here.
+
+| Evaluation piece | Exact lineage used here | Original source publication(s) |
+|---|---|---|
+| Held-out MLM | A SHA-partitioned validation sample created after evaluation exclusion from the same UniRef90, MGnify, and OMG/IMG representative reservoirs used for training. It is an internal guardrail, not a published downstream benchmark. | Suzek et al., [*UniRef clusters*](https://doi.org/10.1093/bioinformatics/btu739) (2015); Richardson et al., [*MGnify in 2023*](https://doi.org/10.1093/nar/gkac1080) (2023); Cornman et al., [*The OMG dataset*](https://doi.org/10.1101/2024.08.14.607850) (2024). |
+| Remote homology | The TAPE-distributed fold-classification payload: SCOP 1.75 fold labels from the DeepSF construction, using the 12,312/736/718 train/validation/fold-holdout split. | Hou, Adhikari, and Cheng, [*DeepSF*](https://doi.org/10.1093/bioinformatics/btx780) (2018); Rao et al., [*Evaluating Protein Transfer Learning with TAPE*](https://proceedings.neurips.cc/paper/2019/hash/37f65c068b7723cd7809ee2d31d7861c-Abstract.html) (2019). |
+| Secondary structure | The TAPE/NetSurfP-2.0 train and validation payloads with CB513 as the primary test set. The current ledger contains 513 records representing 434 unique normalized sequences. | Klausen et al., [*NetSurfP-2.0*](https://doi.org/10.1002/prot.25674) (2019); Cuff and Barton, [the original CB513 publication](https://pubmed.ncbi.nlm.nih.gov/10081963/) (1999); Rao et al., [TAPE](https://proceedings.neurips.cc/paper/2019/hash/37f65c068b7723cd7809ee2d31d7861c-Abstract.html) (2019). |
+| Enzyme Commission | A sequence-only adaptation of the TorchDrug/TorchProtein `EnzymeCommission` artifact, using its `<30%` identity test column. The task descends from DeepFRI's PDB-chain EC benchmark; obsolete/missing chains and this repository's normalization explain why local counts must come from the ledger, not a paper table. | Gligorijević et al., [*Structure-based protein function prediction using graph convolutional networks*](https://doi.org/10.1038/s41467-021-23303-9) (2021); Zhang and Xu, [TorchProtein dataset record](https://doi.org/10.5281/zenodo.6622158) (2022). |
+| DeepLoc2 | The official `multisub_5_partitions_unique.csv` with all five homology-aware partitions. Each partition rotates once through test and once through validation. | Thumuluri et al., [*DeepLoc 2.0*](https://doi.org/10.1093/nar/gkac278) (2022). |
+| Human PPI | The PEER release of Pan's human interaction set: HPRD-derived positive pairs and negatives formed from proteins assigned to different subcellular locations, followed by PEER's sequence-redundancy filtering and split. | Pan, Zhang, and Shen, [*Large-scale prediction of human protein-protein interactions*](https://doi.org/10.1021/pr100618t) (2010); Xu et al., [*PEER*](https://proceedings.neurips.cc/paper_files/paper/2022/hash/e467582d42d9c13fa9603df16f31de6d-Abstract-Datasets_and_Benchmarks.html) (2022). |
+| FLIP2 Hydro low-to-high | The official Hydrophobic Core `low_to_high` fitness split. It pools variants of three wild types and trains below the landscape-wide median before testing above it. | Didi et al., [*FLIP2*](https://doi.org/10.64898/2026.02.23.707496) (2026). |
+| Long-range contact | Experimentally determined structures from a frozen 2024-02-28 RCSB PDB snapshot, converted into the ESM attention-to-contact protocol and the ESMC long-range P@L definition. The 16/4/20,775 split is this repository's deterministic reconstruction. | Berman et al., [*The Protein Data Bank*](https://doi.org/10.1093/nar/28.1.235) (2000); Rao et al., [*Transformer protein language models are unsupervised structure learners*](https://openreview.net/forum?id=fylclEqgvgd) (2021); Candido et al., [*Language Modeling Materializes a World Model of Protein Biology*](https://doi.org/10.64898/2026.06.03.729735) (2026). |
+
+The local evaluation deliberately changes some readouts from their source
+papers so that every released encoder is compared under one frozen,
+low-capacity protocol. Remote homology uses balanced accuracy; secondary
+structure uses residue macro-F1 with Q3 accuracy retained only as a diagnostic;
+EC and DeepLoc2 use macro average precision; Human PPI uses average precision;
+and FLIP2 uses Spearman correlation. The encoder is frozen in every case.
+Therefore, compare model rows within this repository's tables, not directly to
+headline results in the source publications.
+
 ## Frozen split ledger
 
 | Evaluation | Probe-fit data | Validation data | Final test data | Reported test metric | Selection status |

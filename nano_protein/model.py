@@ -557,6 +557,8 @@ class ESMCForMaskedLM(nn.Module):
 
 def build_model(name: str, **overrides: object) -> ESMCForMaskedLM:
     factories = {
+        "esmc-300m": ESMCConfig.esmc_300m,
+        "esmc-600m": ESMCConfig.esmc_600m,
         "esmc_300m": ESMCConfig.esmc_300m,
         "esmc_600m": ESMCConfig.esmc_600m,
         "tiny": ESMCConfig.tiny,

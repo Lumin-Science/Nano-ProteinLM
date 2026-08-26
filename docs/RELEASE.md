@@ -5,7 +5,7 @@ source of truth until evaluation, licensing, and release gates pass.
 
 | Artifact | Local location | Proposed public destination | Gate |
 |---|---|---|---|
-| Source, configs, tests, docs, compact receipts | this Git repository | `github.com/Lumin-Science/LuminBench-Nano-ESMC` | clean CI and reproducibility review |
+| Source, configs, docs, compact receipts | this Git repository | `github.com/Lumin-Science/LuminBench-Nano-ESMC` | clean CI and reproducibility review |
 | Prepared-data manifest and dataset card | `data/processed/<version>/manifest.json` plus provenance | `huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC` | mixed-terms card, hash verification, and immutable revision receipt |
 | Model weights, config, tokenizer, model card | content-addressed training output | `huggingface.co/LuminScience/<model-release>` | trusted evaluation, multi-seed confirmation, dual-use review |
 | Full P-CORE/contact embedding caches | controlled scratch storage | not public by default | benchmark terms and storage policy |
@@ -39,8 +39,8 @@ relicense third-party sequence records. UniRef90 remains CC BY 4.0, the direct
 `tattabio/OMG` distribution makes the derived OMG/IMG arm CC BY-SA 4.0, and
 MGnify remains under the EMBL-EBI Terms of Use plus any original-data-owner
 rights. The binary token stores are reversible sequence representations, so
-tokenization does not erase these obligations. The release card and portable
-ledgers live under `release/huggingface/full-open-v2/`.
+tokenization does not erase these obligations. Each published dataset artifact
+must carry its release card and portable ledgers beside its manifest.
 
 The canonical upload is run from the storage host with uv-managed tooling:
 

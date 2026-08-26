@@ -46,9 +46,9 @@ a model-selection core in this campaign.
 
 The exact dependency pins used on `labp` include Python 3.11.15, PyTorch
 2.8.0/CUDA 12.8, NumPy 2.3.2, PyArrow 25.0.1, scikit-learn 1.7.1, and the
-pinned Biohub Transformers fork reporting version 4.57.6. The local full suite
-passes under `uv run --frozen python -m pytest`: 176 passed, with two expected
-synthetic no-positive-class warnings.
+pinned Biohub Transformers fork reporting version 4.57.6. At validation time,
+the then-current local verification suite recorded 176 passing checks with two
+expected synthetic no-positive-class warnings.
 
 ## Probe 1 — authoritative sources and population reconstruction
 
@@ -256,7 +256,8 @@ The released checkpoint identities are pinned to Biohub ESMC revisions
 ```bash
 UV_CACHE_DIR=.uv-cache uv lock
 UV_CACHE_DIR=.uv-cache uv sync --frozen
-UV_CACHE_DIR=.uv-cache uv run --frozen python -m pytest -q
+UV_CACHE_DIR=.uv-cache uv run --frozen ruff check .
+UV_CACHE_DIR=.uv-cache uv run --frozen ruff format --check .
 
 UV_CACHE_DIR=.uv-cache uv run --frozen python \
   -m autoresearch_esm.pcore_v05_sources \

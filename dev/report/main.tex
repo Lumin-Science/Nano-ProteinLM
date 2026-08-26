@@ -302,6 +302,29 @@ all 116,841 unique sequences from every P-CORE/contact split against those
 coverage of both sequences. The final preparer rereads the original
 representative FASTAs and stops before the receipt-bound prefix boundary.
 
+\paragraph{Choice of decontamination threshold.}
+Corpus clustering and evaluation decontamination serve different purposes.
+The 70\%-identity/80\%-coverage Linclust pass above reduces source redundancy;
+it is not the leakage boundary. For leakage control, we exclude a training
+representative when an alignment to any protected probe-fit, validation, or
+test sequence has sequence identity $\geq 30\%$, coverage $\geq 80\%$ for
+\emph{both} proteins, and $E\text{-value}\leq 10^{-3}$. The frozen MMseqs2
+search uses \code{--min-seq-id 0.30 -c 0.80 --cov-mode 0 -e 0.001 -s 7.5
+--max-seqs 1000000}; the finalizer independently checks identity, query
+coverage, target coverage, and the candidate cap in the exported alignments.
+This core 30\%/80\% rule has a direct precedent: VESM removes training proteins
+co-clustered with benchmark proteins using MMseqs2
+\code{--min-seq-id 0.30 --cov-mode 0 -c 0.8}
+\citep{dinh2026vesm}. Uniclust30 independently combines 30\% identity with 80\%
+minimum overlap and motivates the overlap constraint as preserving similar
+full-length domain structure and functional homogeneity
+\citep{mirdita2017uniclust}. VESM uses joint connected-component clustering;
+our search-and-exclude implementation is more conservative operationally
+because it protects every split and explicitly requires bidirectional
+coverage. The $E$-value, sensitivity, and one-million-candidate settings are
+search-recall and truncation safeguards around the literature-backed biological
+threshold, rather than thresholds attributed to those papers.
+
 \begin{table}[H]
   \centering
   \scriptsize

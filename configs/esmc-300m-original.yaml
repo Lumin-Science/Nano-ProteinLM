@@ -1,8 +1,9 @@
 schema_version: 1
-model: esmc_300m
+model: esmc-300m
 expected_parameter_count: 332997184
 seed: 20260821
 
+# Original checkpoint-compatible ESMC-300M setting.
 # First production-gated campaign: 21,000 steps is projected to take 3:59:15
 # from the measured 1,756 Stage-1 steps / 1,200.317 seconds on four A100 80GB.
 learning_rate: 0.000233695

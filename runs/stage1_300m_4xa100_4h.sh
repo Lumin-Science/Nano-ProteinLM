@@ -10,7 +10,7 @@ data_revision="${DATA_REVISION:-main}"
 training_samples="${TRAINING_SAMPLES:-5376000}"
 download_workers="${DOWNLOAD_WORKERS:-8}"
 output_root="${OUTPUT_ROOT:-$repo_root/outputs/stage1-300m-4xa100-4h}"
-config="${CONFIG:-$repo_root/configs/esmc_300m_stage1_4xa100_4h.yaml}"
+config="${CONFIG:-$repo_root/configs/esmc-300m-original.yaml}"
 uv_bin="${UV_BIN:-uv}"
 uv_cache_dir="${UV_CACHE_DIR:-$repo_root/.uv-cache}"
 

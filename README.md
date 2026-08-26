@@ -9,25 +9,51 @@ are isolated under [`dev/`](dev/).
 
 ## Quick start
 
-`uv.lock` is the sole Python environment contract:
+The repository now has a nanochat-style speedrun: from a fresh clone, the only
+tool it expects is `uv >=0.11.31,<0.12`. It creates the locked Python/CUDA
+environment, downloads and independently hashes the necessary public data
+shards, materializes the mmap corpus, qualifies all four GPUs, and trains
+ESMC-300M end to end:
 
 ```bash
-uv sync --frozen
-
-uv run --frozen python scripts/download_data.py \
-  --repo-id LuminScience/LuminBench-Nano-ESMC \
-  --revision <immutable-release-commit> \
-  --training-samples 5376000 \
-  --cache-root data/cache/full-open-v2 \
-  --output-root data/processed/full-open-v2-4h
-
-DATA_ROOT=$PWD/data/processed/full-open-v2-4h \
-WALLTIME_SECONDS=60 \
-  bash runs/qualify.sh
+git clone https://github.com/Lumin-Science/LuminBench-Nano-ESMC.git
+cd LuminBench-Nano-ESMC
+bash speedrun.sh
 ```
 
-The canonical four-A100 training and full evaluation entrypoint keeps the
-original checkpoint-compatible ESMC architecture:
+By default, every generated artifact stays in the current clone under `.exps/`:
+the uv environment and cache, Hugging Face cache, verified prepared data,
+receipts, checkpoints, and metrics. The default is the original four-GPU,
+four-hour ESMC-300M setting. Existing run directories are never overwritten.
+
+For a short end-to-end smoke run, use a fresh run name and a smaller time/data
+budget. Whole-shard verification means even the smallest run downloads about
+577 MB compressed:
+
+```bash
+TRAINING_SAMPLES=1 \
+WALLTIME_SECONDS=60 \
+RUN_NAME=smoke \
+  bash speedrun.sh
+```
+
+This exact smoke path was verified from an empty environment on Killarney node
+`kn082` (four NVIDIA L40S GPUs): the pinned six-file download selected 3,339,505
+train-plus-validation records, the CUDA/FlashAttention forward-backward checks
+passed, and the 332,997,184-parameter model completed 97 optimizer steps in
+60.38 seconds. The final checkpoint independently matched its recorded SHA-256
+`c7aae89f2c059d17ecf057a58fb4b304f1119b5c9c3e62bab86255805d502e7f`.
+
+Copy [`.env.example`](.env.example) to `.env` to configure the artifact root,
+dataset revision, GPU count, budget, config, or individual cache/output paths.
+`speedrun.sh` automatically loads it; exported environment variables take the
+same names. The default dataset revision is immutable, so a moving Hub branch
+cannot change a run midway.
+
+The training-only speedrun deliberately stops after its checkpoint and complete
+receipts. The canonical training-plus-full-evaluation entrypoint additionally
+expects the separately sourced evaluation datasets described in
+[`docs/EVALUATION_DATASETS.md`](docs/EVALUATION_DATASETS.md):
 
 ```bash
 bash runs/stage1_300m_4xa100_4h.sh
@@ -37,7 +63,7 @@ The current P@L-selected architecture is an explicit opt-in; model defaults and
 the original config are unchanged:
 
 ```bash
-CONFIG=$PWD/configs/esmc_300m_stage1_4xa100_4h_best.yaml \
+CONFIG=$PWD/configs/esmc-300m-current-best.yaml \
 TRAINING_SAMPLES=5766144 \
 OUTPUT_ROOT=$PWD/outputs/stage1-300m-4xa100-4h-best \
   bash runs/stage1_300m_4xa100_4h.sh
@@ -56,12 +82,20 @@ search orientation, and zero train-validation overlap.
 
 ## Complete remote reservoir, budget-sized local corpus
 
-The Hugging Face dataset is the complete verified release, not the former
-2.55-GiB Stage-1 subset. Before final evaluation decontamination, the controlled
-reservoir has 92,230,941 UniRef90, 348,135,082 MGnify, and 324,923,979 OMG/IMG
-70%-identity representatives. Final released records, residues, compressed
-bytes, and rejection counts are written into the verified Hub manifest after
-the full build completes. See [`docs/DATA.md`](docs/DATA.md).
+The [Hugging Face dataset](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC)
+is live and public. The speedrun pins verified commit
+[`bd38448d`](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259),
+whose published manifest records 665,970,495 globally unique training proteins,
+zero train/validation intersections, and zero intersections with the exact and
+homology-based evaluation exclusions. It contains all three source arms,
+validation shards, file/sequence checksums, and provenance receipts.
+
+This is the complete verified release, not the former 2.55-GiB Stage-1 subset.
+Before final evaluation decontamination, the controlled reservoir has 92,230,941
+UniRef90, 348,135,082 MGnify, and 324,923,979 OMG/IMG 70%-identity
+representatives. Final released records, residues, compressed bytes, and
+rejection counts are bound by the verified Hub manifest. See
+[`docs/DATA.md`](docs/DATA.md).
 
 The roughly 459-GiB processing tree is not itself the public payload: it also
 contains cluster-membership tables and build intermediates. Hugging Face gets
@@ -85,11 +119,11 @@ materializes the existing fast mmap layout:
 ```bash
 uv run --frozen python scripts/download_data.py \
   --repo-id LuminScience/LuminBench-Nano-ESMC \
-  --revision <immutable-release-commit> \
+  --revision bd38448d50d8f426d7b9bd4410b53159ea001259 \
   --training-samples 5376000 \
   --download-workers 8 \
-  --cache-root data/cache/full-open-v2 \
-  --output-root data/processed/run-prefix
+  --cache-root .exps/cache/huggingface-dataset \
+  --output-root .exps/data/training-samples-5376000
 ```
 
 This is shard-level on-demand download, like nanochat—not row-level network
@@ -110,9 +144,9 @@ CC BY 4.0, OMG/IMG under CC BY-SA 4.0, and MGnify under the EMBL-EBI Terms of
 Use plus applicable original-owner rights. The umbrella license grants only
 rights Lumin Science holds; it does not relicense upstream records.
 
-The code remains under the repository [`LICENSE`](LICENSE). Full data notices
-are in the Hugging Face release template under
-[`release/huggingface/full-open-v2/`](release/huggingface/full-open-v2/).
+The code remains under the repository [`LICENSE`](LICENSE). Dataset releases
+carry their own source-specific notices and attribution alongside the published
+manifest.
 
 ## Production evaluation performance
 
@@ -132,8 +166,7 @@ frozen metrics while reducing wasted compute:
 
 The implementation is in [`nano_protein/evaluate.py`](nano_protein/evaluate.py),
 [`runs/evaluate_full_parallel.sh`](runs/evaluate_full_parallel.sh), and
-[`runs/evaluate_p_at_l_parallel.sh`](runs/evaluate_p_at_l_parallel.sh). Contract
-tests cover packed embedding parity and deterministic P@L merging.
+[`runs/evaluate_p_at_l_parallel.sh`](runs/evaluate_p_at_l_parallel.sh).
 
 ## Repository map
 
@@ -142,7 +175,6 @@ configs/          supported production training configuration
 nano_protein/     tokenizer, ESMC model, mmap data, trainer, evaluation
 runs/             production preparation, training, and evaluation entrypoints
 scripts/          uv-invoked command-line interfaces and receipt verification
-tests/            fast contract, parity, and determinism checks
 docs/             stable architecture, data, evaluation, and release contracts
 release/          portable release cards and immutable-manifest templates
 dev/              AutoResearch, proposed work, reports, plans, and run receipts

@@ -258,13 +258,14 @@ ROOT=/absolute/path/to/protein-corpus
 MMSEQS=/absolute/path/to/mmseqs
 LEGACY_EVAL=/absolute/path/to/frozen-p-at-l-and-pcore-v0.2-bundle
 Q9_EVAL=/absolute/path/to/pcore-v0.5-alpha-q9
+RELEASE_TEMPLATE=/absolute/path/to/reviewed-release-card-template
 
 uv run --frozen python "$PIPE" reproduce \
   --data-root "$ROOT" \
   --omg-manifest dev/data/omg_upstream_shards.tsv \
   --legacy-evaluation-root "$LEGACY_EVAL" \
   --q9-evaluation-root "$Q9_EVAL" \
-  --template-root release/huggingface/full-open-v2 \
+  --template-root "$RELEASE_TEMPLATE" \
   --mmseqs "$MMSEQS" --threads 64 --download-workers 8 \
   --partitions 256 --validation-per-source 4096 \
   --shard-residues 268435456
@@ -334,7 +335,7 @@ uv run --frozen python "$PIPE" verify-release \
   --evaluation-root "$ROOT/evaluation"
 uv run --frozen python "$PIPE" stage-metadata \
   --release-root "$ROOT/release" \
-  --template-root release/huggingface/full-open-v2 \
+  --template-root "$RELEASE_TEMPLATE" \
   --omg-manifest dev/data/omg_upstream_shards.tsv \
   --screen-root "$ROOT/homology-screen" \
   --evaluation-root "$ROOT/evaluation"
