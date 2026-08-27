@@ -73,6 +73,22 @@ The complete task definition, including feedback policy, experimental budgets,
 success rule, reproduction requirements, governance, and unresolved sign-offs,
 is in [`docs/TASK.md`](docs/TASK.md).
 
+## AutoResearch-Codex Round 1
+
+| Model | Exact P@L | Delta vs. original | Train loss | Validation loss | Steps | Model tokens (M) | Parameters (M) | Peak VRAM (MiB) | Train (s) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Original ESMC | 0.0924624073 | — | 2.723379 | 2.698895 | 5,883 | 357.792 | 332.997 | 35,579.898 | 3,600.602 |
+| **AutoResearch-Codex-Round1** | **0.0960432677** | **+0.0035808604 (+3.87%)** | **2.720052** | 2.703555 | 5,682 | 345.564 | 332.823 | 37,698.239 | 3,600.004 |
+
+These results use Stage 1 training only, four NVIDIA L40S GPUs, and one hour of
+synchronized training time per model.
+
+Relative to original ESMC, `AutoResearch-Codex-Round1` adds learned
+residual/input routing, parameter-free transformer RMSNorm, depth-scaled
+attention-output and FFN-down initialization, and a linear learning-rate
+cooldown over the final 20% of training that ends at 0.1× the peak learning
+rate.
+
 ## One-command training
 
 From a fresh clone, the only project-level tool required is
