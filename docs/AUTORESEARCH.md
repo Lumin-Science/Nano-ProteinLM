@@ -52,6 +52,11 @@ budget. Promotion beyond development additionally requires a controlled clean
 rebuild, repeated runs, checkpoint verification, uncertainty reporting, and
 review of trusted-task regressions.
 
+The exact retained one-hour preset is
+[`configs/autoresearch_300m_4xa100_1h.yaml`](../configs/autoresearch_300m_4xa100_1h.yaml).
+It is opt-in; the public speedrun remains on the original ESMC-compatible
+configuration unless `CONFIG` is set explicitly.
+
 ## AutoResearch-Codex Round 1
 
 | Model | P@L | Delta vs. original | Train loss | Validation loss | Steps | Model tokens (M) | Parameters (M) | Peak VRAM (GB) | Train (h) |

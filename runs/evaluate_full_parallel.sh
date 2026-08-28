@@ -4,9 +4,9 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-pcore_root="${PCORE_ROOT:-/home/muchenli/datasets/pcore/v0.1}"
-contact_root="${CONTACT_ROOT:-/home/muchenli/datasets/esmc-paper-contact-v1}"
-external_src="${EXTERNAL_SRC:-/home/muchenli/projects/AutoResearch_ESMC/src}"
+pcore_root="${PCORE_ROOT:?set PCORE_ROOT to the frozen P-CORE dataset}"
+contact_root="${CONTACT_ROOT:?set CONTACT_ROOT to the frozen contact dataset}"
+external_src="${EXTERNAL_SRC:?set EXTERNAL_SRC to the evaluation source checkout}"
 data_root="${DATA_ROOT:-$repo_root/data/processed/full-open-v2-4h}"
 output_root="${OUTPUT_ROOT:-$repo_root/outputs/stage1-300m-4xa100-4h}"
 checkpoint_name="${EVAL_CHECKPOINT:-checkpoint-final.pt}"
@@ -20,6 +20,7 @@ pcore_probe_threads="${PCORE_PROBE_THREADS:-4}"
 pcore_batch_residues="${PCORE_BATCH_RESIDUES:-32768}"
 uv_bin="${UV_BIN:-uv}"
 uv_cache_dir="${UV_CACHE_DIR:-$repo_root/.uv-cache}"
+contact_scoring_cache_root="${CONTACT_SCORING_CACHE_ROOT:-}"
 
 checkpoint="$output_root/$checkpoint_name"
 test -f "$checkpoint"
@@ -39,6 +40,31 @@ component_root="$eval_root/components"
 mkdir -p "$component_root"
 UV_CACHE_DIR="$uv_cache_dir" "$uv_bin" sync --frozen
 
+cache_args=()
+if [[ -n "$contact_scoring_cache_root" ]]; then
+  cache_preflight="$eval_root/CONTACT_SCORING_CACHE_PREFLIGHT.json"
+  UV_CACHE_DIR="$uv_cache_dir" "$uv_bin" run --frozen python \
+    scripts/verify_contact_scoring_cache.py \
+    --cache-root "$contact_scoring_cache_root" \
+    --output "$cache_preflight" \
+    > "$eval_root/cache-preflight.stdout" 2> "$eval_root/cache-preflight.stderr"
+  cache_args=(
+    --contact-scoring-cache-root "$contact_scoring_cache_root"
+    --contact-scoring-cache-preflight "$cache_preflight"
+  )
+fi
+
+# Fit the frozen 16-chain/4-chain probe once, then bind every inference shard
+# to the same checkpoint- and dataset-specific receipt.
+probe_receipt="$eval_root/CONTACT_PROBE.json"
+CUDA_VISIBLE_DEVICES="${gpu_list[0]}" UV_CACHE_DIR="$uv_cache_dir" \
+  "$uv_bin" run --frozen python scripts/fit_contact_probe.py \
+  --checkpoint "$checkpoint" \
+  --external-src "$external_src" \
+  --contact-root "$contact_root" \
+  --output "$probe_receipt" \
+  > "$eval_root/probe.stdout" 2> "$eval_root/probe.stderr"
+
 pids=()
 for ((shard = 0; shard < contact_shards; shard++)); do
   shard_root="$component_root/contact-shard-$shard"
@@ -54,6 +80,8 @@ for ((shard = 0; shard < contact_shards; shard++)); do
     --contact-bootstrap 0 \
     --contact-shard-index "$shard" \
     --contact-shard-count "$contact_shards" \
+    --contact-probe-receipt "$probe_receipt" \
+    "${cache_args[@]}" \
     --run-contact \
     --skip-validation-mlm \
     --resume-components \

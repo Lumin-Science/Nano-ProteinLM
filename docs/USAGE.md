@@ -38,6 +38,20 @@ RUN_NAME=smoke \
   bash runs/speedrun.sh
 ```
 
+The measured one-hour AutoResearch incumbent is available but deliberately
+off by default. Opt in explicitly:
+
+```bash
+CONFIG="$PWD/configs/autoresearch_300m_4xa100_1h.yaml" \
+WALLTIME_SECONDS=3600 \
+RUN_NAME=autoresearch-incumbent-1h \
+  bash runs/speedrun.sh
+```
+
+`configs/esmc-300m-current-best.yaml` is the stable public alias for this exact
+incumbent. Both retain the winning model/training recipe; neither changes the
+default original-ESMC speedrun.
+
 Each successful run records its resolved configuration, immutable data
 revision, environment and corpus receipts, metrics, completion receipt, final
 checkpoint, and checkpoint hash.
@@ -51,6 +65,8 @@ bash runs/stage1_300m_4xa100_4h.sh
 ```
 
 Full evaluation requires the separately prepared representation-probe and
-contact datasets.
+contact datasets. Contact P@L uses the one-probe, sparse-scoring fast path by
+default; a receipt-bound static scoring cache can be enabled with
+`CONTACT_SCORING_CACHE_ROOT`.
 See [`EVALUATION.md`](EVALUATION.md) for dataset lineage, split roles, metrics,
 and restartable execution details.

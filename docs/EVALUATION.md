@@ -49,11 +49,21 @@ subprocesses with bounded parallelism, followed by a digest-checked reduction.
 Secondary structure performs four full-residue LBFGS fits and is not suitable
 for a short training gate.
 
-The full contact evaluation is also restartable. Deterministic contact shards
-can run concurrently with representation embedding. The merger restores
-the global SHA-ranked chain order and performs the same 5,000-replicate chain
-bootstrap over all 20,775 rows; sharding does not change the metric or reduce
-its data.
+The full contact evaluation uses the exact fast P@L path by default. It fits
+the frozen probe once, binds the coefficients to the checkpoint and contact
+manifest, and reuses that receipt across every deterministic inference shard.
+Because the selected L1 probe is sparse, inference transfers and scores only
+nonzero attention channels. Contact shards can run concurrently with
+representation embedding. The merger restores the global SHA-ranked chain
+order and performs the same 5,000-replicate chain bootstrap over all 20,775
+rows; these execution changes do not alter the examples, probe, ordering, or
+metric.
+
+Static contact labels and eligible-pair geometry may also be cached once. The
+optional cache is bound to the source payload and contact-manifest digests and
+must pass a complete preflight hash check before inference. Without a cache,
+the same fast probe-reuse and sparse-scoring path reads the frozen source
+payloads directly.
 
 Component receipts (`VALIDATION_MLM.json`, `CONTACT.json`, diagnostic
 embedding, and per-task JSON) are written atomically. A later failure does not
@@ -63,9 +73,32 @@ existing evaluation directory.
 
 Execution improvements retained on `main` include cross-protein residue-budget
 batching, secondary-structure-only residue caches, bounded parallel probe
-processes, contact sharding, deterministic global P@L merge, and atomic
-receipts. They change execution only; the examples, probes, row ordering,
-metrics, and bootstrap remain fixed.
+processes, one-time contact-probe fitting, sparse contact scoring, an optional
+receipt-bound contact cache, contact sharding, deterministic global P@L merge,
+and atomic receipts. They change execution only; the examples, probes, row
+ordering, metrics, and bootstrap remain fixed.
+
+Build and verify the optional static cache once:
+
+```bash
+uv run --frozen python scripts/build_contact_scoring_cache.py \
+  --dataset-root "$CONTACT_ROOT" \
+  --external-src "$EXTERNAL_SRC" \
+  --output-root "$CONTACT_SCORING_CACHE_ROOT"
+```
+
+Then run the full fast contact evaluation with four GPUs:
+
+```bash
+CONTACT_ROOT=/path/to/frozen-contact-data \
+EXTERNAL_SRC=/path/to/evaluation-source \
+CONTACT_SCORING_CACHE_ROOT=/path/to/contact-scoring-cache \
+EVAL_GPUS=0,1,2,3 \
+  bash runs/evaluate_p_at_l_parallel.sh
+```
+
+Omit `CONTACT_SCORING_CACHE_ROOT` to disable only the static cache. Probe reuse,
+sparse scoring, deterministic sharding, and exact aggregation remain enabled.
 
 Baseline training recipes, compute-matched comparisons, and fairness caveats
 are documented in [`BASELINES.md`](BASELINES.md).

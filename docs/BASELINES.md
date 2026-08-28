@@ -38,10 +38,13 @@ the public record for these historical comparisons.
 
 ### Current compute-matched workflow
 
-`configs/esmc-300m-current-best.yaml` is the opt-in AutoResearch incumbent. It
-keeps the ESMC-300M class while adding learned residual/input routing,
-parameter-free transformer RMSNorm, depth-scaled residual initialization, and
-a final-20% learning-rate cooldown. It has 332,823,484 parameters.
+`configs/esmc-300m-current-best.yaml` is the opt-in, exact one-hour
+AutoResearch incumbent; `configs/autoresearch_300m_4xa100_1h.yaml` is its
+campaign-named alias. The public speedrun continues to default to the original
+ESMC recipe. The incumbent keeps the ESMC-300M class while adding learned
+residual/input routing, parameter-free transformer RMSNorm, depth-scaled
+residual initialization, and a final-20% learning-rate cooldown. It has
+332,823,484 parameters.
 
 Under the current four-GPU, one-hour, decontaminated AutoResearch contract, the
 incumbent progression was:

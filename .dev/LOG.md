@@ -176,6 +176,31 @@ their recorded name rather than retrospectively relabeled.
 - Rejected candidates remain development evidence; they are not presented as
   supported public configurations.
 
+## 2026-08-28 — Fast contact evaluation promoted to main
+
+**Worked**
+
+- Replaced the default parallel contact path with the exact AutoResearch fast
+  path: fit the frozen probe once, bind it to the checkpoint and contact
+  manifest, reuse it across shards, and score only nonzero L1-probe channels.
+- Added an optional receipt-bound static scoring cache with a full digest
+  preflight. Omitting the cache retains probe reuse and sparse scoring.
+- Added regression tests showing that cached top-L scoring matches the stable
+  reference rule and sparse scoring matches the all-channel implementation.
+- Made the exact one-hour incumbent an opt-in public preset while preserving
+  the original ESMC-compatible recipe as the speedrun default.
+- Separated schedule progress from the emergency optimizer-step stop so a
+  nonbinding cap cannot silently move the cooldown.
+
+**Did not carry forward**
+
+- The AutoResearch `prefix_data` and `round2_data` helpers reconstruct only the
+  old parent-plus-Q9 campaign prefix. They do not rebuild the current 665M
+  release from raw sources, so presenting them as the public reconstruction
+  path would be misleading. The current release-manifest decontamination
+  validator remains supported; a future raw rebuild must be parent-independent
+  and reproduce the complete protected evaluation union.
+
 ## Open evaluation work
 
 1. Requalify the current four trusted tasks under the same gates used for new

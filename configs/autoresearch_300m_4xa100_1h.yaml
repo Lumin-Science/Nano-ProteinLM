@@ -3,9 +3,9 @@ model: esmc_300m
 expected_parameter_count: 332823484
 seed: 20260824
 
-# Exact retained AutoResearch incumbent. This is opt-in: the supported speedrun
-# continues to default to esmc-300m-original.yaml. The synchronized wall clock,
-# rather than an optimizer-step cap, drives the final-20% cooldown.
+# Canonical one-hour AutoResearch incumbent. This preset is never selected by
+# default; pass CONFIG explicitly to opt in. Wall-clock progress drives the
+# final-20% cooldown, and no optimizer-step cap can stop training early.
 learning_rate: 0.000233695
 weight_decay: 0.025675
 betas: [0.9, 0.95]

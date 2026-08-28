@@ -36,6 +36,28 @@ def load_config(path: Path) -> dict[str, Any]:
     return config
 
 
+def resolve_step_budgets(config: dict[str, Any]) -> tuple[int | None, int | None]:
+    """Resolve an emergency stop cap independently from schedule progress.
+
+    Existing configurations remain byte-for-byte compatible: without an
+    explicit ``schedule_steps`` value, ``max_steps`` controls both behaviors.
+    AutoResearch configurations can set a deliberately nonbinding ``max_steps``
+    while keeping warmup and decay bound to the smoke-derived schedule length.
+    """
+
+    max_steps_value = config.get("max_steps")
+    max_steps = int(max_steps_value) if max_steps_value is not None else None
+    if max_steps is not None and max_steps <= 0:
+        raise ValueError("max_steps must be positive")
+    schedule_steps_value = config.get("schedule_steps", max_steps_value)
+    schedule_steps = int(schedule_steps_value) if schedule_steps_value is not None else None
+    if schedule_steps is not None and schedule_steps <= 0:
+        raise ValueError("schedule_steps must be positive")
+    if max_steps is not None and schedule_steps is not None and schedule_steps > max_steps:
+        raise ValueError("schedule_steps cannot exceed max_steps")
+    return max_steps, schedule_steps
+
+
 def validate_data_manifest(
     data_root: Path,
 ) -> dict[str, Any]:
@@ -299,9 +321,7 @@ def train(
         "gradient_checkpointing": bool(config.get("gradient_checkpointing", False)),
         "learned_residual_routing": bool(config.get("learned_residual_routing", False)),
         "transformer_norm": str(config.get("transformer_norm", "layernorm")),
-        "depth_scaled_residual_init": bool(
-            config.get("depth_scaled_residual_init", False)
-        ),
+        "depth_scaled_residual_init": bool(config.get("depth_scaled_residual_init", False)),
     }
     model = build_model(str(config["model"]), **model_options).to(device)
     parameter_count = count_parameters(model)
@@ -349,10 +369,7 @@ def train(
     walltime_seconds = float(
         walltime_override if walltime_override is not None else config["walltime_seconds"]
     )
-    max_steps_value = config.get("max_steps")
-    max_steps = int(max_steps_value) if max_steps_value is not None else None
-    if max_steps is not None and max_steps <= 0:
-        raise ValueError("max_steps must be positive")
+    max_steps, schedule_steps = resolve_step_budgets(config)
     stage1_fraction = float(config.get("stage1_fraction", 2.0 / 3.0))
     warmup_steps = int(config.get("warmup_steps", 10))
     log_interval = int(config.get("log_interval", 5))
@@ -384,9 +401,9 @@ def train(
             max_steps is not None and optimizer_step >= max_steps
         ):
             break
-        if max_steps is not None:
+        if schedule_steps is not None:
             stage, stage_progress = stage_for_progress(
-                optimizer_step / max_steps,
+                optimizer_step / schedule_steps,
                 stage1_fraction=stage1_fraction,
                 stages=stages,
             )
@@ -423,9 +440,7 @@ def train(
             stage_name=stage.name,
             stage_progress=stage_progress,
             minimum_ratio=float(config.get("minimum_lr_ratio", 0.1)),
-            stage1_cooldown_fraction=float(
-                config.get("stage1_cooldown_fraction", 0.0)
-            ),
+            stage1_cooldown_fraction=float(config.get("stage1_cooldown_fraction", 0.0)),
         )
         for group in optimizer.param_groups:
             group["lr"] = peak_learning_rate * multiplier
@@ -578,6 +593,7 @@ def train(
             "event": "training_complete",
             "optimizer_steps": optimizer_step,
             "target_optimizer_steps": max_steps,
+            "schedule_optimizer_steps": schedule_steps,
             "training_seconds": training_seconds,
             "compute_seconds": compute_seconds_total,
             "walltime_budget_seconds": walltime_seconds,

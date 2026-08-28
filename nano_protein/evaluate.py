@@ -12,7 +12,7 @@ import os
 import subprocess
 import sys
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +20,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+from .contact_cache import ContactScoringCache
 from .data import MixtureBatcher, file_sha256
 from .model import ESMCConfig, ESMCForMaskedLM
 from .tokenizer import ProteinTokenizer, mask_tokens
@@ -649,26 +650,20 @@ def _attentions(
     return attentions
 
 
-def run_contact_lite(
+def fit_contact_probe_receipt(
     model: ESMCForMaskedLM,
     *,
+    checkpoint_sha256: str,
     dataset_root: Path,
     external_src: Path,
     device: torch.device,
-    evaluation_chains: int,
-    bootstrap: int,
-    shard_index: int = 0,
-    shard_count: int = 1,
 ) -> dict[str, object]:
-    """Fit the frozen 20-chain probe and score a predeclared uniform subset."""
+    """Fit the frozen probe once so deterministic inference shards can share it."""
 
     sys.path.insert(0, str(external_src))
     try:
-        from autoresearch_esm.paper_contact import score_chain  # type: ignore[import-not-found]
         from autoresearch_esm.paper_contact_model import (  # type: ignore[import-not-found]
-            fit_logistic_probe,
             sampled_pair_feature_matrix,
-            score_and_digest_from_attentions,
         )
         from autoresearch_esm.paper_contact_runtime import (
             ContactDataset,  # type: ignore[import-not-found]
@@ -676,8 +671,6 @@ def run_contact_lite(
     finally:
         sys.path.pop(0)
     dataset = ContactDataset(dataset_root)
-    if evaluation_chains <= 0 or shard_count <= 0 or not 0 <= shard_index < shard_count:
-        raise ValueError("invalid contact evaluation/shard contract")
     tokenizer = ProteinTokenizer.esmc()
     features: list[np.ndarray] = []
     labels: list[np.ndarray] = []
@@ -694,37 +687,392 @@ def run_contact_lite(
         features.append(x)
         labels.append(y)
         del attention
-    coefficients, intercept, selected_c, trace = fit_logistic_probe(
-        features[:16], labels[:16], features[16:], labels[16:], seed=20260819
+    coefficients, intercept, selected_c, trace = _fit_logistic_probe_concurrent_exact(
+        features[:16],
+        labels[:16],
+        features[16:],
+        labels[16:],
+        seed=20260819,
     )
-    del features, labels
+    if coefficients.size != model.config.n_layers * model.config.n_heads:
+        raise ValueError("frozen probe channel count differs from model attention channels")
+    return {
+        "schema_version": 1,
+        "protocol": "autoresearch-frozen-contact-probe-v1",
+        "checkpoint_sha256": checkpoint_sha256,
+        "dataset_manifest_sha256": dataset.manifest_receipt.manifest_sha256,
+        "probe_train_chain_ids": dataset.train_ids[:16],
+        "probe_validation_chain_ids": dataset.train_ids[16:],
+        "pair_sampling_seed": 20260819,
+        "maximum_pairs_per_class": 4096,
+        "channels": int(coefficients.size),
+        "coefficients": np.asarray(coefficients, dtype=np.float64).tolist(),
+        "intercept": float(intercept),
+        "selected_C": selected_c,
+        "validation_trace": trace,
+    }
+
+
+def _fit_logistic_probe_concurrent_exact(
+    train_features: Sequence[np.ndarray],
+    train_labels: Sequence[np.ndarray],
+    validation_features: Sequence[np.ndarray],
+    validation_labels: Sequence[np.ndarray],
+    *,
+    candidates_c: Sequence[float] = (0.01, 0.1, 1.0, 10.0),
+    seed: int,
+) -> tuple[np.ndarray, float, float, list[dict[str, float]]]:
+    """Parallelize frozen C trials and a speculative canonical C=1 refit.
+
+    Each candidate uses the exact estimator arguments from the paper evaluator. The
+    all-chain refit also uses the exact canonical arguments. If validation selects a
+    different C, its canonical refit runs normally, so this changes scheduling only.
+    """
+
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import average_precision_score
+
+    if not train_features or not validation_features:
+        raise ValueError("probe fitting requires non-empty train and validation chains")
+    x_train = np.concatenate([np.asarray(value, dtype=np.float32) for value in train_features])
+    y_train = np.concatenate([np.asarray(value, dtype=np.int8) for value in train_labels])
+    x_valid = np.concatenate(
+        [np.asarray(value, dtype=np.float32) for value in validation_features]
+    )
+    y_valid = np.concatenate([np.asarray(value, dtype=np.int8) for value in validation_labels])
+    if x_train.ndim != 2 or x_valid.ndim != 2 or x_train.shape[1] != x_valid.shape[1]:
+        raise ValueError("probe feature matrices are not aligned")
+    if np.unique(y_train).size != 2 or np.unique(y_valid).size != 2:
+        raise ValueError("probe train and validation sets both require two classes")
+    candidates = tuple(float(value) for value in candidates_c)
+    if not candidates or any(value <= 0 for value in candidates):
+        raise ValueError("logistic C values must be positive")
+
+    def fit_candidate(value: float) -> tuple[float, float]:
+        model = LogisticRegression(
+            penalty="l1",
+            C=value,
+            solver="saga",
+            class_weight=None,
+            random_state=seed,
+            max_iter=500,
+            n_jobs=1,
+        ).fit(x_train, y_train)
+        score = float(average_precision_score(y_valid, model.decision_function(x_valid)))
+        return value, score
+
+    x_all = np.concatenate((x_train, x_valid), axis=0)
+    y_all = np.concatenate((y_train, y_valid), axis=0)
+
+    def fit_final(value: float) -> tuple[np.ndarray, float]:
+        model = LogisticRegression(
+            penalty="l1",
+            C=value,
+            solver="saga",
+            class_weight=None,
+            random_state=seed,
+            max_iter=1000,
+            n_jobs=1,
+        ).fit(x_all, y_all)
+        return np.asarray(model.coef_[0], dtype=np.float64), float(model.intercept_[0])
+
+    speculative_c = 1.0 if 1.0 in candidates else candidates[0]
+    by_c: dict[float, float] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(candidates) + 1) as pool:
+        futures = [pool.submit(fit_candidate, value) for value in candidates]
+        speculative_final = pool.submit(fit_final, speculative_c)
+        for future in concurrent.futures.as_completed(futures):
+            value, score = future.result()
+            by_c[value] = score
+        speculative_result = speculative_final.result()
+    trace = [{"C": value, "validation_average_precision": by_c[value]} for value in candidates]
+    selected_c = max((by_c[value], -value) for value in candidates)[1] * -1.0
+    coefficients, intercept = (
+        speculative_result if selected_c == speculative_c else fit_final(selected_c)
+    )
+    return coefficients, intercept, selected_c, trace
+
+
+def _score_long_range_pairs_and_digest(
+    attentions: Sequence[Any],
+    coefficients: np.ndarray,
+    intercept: float,
+    *,
+    residue_length: int,
+    sequence_separation: int,
+    attention_planes: Callable[..., Any],
+) -> tuple[np.ndarray, str]:
+    """Apply the exact probe only where the frozen P@L scorer reads scores."""
+
+    coefficients = np.asarray(coefficients, dtype=np.float64)
+    if coefficients.ndim != 1:
+        raise ValueError("probe coefficients must be one-dimensional")
+    i, j = np.triu_indices(residue_length, k=sequence_separation)
+    pair_scores = np.full(i.size, float(intercept), dtype=np.float64)
+    feature_digest = hashlib.sha256(
+        json.dumps(
+            {
+                "dtype": "float32",
+                "residue_length": int(residue_length),
+                "sequence_separation": int(sequence_separation),
+                "transformation": "long_range_upper_triangle_symmetrized_channels",
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    )
+    observed = 0
+    for index, plane in enumerate(attention_planes(attentions, residue_length=residue_length)):
+        if index >= len(coefficients):
+            raise ValueError("probe has fewer coefficients than attention channels")
+        plane = np.asarray(plane, dtype=np.dtype("<f4"), order="C")
+        selected = np.asarray(plane[i, j], dtype=np.dtype("<f4"), order="C")
+        feature_digest.update(memoryview(selected).cast("B"))
+        pair_scores += float(coefficients[index]) * selected
+        observed = index + 1
+    if observed != len(coefficients):
+        raise ValueError("probe/attention channel count differs")
+    scores = np.zeros((residue_length, residue_length), dtype=np.float64)
+    scores[i, j] = pair_scores
+    return scores, feature_digest.hexdigest()
+
+
+def _symmetrized_attention_planes_batched(
+    attentions: Sequence[Any], *, residue_length: int
+) -> Iterator[np.ndarray]:
+    """Transfer and symmetrize one complete layer while preserving plane order."""
+
+    stop = residue_length + 1
+    for layer_index, layer in enumerate(attentions):
+        if hasattr(layer, "detach"):
+            layer = layer.detach().float().cpu().numpy()
+        array = np.asarray(layer)
+        if array.ndim == 4:
+            if array.shape[0] != 1:
+                raise ValueError("contact attention batch size changed")
+            array = array[0]
+        if array.ndim != 3 or array.shape[1] < stop or array.shape[2] < stop:
+            raise ValueError(f"contact attention layer shape changed: {layer_index}")
+        trimmed = np.asarray(array[:, 1:stop, 1:stop], dtype=np.float32)
+        planes = np.asarray(
+            (trimmed + np.swapaxes(trimmed, 1, 2)) * 0.5,
+            dtype=np.float32,
+            order="C",
+        )
+        yield from planes
+
+
+def _score_sparse_long_range_pairs_and_digest(
+    attentions: Sequence[Any],
+    coefficients: np.ndarray,
+    intercept: float,
+    *,
+    residue_length: int,
+    sequence_separation: int,
+) -> tuple[np.ndarray, str]:
+    """Transfer and score only nonzero L1-probe channels in canonical order."""
+
+    coefficients = np.asarray(coefficients, dtype=np.float64)
+    if coefficients.ndim != 1:
+        raise ValueError("probe coefficients must be one-dimensional")
+    i, j = np.triu_indices(residue_length, k=sequence_separation)
+    pair_scores = np.full(i.size, float(intercept), dtype=np.float64)
+    stop = residue_length + 1
+    channel_offset = 0
+    for layer_index, layer in enumerate(attentions):
+        if hasattr(layer, "detach"):
+            if layer.ndim == 4:
+                if int(layer.shape[0]) != 1:
+                    raise ValueError("contact attention batch size changed")
+                layer = layer[0]
+            if layer.ndim != 3 or int(layer.shape[1]) < stop or int(layer.shape[2]) < stop:
+                raise ValueError(f"contact attention layer shape changed: {layer_index}")
+            heads = int(layer.shape[0])
+            layer_coefficients = coefficients[channel_offset : channel_offset + heads]
+            selected_heads = np.flatnonzero(layer_coefficients).tolist()
+            if selected_heads:
+                array = layer[selected_heads, 1:stop, 1:stop].detach().float().cpu().numpy()
+            else:
+                array = np.empty((0, residue_length, residue_length), dtype=np.float32)
+        else:
+            array = np.asarray(layer)
+            if array.ndim == 4:
+                if array.shape[0] != 1:
+                    raise ValueError("contact attention batch size changed")
+                array = array[0]
+            if array.ndim != 3 or array.shape[1] < stop or array.shape[2] < stop:
+                raise ValueError(f"contact attention layer shape changed: {layer_index}")
+            heads = int(array.shape[0])
+            layer_coefficients = coefficients[channel_offset : channel_offset + heads]
+            selected_heads = np.flatnonzero(layer_coefficients).tolist()
+            array = np.asarray(
+                array[selected_heads, 1:stop, 1:stop], dtype=np.float32, order="C"
+            )
+        if layer_coefficients.size != heads:
+            raise ValueError("probe has fewer coefficients than attention channels")
+        if selected_heads:
+            planes = np.asarray(
+                (array + np.swapaxes(array, 1, 2)) * 0.5,
+                dtype=np.float32,
+                order="C",
+            )
+            for local_index, head_index in enumerate(selected_heads):
+                selected = np.asarray(
+                    planes[local_index, i, j], dtype=np.dtype("<f4"), order="C"
+                )
+                pair_scores += float(layer_coefficients[head_index]) * selected
+        channel_offset += heads
+    if channel_offset != len(coefficients):
+        raise ValueError("probe/attention channel count differs")
+    digest = hashlib.sha256(
+        json.dumps(
+            {
+                "dtype": "float64",
+                "residue_length": int(residue_length),
+                "sequence_separation": int(sequence_separation),
+                "transformation": "sparse_probe_long_range_upper_triangle_scores",
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    )
+    digest.update(memoryview(np.asarray(pair_scores, dtype=np.dtype("<f8"))).cast("B"))
+    scores = np.zeros((residue_length, residue_length), dtype=np.float64)
+    scores[i, j] = pair_scores
+    return scores, digest.hexdigest()
+
+
+def load_contact_probe_receipt(
+    path: Path,
+    *,
+    checkpoint_sha256: str,
+    dataset_manifest_sha256: str,
+    channels: int,
+) -> tuple[np.ndarray, float, float, object]:
+    """Load an exact fitted-probe receipt with checkpoint and dataset binding."""
+
+    receipt = json.loads(path.read_text())
+    if not (
+        receipt.get("schema_version") == 1
+        and receipt.get("protocol") == "autoresearch-frozen-contact-probe-v1"
+        and receipt.get("checkpoint_sha256") == checkpoint_sha256
+        and receipt.get("dataset_manifest_sha256") == dataset_manifest_sha256
+        and receipt.get("pair_sampling_seed") == 20260819
+        and receipt.get("maximum_pairs_per_class") == 4096
+        and receipt.get("channels") == channels
+    ):
+        raise ValueError("fitted contact probe receipt binding changed")
+    coefficients = np.asarray(receipt.get("coefficients"), dtype=np.float64)
+    if coefficients.shape != (channels,) or not np.isfinite(coefficients).all():
+        raise ValueError("fitted contact probe coefficients are invalid")
+    intercept = float(receipt.get("intercept"))
+    selected_c = float(receipt.get("selected_C"))
+    trace = receipt.get("validation_trace")
+    if not np.isfinite(intercept) or not np.isfinite(selected_c) or not isinstance(trace, list):
+        raise ValueError("fitted contact probe scalar contract is invalid")
+    return coefficients, intercept, selected_c, trace
+
+
+def run_contact_lite(
+    model: ESMCForMaskedLM,
+    *,
+    dataset_root: Path,
+    external_src: Path,
+    device: torch.device,
+    evaluation_chains: int,
+    bootstrap: int,
+    shard_index: int = 0,
+    shard_count: int = 1,
+    checkpoint_sha256: str | None = None,
+    probe_receipt: Path | None = None,
+    scoring_cache_root: Path | None = None,
+    scoring_cache_preflight: Path | None = None,
+) -> dict[str, object]:
+    """Fit the frozen 20-chain probe and score a predeclared uniform subset."""
+
+    sys.path.insert(0, str(external_src))
+    try:
+        from autoresearch_esm.paper_contact import (  # type: ignore[import-not-found]
+            SEQUENCE_SEPARATION,
+            score_chain,
+        )
+        from autoresearch_esm.paper_contact_runtime import (
+            ContactDataset,  # type: ignore[import-not-found]
+        )
+    finally:
+        sys.path.pop(0)
+    dataset = ContactDataset(dataset_root)
+    if evaluation_chains <= 0 or shard_count <= 0 or not 0 <= shard_index < shard_count:
+        raise ValueError("invalid contact evaluation/shard contract")
+    tokenizer = ProteinTokenizer.esmc()
+    probe_receipt_sha256: str | None = None
+    if probe_receipt is not None:
+        if checkpoint_sha256 is None:
+            raise ValueError("shared contact probe requires a checkpoint digest")
+        coefficients, intercept, selected_c, trace = load_contact_probe_receipt(
+            probe_receipt,
+            checkpoint_sha256=checkpoint_sha256,
+            dataset_manifest_sha256=dataset.manifest_receipt.manifest_sha256,
+            channels=model.config.n_layers * model.config.n_heads,
+        )
+        probe_receipt_sha256 = file_sha256(probe_receipt)
+    else:
+        fitted = fit_contact_probe_receipt(
+            model,
+            checkpoint_sha256=checkpoint_sha256 or "unbound-legacy-call",
+            dataset_root=dataset_root,
+            external_src=external_src,
+            device=device,
+        )
+        coefficients = np.asarray(fitted["coefficients"], dtype=np.float64)
+        intercept = float(fitted["intercept"])
+        selected_c = float(fitted["selected_C"])
+        trace = fitted["validation_trace"]
     gc.collect()
     ranked_all = sorted(
         dataset.eval_ids,
         key=lambda chain_id: hashlib.sha256(f"20260820:{chain_id}".encode()).digest(),
     )[:evaluation_chains]
     ranked = ranked_all[shard_index::shard_count]
+    scoring_cache: ContactScoringCache | None = None
+    if scoring_cache_root is not None or scoring_cache_preflight is not None:
+        if scoring_cache_root is None or scoring_cache_preflight is None:
+            raise ValueError("contact scoring cache requires root plus preflight")
+        scoring_cache = ContactScoringCache(
+            root=scoring_cache_root,
+            preflight=scoring_cache_preflight,
+            dataset_manifest_sha256=dataset.manifest_receipt.manifest_sha256,
+            expected_chain_ids=dataset.eval_ids,
+        )
     rows: list[dict[str, object]] = []
     for chain_id in ranked:
-        payload, chain = dataset.load_payload(chain_id)
-        sequence = chain.sequence[:510]
+        if scoring_cache is None:
+            payload, chain = dataset.load_payload(chain_id)
+            sequence = chain.sequence[:510]
+        else:
+            cached = scoring_cache.entries[chain_id]
+            sequence = cached.sequence
         attention = _attentions(model, tokenizer, sequence, device)
-        scores, feature_digest = score_and_digest_from_attentions(
+        scores, score_digest = _score_sparse_long_range_pairs_and_digest(
             attention,
             coefficients,
             intercept,
             residue_length=len(sequence),
+            sequence_separation=SEQUENCE_SEPARATION,
         )
-        result = score_chain(
-            chain_id,
-            scores,
-            chain.cb_distances,
-            source_length=int(payload["source_length"]),
-        )
-        if result is None:
-            raise ValueError(f"frozen eligible contact chain became ineligible: {chain_id}")
-        row = dict(result.__dict__)
-        row["attention_feature_sha256"] = feature_digest
+        if scoring_cache is None:
+            result = score_chain(
+                chain_id,
+                scores,
+                chain.cb_distances,
+                source_length=int(payload["source_length"]),
+            )
+            if result is None:
+                raise ValueError(f"frozen eligible contact chain became ineligible: {chain_id}")
+            row = dict(result.__dict__)
+        else:
+            row = scoring_cache.score(chain_id, scores)
+        row["long_range_probe_score_sha256"] = score_digest
         rows.append(row)
         del attention
     precision = np.asarray([float(row["precision_at_l"]) for row in rows])
@@ -750,6 +1098,7 @@ def run_contact_lite(
         "random_precision_at_l": float(random_precision.mean()),
         "selected_C": selected_c,
         "validation_trace": trace,
+        "probe_receipt_sha256": probe_receipt_sha256,
         "rows": rows,
     }
 
@@ -1010,6 +1359,9 @@ def main() -> None:
     parser.add_argument("--contact-bootstrap", type=int, default=5000)
     parser.add_argument("--contact-shard-index", type=int, default=0)
     parser.add_argument("--contact-shard-count", type=int, default=1)
+    parser.add_argument("--contact-probe-receipt", type=Path)
+    parser.add_argument("--contact-scoring-cache-root", type=Path)
+    parser.add_argument("--contact-scoring-cache-preflight", type=Path)
     parser.add_argument("--pcore-batch-residues", type=int, default=8192)
     parser.add_argument("--pcore-bootstrap", type=int, default=10000)
     parser.add_argument("--pcore-task-parallel", type=int, default=2)
@@ -1083,6 +1435,10 @@ def main() -> None:
                 bootstrap=args.contact_bootstrap,
                 shard_index=args.contact_shard_index,
                 shard_count=args.contact_shard_count,
+                checkpoint_sha256=str(report["checkpoint_sha256"]),
+                probe_receipt=args.contact_probe_receipt,
+                scoring_cache_root=args.contact_scoring_cache_root,
+                scoring_cache_preflight=args.contact_scoring_cache_preflight,
             )
             timing_seconds["contact"] = time.monotonic() - component_started
             write_json(contact_path, contact)
