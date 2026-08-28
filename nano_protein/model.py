@@ -347,8 +347,8 @@ class ESMCBlock(nn.Module):
         super().__init__()
         self.attention = ESMCAttention(config)
         self.ffn = ESMCFeedForward(config)
-        # This follows the released Biohub inference source. The 2026 paper text
-        # says sqrt(n_layers); see docs/ARCHITECTURE.md for the frozen choice.
+        # Follow the released Biohub inference source: it uses
+        # sqrt(n_layers / 36), while the 2026 paper text says sqrt(n_layers).
         self.residual_scale = math.sqrt(config.n_layers / 36.0)
 
     def forward_packed(

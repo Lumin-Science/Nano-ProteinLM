@@ -1,25 +1,0 @@
-Fetching 9 files:   0%|          | 0/9 [00:00<?, ?it/s]Fetching 9 files:  33%|███▎      | 3/9 [00:20<00:40,  6.67s/it]Fetching 9 files:  44%|████▍     | 4/9 [00:31<00:39,  7.86s/it]Fetching 9 files:  56%|█████▌    | 5/9 [03:19<02:39, 39.94s/it]Fetching 9 files:  67%|██████▋   | 6/9 [03:22<01:41, 33.68s/it]Fetching 9 files:  78%|███████▊  | 7/9 [03:34<01:01, 30.66s/it]Fetching 9 files: 100%|██████████| 9/9 [03:34<00:00, 23.86s/it]Fetching 9 files: 100%|██████████| 9/9 [03:34<00:00, 23.86s/it]
-`torch_dtype` is deprecated! Use `dtype` instead!
-ESMC: transformer_engine is not installed; falling back to pure-PyTorch LayerNorm+Linear / LayerNorm+MLP. Outputs will differ numerically — measured on the unnormalized residual stream (before the final LayerNorm), ~O(10) max-diff in fp32 and ~O(100) in bf16; after the final LayerNorm these shrink to a few ULP and perplexity stays within rounding noise. Install with `pip install transformer-engine[pytorch]` to enable fused fp32-reduction LayerNorm.
-ESMC: neither xformers nor flash-attn is installed; falling back to PyTorch ``F.scaled_dot_product_attention``. The attention reduction order in bf16 differs from a fused kernel by ~1 bf16 ULP per attention block; compounded across the 80-block stack this reaches ~O(100) max-diff on the unnormalized residual stream. Install xformers (preferred) with `pip install xformers` for a fused attention kernel.
-ESMC: flash-attn rotary kernel not installed; falling back to pure-PyTorch RoPE. For faster GPU inference run `pip install flash-attn`.
-Loading checkpoint shards:   0%|          | 0/6 [00:00<?, ?it/s]Loading checkpoint shards:  17%|█▋        | 1/6 [00:00<00:02,  1.97it/s]Loading checkpoint shards:  33%|███▎      | 2/6 [00:01<00:02,  1.99it/s]Loading checkpoint shards:  50%|█████     | 3/6 [00:01<00:01,  2.00it/s]Loading checkpoint shards:  67%|██████▋   | 4/6 [00:02<00:00,  2.00it/s]Loading checkpoint shards:  83%|████████▎ | 5/6 [00:02<00:00,  2.01it/s]Loading checkpoint shards: 100%|██████████| 6/6 [00:02<00:00,  2.33it/s]
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/muchenli/projects/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/src/autoresearch_esm/pcore_embed.py", line 770, in <module>
-    slug = args.model.replace("/", "--") + "--" + args.revision[:12]
-    ^^^^^^
-  File "/home/muchenli/projects/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/src/autoresearch_esm/pcore_embed.py", line 756, in main
-    observed_hidden_size = _model_hidden_size(model)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/muchenli/projects/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/src/autoresearch_esm/pcore_embed.py", line 391, in embed_sequences
-    return _embed_missing_cross_sequence_batches(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/muchenli/projects/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/src/autoresearch_esm/pcore_embed.py", line 483, in _embed_missing_cross_sequence_batches
-    embeddings, counts, residue_embeddings = _window_embeddings(
-                                             ^^^^^^^^^^^^^^^^^^^
-  File "/home/muchenli/projects/AutoResearch_ESMC/pcore/v0.5-alpha-q9/run/src/autoresearch_esm/pcore_embed.py", line 351, in _window_embeddings
-    pooled = (hidden * residue_mask.unsqueeze(-1)).sum(dim=1) / counts.unsqueeze(-1)
-                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
-KeyboardInterrupt

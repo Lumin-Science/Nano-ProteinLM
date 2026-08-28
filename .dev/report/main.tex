@@ -1,0 +1,426 @@
+\documentclass{article}
+
+\usepackage{report_style}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{url}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\code}[1]{\texttt{#1}}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=blue!55!black,
+  urlcolor=blue!55!black,
+  pdftitle={Nano-ESMC: A Minimal, Hill-Climbable ESMC Training Reproduction},
+  pdfauthor={Lumin Science}
+}
+
+\title{Nano-ESMC:\\
+A Minimal, Hill-Climbable ESMC Training Reproduction}
+
+\author{%
+  Lumin Science\\
+  \texttt{https://luminscience.io}
+}
+
+\begin{document}
+\raggedbottom
+\maketitle
+
+\begin{abstract}
+Nano-ESMC is a compact, end-to-end reconstruction of ESMC-style protein
+language-model training. It connects a public 665,970,495-protein,
+evaluation-decontaminated corpus to a fixed four-GPU training contract and
+frozen biological evaluation. Full long-range contact precision at $L$
+(P@L) on 20,775 RCSB Protein Data Bank chains is the primary model-selection
+axis; held-out masked-language-model loss and the four-task P-CORE
+representation panel are supporting measurements. Under the current one-hour
+four-L40S contract, the original ESMC-300M-class baseline reaches 0.0925 P@L
+and the first retained AutoResearch candidate reaches 0.0960. Released
+ESMC-300M, 600M, and 6B checkpoints establish the external scale ladder for
+P-CORE, while a source-qualified P-CORE Next alpha campaign records which new
+tasks discriminate scale and which fail qualification. This report presents
+the data pipeline once, the evaluation contract once, and all baseline
+evidence in one section.
+\end{abstract}
+
+\section{Scope and fixed contract}
+
+The goal is to reproduce the essential ESMC sequence-model training path in a
+form that is small enough to inspect and strict enough to hill climb
+\citep{candido2026language}. A candidate may change model internals,
+optimization, batching, kernels, or schedules, but it cannot change the data,
+compute budget, evaluation examples, or metric after observing a result.
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{0.18\textwidth}Y@{}}
+    \toprule
+    Object & Current contract \\
+    \midrule
+    Model class & Sequence-only ESMC-300M encoder trained from scratch; no structure-conditioned input. \\
+    Data & Immutable public UniRef90, MGnify, and OMG/IMG release with exact and homology decontamination against the complete protected evaluation union. \\
+    Compute & Four NVIDIA L40S GPUs and 3,600 seconds of synchronized training-loop time. \\
+    Primary selection & Full long-range contact P@L on the frozen 20,775-chain population. \\
+    Supporting axes & Held-out sequence-mean MLM loss and the four-task P-CORE frozen-representation panel. \\
+    Promotion & Strict P@L improvement at matched compute, no unexplained trusted-task regression, then clean rebuilds and repeated seeds before a release claim. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{The public Nano-ESMC experiment contract.}
+  \label{tab:contract}
+\end{table}
+
+The current repository supports Stage-1 training at context length 512.
+Longer-context Stage 2, larger local models, and week-scale compute projections
+are outside the present claim. Historical experiments remain evidence about
+scaling, not alternate active contracts.
+
+\section{Data: one corpus and one processing pipeline}
+\label{sec:data}
+
+\subsection{Sources and the main gap to ESMC}
+
+ESMC reports training pools from UniRef, MGnify, and a July 2023 Joint Genome
+Institute (JGI) snapshot \citep{candido2026language,suzek2015uniref,
+richardson2023mgnify}. Nano-ESMC reconstructs the same source roles with
+UniRef90 2023\_02, MGnify 2023\_02, and the IMG/JGI-labelled portion of the
+public OMG corpus \citep{cornman2024omg}. OMG/IMG is a surrogate for the JGI
+role, not the authors' exact snapshot.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrr@{}}
+    \toprule
+    Source role & ESMC 70\%-identity clusters & Nano-ESMC representatives & Nano / ESMC \\
+    \midrule
+    UniRef & approximately 83M & 92,230,941 & approximately 111\% \\
+    MGnify & approximately 372M & 348,135,082 & approximately 94\% \\
+    JGI role / OMG-IMG surrogate & approximately 2B & 324,923,979 & approximately 16\% \\
+    \midrule
+    Total & approximately 2.455B & 765,290,002 & approximately 31\% \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Stage-aligned comparison with the cluster counts reported by ESMC.
+  The roughly 1.68B-representative JGI-role gap dominates the difference.}
+  \label{tab:source-gap}
+\end{table}
+
+\subsection{Processing and release accounting}
+
+The complete path is fixed in seven steps:
+
+\begin{enumerate}
+  \item pin every upstream object and its digest;
+  \item normalize sequences and assign OMG accessions to one source role;
+  \item reject sequences shorter than 60 amino acids or with more than 20\%
+        ambiguous residues;
+  \item collapse exact sequences while retaining source membership;
+  \item cluster each source view independently at 70\% identity and 80\%
+        shorter-sequence coverage with MMseqs2 Linclust
+        \citep{steinegger2018linclust};
+  \item remove exact matches and homologs to the protected evaluation union;
+        and
+  \item assign cross-source ownership, select validation rows, write
+        deterministic Parquet shards, and independently verify every digest.
+\end{enumerate}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3.0pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrrrrr@{}}
+    \toprule
+    Source & Original records & Quality eligible & Distinct in source & 70\% representatives & After eval. decontam. & Final training \\
+    \midrule
+    UniRef90 & 170,669,877 & 165,884,293 & 165,884,293 & 92,230,941 & 74,181,938 & 74,175,974 \\
+    MGnify & 729,215,663 & 611,817,034 & 611,788,129 & 348,135,082 & 330,444,705 & 328,949,335 \\
+    OMG/IMG & 3,280,269,924 & 2,085,746,535 & 963,673,186 & 324,923,979 & 282,202,559 & 262,845,186 \\
+    \midrule
+    Total source views & 4,180,155,464 & 2,863,447,862 & 1,741,345,608 & 765,290,002 & 686,829,202 & 665,970,495 \\
+    \bottomrule
+  \end{tabular}}
+  \caption{The single corpus funnel. Source-view distinct counts can overlap
+  because one exact sequence may carry more than one source membership.
+  Cross-source ownership is resolved before the final training count.}
+  \label{tab:data-funnel}
+\end{table}
+
+The protected union contains 317,000 unique evaluation sequences, including
+all probe-fit, validation, gallery, test, blocked-candidate, and contact rows
+known at release-build time. It includes the 20 contact-probe chains and all
+20,775 contact-evaluation chains from the frozen 2024-02-28 RCSB PDB snapshot.
+The pipeline removes 21,653 exact matches and 78,439,147 additional homologs
+at least 30\% identity, at least 80\% bidirectional coverage, and
+$E\text{-value}\leq10^{-3}$ using MMseqs2 \citep{steinegger2017mmseqs2}.
+After decontamination, 20,844,431 non-owner source memberships, 1,988
+out-of-range records, and 12,288 validation rows are excluded to reach the
+final training release.
+
+The immutable public artifact contains 565 training shards,
+665,970,495 proteins, and 151,304,238,405 residues. Each source contributes
+one additional 4,096-protein validation shard. The complete train/validation
+release occupies 109,661,312,410 compressed bytes. These values define the
+supported corpus. The earlier 9M-protein materialization appears only in the
+historical baseline table in Section~\ref{sec:evidence}.
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+\subsection{Three reported axes}
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}p{0.18\textwidth}Y@{}}
+    \toprule
+    Axis & Role & Definition \\
+    \midrule
+    Held-out MLM & Diagnostic & Sequence-mean negative log-likelihood and perplexity on 12,288 hash-disjoint validation representatives. \\
+    P-CORE & Representation panel & Four frozen-encoder tasks spanning evolution, local structure, localization, and fitness. \\
+    Long-range contact P@L & Primary selection & Mean top-$L$ precision over the frozen 20,775-chain population using all-layer/all-head attention features. \\
+    \bottomrule
+  \end{tabularx}
+  \caption{Evaluation axes and their decision roles. A lower MLM loss does not
+  override a contact P@L regression.}
+  \label{tab:evaluation-axes}
+\end{table}
+
+\subsection{Contact P@L}
+
+All contact structures and labels come from the 2024-02-28 RCSB Protein Data
+Bank snapshot \citep{berman2000pdb}. Following the ESM contact protocol and
+the ESMC long-range definition \citep{rao2021unsupervised,
+candido2026language}, all attention heads and layers are symmetrized and fed
+to a logistic probe. Sixteen structures fit candidate probes, four select
+regularization, the selected probe is refit on all 20, and 20,775 chains
+supply the final score. A true contact has
+C$\beta$ distance below 8\AA{} (C$\alpha$ for glycine), long range means
+sequence separation at least 24, and the per-chain metric is precision among
+the top $L$ predicted pairs.
+
+The snapshot yields 216,478 source structures and 781,077 extracted protein
+chains before filtering. Chains are reduced at 40\% sequence identity and 80\%
+shorter-sequence coverage, truncated to 510 residues, and required to contain
+at least $L$ eligible true contacts. The final population contains 20,775
+chains representing 20,758 unique sequences. ESMC reports the same snapshot
+date, population size, and construction rules, but does not publish its
+ordered chain manifest or raw-file digests. The two evaluations are
+protocol-matched, not proven item-for-item identical.
+
+\subsection{P-CORE}
+
+The encoder remains frozen. Protein tasks mean-pool final-layer residue
+vectors; secondary structure uses residue vectors directly. A standardizer
+and a fixed low-capacity logistic or ridge probe are fit on probe-training
+data, regularization is selected on validation, and the selected probe is
+applied once to the untouched test set. Bootstrap intervals resample frozen
+test predictions by biological unit and do not refit the encoder or probe.
+The task sources are DeepSF/TAPE for remote homology
+\citep{hou2018deepsf,rao2019tape}, NetSurfP-2.0/CB513 for secondary structure
+\citep{klausen2019netsurfp,cuff1999evaluation}, DeepLoc2 for localization
+\citep{thumuluri2022deeploc2}, and FLIP2 for fitness
+\citep{didi2026flip2}.
+
+\begin{table}[H]
+  \centering
+  \small
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}p{0.18\textwidth}p{0.25\textwidth}p{0.20\textwidth}YY@{}}
+    \toprule
+    Task & Fit / validation / test & Frozen readout & Primary metric & Unit \\
+    \midrule
+    Remote homology & 12,312 / 736 / 718 proteins & mean + multinomial logistic & balanced accuracy & family group \\
+    Secondary structure & 8,678 / 2,170 / 513 proteins & residue + logistic & residue macro-F1 & protein \\
+    DeepLoc2 & 28,303 proteins in five rotating folds & mean + multilabel logistic & macro average precision & fold / protein \\
+    FLIP2 Hydrophobic Core & 9,974 / 2,493 / 12,468 variants & mean + ridge & Spearman correlation & variant group \\
+    \bottomrule
+  \end{tabularx}
+  \caption{The four trusted P-CORE tasks. Each raw metric is null-normalized;
+  the score is 100 times their geometric mean. A task at or below its null
+  invalidates the aggregate.}
+  \label{tab:pcore-contract}
+\end{table}
+
+Enzyme Commission and the reconstructed Human PPI benchmark remain visible
+diagnostics, but neither can affect P-CORE or model selection. Their released
+model behavior is reported once in Section~\ref{sec:evidence}.
+
+\section{Baseline and qualification evidence}
+\label{sec:evidence}
+
+\subsection{Current one-hour AutoResearch baseline}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3.4pt}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{@{}lrrrrrrrrr@{}}
+    \toprule
+    Model & P@L & Delta & Train loss & Valid. loss & Steps & Tokens (M) & Params. (M) & Peak GB & Train h \\
+    \midrule
+    Original ESMC & 0.0925 & -- & 2.723 & 2.699 & 5,883 & 358 & 333 & 35 & 1 \\
+    AutoResearch-Codex-Round1 & \textbf{0.0960} & \textbf{+0.0036} & \textbf{2.720} & 2.704 & 5,682 & 346 & 333 & 37 & 1 \\
+    \bottomrule
+  \end{tabular}}
+  \caption{Compute-matched Stage-1 runs on four L40S GPUs. P@L is the keep or
+  reject metric; losses are required diagnostics.}
+  \label{tab:autoresearch}
+\end{table}
+
+The retained candidate adds learned residual/input routing, parameter-free
+transformer RMSNorm, depth-scaled residual initialization, and a linear
+learning-rate cooldown over the final 20\% of training. Its improvement is a
+single fixed-checkpoint result, not a multi-seed release claim.
+
+\subsection{Released ESMC checkpoints and quarantined diagnostics}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\textwidth}{@{}Yrrrl@{}}
+    \toprule
+    Metric & ESMC-300M & ESMC-600M & ESMC-6B & Role \\
+    \midrule
+    Remote homology balanced accuracy & 0.1159 & 0.1152 & 0.1186 & P-CORE \\
+    Secondary-structure macro-F1 & 0.8315 & 0.8407 & 0.8780 & P-CORE \\
+    DeepLoc2 macro average precision & 0.6442 & 0.6568 & 0.6942 & P-CORE \\
+    FLIP2 Hydro Spearman & 0.4132 & 0.4276 & 0.4616 & P-CORE \\
+    \textbf{P-CORE} & \textbf{37.4847} & \textbf{38.1553} & \textbf{40.6011} & reference panel \\
+    \midrule
+    Enzyme Commission macro average precision & 0.7174 & 0.7096 & 0.0237 & quarantined \\
+    Human PPI average precision & 0.8155 & 0.8026 & 0.8345 & quarantined \\
+    \midrule
+    ESMC paper contact P@L-LR & $0.552\pm0.002$ & $0.589\pm0.002$ & $0.725\pm0.002$ & published \\
+    Nano-ESMC full 20,775-chain P@L & 0.5387 & 0.5803 & pending & local protocol \\
+    \bottomrule
+  \end{tabularx}
+  \caption{One consolidated released-model reference table. P-CORE values are
+  local recomputations with the frozen probes. Contact paper values come from
+  ESMC; local contact values use the Nano-ESMC chain manifest.}
+  \label{tab:released-baselines}
+\end{table}
+
+P-CORE is ordered across the three released scales, although remote homology
+is nearly flat. EC collapses at 6B despite clean split and embedding-integrity
+checks. Human PPI has only 237 test pairs, is non-monotone across scale, and
+was nearly matched by a severely undertrained local model. These behaviors
+justify quarantine rather than post hoc repair. The full 6B local contact
+evaluation remains pending and is not replaced by the completed 1,024-chain
+diagnostic.
+
+\subsection{Historical training-duration check}
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{@{}lrrrrl@{}}
+    \toprule
+    Historical run & Steps & Model tokens & P-CORE & Contact P@L & Decision \\
+    \midrule
+    Local ESMC-300M, 4 h & 20,971 & 1.290B & 25.4609 & 0.1013 & baseline \\
+    Local ESMC-300M, 16 h & 84,000 & 5.166B & 30.6609 & 0.1636 & improved, not promoted \\
+    Released ESMC-300M & -- & -- & 37.4847 & 0.5387 & external reference \\
+    \bottomrule
+  \end{tabular}
+  \caption{Historical four-A100 duration experiment. Both local runs used the
+  superseded 9M-protein materialization, so they are retained as scaling
+  evidence and are not baselines for the current public corpus.}
+  \label{tab:historical-duration}
+\end{table}
+
+All four trusted raw tasks improved from four to sixteen hours. Contact P@L
+increased by 0.0623, with a fixed-checkpoint paired 95\% interval of
+[0.0614, 0.0632]. The runs used different seeds, so that interval does not
+isolate training duration from initialization. The sixteen-hour checkpoint
+remained below released ESMC-300M on P-CORE and contact and was not promoted.
+
+\subsection{P-CORE Next alpha qualification}
+
+The expansion campaign evaluated identical manifests with released ESMC-300M,
+600M, and 6B checkpoints and 10,000 paired biological-unit bootstrap
+resamples. Candidate sources are CATH 4.4 \citep{waman2025cath44}, PRING
+\citep{zheng2025pring}, FLIP2 \citep{didi2026flip2}, MegaScale
+\citep{tsuboyama2023megascale}, CAID3 \citep{mehdiabadi2026caid3}, and CAFA5
+\citep{depaolis2026cafa5}. It is a qualification profile, not a new aggregate.
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}YrrrY@{}}
+    \toprule
+    Candidate / metric & ESMC-300M & ESMC-600M & ESMC-6B & Decision \\
+    \midrule
+    CATH 4.4 macro-H mAP & 0.1170 & 0.1067 & 0.1153 & diagnostic; not scale-monotone \\
+    PRING Human AUPRC & 0.7035 & 0.7001 & 0.7113 & provisional; intervals failed centering \\
+    FLIP2 hierarchical score & 0.7823 & 0.7581 & 0.7805 & diagnostic; limited landscapes \\
+    MegaScale median-parent Spearman & 0.6835 & 0.7267 & 0.7207 & qualification candidate \\
+    CAID3 macro-protein AP & 0.7292 & 0.7341 & 0.7340 & temporal diagnostic \\
+    CAFA5 molecular function & blocked & blocked & blocked & 110 hard proteins $<500$ gate \\
+    \bottomrule
+  \end{tabularx}
+  \caption{P-CORE Next alpha results. Missing tasks are not imputed and no
+  aggregate or released-model ranking is issued.}
+  \label{tab:pcore-next}
+\end{table}
+
+No runnable candidate is strictly monotone across all three scales. MegaScale
+is the only new task with a clear paired 6B-over-300M difference:
+$+0.0372$ with a 95\% interval of [0.0064, 0.1171]. PRING has only one
+negative realization and non-centered intervals. CAFA5 failed its frozen
+minimum-population gate. CATH, FLIP2 shift, and CAID3 remain useful
+diagnostics but do not yet qualify as promotion gates.
+
+\section{Limitations and next work}
+
+The public corpus reproduces ESMC's source roles and processing logic, but its
+OMG/IMG surrogate is much smaller than the reported JGI cluster pool and
+cannot reproduce ESMC's unavailable cluster-member sampling. The released
+contact protocol matches the ESMC description, snapshot date, and population
+size, but the unpublished Biohub chain manifest prevents an item-for-item
+identity claim. The current one-hour AutoResearch improvement is single-run
+evidence. The historical duration runs use a superseded corpus. The full
+released ESMC-6B contact value is still pending. P-CORE Next has not qualified
+a successor aggregate.
+
+The immediate work is therefore:
+
+\begin{enumerate}
+  \item complete the full 6B contact measurement;
+  \item repeat the one-hour incumbent and strongest candidate across seeds;
+  \item requalify the four current P-CORE tasks under the same gates applied
+        to new candidates;
+  \item complete MegaScale confound, weak-model, and probe-stability controls;
+  \item repair PRING with a preregistered uncertainty estimator and ten
+        negative realizations; and
+  \item shadow any P-CORE successor beside the current four-task panel before
+        changing model-selection policy.
+\end{enumerate}
+
+Nano-ESMC should be read as a reproducible research system and a measured
+hill-climbing baseline. It does not yet claim an exact ESMC data reproduction,
+a reproduction-quality checkpoint, or a replacement P-CORE suite.
+
+\begingroup
+\footnotesize
+\setlength{\bibsep}{1pt}
+\bibliographystyle{plainnat}
+\bibliography{references}
+\endgroup
+
+\end{document}

@@ -2,6 +2,14 @@
 .uv-cache/
 .env
 .exps/
+/.dev/*
+!/.dev/LOG.md
+!/.dev/report/
+/.dev/report/*
+!/.dev/report/main.tex
+!/.dev/report/main.pdf
+!/.dev/report/references.bib
+!/.dev/report/report_style.sty
 .DS_Store
 __pycache__/
 *.py[cod]
@@ -14,11 +22,3 @@ data/processed/
 outputs/
 output/
 tmp/
-dev/report/*.aux
-dev/report/*.bbl
-dev/report/*.blg
-dev/report/*.fdb_latexmk
-dev/report/*.fls
-dev/report/*.log
-dev/report/*.out
-dev/report/*.pdf
