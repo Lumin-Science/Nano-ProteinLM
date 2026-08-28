@@ -25,7 +25,7 @@ do not override a contact P@L regression.
 |---|---:|---:|
 | ESMC-300M | 0.552 ± 0.002 | 0.5387 |
 | ESMC-600M | 0.589 ± 0.002 | 0.5803 |
-| ESMC-6B | 0.725 ± 0.002 | running; exact result pending |
+| ESMC-6B | 0.725 ± 0.002 | 0.7126 |
 
 The paper and this reconstruction both source structures from the RCSB Protein
 Data Bank and use the 2024-02-28 snapshot date. Our immutable build receipt
@@ -36,8 +36,8 @@ definition, and filtering rules. However, the paper does not publish the
 ordered chain identifiers, raw-file digests, or a manifest digest. We therefore
 cannot prove that our 20,775 chains are identical item-for-item to Biohub's;
 the columns are protocol-matched measurements, not a claim of a byte-identical
-evaluation set. Our completed 1,024-chain diagnostic is not substituted for the
-running 6B full-population measurement.
+evaluation set. The reported 6B value is the completed full-population
+measurement; the 1,024-chain diagnostic remains an execution check only.
 
 ## Evaluation execution
 

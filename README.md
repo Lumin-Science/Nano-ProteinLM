@@ -49,7 +49,7 @@ losses are diagnostics; they do not override a P@L regression.
 |---|---:|---:|
 | ESMC-300M | 0.552 ± 0.002 | 0.5387 |
 | ESMC-600M | 0.589 ± 0.002 | 0.5803 |
-| ESMC-6B | 0.725 ± 0.002 | running; exact result pending |
+| ESMC-6B | 0.725 ± 0.002 | 0.7126 |
 
 Both evaluations start from the RCSB Protein Data Bank with the 2024-02-28
 snapshot date, contain 20,775 chains, and follow the same published construction
