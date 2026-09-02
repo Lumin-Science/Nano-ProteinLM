@@ -1,4 +1,4 @@
-"""Checkpoint-compatible ESMC 300M/600M architecture in plain PyTorch.
+"""Checkpoint-compatible ESMC architecture and family-scaled variants in plain PyTorch.
 
 The tensor shapes and parameterization follow Biohub's released implementation:
 pre-norm bias-free linear layers, whole-projection Q/K LayerNorm, non-interleaved
@@ -44,6 +44,12 @@ class ESMCConfig:
     @classmethod
     def esmc_300m(cls, **overrides: object) -> ESMCConfig:
         values = dict(name="esmc_300m", d_model=960, n_heads=15, n_layers=30)
+        values.update(overrides)
+        return cls(**values)
+
+    @classmethod
+    def esmc_171m(cls, **overrides: object) -> ESMCConfig:
+        values = dict(name="esmc_171m", d_model=768, n_heads=12, n_layers=24)
         values.update(overrides)
         return cls(**values)
 
@@ -557,8 +563,10 @@ class ESMCForMaskedLM(nn.Module):
 
 def build_model(name: str, **overrides: object) -> ESMCForMaskedLM:
     factories = {
+        "esmc-171m": ESMCConfig.esmc_171m,
         "esmc-300m": ESMCConfig.esmc_300m,
         "esmc-600m": ESMCConfig.esmc_600m,
+        "esmc_171m": ESMCConfig.esmc_171m,
         "esmc_300m": ESMCConfig.esmc_300m,
         "esmc_600m": ESMCConfig.esmc_600m,
         "tiny": ESMCConfig.tiny,
