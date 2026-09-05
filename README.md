@@ -1,13 +1,29 @@
 # LuminBench Nano-ESMC
 
-LuminBench Nano-ESMC is a minimal, end-to-end reproduction of ESMC-based
-protein language-model training. It provides the complete recipe from public,
-decontaminated protein sequences through a locked training environment,
-checkpoint receipts, and frozen evaluation.
+Nano-ESMC is a small, end-to-end implementation of ESMC-style protein
+language-model training. It carries the whole recipe: public, decontaminated
+protein sequences, a locked training environment, checkpoint receipts, and a
+frozen evaluation.
 
-The same recipe is formalized for hill climbing: hold the data, compute budget,
-and evaluation fixed; change one model or training idea at a time; and retain
-only measured improvements.
+It is built for two purposes.
+
+1. **A reproduction you can run and change.** Protein LM pretraining is mostly
+   published as a paper plus a released checkpoint. This repository is the
+   training run itself, small enough to read in an afternoon and to execute on
+   four GPUs, so the pretraining recipe is open to ordinary research rather
+   than locked inside an industrial pipeline.
+2. **A benchmark for agentic autoresearch.** The corpus, tokenizer, compute
+   budget, and evaluation are pinned, so an automated agent can search for a
+   better training recipe and its results can be compared against the baseline
+   and against other agents on equal terms.
+
+This is early work. The training path, the data release, and the contact
+evaluator run end to end, but the evaluation suite is still growing and the
+autoresearch loop has only a few rounds behind it. If you work on protein
+language models or on agentic autoresearch, we would like the help: new
+evaluation tasks, recipe candidates, reproductions on other hardware, or
+arguments that something here is measuring the wrong thing. Open an issue or a
+pull request.
 
 ## Data
 
@@ -15,7 +31,7 @@ We reconstructed the training-data recipe described in the
 [ESMC paper](https://doi.org/10.64898/2026.06.03.729735), using the same three
 source roles and a similar quality-filtering, deduplication, and 70%-identity
 clustering pipeline. After evaluation decontamination, this produces a public
-training dataset of **665,970,495 proteins**.
+training dataset of 665,970,495 proteins.
 
 The release is screened against the complete protected evaluation union,
 including every RCSB Protein Data Bank chain used for contact P@L. Exact
@@ -31,19 +47,41 @@ selected.
 | **Total** | **665,970,495** | |
 
 The main gap relative to ESMC is the JGI arm. The paper's exact July 2023 JGI
-snapshot is not directly available as a reproducible public download, so this
-release uses public OMG/IMG data as its surrogate and remains approximately
-1.68 billion 70%-identity representatives below ESMC in that source role.
-Closing this gap with a public, redistributable JGI-scale source is future work.
+snapshot is not available as a reproducible public download, so this release
+uses public OMG/IMG data as its surrogate and remains roughly 1.68 billion
+70%-identity representatives below ESMC in that source role. Closing that gap
+with a public, redistributable JGI-scale source is future work.
 
-- [Download the immutable processed dataset on Hugging Face](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259).
-- Read the full [data contract and provenance](docs/DATA.md).
+Construction is documented in full in [`docs/DATA.md`](docs/DATA.md).
+
+- 🤗 [Hugging Face](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259).
 
 ## Evaluation
 
-**The main hill-climbing axis is full long-range contact precision at L
-(P@L)** over the frozen 20,775-chain population. Training and validation MLM
-losses are diagnostics; they do not override a P@L regression.
+What we are trying to produce is a good residue-level representation of a
+protein. Almost everything built on a protein LM reads those representations
+rather than the weights: ESMFold, for example, predicts structure from the
+representations of a pretrained ESM encoder. The encoder therefore sets a
+ceiling on what the models above it can do, which makes it worth measuring
+directly instead of trusting training loss as a stand-in.
+
+Long-range contact precision is the most informative cheap proxy we have for
+that. Recovering which residue pairs are in physical contact while far apart in
+sequence is close to the core of what a folding model needs from its encoder,
+and it can be read out of a frozen model with a small probe. Following the ESMC
+paper, we use full long-range contact precision at L (P@L) over a frozen
+20,775-chain population as the headline metric. Training and validation MLM
+losses are reported alongside it as diagnostics.
+
+Our evaluation and the paper's both start from the RCSB Protein Data Bank at
+the 2024-02-28 snapshot date, contain 20,775 chains, and follow the same
+published construction rules. Biohub does not publish its ordered chain
+manifest or raw-file digests, so item-for-item identity cannot be verified; the
+two columns below are protocol-matched measurements, not a claim of an
+identical evaluation set. All structural labels for our P@L evaluation come
+from that frozen RCSB source, and those chains are in the protected union used
+to decontaminate the training corpus.
+[RCSB PDB](https://www.rcsb.org/); [ESMC](https://doi.org/10.64898/2026.06.03.729735).
 
 | Released model | ESMC paper P@L-LR (95% CI) | Our full 20,775-chain P@L |
 |---|---:|---:|
@@ -51,69 +89,54 @@ losses are diagnostics; they do not override a P@L regression.
 | ESMC-600M | 0.589 ± 0.002 | 0.5803 |
 | ESMC-6B | 0.725 ± 0.002 | 0.7126 |
 
-Both evaluations start from the RCSB Protein Data Bank with the 2024-02-28
-snapshot date, contain 20,775 chains, and follow the same published construction
-rules. Biohub does not publish its ordered chain manifest or raw-file digests,
-so exact item-for-item identity cannot be verified. All structural labels for
-our P@L evaluation come from this frozen RCSB PDB source, and these chains are
-included in the protected union used to decontaminate the training corpus.
-[RCSB PDB](https://www.rcsb.org/); [ESMC](https://doi.org/10.64898/2026.06.03.729735).
-
-We also developed **P-CORE**, a broader frozen-representation evaluation suite.
-The currently reported P-CORE score combines four trusted tasks:
-
-- Remote homology, balanced accuracy — [DeepSF](https://doi.org/10.1093/bioinformatics/btx780), [TAPE](https://proceedings.neurips.cc/paper/2019/hash/37f65c068b7723cd7809ee2d31d7861c-Abstract.html).
-- Secondary structure, residue macro-F1 — [NetSurfP-2.0](https://doi.org/10.1002/prot.25674), [CB513](https://pubmed.ncbi.nlm.nih.gov/10081963/).
-- DeepLoc2 localization, macro average precision — [DeepLoc 2.0](https://doi.org/10.1093/nar/gkac278).
-- FLIP2 Hydrophobic Core low-to-high fitness, Spearman correlation — [FLIP2](https://doi.org/10.64898/2026.02.23.707496).
-
-The evaluation program separately reports:
-
-- Held-out MLM negative log-likelihood and perplexity — [data provenance](docs/DATA.md).
-- Enzyme Commission macro average precision, quarantined — [DeepFRI](https://doi.org/10.1038/s41467-021-23303-9), [TorchProtein](https://doi.org/10.5281/zenodo.6622158).
-- Human PPI average precision, quarantined — [Pan et al.](https://doi.org/10.1021/pr100618t), [PEER](https://proceedings.neurips.cc/paper_files/paper/2022/hash/e467582d42d9c13fa9603df16f31de6d-Abstract-Datasets_and_Benchmarks.html).
-
-The source-qualified P-CORE v0.5 alpha additionally covers:
-
-- CATH 4.4 remote retrieval — [CATH 4.4](https://doi.org/10.1093/nar/gkae1087).
-- PRING Human PPI, provisional — [PRING](https://github.com/SophieSarceau/PRING).
-- FLIP2 engineering shift — [FLIP2](https://doi.org/10.64898/2026.02.23.707496).
-- MegaScale stability — [MegaScale](https://doi.org/10.1038/s41586-023-06328-6).
-- CAID3 disorder — [CAID3](https://doi.org/10.1002/prot.70045).
-- CAFA5 molecular function, blocked because only 110 test proteins survived
-  its preregistered identity screen — [CAFA5](https://doi.org/10.64898/2026.04.27.716980).
-
-None of the alpha or quarantined tasks contributes to the current four-task
-P-CORE score. Public development outcomes and open evaluation work are tracked
-in [`.dev/LOG.md`](.dev/LOG.md).
+Contact precision is one view of one property, so we are also building a
+broader frozen-representation suite, P-CORE, covering remote homology,
+secondary structure, subcellular localization, and mutational fitness. It is a
+reporting panel today, not a selection metric.
 
 See [`docs/EVALUATION.md`](docs/EVALUATION.md) for dataset lineage, exact
-splits, probe definitions, representation-panel results, confidence intervals,
-and execution.
+splits, probe definitions, P-CORE results, confidence intervals, and execution.
+
+## Baselines
 
 ## AutoResearch
 
-> Train an ESMC-300M-class sequence encoder from scratch under a fixed compute
+The reason the data and the evaluation are frozen is that we want to hand this
+repository to agentic systems and ask them to do the research: propose a change
+to the training recipe, run it, measure it, and keep it only if it worked. A
+protein LM recipe is a large search space of architecture, optimizer, loss,
+schedule, and systems choices, most of it explored by hand today. The question
+we put to the agent is:
+
+> Train a protein sequence encoder from scratch under a fixed compute
 > budget and improve the biological information exposed by its frozen
 > representations.
 
-Candidates may change the model, optimizer, loss, schedule, batching, kernels,
-and other training-efficiency components. The processed corpus, tokenizer,
-dependency lock, hardware budget, training clock, evaluation examples, probes,
-and metrics remain fixed.
+**Scope.** A candidate may change the model, optimizer, loss, schedule,
+batching, kernels, and other training-efficiency components. The processed
+corpus, tokenizer, dependency lock, hardware class, training clock, evaluation
+examples, probes, and metrics stay fixed.
 
-The AutoResearch baseline trains Stage 1 from scratch for exactly one hour on
-four NVIDIA L40S GPUs. The corpus, tokenizer, dependency lock, hardware class,
-training clock, and full contact evaluator stay fixed. Each round tests one
-focused change and keeps it only when P@L strictly improves; training and
-validation loss remain required diagnostics.
+**Budget.** One round is one hour of synchronized training time on four NVIDIA
+L40S GPUs, starting from scratch — roughly ten minutes on eight H100s. That is
+short enough for an agent to run many rounds per day and long enough that the
+model learns something measurable.
+
+**Evaluation.** Selecting on a single metric at a single compute budget is easy
+to game, and we assume an agent will find the cheap wins. One hour of training
+is short enough that a recipe can win by front-loading progress in ways that
+cost capacity later, and optimizing P@L alone rewards changes that suit this
+particular probe rather than the representation. So the search budget is not
+the acceptance budget: a retained recipe is re-run at about 36× the compute —
+1.5 days on four L40S — and is only credited if the gain survives the scale-up.
+Those runs are in progress and the table is not published yet.
 
 | Model | P@L | Delta vs. original | Train loss | Validation loss | Steps | Model tokens (M) | Parameters (M) | Peak VRAM (GB) | Train (h) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Original ESMC | 0.0925 | — | 2.723 | 2.699 | 5,883 | 358 | 333 | 35 | 1 |
 | **AutoResearch-Codex-Round1** | **0.0960** | **+0.0036 (+3.87%)** | **2.720** | 2.704 | 5,682 | 346 | 333 | 37 | 1 |
 
-The retained recipe adds learned residual/input routing, parameter-free
+Round 1's retained recipe adds learned residual/input routing, parameter-free
 transformer RMSNorm, depth-scaled attention-output and FFN-down initialization,
 and a final-20% linear learning-rate cooldown ending at 0.1× peak.
 
@@ -146,8 +169,8 @@ If you use Nano-ESMC, please cite this repository and the original
 
 ```bibtex
 @software{lumin_science_nano_esmc_2026,
-  author = {{Lumin Science}},
-  title = {LuminBench Nano-ESMC: A Minimal Reproduction of ESMC Language-Model Training},
+  author = {Muchen Li},
+  title = {Nano-Protein-LM: A Minimal Reproduction of ESMC Language-Model Training},
   year = {2026},
   url = {https://github.com/Lumin-Science/LuminBench-Nano-ESMC}
 }
