@@ -149,6 +149,43 @@ def sequence_mean_loss(logits: torch.Tensor, labels: torch.Tensor) -> torch.Tens
     return (per_token.sum(dim=1) / selected.sum(dim=1).clamp_min(1)).mean()
 
 
+def training_losses(
+    logits: torch.Tensor,
+    labels: torch.Tensor,
+    *,
+    reduction: str = "sequence_mean",
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Return the backward loss, sequence-mean diagnostic, and objective value.
+
+    Square-root target weights are normalized across ranks. Multiplying each
+    rank's differentiable numerator by world size cancels DDP's gradient
+    averaging, yielding the gradient of the global weighted sequence mean.
+    """
+    if reduction == "sequence_mean":
+        loss = sequence_mean_loss(logits, labels)
+        return loss, loss.detach(), loss.detach()
+    if reduction != "sqrt_mask_count":
+        raise ValueError(f"unknown training loss reduction {reduction!r}")
+    per_token = F.cross_entropy(
+        logits.flatten(0, 1), labels.flatten(), ignore_index=-100, reduction="none"
+    ).view_as(labels)
+    selected = labels != -100
+    diagnostic = (per_token.sum(1) / selected.sum(1).clamp_min(1)).mean().detach()
+    counts = selected.sum(1).to(per_token.dtype)
+    sequence_losses = per_token.sum(1) / counts.clamp_min(1)
+    weights = counts.sqrt()
+    numerator = (weights * sequence_losses).sum()
+    statistics = torch.stack((numerator.detach().double(), weights.sum().double()))
+    world_size = 1
+    if dist.is_available() and dist.is_initialized():
+        world_size = dist.get_world_size()
+        dist.all_reduce(statistics, op=dist.ReduceOp.SUM)
+    denominator = statistics[1].clamp_min(1).to(numerator.dtype)
+    loss = numerator * world_size / denominator
+    objective = (statistics[0] / statistics[1].clamp_min(1)).to(numerator.dtype)
+    return loss, diagnostic, objective
+
+
 def _distributed() -> tuple[int, int, int]:
     rank = int(os.environ.get("RANK", "0"))
     local_rank = int(os.environ.get("LOCAL_RANK", "0"))
@@ -466,6 +503,9 @@ def train(
     walltime_override: int | None = None,
 ) -> None:
     config = load_config(config_path)
+    loss_reduction = str(config.get("training_loss_reduction", "sequence_mean"))
+    if loss_reduction not in {"sequence_mean", "sqrt_mask_count"}:
+        raise ValueError(f"unknown training loss reduction {loss_reduction!r}")
     balance_batches = bool(config.get("balance_batches_across_ranks", False))
     data_manifest = validate_data_manifest(data_root)
     rank, local_rank, world_size = _distributed()
@@ -653,6 +693,7 @@ def train(
 
         optimizer.zero_grad(set_to_none=True)
         step_loss = 0.0
+        step_objective = 0.0
         balance_statistics: dict[str, object] | None = None
         step_tokens = 0
         step_filled = 0
@@ -684,9 +725,13 @@ def train(
                 output = model(input_ids=corrupted, attention_mask=attention_mask)
                 if not isinstance(output, dict):
                     raise TypeError("model output contract changed")
-                loss = sequence_mean_loss(output["logits"], labels)
+                loss, diagnostic, objective = training_losses(
+                    output["logits"], labels, reduction=loss_reduction
+                )
                 (loss / stage.gradient_accumulation).backward()
-            step_loss += float(loss.detach())
+            step_loss += float(diagnostic)
+            if loss_reduction != "sequence_mean":
+                step_objective += float(objective)
         gradient_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), clip_norm)
         optimizer.step()
         torch.cuda.synchronize(device)
@@ -751,6 +796,9 @@ def train(
             }
             if balance_statistics is not None:
                 record["batch_balance"] = balance_statistics
+            if loss_reduction != "sequence_mean":
+                record["training_loss_reduction"] = loss_reduction
+                record["objective_loss"] = step_objective / stage.gradient_accumulation
             with metrics_path.open("a") as handle:
                 handle.write(json.dumps(record, sort_keys=True) + "\n")
             print(json.dumps(record, sort_keys=True), flush=True)
