@@ -22,6 +22,7 @@ import torch.nn.functional as F
 import yaml
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+from .batch_balance import rebalance_masked_batch
 from .data import MixtureBatcher, file_sha256
 from .flash_attention import prepare_attention
 from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
@@ -465,6 +466,7 @@ def train(
     walltime_override: int | None = None,
 ) -> None:
     config = load_config(config_path)
+    balance_batches = bool(config.get("balance_batches_across_ranks", False))
     data_manifest = validate_data_manifest(data_root)
     rank, local_rank, world_size = _distributed()
     if not torch.cuda.is_available():
@@ -651,6 +653,7 @@ def train(
 
         optimizer.zero_grad(set_to_none=True)
         step_loss = 0.0
+        balance_statistics: dict[str, object] | None = None
         step_tokens = 0
         step_filled = 0
         step_sequences = 0
@@ -669,6 +672,10 @@ def train(
             input_ids = input_ids.to(device, non_blocking=True)
             attention_mask = attention_mask.to(device, non_blocking=True)
             corrupted, labels = mask_tokens(input_ids, attention_mask, tokenizer)
+            if balance_batches:
+                corrupted, labels, attention_mask, balance_statistics = rebalance_masked_batch(
+                    corrupted, labels, attention_mask
+                )
             synchronize = micro_step == stage.gradient_accumulation - 1
             sync_context = nullcontext()
             if isinstance(model, DDP) and not synchronize:
@@ -742,6 +749,8 @@ def train(
                 "attention_backend": model_options["attention_backend"],
                 "optimizer": str(config.get("optimizer", "adamw")),
             }
+            if balance_statistics is not None:
+                record["batch_balance"] = balance_statistics
             with metrics_path.open("a") as handle:
                 handle.write(json.dumps(record, sort_keys=True) + "\n")
             print(json.dumps(record, sort_keys=True), flush=True)
