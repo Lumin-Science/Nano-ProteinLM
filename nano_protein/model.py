@@ -36,6 +36,7 @@ class ESMCConfig:
     transformer_norm: str = "layernorm"
     depth_scaled_residual_init: bool = False
     ffn_hidden_dim: int | None = None
+    tie_word_embeddings: bool = False
 
     def __post_init__(self) -> None:
         if self.d_model != self.n_heads * self.head_dim:
@@ -450,6 +451,10 @@ class ESMCForMaskedLM(nn.Module):
                 nn.init.normal_(block.attention.proj.weight, mean=0.0, std=residual_std)
                 nn.init.normal_(block.ffn.down.weight, mean=0.0, std=residual_std)
 
+        if config.tie_word_embeddings:
+            # Tie after initialization to preserve all other tensor draws and RNG state.
+            self.head_out.weight = self.embedding.weight
+
     @staticmethod
     def _initialize(module: nn.Module) -> None:
         if isinstance(module, nn.Linear | nn.Embedding):
@@ -639,7 +644,8 @@ def expected_parameter_count(config: ESMCConfig) -> int:
     final_norm = 0 if config.transformer_norm == "rmsnorm" else width
     head = (width * width + width) + 2 * width + (width * config.vocab_size + config.vocab_size)
     routing = 2 * config.n_layers if config.learned_residual_routing else 0
-    return embedding + config.n_layers * block + final_norm + head + routing
+    tied_savings = embedding if config.tie_word_embeddings else 0
+    return embedding + config.n_layers * block + final_norm + head + routing - tied_savings
 
 
 def parameter_groups(model: nn.Module, *, weight_decay: float) -> list[dict[str, object]]:
