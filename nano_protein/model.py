@@ -35,10 +35,17 @@ class ESMCConfig:
     learned_residual_routing: bool = False
     transformer_norm: str = "layernorm"
     depth_scaled_residual_init: bool = False
+    ffn_hidden_dim: int | None = None
 
     def __post_init__(self) -> None:
         if self.d_model != self.n_heads * self.head_dim:
             raise ValueError("ESMC requires 64-dimensional attention heads")
+        if self.ffn_hidden_dim is not None and (
+            not isinstance(self.ffn_hidden_dim, int)
+            or isinstance(self.ffn_hidden_dim, bool)
+            or self.ffn_hidden_dim <= 0
+        ):
+            raise ValueError("ffn_hidden_dim must be a positive integer or None")
         if self.rotary_base <= 0.0:
             raise ValueError("rotary_base must be positive")
         if self.attention_backend not in {"flash", "flash3", "auto", "math"}:
@@ -364,7 +371,9 @@ class ESMCAttention(nn.Module):
 class ESMCFeedForward(nn.Module):
     def __init__(self, config: ESMCConfig) -> None:
         super().__init__()
-        hidden = int((((8.0 / 3.0) * config.d_model) + 255) // 256 * 256)
+        hidden = config.ffn_hidden_dim
+        if hidden is None:
+            hidden = int((((8.0 / 3.0) * config.d_model) + 255) // 256 * 256)
         self.norm = _transformer_norm(config.d_model, config.transformer_norm)
         self.gate_up = nn.Linear(config.d_model, 2 * hidden, bias=False)
         self.down = nn.Linear(hidden, config.d_model, bias=False)
@@ -615,7 +624,9 @@ def expected_parameter_count(config: ESMCConfig) -> int:
     """Return the exact parameter count without materializing a large model."""
 
     width = config.d_model
-    hidden = int((((8.0 / 3.0) * width) + 255) // 256 * 256)
+    hidden = config.ffn_hidden_dim
+    if hidden is None:
+        hidden = int((((8.0 / 3.0) * width) + 255) // 256 * 256)
     transformer_norm = 0 if config.transformer_norm == "rmsnorm" else 6 * width
     block = (
         transformer_norm  # attention, Q/K, and FFN pre-normalization

@@ -574,6 +574,7 @@ def train(
         "transformer_norm": str(config.get("transformer_norm", "layernorm")),
         "depth_scaled_residual_init": bool(config.get("depth_scaled_residual_init", False)),
         "rotary_base": float(config.get("rotary_base", 10_000.0)),
+        "ffn_hidden_dim": config.get("ffn_hidden_dim"),
     }
     model = build_model(str(config["model"]), **model_options).to(device)
     parameter_count = count_parameters(model)
