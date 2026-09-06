@@ -11,6 +11,7 @@ import subprocess
 import time
 from contextlib import nullcontext
 from datetime import timedelta
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ import yaml
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from .data import MixtureBatcher, file_sha256
+from .flash_attention import prepare_attention
 from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
 from .schedule import Stage, stage_for_progress, stage_for_time, wsd_multiplier
 from .sharded_data import validate_search_contracts
@@ -469,6 +471,7 @@ def train(
         raise RuntimeError("training requires CUDA")
     device = torch.device("cuda", local_rank)
     torch.cuda.set_device(device)
+    attention = prepare_attention(str(config.get("attention_backend", "flash")), device)
     torch.set_float32_matmul_precision("high")
     seed = int(config.get("seed", 20260821))
     random.seed(seed + rank)
@@ -507,9 +510,13 @@ def train(
                 "cuda": torch.version.cuda,
                 "torch": torch.__version__,
                 "visible_gpu": torch.cuda.get_device_name(device),
-                "attention_implementation": (
-                    "whole-transformer-packed-aten::_flash_attention_forward"
-                ),
+                "attention_implementation": f"whole-transformer-packed-{attention['operator']}",
+                "attention_kernel": attention,
+                "python_executable": os.path.realpath(os.sys.executable),
+                "runtime_packages": {
+                    name: version(name)
+                    for name in ("torch", "numpy", "pyarrow", "PyYAML", "huggingface-hub")
+                },
                 "uv_lock": str(uv_lock),
                 "uv_lock_sha256": file_sha256(uv_lock),
                 **_git_state(project_root),

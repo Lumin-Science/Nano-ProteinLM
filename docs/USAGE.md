@@ -70,6 +70,27 @@ Each successful run records its resolved configuration, immutable data
 revision, environment and corpus receipts, metrics, completion receipt, final
 checkpoint, and checkpoint hash.
 
+### H100 FlashAttention-3 baseline
+
+`configs/esmc-171m-original-h100-fa3-12h.yaml` keeps the original ESMC-171M
+recipe and selects `attention_backend: flash3` with a 43,200-second budget.
+It requires Hopper GPUs and Linux/CUDA 12.6 or 13.0 PyTorch. The dependency
+lock uses CUDA 12.6; CUDA 13.0 measurements must identify their runtime explicitly.
+The first use downloads the matching pinned FA3 build from
+`kernels-community/flash-attn3` at revision
+`e29f138fc363b396e5d2706c8a5f6fa7d36f41e0`; packaged files are checked
+against SHA-256 hashes before importing the kernel.
+
+Qualify forward/backward numerics and verify FA3 profiler events before training:
+
+```bash
+uv run --frozen python scripts/check_environment.py \
+  --require-gpus 4 --attention-backend flash3 --output /path/to/ENVIRONMENT.json
+```
+
+Pass the H100 config and `WALLTIME_SECONDS=43200` to the training entry point.
+Training receipts identify the actual attention backend and pinned kernel build.
+
 ## Evaluate
 
 The production training-and-evaluation entry point is:

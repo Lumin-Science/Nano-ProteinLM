@@ -18,6 +18,8 @@ import torch.nn.functional as F
 import torch.utils.checkpoint as torch_checkpoint
 from torch import nn
 
+from .flash_attention import load_fa3
+
 
 @dataclass(frozen=True)
 class ESMCConfig:
@@ -39,7 +41,7 @@ class ESMCConfig:
             raise ValueError("ESMC requires 64-dimensional attention heads")
         if self.rotary_base <= 0.0:
             raise ValueError("rotary_base must be positive")
-        if self.attention_backend not in {"flash", "auto", "math"}:
+        if self.attention_backend not in {"flash", "flash3", "auto", "math"}:
             raise ValueError(f"unknown attention backend {self.attention_backend!r}")
         if self.transformer_norm not in {"layernorm", "rmsnorm"}:
             raise ValueError(f"unknown transformer norm {self.transformer_norm!r}")
@@ -185,6 +187,7 @@ def _flash_attention_packed(
     cumulative_lengths: torch.Tensor,
     *,
     maximum_length: int,
+    backend: str = "flash",
 ) -> torch.Tensor:
     """Run the uv-locked in-tree FA2 kernel on compacted protein tokens."""
 
@@ -197,6 +200,20 @@ def _flash_attention_packed(
         value = value.to(compute_dtype)
     if query.dtype not in {torch.float16, torch.bfloat16}:
         raise RuntimeError("variable-length FlashAttention requires fp16 or bf16")
+    if backend == "flash3":
+        if torch.cuda.get_device_capability(query.device)[0] != 9:
+            raise RuntimeError("FlashAttention-3 requires a Hopper GPU")
+        return load_fa3().flash_attn_varlen_func(
+            query,
+            key,
+            value,
+            cumulative_lengths,
+            cumulative_lengths,
+            maximum_length,
+            maximum_length,
+            softmax_scale=query.shape[-1] ** -0.5,
+            causal=False,
+        )
     if not hasattr(torch.ops.aten, "_flash_attention_forward"):
         raise RuntimeError(
             "this Torch build lacks aten::_flash_attention_forward; run "
@@ -224,6 +241,8 @@ def _varlen_flash_attention(
     key: torch.Tensor,
     value: torch.Tensor,
     attention_mask: torch.Tensor,
+    *,
+    backend: str = "flash",
 ) -> torch.Tensor:
     """Compact a dense batch, run FA2 varlen, and restore padded layout.
 
@@ -251,6 +270,7 @@ def _varlen_flash_attention(
         value_packed,
         cumulative,
         maximum_length=length,
+        backend=backend,
     )
     flat_context = torch.zeros_like(query_blhd).reshape(-1, heads, head_dim)
     flat_context = flat_context.index_copy(0, packed_positions, packed_context)
@@ -294,6 +314,7 @@ class ESMCAttention(nn.Module):
             value,
             cumulative_lengths,
             maximum_length=maximum_length,
+            backend=self.backend,
         )
         return self.proj(context.reshape(-1, width))
 
@@ -323,8 +344,10 @@ class ESMCAttention(nn.Module):
             weights = torch.softmax(scores.float(), dim=-1).to(query.dtype)
             context = weights @ value
         else:
-            if self.backend == "flash" and key_mask is not None and query.is_cuda:
-                context = _varlen_flash_attention(query, key, value, attention_mask)
+            if self.backend in {"flash", "flash3"} and key_mask is not None and query.is_cuda:
+                context = _varlen_flash_attention(
+                    query, key, value, attention_mask, backend=self.backend
+                )
             else:
                 with _sdpa_context(self.backend, device=query.device):
                     context = F.scaled_dot_product_attention(
@@ -522,8 +545,13 @@ class ESMCForMaskedLM(nn.Module):
         output_hidden_states: bool = False,
         return_dict: bool = True,
     ) -> dict[str, object] | tuple[object, ...]:
+        if self.config.attention_backend == "flash3" and not output_attentions:
+            if not input_ids.is_cuda:
+                raise RuntimeError("FlashAttention-3 requires CUDA inputs")
+            if attention_mask is None:
+                attention_mask = torch.ones_like(input_ids, dtype=torch.bool)
         if (
-            self.config.attention_backend == "flash"
+            self.config.attention_backend in {"flash", "flash3"}
             and input_ids.is_cuda
             and attention_mask is not None
             and not output_attentions
