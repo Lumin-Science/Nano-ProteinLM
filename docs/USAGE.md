@@ -105,3 +105,13 @@ default; a receipt-bound static scoring cache can be enabled with
 `CONTACT_SCORING_CACHE_ROOT`.
 See [`EVALUATION.md`](EVALUATION.md) for dataset lineage, split roles, metrics,
 and restartable execution details.
+
+### ESMC-171M default at global batch 1,024
+
+`configs/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml` prepares the
+Stage-1 default with peak LR `5e-4`, 1,000 warmup steps, and 100,000 optimizer
+steps. On four H100s it uses microbatch 64 with accumulation 4 and FA3/BF16.
+The 16-hour wall-time guard allows the projected roughly 13-hour step budget
+to finish; overriding it to 43,200 seconds can stop before 100k steps.
+See [the three-way recipe comparison](171M_RECIPES.md) for the retained R02
+settings and the paper reference. This preset does not change an active run.
