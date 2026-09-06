@@ -1,0 +1,16 @@
+{
+  "source_repository": "https://github.com/Lumin-Science/LuminBench-Nano-ESMC",
+  "source_branch": "autoresearch-171m-val-loss",
+  "source_commit": "1a194f4dd6c1d283a6c561ca45b0485eaa82fab2",
+  "published_snapshot_utc": "2026-09-06T22:34:54Z",
+  "accepted_endpoint": "fc0a1253a8919615714fd7f95bbe1a7a00235172",
+  "completed_methods": 30,
+  "completed_runs": 60,
+  "accepted_changes": 5,
+  "audit_archive_files_verified": 789,
+  "audit_archive_sha256": "45004ecbbcb821dbca765ec322bc2de95a1a9509964634b279a244eb5bf03608",
+  "summary_verification": "All mean validation losses, sample SDs and mean P@L values reproduced from the 60 seed rows; all five accepted improvements exceed their candidate sample SD.",
+  "main_import_note": "Only R01 reference configs and the four requested accepted implementation commits were cherry-picked. Main retains FA3 and its existing schedule functionality. Historical Program 2 runner commands belong to the source branch. R30 is pending in this published snapshot.",
+  "training_corpus_receipts_verified": 60,
+  "training_data_matches_h100_comparison": true
+}

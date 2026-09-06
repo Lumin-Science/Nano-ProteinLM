@@ -179,6 +179,19 @@ loss mean and standard deviation are not published in the campaign record.
 See [`docs/AUTORESEARCH.md`](docs/AUTORESEARCH.md) for the experiment contract
 and [`docs/BASELINES.md`](docs/BASELINES.md) for detailed baseline context.
 
+### Validation-loss AutoResearch (Program 2)
+
+The separate Program 2 campaign completed 30 paired-seed methods through R29.
+Its accepted sequence is Muon → balanced ranks → square-root target-count loss
+weights → FFN width 1536 → tied embeddings. Mean one-hour validation loss fell
+from 2.63868 to 2.58057; these use a smaller validation sample and training
+budget than the completed H100 comparison above.
+
+See the [published Program 2 snapshot and audit](reports/program2/README.md) and
+[architecture/config differences with matched 100k H100 presets](docs/PROGRAM2_SCALEUP.md).
+The accepted implementations are available on main; the new H100 presets are
+prepared and have not been launched.
+
 ## Usage
 
 From a fresh clone with `uv >=0.11.31,<0.12`, a supported NVIDIA driver, and

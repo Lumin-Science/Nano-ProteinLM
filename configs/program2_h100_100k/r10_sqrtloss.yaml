@@ -1,0 +1,51 @@
+# PREPARED, NOT LAUNCHED: matched 100k-step, four-H100 scale-up.
+# R10 retains R04 and adds sqrt(masked-target-count) weighting.
+# Base LR/WD and Muon group multipliers match the completed H100 R02.
+# Program 2 LayerNorm/fixed residuals/standard init/RoPE 10k are retained.
+# See docs/PROGRAM2_SCALEUP.md for the exact comparison and accumulation semantics.
+schema_version: 1
+model: esmc-171m
+expected_parameter_count: 170671168
+seed: 20260824
+optimizer: muon
+learning_rate: 0.0005
+weight_decay: 0.01
+betas:
+- 0.9
+- 0.95
+gradient_clip_norm: 1.0
+warmup_steps: 1000
+attention_backend: flash3
+gradient_checkpointing: false
+compile: false
+compile_mode: default
+max_steps: 100000
+schedule_steps: 100000
+walltime_seconds: 57600
+log_interval: 10
+peak_bf16_tflops_per_gpu: 989.5
+stages:
+- name: stage1
+  context_length: 512
+  micro_batch_size: 64
+  gradient_accumulation: 4
+  mixture:
+    uniref90: 0.36
+    mgnify: 0.11
+    omg_img: 0.54
+muon_momentum: 0.95
+muon_lr_scale: 0.8
+muon_attention_lr_scale: 0.9
+muon_ffn_lr_scale: 0.75
+muon_weight_decay_scale: 0.75
+muon_nesterov: true
+muon_ns_steps: 5
+muon_adjust_lr_fn: match_rms_adamw
+transformer_norm: layernorm
+learned_residual_routing: false
+depth_scaled_residual_init: false
+rotary_base: 10000.0
+ffn_hidden_dim: 2048
+tie_word_embeddings: false
+balance_batches_across_ranks: true
+training_loss_reduction: sqrt_mask_count
