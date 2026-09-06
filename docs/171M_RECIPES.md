@@ -39,19 +39,23 @@ A.1.1–A.1.4.1 and Tables S3–S4 of
 
 ## Matched comparison contract
 
-### 10k-step pilot
+### Superseded 10k-step pilot
 
-The initial paired pilot uses
+The initial paired pilot used
 [`esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml`](../configs/esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml)
 on Fir `fc10111` and
 [`esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml`](../configs/esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml)
-on Fir `fc10212`. Both stop at 10,000 optimizer steps, with `schedule_steps`
-also set to 10,000 and a four-hour emergency guard. All other settings match
-the respective 100k-step presets, including 1,000-step warmup, base LR 5e-4,
-base WD 0.01, global batch 1,024, and seed 20260824. Each completed pilot sees
-10.24 million sequences. Use the shared held-out MLM evaluation below.
+on Fir `fc10212`. The user corrected the intended budget to 100,000 steps
+and explicitly requested cancellation and fresh relaunches. Both pilot
+training steps were cancelled on September 6, 2026, while preserving the
+parent allocations and logs. These configs remain historical records; the
+active default and R02 recipes are the 100k-step presets linked above.
 
 ### Full comparison
+
+Run the default on Fir `fc10111` and R02 on `fc10212` from fresh initialization.
+Both `max_steps` and `schedule_steps` must be 100,000; the wall-time guard is
+57,600 seconds (16 hours). Each completed run sees 102.4 million sequences.
 
 Both prepared recipes use seed 20260824, global batch 1,024, context 512,
 identical source mixture weights, 1,000-step warmup then constant LR, base
@@ -116,7 +120,12 @@ The historical one-hour score cannot serve as the measured outcome of the
 aligned 100k-step comparison. The exact paper run remains a literature
 reference while numerical hyperparameters and source data are missing.
 
-The four-H100 default timing estimate is approximately **12.8 hours for 100k
-steps**, extrapolated from the measured batch-256 FA3 throughput. Batch-1,024
-and R02 timings have not been measured. The already-running batch-256 job
-loads its own immutable config at startup and is not changed by this preset.
+The initial batch-1,024 pilot timing samples measured approximately **0.430
+seconds per step for the default** and **0.462 seconds per step for R02**.
+Extrapolated to 100k steps, these are approximately **11.9 hours** and
+**12.8 hours**, respectively, plus setup, checkpointing, and evaluation.
+Refresh these estimates from the full runs' measured progress. Launch receipts
+and preserved pilot logs are recorded under `.exps/fir-171m-paired-100k-20260906`
+and `.exps/fir-171m-paired-10k-20260906` locally, with corresponding persistent
+run outputs under `/scratch/muchenli/Nano-Protein-LM-paired-100k-20260906` and
+`/scratch/muchenli/Nano-Protein-LM-paired-10k-20260906` on Fir.
