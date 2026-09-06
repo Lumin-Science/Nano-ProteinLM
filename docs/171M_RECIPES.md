@@ -3,7 +3,8 @@
 “175M” in this project refers to the 24-layer, width-768, 12-head family.
 The new default is prepared in
 [`esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml`](../configs/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml).
-Its peak LR of **5e-4** and **1,000-step warmup** are explicit user settings.
+Its peak LR of **5e-4**, base weight decay of **0.01**, and **1,000-step warmup**
+are explicit user settings.
 The matched R02 variant is prepared in
 [`esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml`](../configs/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml).
 The table now compares these two aligned presets with the paper reference.
@@ -15,7 +16,7 @@ not yet been trained or quality-qualified.
 | Parameters | 170,559,856 | 170,671,168 | 170.7M in the scaling experiment |
 | Optimizer | Muon on transformer matrices; AdamW elsewhere | AdamW | AdamW |
 | Peak/base LR | **0.0005**; Muon attention multiplier 0.9, FFN multiplier 0.75 | **0.0005** | Numerical calibrated value not disclosed; µP transfer described |
-| Weight decay | **0.0367424**; Muon multiplier 0.75 | 0.0367424 | Selective decay with µP scaling; numerical base not disclosed |
+| Weight decay | **0.01**; Muon multiplier 0.75 gives 0.0075 | **0.01** | Selective decay with µP scaling; numerical base not disclosed |
 | Adam betas / epsilon | (0.9, 0.95) / 1e-8 | (0.9, 0.95) / 1e-8 | (0.9, 0.95) / 1e-8 |
 | Gradient clip norm | 1.0 | 1.0 | 1.0 |
 | Warmup | **1,000 optimizer steps** | **1,000 optimizer steps** | 1,000 steps in family training specification |
@@ -38,9 +39,23 @@ A.1.1–A.1.4.1 and Tables S3–S4 of
 
 ## Matched comparison contract
 
+### 10k-step pilot
+
+The initial paired pilot uses
+[`esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml`](../configs/esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml)
+on Fir `fc10111` and
+[`esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml`](../configs/esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml)
+on Fir `fc10212`. Both stop at 10,000 optimizer steps, with `schedule_steps`
+also set to 10,000 and a four-hour emergency guard. All other settings match
+the respective 100k-step presets, including 1,000-step warmup, base LR 5e-4,
+base WD 0.01, global batch 1,024, and seed 20260824. Each completed pilot sees
+10.24 million sequences. Use the shared held-out MLM evaluation below.
+
+### Full comparison
+
 Both prepared recipes use seed 20260824, global batch 1,024, context 512,
 identical source mixture weights, 1,000-step warmup then constant LR, base
-LR 5e-4, base WD 0.0367424, Adam betas (0.9, 0.95), clip norm 1.0, BF16/FA3,
+LR 5e-4, base WD 0.01, Adam betas (0.9, 0.95), clip norm 1.0, BF16/FA3,
 no compilation or gradient checkpointing, and 100,000 Stage-1 optimizer steps.
 Use the same verified data root and four-H100 layout for both runs.
 
@@ -48,9 +63,9 @@ The intended differences are the R02 optimizer and architecture. At peak:
 
 | Parameter group | Default LR | R02 configured LR | Default WD | R02 WD |
 |---|---:|---:|---:|---:|
-| Attention matrices | 0.0005 | 0.00045 | 0.0367424 | 0.0275568 |
-| FFN matrices | 0.0005 | 0.000375 | 0.0367424 | 0.0275568 |
-| Decayed AdamW parameters | 0.0005 | 0.0005 | 0.0367424 | 0.0367424 |
+| Attention matrices | 0.0005 | 0.00045 | 0.01 | 0.0075 |
+| FFN matrices | 0.0005 | 0.000375 | 0.01 | 0.0075 |
+| Decayed AdamW parameters | 0.0005 | 0.0005 | 0.01 | 0.01 |
 | Non-decayed AdamW parameters | 0.0005 | 0.0005 | 0 | 0 |
 
 Muon retains `match_rms_adamw` adjustment, momentum 0.95, five Newton–Schulz
@@ -72,11 +87,15 @@ uncertainty; repeated paired training seeds are needed for that.
 
 ## Project choices and evidence limits
 
-The default weight decay remains at the preceding batch-1,024 proposal's
-0.0367424. After the user set LR to 5e-4, it no longer preserves exactly the
-old batch-256 decay per processed sequence. That optional matching convention
-would instead give WD ≈ 0.048; this has not been applied. The user-specified
-1,000-step warmup also deliberately replaces sample-count-matched warmup.
+The shared base weight decay is the user-selected 0.01. This choice is informed
+by related protein pretraining recipes, particularly
+[AMPLIFY 120M/350M](https://huggingface.co/chandar-lab/AMPLIFY_350M#training-descritpion),
+which uses AdamW with weight decay 0.01, betas (0.9, 0.95), BF16, context 512,
+and a 1,000-step warmup in Stage 1. It is a project choice, not a recovered
+ESMC calibration or a guarantee of optimality for this 100k-step budget.
+No additional batch-size or µP multiplier is applied to the shared base WD;
+R02 retains its explicit Muon multiplier of 0.75. The shared 1,000-step warmup
+is also a user setting rather than a sample-count-matched transfer.
 
 The repository's older `esmc-171m-original.yaml` is an ESMC-style adaptation,
 with assumed proxy LR/WD values transferred by `mup_hyperparameters`; those

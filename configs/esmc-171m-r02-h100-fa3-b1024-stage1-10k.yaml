@@ -30,11 +30,11 @@ transformer_norm: rmsnorm
 depth_scaled_residual_init: true
 compile: false
 compile_mode: default
-max_steps: 100000
-schedule_steps: 100000
-# Shared emergency guard. Compare completed 100k-step runs, not partial runs
-# that hit the guard; optimizer-step matching does not imply equal wall time.
-walltime_seconds: 57600
+max_steps: 10000
+schedule_steps: 10000
+# Shared four-hour emergency guard. Compare completed 10k-step runs;
+# matching optimizer steps does not imply equal wall time.
+walltime_seconds: 14400
 log_interval: 10
 peak_bf16_tflops_per_gpu: 989.5
 stages:

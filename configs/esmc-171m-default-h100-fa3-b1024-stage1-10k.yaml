@@ -1,4 +1,4 @@
-# Default batch-1024 Stage-1 run prepared for Fir H100; not yet launched.
+# Default batch-1024 Stage-1 10k-step pilot for Fir H100.
 # Four H100s: 64 sequences/GPU/microstep * 4 accumulation steps * 4 GPUs.
 # Peak LR and warmup are explicit user settings (5e-4 and 1,000 steps).
 # Base weight decay is the user-selected 0.01, informed by related protein
@@ -18,11 +18,10 @@ attention_backend: flash3
 gradient_checkpointing: false
 compile: false
 compile_mode: default
-max_steps: 100000
-schedule_steps: 100000
-# A 16-hour guard permits the projected ~13-hour step budget to finish.
-# Use --walltime-seconds 43200 if the original 12-hour cap is selected instead.
-walltime_seconds: 57600
+max_steps: 10000
+schedule_steps: 10000
+# Four-hour emergency guard; the scientific budget is 10,000 optimizer steps.
+walltime_seconds: 14400
 log_interval: 10
 peak_bf16_tflops_per_gpu: 989.5
 stages:
