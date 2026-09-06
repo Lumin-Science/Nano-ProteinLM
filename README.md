@@ -99,6 +99,18 @@ splits, probe definitions, P-CORE results, confidence intervals, and execution.
 
 ## Baselines
 
+The matched 100k-step, four-H100 ESMC-171M comparison has completed:
+
+| Recipe | Validation loss ↓ | Full contact P@L ↑ | Training time |
+|---|---:|---:|---:|
+| Project default (AdamW) | 2.47436 | 26.50% | 12h 01m |
+| R02 (Muon + retained architecture) | **2.43698** | **30.31%** | 12h 57m |
+
+Both use batch 1,024, base LR 5e-4, base WD 0.01, and 1,000-step warmup.
+Evaluation uses 4,096 held-out MLM sequences and 20,775 contact chains;
+one training seed per recipe. See the
+[results, confidence intervals, and audit receipts](reports/fir-171m-100k-20260906/README.md).
+
 ## AutoResearch
 
 The reason the data and the evaluation are frozen is that we want to hand this

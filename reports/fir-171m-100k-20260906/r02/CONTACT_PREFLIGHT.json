@@ -1,0 +1,11 @@
+{
+  "torch": "2.13.0+cu130",
+  "sklearn": "1.9.0",
+  "numpy": "2.4.6",
+  "scipy": "1.17.1",
+  "dataset_manifest_sha256": "c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3",
+  "evaluation_chains": 20775,
+  "probe_chains": 20,
+  "contact_shards": 16,
+  "external_source_manifest_sha256": "2fad51df6f4f2586b6648b9e4f575058f1999eba60175cba9fd7834f36951e55"
+}

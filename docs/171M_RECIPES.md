@@ -8,8 +8,11 @@ are explicit user settings.
 The matched R02 variant is prepared in
 [`esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml`](../configs/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml).
 The table now compares these two aligned presets with the paper reference.
-The original one-hour R02 record remains unchanged; the aligned variant has
-not yet been trained or quality-qualified.
+Both aligned variants completed training and evaluation on September 6, 2026.
+R02 reached validation loss **2.43698** and P@L **30.31%**, compared with
+**2.47436** and **26.50%** for default. See the
+[verified 100k results and receipts](../reports/fir-171m-100k-20260906/README.md).
+The original one-hour R02 record remains unchanged.
 
 | Setting | Aligned 171M R02 recipe | New project default | ESMC paper reference |
 |---|---|---|---|
@@ -120,11 +123,8 @@ The historical one-hour score cannot serve as the measured outcome of the
 aligned 100k-step comparison. The exact paper run remains a literature
 reference while numerical hyperparameters and source data are missing.
 
-The initial batch-1,024 pilot timing samples measured approximately **0.430
-seconds per step for the default** and **0.462 seconds per step for R02**.
-Extrapolated to 100k steps, these are approximately **11.9 hours** and
-**12.8 hours**, respectively, plus setup, checkpointing, and evaluation.
-Refresh these estimates from the full runs' measured progress. Launch receipts
+The completed 100k runs took **12h 00m 42s for default** and **12h 56m 30s
+for R02**, excluding setup, final checkpointing, and evaluation. Launch receipts
 and preserved pilot logs are recorded under `.exps/fir-171m-paired-100k-20260906`
 and `.exps/fir-171m-paired-10k-20260906` locally, with corresponding persistent
 run outputs under `/scratch/muchenli/Nano-Protein-LM-paired-100k-20260906` and
