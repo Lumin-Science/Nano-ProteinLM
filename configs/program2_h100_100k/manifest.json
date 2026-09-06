@@ -1,8 +1,13 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "plan": "four_cumulative_r02_rope10k_settings",
   "source_branch": "autoresearch-171m-val-loss",
   "source_snapshot_commit": "1a194f4dd6c1d283a6c561ca45b0485eaa82fab2",
-  "architecture_lineage": "Program 2: LayerNorm, fixed residuals, default initialization, RoPE 10000; accepted changes are cumulative.",
+  "base_recipe": "configs/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml",
+  "base_recipe_training_commit": "68f8cdc2cd8db6a0edacaea0cad687127632aa3f",
+  "base_reference_checkpoint_sha256": "ad26e0c6e363ddaf1b37f7f079272ada83951bd3c6dcb8acfbdfdb9030c57cc9",
+  "base_reference_use": "Historical comparison only; no checkpoint resume. All four runs initialize from scratch.",
+  "architecture_lineage": "Completed H100 R02 with RoPE base reset to 10000. Retain RMSNorm, learned residual/input routing, depth-scaled initialization and FFN width 2048. Add batch balance, sqrt loss and tied embeddings cumulatively.",
   "optimizer_alignment": "All configured peak learning rates and weight decay groups match the completed H100 R02, before Muon matrix-shape adjustment. Historical Program 2 group multipliers of 1.0 are not retained in these new presets.",
   "shared": {
     "base_learning_rate": 0.0005,
@@ -19,18 +24,37 @@
     "attention_backend": "flash3",
     "walltime_guard_seconds": 57600,
     "validation_sequences": 4096,
-    "contact_chains": 20775
+    "contact_chains": 20775,
+    "ffn_hidden_dim": 2048,
+    "transformer_norm": "rmsnorm",
+    "learned_residual_routing": true,
+    "depth_scaled_residual_init": true,
+    "rotary_base": 10000.0,
+    "initialization": "from_scratch"
   },
   "loss_accumulation": "Retain the imported R10 objective: normalize weights across the four ranks within each 256-sequence microstep, then average four microstep gradients per optimizer update. This is not one joint sqrt-weight normalization across all 1024 examples.",
+  "deferred": [
+    {
+      "method": "r22_ffn1536",
+      "status": "todo_not_in_active_plan",
+      "reason": "User deferred narrower FFNs; preserve full FFN width 2048 in all four settings.",
+      "historical_config": "configs/program2/r22_ffn1536_seed42.yaml",
+      "todo": "TODO.md"
+    }
+  ],
   "runs": [
     {
-      "method": "r01_muon",
-      "config": "configs/program2_h100_100k/r01_muon.yaml",
-      "config_sha256": "2e7b47969b202bcc107438ed6d58677ea128df89d6913c9f28227ce80ae2e344",
+      "setting": 1,
+      "method": "r02_rope10k",
+      "config": "configs/program2_h100_100k/r02_rope10k.yaml",
+      "config_sha256": "d0ecf91435e98feb0e4b1e731e21582fc21ee7f9387196a32741b4393839e1f2",
       "status": "prepared_not_launched",
+      "initialization": "from_scratch",
       "cumulative_parent": null,
-      "incremental_changes": {},
-      "parameters": 170671168,
+      "incremental_changes": {
+        "rotary_base": 10000.0
+      },
+      "parameters": 170559856,
       "optimizer_groups": [
         {
           "name": "muon_attention",
@@ -55,23 +79,25 @@
         },
         {
           "name": "adamw_no_decay",
-          "parameter_tensors": 149,
-          "parameter_count": 113728,
+          "parameter_tensors": 6,
+          "parameter_count": 2416,
           "configured_peak_lr": 0.0005,
           "weight_decay": 0.0
         }
       ]
     },
     {
+      "setting": 2,
       "method": "r04_batchbalance",
       "config": "configs/program2_h100_100k/r04_batchbalance.yaml",
-      "config_sha256": "a631887a5bd82086587718ad43018f08889c3a0ade59eade68de8f0aa847d4b6",
+      "config_sha256": "f3e0193b1bee00f43544f305a9371c46a8b46390b89eea85fd0475a08c52bc87",
       "status": "prepared_not_launched",
-      "cumulative_parent": "r01_muon",
+      "initialization": "from_scratch",
+      "cumulative_parent": "r02_rope10k",
       "incremental_changes": {
         "balance_batches_across_ranks": true
       },
-      "parameters": 170671168,
+      "parameters": 170559856,
       "optimizer_groups": [
         {
           "name": "muon_attention",
@@ -96,23 +122,25 @@
         },
         {
           "name": "adamw_no_decay",
-          "parameter_tensors": 149,
-          "parameter_count": 113728,
+          "parameter_tensors": 6,
+          "parameter_count": 2416,
           "configured_peak_lr": 0.0005,
           "weight_decay": 0.0
         }
       ]
     },
     {
+      "setting": 3,
       "method": "r10_sqrtloss",
       "config": "configs/program2_h100_100k/r10_sqrtloss.yaml",
-      "config_sha256": "23064fc92419cea10a9644a05a669205a45e986f0f291e037451d5eafe352d7c",
+      "config_sha256": "06d6173acd831f1b553777b689066522d2c75261d1b34ec2bc10c07df008786c",
       "status": "prepared_not_launched",
+      "initialization": "from_scratch",
       "cumulative_parent": "r04_batchbalance",
       "incremental_changes": {
         "training_loss_reduction": "sqrt_mask_count"
       },
-      "parameters": 170671168,
+      "parameters": 170559856,
       "optimizer_groups": [
         {
           "name": "muon_attention",
@@ -137,66 +165,26 @@
         },
         {
           "name": "adamw_no_decay",
-          "parameter_tensors": 149,
-          "parameter_count": 113728,
+          "parameter_tensors": 6,
+          "parameter_count": 2416,
           "configured_peak_lr": 0.0005,
           "weight_decay": 0.0
         }
       ]
     },
     {
-      "method": "r22_ffn1536",
-      "config": "configs/program2_h100_100k/r22_ffn1536.yaml",
-      "config_sha256": "2094ce2c4ff4afb8ed9f5580d93539ceffd7c557655d8608118f081aed34d8a2",
-      "status": "prepared_not_launched",
-      "cumulative_parent": "r10_sqrtloss",
-      "incremental_changes": {
-        "ffn_hidden_dim": 1536,
-        "expected_parameter_count": 142359616
-      },
-      "parameters": 142359616,
-      "optimizer_groups": [
-        {
-          "name": "muon_attention",
-          "parameter_tensors": 48,
-          "parameter_count": 56623104,
-          "configured_peak_lr": 0.00045000000000000004,
-          "weight_decay": 0.0075
-        },
-        {
-          "name": "muon_ffn",
-          "parameter_tensors": 48,
-          "parameter_count": 84934656,
-          "configured_peak_lr": 0.000375,
-          "weight_decay": 0.0075
-        },
-        {
-          "name": "adamw_decay",
-          "parameter_tensors": 3,
-          "parameter_count": 688128,
-          "configured_peak_lr": 0.0005,
-          "weight_decay": 0.01
-        },
-        {
-          "name": "adamw_no_decay",
-          "parameter_tensors": 149,
-          "parameter_count": 113728,
-          "configured_peak_lr": 0.0005,
-          "weight_decay": 0.0
-        }
-      ]
-    },
-    {
+      "setting": 4,
       "method": "r29_tied",
       "config": "configs/program2_h100_100k/r29_tied.yaml",
-      "config_sha256": "9735134d8ced8b54593912070ea3ebb4e6d859f3c53254ba403bcba7bf43d36b",
+      "config_sha256": "8ed1677ba55dcc1c34eede778627324a126ea0b42a2e73f602865964e28e5fb9",
       "status": "prepared_not_launched",
-      "cumulative_parent": "r22_ffn1536",
+      "initialization": "from_scratch",
+      "cumulative_parent": "r10_sqrtloss",
       "incremental_changes": {
         "tie_word_embeddings": true,
-        "expected_parameter_count": 142310464
+        "expected_parameter_count": 170510704
       },
-      "parameters": 142310464,
+      "parameters": 170510704,
       "optimizer_groups": [
         {
           "name": "muon_attention",
@@ -208,7 +196,7 @@
         {
           "name": "muon_ffn",
           "parameter_tensors": 48,
-          "parameter_count": 84934656,
+          "parameter_count": 113246208,
           "configured_peak_lr": 0.000375,
           "weight_decay": 0.0075
         },
@@ -221,13 +209,13 @@
         },
         {
           "name": "adamw_no_decay",
-          "parameter_tensors": 149,
-          "parameter_count": 113728,
+          "parameter_tensors": 6,
+          "parameter_count": 2416,
           "configured_peak_lr": 0.0005,
           "weight_decay": 0.0
         }
       ]
     }
   ],
-  "validation": "Exact full-size model counts and optimizer ownership/group LR/WD checked on meta tensors; imported unit suite passes on CPU including real DDP. No new H100 training or throughput qualification has been run."
+  "validation": "All four exact model counts, cumulative config differences, completed-R02 base equivalence except RoPE, fixed 2048 FFNs, unique optimizer ownership and matching group LR/WD verified on meta tensors. Implementation is unchanged from the prior 32-test passing import; H100 qualification and training are planned, not launched."
 }

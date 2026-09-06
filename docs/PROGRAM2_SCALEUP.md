@@ -1,11 +1,16 @@
 # Program 2 versus the completed H100 R02, and matched 100k presets
 
-The four requested Program 2 improvements and their regression tests have been
-imported into main. The prepared H100 presets retain **Program 2's cumulative
-architecture sequence** while matching the completed H100 R02's LR/WD parameter
-groups and the common 100k training contract. They have **not been launched**.
-An R01 control is included to separate the four improvements from the
-architecture differences between Program 2 and our completed R02.
+The active plan contains **four settings based on our completed H100 R02**:
+reset RoPE from 20k to 10k, then add batch balance, sqrt loss and tied embeddings
+cumulatively. Every setting retains RMSNorm, learned residual/input routing,
+depth-scaled initialization and **FFN width 2048**, with the same optimizer
+groups and 100k training contract as the completed R02. Each run starts from
+scratch; cumulative refers to recipe changes, not checkpoint continuation.
+
+**R22 FFN narrowing is deferred to [TODO](../TODO.md)**. The earlier unlaunched
+five-setting proposal with Program 2's LayerNorm architecture is superseded.
+Historical Program 2 results below remain unchanged. None of the four revised
+configs has been launched. See the [GPU training plan](PROGRAM2_GPU_PLAN.md).
 
 ## Published Program 2 results
 
@@ -102,11 +107,17 @@ establish how the combined changes behave after 100k steps.
 
 | Prepared config | Increment over preceding row | Balanced ranks | Training loss | FFN hidden width | Tied embeddings | Parameters |
 |---|---|---|---|---:|---|---:|
-| [R01 control](../configs/program2_h100_100k/r01_muon.yaml) | Program 2 Muon architecture, matched optimizer groups | No | Sequence mean | 2048 | No | 170,671,168 |
-| [R04 batch balance](../configs/program2_h100_100k/r04_batchbalance.yaml) | `balance_batches_across_ranks: true` | Yes | Sequence mean | 2048 | No | 170,671,168 |
-| [R10 sqrt loss](../configs/program2_h100_100k/r10_sqrtloss.yaml) | `training_loss_reduction: sqrt_mask_count` | Yes | Square-root target weights | 2048 | No | 170,671,168 |
-| [R22 FFN 1536](../configs/program2_h100_100k/r22_ffn1536.yaml) | `ffn_hidden_dim: 1536` | Yes | Square-root target weights | 1536 | No | 142,359,616 |
-| [R29 tied](../configs/program2_h100_100k/r29_tied.yaml) | `tie_word_embeddings: true` | Yes | Square-root target weights | 1536 | Yes | 142,310,464 |
+| [1. R02 RoPE10k](../configs/program2_h100_100k/r02_rope10k.yaml) | Completed R02 recipe, `rotary_base: 10000.0` | No | Sequence mean | 2048 | No | 170,559,856 |
+| [2. + R04 batch balance](../configs/program2_h100_100k/r04_batchbalance.yaml) | `balance_batches_across_ranks: true` | Yes | Sequence mean | 2048 | No | 170,559,856 |
+| [3. + R10 sqrt loss](../configs/program2_h100_100k/r10_sqrtloss.yaml) | `training_loss_reduction: sqrt_mask_count` | Yes | Square-root target weights | 2048 | No | 170,559,856 |
+| [4. + R29 tied](../configs/program2_h100_100k/r29_tied.yaml) | `tie_word_embeddings: true` | Yes | Square-root target weights | 2048 | Yes | 170,510,704 |
+
+The first row changes only the completed R02's effective RoPE setting; explicit
+default fields in the YAML clarify the unchanged FFN/loss/embedding settings.
+Compare it with the existing RoPE20k R02 result to evaluate that change. Then
+compare rows 2 versus 1, 3 versus 2, and 4 versus 3 for the incremental effects.
+Every row also remains comparable with the completed default and R02 endpoints
+under the same 100k update and evaluation contract.
 
 **R04** reassigns already-masked whole examples among GPUs, greedily balancing
 sequence lengths while preserving equal example counts on every rank. It
@@ -121,33 +132,35 @@ target sets more influence than equal sequence weighting, but less than full
 token weighting. Zero-target sequences have zero weight. Held-out MLM evaluation
 remains sequence-mean NLL; only the training objective changes.
 
-**R22** narrows the SwiGLU intermediate dimension by 25%, retaining depth,
-model width and heads. It removes 28,311,552 parameters, leaving **142.36M**.
-This is a capacity/compute change as well as a training-recipe change.
+**R22 is deferred.** Its historical Program 2 result narrows the SwiGLU
+intermediate dimension by 25%, removing 28,311,552 parameters. That separate
+capacity/compute experiment is not included in the active four settings.
 
 **R29** shares the input embedding matrix and final vocabulary projection,
 preserving the separate output bias. Both roles contribute gradients to one
 AdamW-owned parameter with one optimizer state. It removes another **49,152**
-parameters. It retains the earlier FFN narrowing and both data/loss changes.
+parameters. In the new four-setting plan it retains both data/loss changes and
+the full-width FFNs; this differs from historical Program 2 R29, which inherited
+R22's narrower FFNs.
 
 ## Matched scale-up contract and controls
 
-All five new configs match the completed runs' base LR **5e-4**, base WD
+All four new configs match the completed runs' base LR **5e-4**, base WD
 **0.01**, warmup **1,000**, batch **1,024**, context **512**, seed **20260824**,
 mixture, **100,000 optimizer and schedule steps**, BF16/FA3 and 16-hour guard.
 All Muon variants additionally match our R02's **actual configured group LRs
 and WDs**: attention 0.00045/0.0075, FFN 0.000375/0.0075, decayed AdamW
 0.0005/0.01, non-decayed AdamW 0.0005/0. This intentionally replaces historical
-Program 2's uniform multipliers of 1.0; it is a matched adaptation rather than
-an exact continuation of its optimizer calibration. No additional width-based
-LR or WD rescaling is applied to the narrower FFNs.
+Program 2's uniform multipliers of 1.0; the new plan retains our completed
+R02's configured optimizer settings. All four FFNs remain width 2048, and no
+additional LR or WD rescaling is applied.
 
-The architecture starts from Program 2's **LayerNorm, fixed residuals, standard
-initialization and RoPE 10k**. These configs do not add the four changes to the
-completed R02 architecture. The prepared R01 control provides the architecture
-bridge to that measured R02; R04→R10→R22→R29 then isolates each retained change
-under the shared new optimizer settings. The completed default and R02 remain
-the measured comparison endpoints, and all new results are pending.
+The architecture starts from our completed R02's **parameter-free RMSNorm,
+learned residual/input routing and depth-scaled initialization**, with RoPE
+reset to **10k**. The original Program 2 R01 is no longer an active setting.
+R02-RoPE10k → R04 → R10 → R29 defines the four cumulative recipes. The completed
+default and RoPE20k R02 remain measured historical references; all four new
+results are pending.
 
 Batch 1,024 uses 64 examples/GPU × 4 GPUs × 4 accumulation microsteps. The
 imported R10 implementation normalizes weights **across ranks within each
@@ -162,7 +175,9 @@ claiming training-seed robustness; the prepared seed matches the existing runs.
 
 The imported tests cover complete-example preservation, distributed gradients,
 default behavior, full-size parameter counts, tied-gradient summation, optimizer
-ownership and checkpoint/contact-feature loading. All **32 tests**, Ruff lint,
-and formatting checks passed on main. Full-size meta-model checks confirm every
-prepared parameter count and optimizer group. The new combinations have not
-yet received an H100 throughput or full training qualification.
+ownership and checkpoint/contact-feature loading. All **32 tests** passed for
+the imported implementation, which is unchanged by this recipe revision.
+Full-size meta-model checks confirm the revised parameter counts, full-width
+FFNs, base equivalence except RoPE, cumulative config differences, and identical
+optimizer LR/WD groups. The new combinations have not yet received an H100
+throughput or full training qualification.

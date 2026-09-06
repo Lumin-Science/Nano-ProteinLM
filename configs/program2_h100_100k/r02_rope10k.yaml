@@ -1,5 +1,5 @@
 # PREPARED, NOT LAUNCHED: 100000 steps from scratch on four H100s.
-# Setting 2/4: Add R04 balanced masked batches to R02-RoPE10k.
+# Setting 1/4: Completed H100 R02 recipe with RoPE base 10000; fresh initialization.
 # All settings retain R02 RMSNorm, learned routing, depth-scaled init,
 # identical optimizer groups, and FFN width 2048. R22 narrowing is deferred.
 # See docs/PROGRAM2_SCALEUP.md and docs/PROGRAM2_GPU_PLAN.md.
@@ -47,5 +47,5 @@ stages:
     omg_img: 0.54
 ffn_hidden_dim: 2048
 tie_word_embeddings: false
-balance_batches_across_ranks: true
+balance_batches_across_ranks: false
 training_loss_reduction: sequence_mean
