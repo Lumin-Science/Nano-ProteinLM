@@ -115,3 +115,10 @@ The 16-hour wall-time guard allows the projected roughly 13-hour step budget
 to finish; overriding it to 43,200 seconds can stop before 100k steps.
 See [the three-way recipe comparison](171M_RECIPES.md) for the retained R02
 settings and the paper reference. This preset does not change an active run.
+
+The matched R02 comparison preset is
+`configs/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml`. It shares the default's
+base LR/WD, warmup, batch, seed, context, mixture, and 100k-step budget, while
+retaining the R02 architecture and Muon group multipliers. Use the same data
+root and evaluation arguments for both; see the linked comparison contract.
+The original one-hour R02 preset remains the historical record.
