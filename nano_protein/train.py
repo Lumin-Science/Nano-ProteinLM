@@ -253,6 +253,208 @@ def _git_state(root: Path) -> dict[str, object]:
     return {"git_commit": revision, "git_dirty": dirty}
 
 
+class _OptimizerBundle:
+    def __init__(self, named_optimizers: tuple[tuple[str, torch.optim.Optimizer], ...]) -> None:
+        if not named_optimizers:
+            raise ValueError("at least one optimizer is required")
+        self.named_optimizers = named_optimizers
+        self.param_groups = [
+            group for _, optimizer in self.named_optimizers for group in optimizer.param_groups
+        ]
+
+    def zero_grad(self, *, set_to_none: bool = True) -> None:
+        for _, optimizer in self.named_optimizers:
+            optimizer.zero_grad(set_to_none=set_to_none)
+
+    def step(self) -> object:
+        result = None
+        for _, optimizer in self.named_optimizers:
+            result = optimizer.step()
+        return result
+
+    def set_param_group_value(self, optimizer_name: str, key: str, value: object) -> None:
+        for name, optimizer in self.named_optimizers:
+            if name == optimizer_name:
+                for group in optimizer.param_groups:
+                    group[key] = value
+                return
+        raise KeyError(f"unknown bundled optimizer {optimizer_name!r}")
+
+    def state_dict(self) -> dict[str, object]:
+        return {
+            "schema_version": 1,
+            "class": self.__class__.__name__,
+            "optimizers": [
+                {"name": name, "state_dict": optimizer.state_dict()}
+                for name, optimizer in self.named_optimizers
+            ],
+        }
+
+
+def _canonical_parameter_name(name: str) -> str:
+    prefixes = ("module.", "_orig_mod.")
+    stripped = name
+    changed = True
+    while changed:
+        changed = False
+        for prefix in prefixes:
+            if stripped.startswith(prefix):
+                stripped = stripped.removeprefix(prefix)
+                changed = True
+    return stripped
+
+
+def _nonempty_parameter_groups(groups: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [group for group in groups if group["params"]]
+
+
+def muon_adamw_parameter_groups(
+    model: torch.nn.Module,
+    *,
+    weight_decay: float,
+    muon_lr_scale: float = 1.0,
+    muon_weight_decay_scale: float = 1.0,
+    muon_attention_lr_scale: float | None = None,
+    muon_ffn_lr_scale: float | None = None,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """Split trainable parameters for hidden-layer Muon with AdamW fallback."""
+
+    if muon_lr_scale <= 0.0:
+        raise ValueError("muon_lr_scale must be positive")
+    if muon_weight_decay_scale < 0.0:
+        raise ValueError("muon_weight_decay_scale must be non-negative")
+    attention_lr_scale = (
+        muon_lr_scale if muon_attention_lr_scale is None else muon_attention_lr_scale
+    )
+    ffn_lr_scale = muon_lr_scale if muon_ffn_lr_scale is None else muon_ffn_lr_scale
+    if attention_lr_scale <= 0.0 or ffn_lr_scale <= 0.0:
+        raise ValueError("Muon attention and FFN learning-rate scales must be positive")
+    muon_hidden: list[torch.nn.Parameter] = []
+    muon_attention: list[torch.nn.Parameter] = []
+    muon_ffn: list[torch.nn.Parameter] = []
+    adamw_decay: list[torch.nn.Parameter] = []
+    adamw_no_decay: list[torch.nn.Parameter] = []
+    for raw_name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        name = _canonical_parameter_name(raw_name)
+        if name.startswith("blocks.") and parameter.ndim == 2:
+            muon_hidden.append(parameter)
+            if ".attention." in name:
+                muon_attention.append(parameter)
+            elif ".ffn." in name:
+                muon_ffn.append(parameter)
+        elif parameter.ndim < 2 or "norm" in name.lower() or name.endswith("bias"):
+            adamw_no_decay.append(parameter)
+        else:
+            adamw_decay.append(parameter)
+    split_hidden_groups = muon_attention_lr_scale is not None or muon_ffn_lr_scale is not None
+    if split_hidden_groups:
+        if len(muon_attention) + len(muon_ffn) != len(muon_hidden):
+            raise ValueError("could not classify every hidden matrix as attention or FFN")
+        muon_groups = _nonempty_parameter_groups(
+            [
+                {
+                    "params": muon_attention,
+                    "weight_decay": float(weight_decay) * muon_weight_decay_scale,
+                    "lr_scale": float(attention_lr_scale),
+                    "name": "muon_attention",
+                },
+                {
+                    "params": muon_ffn,
+                    "weight_decay": float(weight_decay) * muon_weight_decay_scale,
+                    "lr_scale": float(ffn_lr_scale),
+                    "name": "muon_ffn",
+                },
+            ]
+        )
+    else:
+        muon_groups = _nonempty_parameter_groups(
+            [
+                {
+                    "params": muon_hidden,
+                    "weight_decay": float(weight_decay) * muon_weight_decay_scale,
+                    "lr_scale": float(muon_lr_scale),
+                    "name": "muon_hidden",
+                }
+            ]
+        )
+    adamw_groups = _nonempty_parameter_groups(
+        [
+            {"params": adamw_decay, "weight_decay": float(weight_decay), "name": "adamw_decay"},
+            {"params": adamw_no_decay, "weight_decay": 0.0, "name": "adamw_no_decay"},
+        ]
+    )
+    return muon_groups, adamw_groups
+
+
+def build_optimizer(model: torch.nn.Module, config: dict[str, Any]) -> object:
+    name = str(config.get("optimizer", "adamw")).lower()
+    learning_rate = float(config["learning_rate"])
+    weight_decay = float(config["weight_decay"])
+    if name == "adamw":
+        return torch.optim.AdamW(
+            parameter_groups(model, weight_decay=weight_decay),
+            lr=learning_rate,
+            betas=tuple(config.get("betas", (0.9, 0.95))),
+            eps=1e-8,
+            fused=True,
+        )
+    if name not in {"muon", "hybrid_muon", "muon_adamw"}:
+        raise ValueError(f"unknown optimizer {name!r}")
+    if not hasattr(torch.optim, "Muon"):
+        raise RuntimeError(
+            "optimizer='muon' requires torch.optim.Muon in the frozen environment"
+        )
+    muon_lr_scale = float(config.get("muon_lr_scale", 1.0))
+    muon_weight_decay_scale = float(config.get("muon_weight_decay_scale", 1.0))
+    muon_groups, adamw_groups = muon_adamw_parameter_groups(
+        model,
+        weight_decay=weight_decay,
+        muon_lr_scale=muon_lr_scale,
+        muon_weight_decay_scale=muon_weight_decay_scale,
+        muon_attention_lr_scale=(
+            float(config["muon_attention_lr_scale"])
+            if "muon_attention_lr_scale" in config
+            else None
+        ),
+        muon_ffn_lr_scale=(
+            float(config["muon_ffn_lr_scale"]) if "muon_ffn_lr_scale" in config else None
+        ),
+    )
+    if not muon_groups:
+        raise ValueError("optimizer='muon' found no transformer block matrices for Muon")
+    adjust_lr_fn = config.get("muon_adjust_lr_fn", "match_rms_adamw")
+    return _OptimizerBundle(
+        (
+            (
+                "muon",
+                torch.optim.Muon(
+                    muon_groups,
+                    lr=learning_rate * muon_lr_scale,
+                    weight_decay=weight_decay * muon_weight_decay_scale,
+                    momentum=float(
+                        config.get("muon_initial_momentum", config.get("muon_momentum", 0.95))
+                    ),
+                    nesterov=bool(config.get("muon_nesterov", True)),
+                    ns_steps=int(config.get("muon_ns_steps", 5)),
+                    adjust_lr_fn=None if adjust_lr_fn is None else str(adjust_lr_fn),
+                ),
+            ),
+            (
+                "adamw",
+                torch.optim.AdamW(
+                    adamw_groups,
+                    lr=learning_rate,
+                    betas=tuple(config.get("betas", (0.9, 0.95))),
+                    eps=1e-8,
+                    fused=True,
+                ),
+            ),
+        )
+    )
+
+
 def train(
     config_path: Path,
     *,
@@ -322,6 +524,7 @@ def train(
         "learned_residual_routing": bool(config.get("learned_residual_routing", False)),
         "transformer_norm": str(config.get("transformer_norm", "layernorm")),
         "depth_scaled_residual_init": bool(config.get("depth_scaled_residual_init", False)),
+        "rotary_base": float(config.get("rotary_base", 10_000.0)),
     }
     model = build_model(str(config["model"]), **model_options).to(device)
     parameter_count = count_parameters(model)
@@ -344,13 +547,7 @@ def train(
             gradient_as_bucket_view=True,
         )
 
-    optimizer = torch.optim.AdamW(
-        parameter_groups(model, weight_decay=float(config["weight_decay"])),
-        lr=float(config["learning_rate"]),
-        betas=tuple(config.get("betas", (0.9, 0.95))),
-        eps=1e-8,
-        fused=True,
-    )
+    optimizer = build_optimizer(model, config)
     tokenizer = ProteinTokenizer.esmc()
     stages = tuple(_stage(spec) for spec in config["stages"])
     if not 1 <= len(stages) <= 2:
@@ -443,7 +640,7 @@ def train(
             stage1_cooldown_fraction=float(config.get("stage1_cooldown_fraction", 0.0)),
         )
         for group in optimizer.param_groups:
-            group["lr"] = peak_learning_rate * multiplier
+            group["lr"] = peak_learning_rate * multiplier * float(group.get("lr_scale", 1.0))
 
         optimizer.zero_grad(set_to_none=True)
         step_loss = 0.0
@@ -536,6 +733,7 @@ def train(
                 "estimated_training_flops": 6 * parameter_count * model_tokens,
                 "source_counts_rank0": dict(batchers[stage.name].source_counts),
                 "attention_backend": model_options["attention_backend"],
+                "optimizer": str(config.get("optimizer", "adamw")),
             }
             with metrics_path.open("a") as handle:
                 handle.write(json.dumps(record, sort_keys=True) + "\n")

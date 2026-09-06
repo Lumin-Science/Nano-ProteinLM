@@ -52,6 +52,20 @@ RUN_NAME=autoresearch-incumbent-1h \
 incumbent. Both retain the winning model/training recipe; neither changes the
 default original-ESMC speedrun.
 
+The validated ESMC-171M R02 preset is also available:
+
+```bash
+CONFIG="$PWD/configs/autoresearch_171m_4xl40s_1h.yaml" \
+NUM_GPUS=4 \
+WALLTIME_SECONDS=3600 \
+RUN_NAME=autoresearch-171m-r02-1h \
+  bash runs/speedrun.sh
+```
+
+Its published results use four L40S GPUs. The preset uses Muon, RoPE base
+20,000, and warmup followed by constant LR. Set `WALLTIME_SECONDS` explicitly:
+the speedrun's four-hour default overrides the duration in the YAML.
+
 Each successful run records its resolved configuration, immutable data
 revision, environment and corpus receipts, metrics, completion receipt, final
 checkpoint, and checkpoint hash.

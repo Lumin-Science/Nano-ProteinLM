@@ -60,6 +60,30 @@ The experiment contract and retained changes are summarized in
 [`AUTORESEARCH.md`](AUTORESEARCH.md); rejected candidates remain on the
 `auto-research` branch.
 
+### Validated ESMC-171M preset
+
+[`configs/autoresearch_171m_4xl40s_1h.yaml`](../configs/autoresearch_171m_4xl40s_1h.yaml)
+records the R02 winner from `autoresearch-171m`, promoted in `f3293e4` and
+documented in `9ec883b`. It has 170,559,856 parameters: 24 layers, width 768,
+and 12 attention heads. It combines learned residual/input routing,
+parameter-free RMSNorm, depth-scaled residual initialization, and RoPE base
+20,000 with Muon for transformer matrices and AdamW for the remaining weights.
+Muon learning-rate scales are 0.9 for attention and 0.75 for FFNs; its
+weight-decay scale is 0.75. The base learning rate is 0.000326599 and weight
+decay is 0.0183712. Training uses a 554-step warmup followed by constant LR,
+Stage 1 context 512, and 64 sequences per GPU for one hour on four L40S GPUs.
+
+Across matched seeds 42, 43, and 44, R02 recorded contact P@L of 0.1081,
+0.1058, and 0.1091, with a reported mean ± sample SD of **0.1077 ± 0.0017**.
+The reported improvement is +8.06% over the campaign's starting baseline,
+which already used Muon and the retained architecture. This is not a
+comparison against `configs/esmc-171m-original.yaml`.
+The full candidate table is in the [README](../README.md#esmc-171m-autoresearch).
+
+The checked-in campaign record does not report validation-loss mean or SD,
+and the per-seed validation-loss receipts are not included. The P@L standard
+deviation must not be interpreted as validation-loss uncertainty.
+
 ## Released ESMC reference checkpoints
 
 The strong public references are the original Biohub ESMC checkpoints, pinned

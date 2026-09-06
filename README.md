@@ -140,6 +140,30 @@ Round 1's retained recipe adds learned residual/input routing, parameter-free
 transformer RMSNorm, depth-scaled attention-output and FFN-down initialization,
 and a final-20% linear learning-rate cooldown ending at 0.1× peak.
 
+### ESMC-171M AutoResearch
+
+The 171M campaign transfers the retained architecture and Muon optimizer to a
+24-layer, width-768 model, then evaluates each recipe from scratch for one hour
+on four L40S GPUs. We re-ran the starting baseline and all three retained
+changes with matched seeds 42, 43, and 44. R02 won on every seed and is now the
+retained 171M AutoResearch preset:
+[`configs/autoresearch_171m_4xl40s_1h.yaml`](configs/autoresearch_171m_4xl40s_1h.yaml).
+
+| Recipe | Seed 42 P@L | Seed 43 P@L | Seed 44 P@L | Mean P@L ± SD | Delta vs. baseline |
+|---|---:|---:|---:|---:|---:|
+| Starting baseline | 0.1056 | 0.1008 | 0.0925 | 0.0996 ± 0.0067 | — |
+| R01: differential Muon LR | 0.1068 | 0.1032 | 0.0955 | 0.1019 ± 0.0058 | +0.0022 (+2.22%) |
+| **R02: R01 + RoPE base 20,000** | **0.1081** | **0.1058** | **0.1091** | **0.1077 ± 0.0017** | **+0.0080 (+8.06%)** |
+| R03: R02 + attention Muon LR 1.0 | 0.1055 | 0.1024 | 0.1054 | 0.1044 ± 0.0018 | +0.0048 (+4.82%) |
+
+The promoted R02 recipe uses Muon LR scales of 0.9 for attention and 0.75 for
+FFNs, with RoPE base 20,000. It has 170.56M trainable parameters and processed
+561.65M model tokens on average within the fixed one-hour training window.
+
+The starting baseline in this table already uses Muon and the retained
+architecture; it is distinct from `configs/esmc-171m-original.yaml`. Validation
+loss mean and standard deviation are not published in the campaign record.
+
 See [`docs/AUTORESEARCH.md`](docs/AUTORESEARCH.md) for the experiment contract
 and [`docs/BASELINES.md`](docs/BASELINES.md) for detailed baseline context.
 

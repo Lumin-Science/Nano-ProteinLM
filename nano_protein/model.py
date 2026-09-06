@@ -27,6 +27,7 @@ class ESMCConfig:
     n_layers: int
     vocab_size: int = 64
     head_dim: int = 64
+    rotary_base: float = 10_000.0
     attention_backend: str = "flash"
     gradient_checkpointing: bool = False
     learned_residual_routing: bool = False
@@ -36,6 +37,8 @@ class ESMCConfig:
     def __post_init__(self) -> None:
         if self.d_model != self.n_heads * self.head_dim:
             raise ValueError("ESMC requires 64-dimensional attention heads")
+        if self.rotary_base <= 0.0:
+            raise ValueError("rotary_base must be positive")
         if self.attention_backend not in {"flash", "auto", "math"}:
             raise ValueError(f"unknown attention backend {self.attention_backend!r}")
         if self.transformer_norm not in {"layernorm", "rmsnorm"}:
@@ -94,12 +97,12 @@ def _apply_rope(query: torch.Tensor, key: torch.Tensor) -> tuple[torch.Tensor, t
 class ESMCRotaryEmbedding(nn.Module):
     """Per-layer fp32 RoPE cache matching the released non-interleaved layout."""
 
-    def __init__(self, dimension: int) -> None:
+    def __init__(self, dimension: int, *, base: float = 10_000.0) -> None:
         super().__init__()
         self.dimension = dimension
         self.register_buffer(
             "inv_freq",
-            1.0 / (10_000 ** (torch.arange(0, dimension, 2, dtype=torch.float32) / dimension)),
+            1.0 / (base ** (torch.arange(0, dimension, 2, dtype=torch.float32) / dimension)),
             persistent=False,
         )
         self._cached_length = 0
@@ -267,7 +270,7 @@ class ESMCAttention(nn.Module):
         self.q_norm = _transformer_norm(config.d_model, config.transformer_norm, bias=False)
         self.k_norm = _transformer_norm(config.d_model, config.transformer_norm, bias=False)
         self.proj = nn.Linear(config.d_model, config.d_model, bias=False)
-        self.rotary = ESMCRotaryEmbedding(config.head_dim)
+        self.rotary = ESMCRotaryEmbedding(config.head_dim, base=config.rotary_base)
 
     def forward_packed(
         self,
