@@ -1,0 +1,25 @@
+{
+  "checkpoint": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/trials/r04_batchbalance/checkpoint-final.pt",
+  "checkpoint_sha256": "685193a1b9f42bb226c24b895724bdc4ef3dd80db7a41171fac957fbc13f30e2",
+  "checkpoint_training_seconds": 90.96328465128317,
+  "peak_cuda_memory_bytes": 769228800,
+  "resumed_components": [],
+  "schema_version": 1,
+  "timing_seconds": {
+    "total": 5.8312622220255435,
+    "validation_mlm": 2.5454926160164177
+  },
+  "validation_mlm": {
+    "masked_residues": 994,
+    "perplexity": 16.00746090534842,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.7730549201369286,
+    "sequence_median_nll": 2.844452381134033,
+    "sequences": 32,
+    "source_counts": {
+      "mgnify": 9,
+      "omg_img": 13,
+      "uniref90": 10
+    }
+  }
+}

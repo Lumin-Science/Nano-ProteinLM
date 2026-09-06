@@ -189,8 +189,10 @@ budget than the completed H100 comparison above.
 
 See the [published Program 2 snapshot and audit](reports/program2/README.md) and
 [architecture/config differences with matched 100k H100 presets](docs/PROGRAM2_SCALEUP.md).
-The accepted implementations are available on main; the new H100 presets are
-prepared and have not been launched. The active scale-up is now four cumulative
+The accepted implementations and H100 presets are available on main. All four
+200-step H100 technical trials passed, and the production queue has started;
+see the [launch record](reports/fir-r02-rope10k-100k-20260906/README.md).
+The active scale-up is four cumulative
 settings: **completed R02 with RoPE 10k → batch balance → sqrt loss → tied
 embeddings**, all retaining FFN width 2048. FFN narrowing is deferred to
 [TODO](TODO.md). See the [GPU training plan](docs/PROGRAM2_GPU_PLAN.md).

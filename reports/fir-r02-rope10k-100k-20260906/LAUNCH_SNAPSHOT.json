@@ -1,0 +1,77 @@
+{
+  "observed_utc": "2026-09-06T23:56:55.938983+00:00",
+  "source_commit": "253c3ea442f2a1657eeb0f3ce2127ac0b1adfb25",
+  "slurm_step": "58303724.9",
+  "queue_driver_pid": 1109182,
+  "production_config_verified": true,
+  "full": {
+    "r02_rope10k": {
+      "state": "pending"
+    },
+    "r04_batchbalance": {
+      "finite_logged_losses_and_gradients": true,
+      "identity": "NODE=fc10212\nSLURM_JOB_ID=58303724\nSLURM_STEP_ID=9\nMODE=full\nMETHOD=r04_batchbalance",
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            15537,
+            15537,
+            15535,
+            15537
+          ],
+          "rank_tokens_before": [
+            17411,
+            16302,
+            15204,
+            13229
+          ]
+        },
+        "estimated_training_flops": 47119963541793216,
+        "event": "train",
+        "filled_residues": 45655286,
+        "gradient_norm": 1.8389781713485718,
+        "learning_rate": 8.55e-05,
+        "loss": 2.7959564924240112,
+        "mfu_6n": 0.139174903577496,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 46044406,
+        "optimizer": "muon",
+        "optimizer_step": 190,
+        "sequences_seen": 194560,
+        "source_counts_rank0": {
+          "mgnify": 5298,
+          "omg_img": 25968,
+          "uniref90": 17374
+        },
+        "stage": "stage1",
+        "stage_progress": 0.00189,
+        "step_compute_seconds": 0.4471088950522244,
+        "step_model_tokens": 240670,
+        "tokens_per_second": 538280.5009323034,
+        "training_seconds": 86.26407850999385
+      },
+      "metrics_age_seconds": 3.9389829635620117,
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r04_batchbalance",
+      "state": "training",
+      "timing": {
+        "seconds_per_step": 0.45069055325750795,
+        "training_eta_toronto": "2026-09-07T08:26:35.424121-04:00"
+      },
+      "training_started_utc": "2026-09-06T23:55:09Z"
+    },
+    "r10_sqrtloss": {
+      "state": "pending"
+    },
+    "r29_tied": {
+      "state": "pending"
+    }
+  },
+  "planned_training_finish_toronto": {
+    "r04_batchbalance": "2026-09-07T08:26:35.424121-04:00",
+    "r10_sqrtloss": "2026-09-07T21:10:34.515502-04:00",
+    "r29_tied": "2026-09-08T09:54:56.212768-04:00",
+    "r02_rope10k": "2026-09-07T16:55:45.852082-04:00"
+  },
+  "eta_method": "Setting2 extrapolates recent live training steps. Queued settings add their measured trial s/step \u00d7 100k, with 10 minutes between training finishes and the next training start for evaluation/setup. Setting1 assumes 04:00 Toronto start, free GPUs and 2 minutes setup. Estimates can change; final evaluations follow training."
+}

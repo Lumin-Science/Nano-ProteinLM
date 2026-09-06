@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "method": "r10_sqrtloss",
+  "mode": "trial",
+  "config_sha256": "a7d55488ce0781f15282acbcf20cb400e4abf0b9f55d94af326d426470f9661e",
+  "checkpoint_sha256": "052bf415a5c85ffd7e1a6d7c12b25c6672ded371c7ed28f2b8f389aaeae30614",
+  "optimizer_steps": 200,
+  "model_tokens": 48479810,
+  "sequences_seen": 204800,
+  "parameter_count": 170559856,
+  "training_seconds": 91.12769813509658,
+  "peak_cuda_memory_bytes": 21842024448,
+  "finite_logged_losses_and_gradients": true,
+  "flash3_verified": true,
+  "measured_seconds_per_step": 0.45239091380964963,
+  "checkpoint_reload": true,
+  "all_parameters_finite": true,
+  "attention_feature_layout": true,
+  "tied_weight_ownership_verified": true,
+  "optimizer_groups": [
+    {
+      "name": "muon_attention",
+      "lr": 0.00045000000000000004,
+      "weight_decay": 0.0075,
+      "tensors": 48
+    },
+    {
+      "name": "muon_ffn",
+      "lr": 0.000375,
+      "weight_decay": 0.0075,
+      "tensors": 48
+    },
+    {
+      "name": "adamw_decay",
+      "lr": 0.0005,
+      "weight_decay": 0.01,
+      "tensors": 3
+    },
+    {
+      "name": "adamw_no_decay",
+      "lr": 0.0005,
+      "weight_decay": 0.0,
+      "tensors": 6
+    }
+  ]
+}

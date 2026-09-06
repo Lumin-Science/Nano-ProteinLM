@@ -9,8 +9,10 @@ scratch; cumulative refers to recipe changes, not checkpoint continuation.
 
 **R22 FFN narrowing is deferred to [TODO](../TODO.md)**. The earlier unlaunched
 five-setting proposal with Program 2's LayerNorm architecture is superseded.
-Historical Program 2 results below remain unchanged. None of the four revised
-configs has been launched. See the [GPU training plan](PROGRAM2_GPU_PLAN.md).
+Historical Program 2 results below remain unchanged. All four full-size H100
+technical trials passed and the production queue started; see the
+[GPU training plan](PROGRAM2_GPU_PLAN.md) and
+[launch record](../reports/fir-r02-rope10k-100k-20260906/README.md).
 
 ## Published Program 2 results
 
@@ -179,5 +181,5 @@ ownership and checkpoint/contact-feature loading. All **32 tests** passed for
 the imported implementation, which is unchanged by this recipe revision.
 Full-size meta-model checks confirm the revised parameter counts, full-width
 FFNs, base equivalence except RoPE, cumulative config differences, and identical
-optimizer LR/WD groups. The new combinations have not yet received an H100
-throughput or full training qualification.
+optimizer LR/WD groups. All four full-size 200-step H100 trials also passed; their technical qualification
+receipts and subsequent full-run status are in the linked launch record.

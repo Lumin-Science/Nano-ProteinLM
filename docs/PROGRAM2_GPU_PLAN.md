@@ -1,8 +1,12 @@
 # Four-setting 100k H100 training plan
 
-Status: **prepared, not submitted or launched**. Resource snapshot:
-September 6, 2026, **7:12 PM Toronto**. This plan supersedes the unlaunched
-five-setting Program 2 architecture proposal.
+Status: **all four H100 technical trials passed; production queue started**
+(Slurm step `58303724.9`). The user authorized
+settings **2 → 3 → 4 sequentially on fc10212** after qualification, and a
+September 7, 2026 **4:00 AM Toronto** check to launch setting 1 on fc10111 if
+its GPUs are free. This supersedes the earlier proposed two-node/two-wave plan.
+The [launch record](../reports/fir-r02-rope10k-100k-20260906/README.md) holds
+trial receipts, actual launch identities, and timestamped production state.
 
 ## Four independent runs
 
@@ -56,83 +60,80 @@ Freeze the new source commit in a fresh remote checkout and use unique output
 directories named for the method and launch timestamp. The completed 100k
 source checkout and outputs are historical references.
 
-## Available resources and recommended placement
+## Authorized placement and scheduling
 
-| Fir node | Existing allocation | Observed GPU state | Remaining allocation time | Planning use |
-|---|---|---|---|---|
-| `fc10212` | `58303724` | Four idle H100s, 5 MiB/GPU, 0% utilization | About 54h 14m | Available for two runs |
-| `fc10111` | `58303658` | Four H100s busy, about 44,043 MiB/GPU, 98–100% utilization | About 54h 13m | Unavailable for this plan now |
-| `fc10110` | `58047089` | GPU occupancy not checked | About 6h 49m | Insufficient time for a 100k run |
+| Fir node | Existing allocation | Assigned work |
+|---|---|---|
+| `fc10212` | `58303724` | Trial all four recipes, then full settings 2 → 3 → 4 sequentially |
+| `fc10111` | `58303658` | Full setting 1, after the September 7 4:00 AM Toronto availability check |
 
-The `fc10111` workload was visible in `nvidia-smi` even though the Slurm step
-table contained only helper steps. Check both sources immediately before any
-future launch. Node availability is a snapshot, not a reservation.
+At September 6, 7:35 PM Toronto, fc10212 had four idle H100s and about 53h 51m
+remaining. That allows three 16-hour guards plus setup/evaluation margin. A
+separate workload occupied all four fc10111 GPUs. It must finish or be stopped
+by its owner before setting 1 can start; these launchers never stop it. Check
+both Slurm and `nvidia-smi`, since that workload had no separate Slurm step.
 
-**Recommended: use `fc10212` and request one additional four-H100 Fir node.**
-The current matching partition is `gpubase_bynode_b4` (maximum 72 hours), with
-account `rrg-lsigal_gpu`. Plan a **48-hour allocation**, one node, four H100s,
-and 32 training CPUs on the additional node. This request is a proposal and
-has not been submitted. Do not assign `fc10111` while its GPUs are occupied.
+The scheduled heartbeat runs **hourly on the hour**, including September 7 at
+**04:00 America/Toronto = 08:00 UTC**. Its task is to monitor all four runs and
+launch setting 1 at or after that timestamp once the node is free. The launcher
+also enforces that timestamp. A busy node at 4 AM defers launch to a later hourly
+check. Setting 1 starts from scratch and can run independently of the fc10212
+queue. No additional allocation has been requested.
 
-| Wave | `fc10212`, four H100s | Additional idle node, four H100s | Expected duration |
-|---|---|---|---|
-| 1 | Setting 1: R02-RoPE10k | Setting 2: + batch balance | About 13–14h, then evaluation |
-| 2 | Setting 3: + sqrt loss | Setting 4: + tied embeddings | About 13–14h, then evaluation |
+## Qualification and production queue
 
-Start each second-wave run only after that node's first run has saved its final
-checkpoint and completed evaluations. Since all runs start from scratch, the
-additional node can begin its first run as soon as it becomes available; it
-does not need to wait for a checkpoint from `fc10212`.
+The frozen training source is
+`253c3ea442f2a1657eeb0f3ce2127ac0b1adfb25`, in
+`/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906-run`.
+Artifacts and launchers are in the same path without the `-run` suffix.
 
-## Time and compute estimate
+1. Run each exact model/batch combination for **200 optimizer steps**, with a
+   temporary **50-step warmup** and 200-step schedule. These technical trials
+   exercise peak learning rates, four-rank accumulation, FA3 forward/backward,
+   finite parameters/losses/gradients, balanced-token preservation, optimizer
+   ownership and checkpoint/attention-feature reload. Each trial also runs a
+   32-sequence MLM smoke evaluation. These losses are diagnostic, not a quality
+   ranking or a substitute for full evaluation.
+2. Require all four trial receipts and their config/checkpoint bindings to pass
+   before writing `ALL_TRIALS_PASSED.json`. The production launchers refuse to
+   start without that gate. Every full run restores the exact **100k-step,
+   1,000-step-warmup** preset and initializes from scratch.
+3. Run `queue-234.sh` in allocation 58303724 on fc10212. It trains setting 2,
+   verifies completion, performs full MLM/P@L, then repeats for settings 3 and
+   4. A failed stage stops the queue and preserves its logs. Unique output
+   directories and the queue guard prevent accidental duplicate launches.
+4. Before each full run, require idle GPUs, matching source/config hashes and
+   at least **16h 15m** of allocation time. Keep the tested Torch 2.13.0+cu130
+   and pinned FA3 environment; stage and verify the same corpus on node-local
+   storage. The 16-hour training guard remains an operational limit, not a
+   replacement for 100k steps.
+5. Monitor hourly. Notify on launch, failure, stall, completion or required
+   action, and update Toronto ETAs from measured progress. Healthy unchanged
+   runs do not need repetitive notifications.
 
-The completed R02 measured **46,589.86 seconds / 100,000 steps = 0.4659 s/step**,
-or **12h 56m 30s** on four H100s. RoPE 10k leaves model dimensions unchanged;
-batch redistribution, loss normalization and tying need measured timing before
-their exact speeds are known. Use **13–14 hours of training per run** as the
-initial planning range, not a benchmark result for the new recipes.
+## Completion and evaluation
 
-- **Two four-H100 nodes:** roughly **26–28 hours**, plus setup, evaluations and
-  any additional-node queue delay. Allow about **27–30 hours once both nodes
-  are available** for the operational plan. Two 16-hour guards leave room within
-  the proposed 48-hour allocation.
-- **Total training allocation usage:** about **208–224 H100 GPU-hours** for all
-  four runs, before setup/evaluation. The previous R02 runtime alone projects
-  about 207 GPU-hours; 208–224 is the rounded planning range.
-- **One four-H100 node:** about **52–56 hours**, plus overhead. The remaining
-  roughly 54 hours on `fc10212` leave insufficient reliable margin for all four
-  sequential runs; use a longer fresh allocation or a second node.
-- **Four four-H100 nodes:** about **13–14 hours**, plus overhead and queueing,
-  but requires three additional nodes (16 H100s total).
+Require **100,000 optimizer steps**, **102.4M sequences**, `stop_reason=max_steps`
+and a verified final checkpoint hash. Hitting the wall-time guard is incomplete
+for this comparison. Then run the same **4,096-sequence MLM evaluation**
+(256 × 16, context 512, seed 20260821) and **20,775-chain P@L** used for the
+historical default/R02 comparison. Each checkpoint gets its own canonical
+probe fit and 16 deterministic inference shards, followed by chain-coverage,
+checkpoint-binding and shard-hash verification and a 5,000-resample bootstrap CI.
 
-The previous final MLM and full contact evaluations took minutes, rather than
-hours. Reserve additional time for environment/data staging and final checkpoint
-writes. Refresh the estimates from a short full-size timing qualification and
-then from live 100k-run progress; do not change the 100k cap to fit a wall clock.
+Publish the four results alongside the completed default and RoPE20k R02,
+including each adjacent setting's delta. There is one matched training seed;
+contact bootstrap intervals do not measure training-seed variability.
 
-## Launch and evaluation sequence
+## Initial time and compute estimate
 
-1. Recheck allocation expiry, GPU occupancy, source/config hashes and local data
-   receipts; qualify pinned FA3 on each node. Run short full-size checks with
-   four ranks and four accumulation microsteps for all four configs, including
-   finite gradients, preserved masks, tied-weight ownership and measured speed.
-   These checks are planned; they have not been run on H100 for this revision.
-2. Start fresh runs for the first wave, using the tested Torch 2.13.0+cu130 / FA3
-   environment. Require successful loss/gradient progress before leaving them.
-3. Keep the user's hourly monitoring cadence once runs launch. Report failures,
-   stalls, and completions; update Toronto finish estimates from measured speed.
-4. For every completed checkpoint require exactly **100,000 steps**, **102.4M
-   sequences**, `stop_reason=max_steps`, and a saved checkpoint hash. A run that
-   hits the guard is incomplete for this comparison.
-5. Immediately run the same **4,096-sequence MLM evaluation** (256 batches × 16,
-   context 512, evaluation seed 20260821) and **20,775-chain P@L**. Fit each
-   checkpoint's probe on the same fixed structures; reuse the verified contact
-   dataset and merge all shards. Preserve checkpoint-bound receipts and contact
-   bootstrap intervals.
-6. Advance to the second wave on each available node. Publish a table comparing
-   all four runs with the completed default and RoPE20k R02. Report each adjacent
-   configuration's delta. This first comparison has one matched training seed;
-   repeated seeds are a later robustness check.
+The completed RoPE20k R02 took **12h 56m 30s** (0.4659 s/step) on four H100s.
+Use **13–14 hours of training per setting** until the new trials/live runs
+provide measured estimates. Settings 2–4 therefore require about **39–42 hours**
+plus setup and evaluation on fc10212. Setting 1 should finish around **5–6 PM
+Toronto September 7** if it starts at 4 AM and has similar speed. These are
+planning estimates, not fixed finish times.
 
-No new training, allocation request or monitoring automation has been started
-by preparing this plan. The previous completed-run monitor remains paused.
+Total training usage is roughly **208–224 H100 GPU-hours** for all four full
+runs, plus trials/setup/evaluation. New trial timings and live ETAs are recorded
+in the [launch record](../reports/fir-r02-rope10k-100k-20260906/README.md).
