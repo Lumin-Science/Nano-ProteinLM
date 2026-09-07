@@ -1,0 +1,39 @@
+{
+  "compute_seconds": 45055.041260043625,
+  "event": "training_complete",
+  "filled_residues": 23995424761,
+  "final_checkpoint": {
+    "filled_residues": 23995424761,
+    "model_tokens": 24200224761,
+    "optimizer_step": 100000,
+    "path": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r04_batchbalance/checkpoint-final.pt",
+    "sequences_seen": 102400000,
+    "sha256": "618bc9dfa69736610ed21682fbe30f09f6cb361f8f2725f1c94048b8bf2c2fe8",
+    "training_seconds": 45221.8470741841
+  },
+  "model_tokens": 24200224761,
+  "optimizer_steps": 100000,
+  "parameter_count": 170559856,
+  "peak_cuda_memory_bytes": 23047820800,
+  "schedule_optimizer_steps": 100000,
+  "sequences_seen": 102400000,
+  "source_counts": {
+    "stage1": {
+      "mgnify": 11152045,
+      "omg_img": 54747234,
+      "uniref90": 36500721
+    }
+  },
+  "source_epoch_maxima": {
+    "stage1": {
+      "mgnify": 7,
+      "omg_img": 16,
+      "uniref90": 15
+    }
+  },
+  "stage_checkpoint": null,
+  "stop_reason": "max_steps",
+  "target_optimizer_steps": 100000,
+  "training_seconds": 45221.8470741841,
+  "walltime_budget_seconds": 57600.0
+}

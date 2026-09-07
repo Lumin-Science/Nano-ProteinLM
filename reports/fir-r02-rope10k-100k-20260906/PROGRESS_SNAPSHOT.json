@@ -1,0 +1,265 @@
+{
+  "observed_utc": "2026-09-07T13:01:24.409673+00:00",
+  "queue_current": "r10_sqrtloss",
+  "full": {
+    "r02_rope10k": {
+      "finite_logged_losses_and_gradients": true,
+      "identity": "NODE=fc10111\nSLURM_JOB_ID=58303658\nSLURM_STEP_ID=14\nMODE=full\nMETHOD=r02_rope10k",
+      "latest": {
+        "attention_backend": "flash3",
+        "estimated_training_flops": 9381201229557283872,
+        "event": "train",
+        "filled_residues": 9089488237,
+        "gradient_norm": 0.1728227287530899,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.502986788749695,
+        "mfu_6n": 0.1376544234242487,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 9167066477,
+        "optimizer": "muon",
+        "optimizer_step": 37880,
+        "sequences_seen": 38789120,
+        "source_counts_rank0": {
+          "mgnify": 1054154,
+          "omg_img": 5184256,
+          "uniref90": 3458870
+        },
+        "stage": "stage1",
+        "stage_progress": 0.37879,
+        "step_compute_seconds": 0.4450245779007673,
+        "step_model_tokens": 236931,
+        "tokens_per_second": 532399.8083827888,
+        "training_seconds": 17709.750726729166
+      },
+      "metrics_age_seconds": 2.409672975540161,
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r02_rope10k",
+      "state": "training",
+      "timing": {
+        "seconds_per_step": 0.46379113181494175,
+        "training_eta_toronto": "2026-09-07T17:01:32.705108-04:00"
+      },
+      "training_started_utc": "2026-09-07T08:05:44Z"
+    },
+    "r04_batchbalance": {
+      "contact": {
+        "checkpoint_sha256": "618bc9dfa69736610ed21682fbe30f09f6cb361f8f2725f1c94048b8bf2c2fe8",
+        "evaluation_chains": 20775,
+        "p_at_l": 0.3071519389793172,
+        "protocol": "autoresearch-frozen-full-contact-merge-v1",
+        "random_p_at_l": 0.016893223436056953,
+        "schema_version": 1,
+        "selected_C": 1.0,
+        "selection_seed": 20260820,
+        "validation_trace": [
+          {
+            "C": 0.01,
+            "validation_average_precision": 0.5724675408097503
+          },
+          {
+            "C": 0.1,
+            "validation_average_precision": 0.5652618295008645
+          },
+          {
+            "C": 1.0,
+            "validation_average_precision": 0.6613517470778272
+          },
+          {
+            "C": 10.0,
+            "validation_average_precision": 0.6462525605582146
+          }
+        ]
+      },
+      "contact_uncertainty": {
+        "checkpoint_sha256": "618bc9dfa69736610ed21682fbe30f09f6cb361f8f2725f1c94048b8bf2c2fe8",
+        "note": "Across-chain bootstrap confidence interval, not training-seed SD.",
+        "p_at_l": 0.3071519389793172,
+        "uncertainty": {
+          "confidence_interval_95": [
+            0.30486543442409486,
+            0.30947845731037943
+          ],
+          "replicates": 5000,
+          "unit_count": 20775
+        }
+      },
+      "finite_logged_losses_and_gradients": true,
+      "identity": "NODE=fc10212\nSLURM_JOB_ID=58303724\nSLURM_STEP_ID=9\nMODE=full\nMETHOD=r04_batchbalance",
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            15627,
+            15629,
+            15629,
+            15626
+          ],
+          "rank_tokens_before": [
+            15716,
+            14180,
+            16416,
+            16199
+          ]
+        },
+        "estimated_training_flops": 24765521102422766496,
+        "event": "train",
+        "filled_residues": 23995424761,
+        "gradient_norm": 0.11139269173145294,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.4194445610046387,
+        "mfu_6n": 0.13937421306511383,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 24200224761,
+        "optimizer": "muon",
+        "optimizer_step": 100000,
+        "sequences_seen": 102400000,
+        "source_counts_rank0": {
+          "mgnify": 2785794,
+          "omg_img": 13686781,
+          "uniref90": 9127425
+        },
+        "stage": "stage1",
+        "stage_progress": 0.99999,
+        "step_compute_seconds": 0.45397158339619637,
+        "step_model_tokens": 244714,
+        "tokens_per_second": 539051.3612532214,
+        "training_seconds": 45221.839008656796
+      },
+      "metrics_age_seconds": 1937.4096729755402,
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r04_batchbalance",
+      "state": "complete",
+      "timing": {
+        "seconds_per_step": 0.45114112701499837,
+        "training_eta_toronto": "2026-09-07T08:29:07-04:00"
+      },
+      "training_completion": {
+        "compute_seconds": 45055.041260043625,
+        "event": "training_complete",
+        "filled_residues": 23995424761,
+        "final_checkpoint": {
+          "filled_residues": 23995424761,
+          "model_tokens": 24200224761,
+          "optimizer_step": 100000,
+          "path": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r04_batchbalance/checkpoint-final.pt",
+          "sequences_seen": 102400000,
+          "sha256": "618bc9dfa69736610ed21682fbe30f09f6cb361f8f2725f1c94048b8bf2c2fe8",
+          "training_seconds": 45221.8470741841
+        },
+        "model_tokens": 24200224761,
+        "optimizer_steps": 100000,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 23047820800,
+        "schedule_optimizer_steps": 100000,
+        "sequences_seen": 102400000,
+        "source_counts": {
+          "stage1": {
+            "mgnify": 11152045,
+            "omg_img": 54747234,
+            "uniref90": 36500721
+          }
+        },
+        "source_epoch_maxima": {
+          "stage1": {
+            "mgnify": 7,
+            "omg_img": 16,
+            "uniref90": 15
+          }
+        },
+        "stage_checkpoint": null,
+        "stop_reason": "max_steps",
+        "target_optimizer_steps": 100000,
+        "training_seconds": 45221.8470741841,
+        "walltime_budget_seconds": 57600.0
+      },
+      "training_started_utc": "2026-09-06T23:55:09Z",
+      "validation": {
+        "masked_residues": 139963,
+        "perplexity": 11.458348884160133,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.438718624480771,
+        "sequence_median_nll": 2.5146771669387817,
+        "sequences": 4096,
+        "source_counts": {
+          "mgnify": 1393,
+          "omg_img": 1387,
+          "uniref90": 1316
+        }
+      },
+      "verification": {
+        "checkpoint_sha256": "618bc9dfa69736610ed21682fbe30f09f6cb361f8f2725f1c94048b8bf2c2fe8",
+        "config_sha256": "ad7cf87f389380c9994fe757bcb97d891f1a4ff9bf417683a1eadf036225fdd4",
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.4515461517777294,
+        "method": "r04_batchbalance",
+        "mode": "full",
+        "model_tokens": 24200224761,
+        "optimizer_steps": 100000,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 23047820800,
+        "sequences_seen": 102400000,
+        "status": "passed",
+        "training_seconds": 45221.8470741841
+      }
+    },
+    "r10_sqrtloss": {
+      "finite_logged_losses_and_gradients": true,
+      "identity": "NODE=fc10212\nSLURM_JOB_ID=58303724\nSLURM_STEP_ID=9\nMODE=full\nMETHOD=r10_sqrtloss",
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            14805,
+            14804,
+            14803,
+            14803
+          ],
+          "rank_tokens_before": [
+            15162,
+            16608,
+            12659,
+            14786
+          ]
+        },
+        "estimated_training_flops": 809879248529574912,
+        "event": "train",
+        "filled_residues": 784696032,
+        "gradient_norm": 0.29127374291419983,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.6493494510650635,
+        "mfu_6n": 0.13933596688253735,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 791392992,
+        "objective_loss": 2.634984791278839,
+        "optimizer": "muon",
+        "optimizer_step": 3270,
+        "sequences_seen": 3348480,
+        "source_counts_rank0": {
+          "mgnify": 90686,
+          "omg_img": 448195,
+          "uniref90": 298239
+        },
+        "stage": "stage1",
+        "stage_progress": 0.03269,
+        "step_compute_seconds": 0.45713198790326715,
+        "step_model_tokens": 246350,
+        "tokens_per_second": 538903.4382169065,
+        "training_loss_reduction": "sqrt_mask_count",
+        "training_seconds": 1497.0497096180916
+      },
+      "metrics_age_seconds": 0.40967297554016113,
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r10_sqrtloss",
+      "state": "training",
+      "timing": {
+        "seconds_per_step": 0.45202742717927324,
+        "training_eta_toronto": "2026-09-07T21:10:08.613031-04:00"
+      },
+      "training_started_utc": "2026-09-07T12:36:10Z"
+    },
+    "r29_tied": {
+      "state": "pending"
+    }
+  },
+  "new_completed_result": "r04_batchbalance",
+  "result_verified_utc": "2026-09-07T13:04:26.897514+00:00",
+  "action": "Setting2 completed 100k steps and full MLM/P@L; independently verified and archived. Setting3 started automatically and is healthy. Setting1 healthy; setting4 queued. Notify completion, metrics and setting3 ETA; no duplicate launch."
+}

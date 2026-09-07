@@ -1,6 +1,7 @@
 # Four-setting 100k H100 training plan
 
-Status: **all four H100 technical trials passed; production queue started**
+Status: **all four H100 technical trials passed; setting 2 completed its 100k
+run and full evaluations; setting 3 is training**
 (Slurm step `58303724.9`). **Setting 1 is also training on fc10111** in step
 `58303658.14`, launched September 7 at 4:02 AM Toronto after the scheduled
 availability check. The user authorized

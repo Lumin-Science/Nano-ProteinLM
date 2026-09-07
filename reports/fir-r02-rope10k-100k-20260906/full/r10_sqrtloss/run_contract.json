@@ -1,0 +1,35 @@
+{
+  "attention_implementation": "whole-transformer-packed-_flash_attn3_cuda_477ab85",
+  "attention_kernel": {
+    "build": "build/torch-stable-abi210-cu130-x86_64-linux",
+    "implementation": "FlashAttention-3",
+    "operator": "_flash_attn3_cuda_477ab85",
+    "repository": "kernels-community/flash-attn3",
+    "revision": "e29f138fc363b396e5d2706c8a5f6fa7d36f41e0"
+  },
+  "config_path": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml",
+  "config_sha256": "7fcf7cd1719fd1e2262cf589dae8bcedcbe5f970d61615cbf9e757a5ffd33891",
+  "corpus_verification_sha256": "9b81407da3d12d22787f8678070512b9664570c534701d25b3426763d04a9a58",
+  "cuda": "13.0",
+  "data_manifest": "/localscratch/muchenli.58303724.0/nano-esmc-data-bd38448d/manifest.json",
+  "data_manifest_sha256": "43675d51421066ce8c5f68427886d57980e808c53c5bb1641de90cb74dda39ab",
+  "git_commit": "253c3ea442f2a1657eeb0f3ce2127ac0b1adfb25",
+  "git_dirty": false,
+  "homology_exclusion": true,
+  "homology_exclusion_receipt_sha256": "bb94365a46c0d4d5f5fef16a9fc9b1c393d7ad9b7d2d004caba252002930248b",
+  "python": "3.11.4",
+  "python_executable": "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/bin/python3.11",
+  "runtime_packages": {
+    "PyYAML": "6.0.3",
+    "huggingface-hub": "1.27.0",
+    "numpy": "2.4.6",
+    "pyarrow": "25.0.0",
+    "torch": "2.13.0"
+  },
+  "torch": "2.13.0+cu130",
+  "training_budget_semantics": "true synchronized training-loop wall time; setup, final checkpoint, and evaluation are outside the training clock",
+  "uv_lock": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906-run/uv.lock",
+  "uv_lock_sha256": "3dcddbfce190a8b2dabc1841ddcd08c67f06e8a727f52fab86c72b4da0b75f15",
+  "visible_gpu": "NVIDIA H100 80GB HBM3",
+  "world_size": 4
+}

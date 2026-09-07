@@ -1,23 +1,60 @@
 # Four cumulative R02 RoPE10k recipes: Fir launch record
 
-All four 200-step technical trials **passed** on fc10212. The sequential
-production queue is training setting 2 as Slurm step **58303724.9**. Setting 1
-launched on fc10111 at **4:02 AM Toronto September 7** as step **58303658.14**
-and is also training normally. Production training results are pending. The source/configs are frozen at `253c3ea`;
-documentation and launch-record updates on main do not change the running
-checkout.
+All four 200-step technical trials **passed**. **Setting 2 is the first completed
+100k run**, including full MLM and P@L evaluation. Settings 1 and 3 are training;
+setting 4 remains queued. The source/configs are frozen at `253c3ea`; report
+updates on main do not change the running checkout.
 
 | Setting | Recipe | Production placement |
 |---|---|---|
 | 1 | R02 with RoPE10k | fc10111, training in step 58303658.14 since September 7, 4:02 AM Toronto |
-| 2 | + batch balance | fc10212, training in step 58303724.9 |
-| 3 | + sqrt loss | fc10212, after setting 2 and its evaluations |
+| 2 | + batch balance | Completed 100k + evaluations September 7, 8:35 AM Toronto |
+| 3 | + sqrt loss | fc10212, training since September 7, 8:36 AM Toronto in step 58303724.9 |
 | 4 | + tied embeddings | fc10212, after setting 3 and its evaluations |
 
 All full runs initialize from scratch for 100,000 steps, batch 1,024, warmup
 1,000, base LR 5e-4 and base WD 0.01, with preserved R02 Muon groups, RoPE10k,
 FFN2048, BF16 and FA3. [Full recipes and semantics](../../docs/PROGRAM2_SCALEUP.md).
 R22 narrowing remains deferred in [TODO](../../TODO.md).
+
+## Completed production results (one of four)
+
+Setting 2 completed **100,000 steps, 102.4M sequences and 24,200,224,761 model
+tokens**. Training took **12h 33m 42s**; full evaluations finished at **8:35:53 AM
+Toronto September 7**. The checkpoint SHA-256 is
+`618bc9dfa69736610ed21682fbe30f09f6cb361f8f2725f1c94048b8bf2c2fe8`.
+
+| Recipe | Validation loss ↓ | Perplexity ↓ | Full P@L ↑ | P@L 95% CI |
+|---|---:|---:|---:|---:|
+| Historical default | 2.47436048 | 11.87411093 | 26.504938% | 26.294763–26.718848% |
+| Historical R02, RoPE20k | 2.43698294 | 11.43847806 | 30.310361% | 30.078864–30.547478% |
+| **Setting 2: R02 RoPE10k + batch balance** | **2.43871862** | **11.45834888** | **30.715194%** | **30.486543–30.947846%** |
+
+The new result uses the same **4,096 validation sequences / 139,963 masked
+targets** and **20,775 contact chains** as the historical comparison. All 16
+contact-shard hashes, checkpoint/probe bindings, unique chain coverage and the
+same probe split/protocol were checked independently. The mean P@L and
+5,000-resample bootstrap interval were also recomputed from the per-chain rows.
+These intervals describe variation across chains, not training-seed uncertainty.
+
+Compared with historical RoPE20k R02, setting 2 has **0.001736 higher validation
+loss** and **0.4048 percentage points higher P@L**. That comparison changes both
+RoPE and batch balancing. **The isolated batch-balancing comparison awaits
+setting 1**; no conclusion about its incremental quality effect is available yet.
+
+At 9:01 AM Toronto, setting 3 was healthy at 3,270 steps after starting
+automatically at 8:36 AM. Its estimated training finish was **9:10 PM September
+7**. Setting 1 remained healthy at 37,880 steps with a **5 PM** ETA; setting 4
+will follow setting 3 and its full evaluations.
+
+[Machine-readable partial results](results.json) ·
+[Independent result verification](full/r04_batchbalance/RESULT_VERIFIED.json) ·
+[Per-chain P@L](full/r04_batchbalance/contact-per-chain.tsv) ·
+[Complete training trace, gzip](full/r04_batchbalance/metrics-complete.jsonl.gz) ·
+[Progress and queue snapshot](PROGRESS_SNAPSHOT.json).
+The uncompressed `metrics.jsonl` in the setting 2 report directory retains its
+initial launch snapshot. Full raw contact shards remain in the remote artifact
+root and local `.exps` audit directory; their verified hashes are preserved here.
 
 ## Scheduled setting 1 launch: September 7
 
