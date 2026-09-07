@@ -42,5 +42,9 @@
   "setting1_slurm_step": "58303658.14",
   "setting1_driver_pid": 2610432,
   "setting1_launch_utc": "2026-09-07T08:02:34Z",
-  "setting1_launch_status": "verified_healthy"
+  "setting1_launch_status": "verified_healthy",
+  "postrun_audit_scripts": {
+    "launch/verify_completed_result.py": "137ba1f43c0a04dc3ebf606488e29733e43807f31005226ef4c68a3d890ec246",
+    "launch/build_adjacent_comparisons.py": "c875db7186ee30f0065cb2d8b0409812613d4b5341e756f42be2a990b450577d"
+  }
 }

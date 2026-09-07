@@ -1,10 +1,9 @@
 # Four-setting 100k H100 training plan
 
-Status: **all four H100 technical trials passed; setting 2 completed its 100k
-run and full evaluations; setting 3 is training**
-(Slurm step `58303724.9`). **Setting 1 is also training on fc10111** in step
-`58303658.14`, launched September 7 at 4:02 AM Toronto after the scheduled
-availability check. The user authorized
+Status: **settings 1 and 2 completed their 100k runs and full evaluations;
+setting 3 is training, setting 4 is queued**. All four H100 technical trials
+passed. Setting 1 ran as `58303658.14`; the sequential settings 2–4 queue is
+`58303724.9`. The user authorized
 settings **2 → 3 → 4 sequentially on fc10212** after qualification, and a
 September 7, 2026 **4:00 AM Toronto** check to launch setting 1 on fc10111 if
 its GPUs are free. This supersedes the earlier proposed two-node/two-wave plan.

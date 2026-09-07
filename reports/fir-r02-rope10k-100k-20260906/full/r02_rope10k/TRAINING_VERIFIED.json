@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "method": "r02_rope10k",
+  "mode": "full",
+  "config_sha256": "bd3dae3deda55fbf6d1a537688d985691116f4bd671a2c786b40fdb4edf95beb",
+  "checkpoint_sha256": "21d46ba660c418db13345cc5f15264ce91f315938f5913df012562b767c024d9",
+  "optimizer_steps": 100000,
+  "model_tokens": 24200224761,
+  "sequences_seen": 102400000,
+  "parameter_count": 170559856,
+  "training_seconds": 46674.2525427104,
+  "peak_cuda_memory_bytes": 26383191040,
+  "finite_logged_losses_and_gradients": true,
+  "flash3_verified": true,
+  "measured_seconds_per_step": 0.4649177512014285
+}

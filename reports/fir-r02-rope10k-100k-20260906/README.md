@@ -1,13 +1,13 @@
 # Four cumulative R02 RoPE10k recipes: Fir launch record
 
-All four 200-step technical trials **passed**. **Setting 2 is the first completed
-100k run**, including full MLM and P@L evaluation. Settings 1 and 3 are training;
-setting 4 remains queued. The source/configs are frozen at `253c3ea`; report
-updates on main do not change the running checkout.
+All four 200-step technical trials **passed**. **Settings 1 and 2 have completed
+100k steps and full MLM/P@L evaluations.** Setting 3 is training; setting 4
+remains queued. Source/configs are frozen at `253c3ea`; report updates on main
+do not change the running checkout.
 
 | Setting | Recipe | Production placement |
 |---|---|---|
-| 1 | R02 with RoPE10k | fc10111, training in step 58303658.14 since September 7, 4:02 AM Toronto |
+| 1 | R02 with RoPE10k | Completed 100k + evaluations September 7, 5:11 PM Toronto |
 | 2 | + batch balance | Completed 100k + evaluations September 7, 8:35 AM Toronto |
 | 3 | + sqrt loss | fc10212, training since September 7, 8:36 AM Toronto in step 58303724.9 |
 | 4 | + tied embeddings | fc10212, after setting 3 and its evaluations |
@@ -17,44 +17,62 @@ All full runs initialize from scratch for 100,000 steps, batch 1,024, warmup
 FFN2048, BF16 and FA3. [Full recipes and semantics](../../docs/PROGRAM2_SCALEUP.md).
 R22 narrowing remains deferred in [TODO](../../TODO.md).
 
-## Completed production results (one of four)
+## Completed production results (two of four)
 
-Setting 2 completed **100,000 steps, 102.4M sequences and 24,200,224,761 model
-tokens**. Training took **12h 33m 42s**; full evaluations finished at **8:35:53 AM
-Toronto September 7**. The checkpoint SHA-256 is
-`618bc9dfa69736610ed21682fbe30f09f6cb361f8f2725f1c94048b8bf2c2fe8`.
+Both new completed runs processed **100,000 steps, 102.4M sequences and
+24,200,224,761 model tokens**. Setting 1 finished its evaluations at **5:11:09 PM
+Toronto September 7**; setting 2 finished at **8:35:53 AM** the same day.
 
-| Recipe | Validation loss ↓ | Perplexity ↓ | Full P@L ↑ | P@L 95% CI |
+| Recipe | Training time | Validation loss ↓ | Perplexity ↓ | Full P@L ↑ | P@L 95% CI |
+|---|---:|---:|---:|---:|---:|
+| Historical default | 12h 00m 42s | 2.47436048 | 11.87411093 | 26.504938% | 26.294763–26.718848% |
+| Historical R02, RoPE20k | 12h 56m 30s | 2.43698294 | 11.43847806 | 30.310361% | 30.078864–30.547478% |
+| **Setting 1: R02 RoPE10k** | **12h 57m 54s** | **2.43780741** | **11.44791265** | **30.164593%** | **29.935870–30.393752%** |
+| **Setting 2: + batch balance** | **12h 33m 42s** | **2.43871862** | **11.45834888** | **30.715194%** | **30.486543–30.947846%** |
+
+Each result uses the same **4,096 validation sequences / 139,963 masked targets**
+and **20,775 contact chains** as the historical comparison. All 16 contact-shard
+hashes, checkpoint/probe bindings, unique chain coverage and the same probe
+split/protocol were checked independently for each new result. Mean P@L and
+5,000-resample bootstrap intervals were recomputed from the per-chain rows.
+
+### Available adjacent comparisons
+
+Deltas below are candidate minus baseline. Lower loss/time and higher P@L are
+better. Each pair uses one matched training seed; timing also comes from one run
+on each assigned node.
+
+| Increment | Validation loss delta | P@L delta | Paired chain-bootstrap 95% CI for P@L delta | Training time delta |
 |---|---:|---:|---:|---:|
-| Historical default | 2.47436048 | 11.87411093 | 26.504938% | 26.294763–26.718848% |
-| Historical R02, RoPE20k | 2.43698294 | 11.43847806 | 30.310361% | 30.078864–30.547478% |
-| **Setting 2: R02 RoPE10k + batch balance** | **2.43871862** | **11.45834888** | **30.715194%** | **30.486543–30.947846%** |
+| Historical RoPE20k R02 → setting 1, RoPE10k | +0.00082447 | −0.1458 pp | −0.2059 to −0.0867 pp | +1m 24s (+0.18%) |
+| Setting 1 → setting 2, add batch balancing | +0.00091121 | +0.5506 pp | +0.4942 to +0.6067 pp | −24m 12s (−3.11%) |
 
-The new result uses the same **4,096 validation sequences / 139,963 masked
-targets** and **20,775 contact chains** as the historical comparison. All 16
-contact-shard hashes, checkpoint/probe bindings, unique chain coverage and the
-same probe split/protocol were checked independently. The mean P@L and
-5,000-resample bootstrap interval were also recomputed from the per-chain rows.
-These intervals describe variation across chains, not training-seed uncertainty.
+In this matched-seed comparison, batch balancing shortened training and produced
+higher contact P@L, while validation loss was slightly higher (+0.037%). Resetting
+RoPE to 10k produced slightly higher loss and lower P@L than historical RoPE20k.
+These are observations for these checkpoints. The chain-bootstrap intervals
+condition on the trained models; they **do not measure training-seed uncertainty
+or establish reproducible training effects**. Repeated training seeds remain
+necessary for that claim. Sqrt-loss and tied-embedding increments are pending.
 
-Compared with historical RoPE20k R02, setting 2 has **0.001736 higher validation
-loss** and **0.4048 percentage points higher P@L**. That comparison changes both
-RoPE and batch balancing. **The isolated batch-balancing comparison awaits
-setting 1**; no conclusion about its incremental quality effect is available yet.
-
-At 9:01 AM Toronto, setting 3 was healthy at 3,270 steps after starting
-automatically at 8:36 AM. Its estimated training finish was **9:10 PM September
-7**. Setting 1 remained healthy at 37,880 steps with a **5 PM** ETA; setting 4
-will follow setting 3 and its full evaluations.
+Setting 3 remains healthy, with training expected to finish around **9:10 PM
+Toronto September 7**. Setting 4 will follow its full evaluations. All user-owned
+Slurm allocations remain intact.
 
 [Machine-readable partial results](results.json) ·
-[Independent result verification](full/r04_batchbalance/RESULT_VERIFIED.json) ·
-[Per-chain P@L](full/r04_batchbalance/contact-per-chain.tsv) ·
-[Complete training trace, gzip](full/r04_batchbalance/metrics-complete.jsonl.gz) ·
+[Adjacent deltas and paired intervals](ADJACENT_COMPARISONS.json) ·
+[Setting 1 verification](full/r02_rope10k/RESULT_VERIFIED.json) ·
+[Setting 2 verification](full/r04_batchbalance/RESULT_VERIFIED.json) ·
 [Progress and queue snapshot](PROGRESS_SNAPSHOT.json).
-The uncompressed `metrics.jsonl` in the setting 2 report directory retains its
-initial launch snapshot. Full raw contact shards remain in the remote artifact
+
+Per-chain P@L and complete gzipped training traces are stored in each completed
+run directory. Uncompressed `metrics.jsonl` files in those directories retain
+initial launch snapshots. Full raw contact shards remain in the remote artifact
 root and local `.exps` audit directory; their verified hashes are preserved here.
+The [completion auditor](launch/verify_completed_result.py) reads the frozen
+Git config and can be rerun from the repo root with a method name; the
+[comparison script](launch/build_adjacent_comparisons.py) rebuilds adjacent
+comparisons from locally verified completed artifacts.
 
 ## Scheduled setting 1 launch: September 7
 

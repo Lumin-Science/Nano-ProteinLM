@@ -1,0 +1,47 @@
+{
+  "updated_utc": "2026-09-07T21:11:58.770045+00:00",
+  "comparison_order": [
+    "historical_r02_rope20k",
+    "r02_rope10k",
+    "r04_batchbalance",
+    "r10_sqrtloss",
+    "r29_tied"
+  ],
+  "comparisons": [
+    {
+      "baseline": "historical_r02_rope20k",
+      "candidate": "r02_rope10k",
+      "increment": "RoPE base 20000 to 10000",
+      "validation_loss_delta": 0.0008244719240337872,
+      "validation_loss_relative_delta_percent": 0.03383166580444019,
+      "p_at_l_delta_percentage_points": -0.14576785583708118,
+      "p_at_l_paired_chain_bootstrap_delta_95ci_percentage_points": [
+        -0.20586663749649534,
+        -0.08670211784587092
+      ],
+      "training_time_delta_seconds": 84.3958913302049,
+      "training_time_relative_delta_percent": 0.18114649281220085,
+      "paired_contact_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "bootstrap_seed": 20260820
+    },
+    {
+      "baseline": "r02_rope10k",
+      "candidate": "r04_batchbalance",
+      "increment": "Add batch balancing",
+      "validation_loss_delta": 0.000911212374603565,
+      "validation_loss_relative_delta_percent": 0.03737835770285525,
+      "p_at_l_delta_percentage_points": 0.5506007795475776,
+      "p_at_l_paired_chain_bootstrap_delta_95ci_percentage_points": [
+        0.49424810175110284,
+        0.6067240097518152
+      ],
+      "training_time_delta_seconds": -1452.4054685262963,
+      "training_time_relative_delta_percent": -3.11179159687075,
+      "paired_contact_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "bootstrap_seed": 20260820
+    }
+  ],
+  "interpretation": "Candidate minus baseline. Lower validation loss and training time are better; higher P@L is better. One matched training seed per recipe. Paired chain-bootstrap intervals condition on these trained checkpoints and do not measure training-seed variability or establish a reproducible training effect."
+}
