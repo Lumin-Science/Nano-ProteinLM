@@ -14,10 +14,15 @@ All structures and structural contact labels for the P@L evaluation come from
 the frozen 2024-02-28 RCSB Protein Data Bank snapshot. This is also the PDB
 population protected during training-corpus decontamination.
 
-Following the ESMC paper, full long-range contact precision at L (P@L) over the
-frozen 20,775-chain population is the primary AutoResearch validation and model
-selection axis. P-CORE and held-out MLM are reportable reference panels; they
-do not override a contact P@L regression.
+The default ESMC-171M AutoResearch protocol selects on held-out sequence-mean
+MLM loss across at least two matched training seeds. A candidate is kept only
+when its mean loss is below the current best accepted mean by more than the
+candidate's sample standard deviation. Training loss and full long-range
+contact P@L are required diagnostics; P-CORE provides additional representation
+measurements. These diagnostics do not affect research selection. See
+[program2.md](../program2.md) for the exact rule and fixed evaluation sample,
+and [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md) for the larger evaluation used
+to check transfer to longer training.
 
 ## Released ESMC checkpoint P@L
 

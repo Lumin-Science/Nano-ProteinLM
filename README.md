@@ -1,29 +1,20 @@
 # LuminBench Nano-ESMC
 
-Nano-ESMC is a small, end-to-end implementation of ESMC-style protein
-language-model training. It carries the whole recipe: public, decontaminated
-protein sequences, a locked training environment, checkpoint receipts, and a
-frozen evaluation.
+Nano-ESMC implements ESMC-style protein language-model training on four GPUs,
+with public, decontaminated sequences, pinned dependencies, saved run records,
+and fixed evaluations.
 
-It is built for two purposes.
+The repository supports two uses:
 
-1. **A reproduction you can run and change.** Protein LM pretraining is mostly
-   published as a paper plus a released checkpoint. This repository is the
-   training run itself, small enough to read in an afternoon and to execute on
-   four GPUs, so the pretraining recipe is open to ordinary research rather
-   than locked inside an industrial pipeline.
-2. **A benchmark for agentic autoresearch.** The corpus, tokenizer, compute
-   budget, and evaluation are pinned, so an automated agent can search for a
-   better training recipe and its results can be compared against the baseline
-   and against other agents on equal terms.
+1. **Reproduce and modify protein LM pretraining.** Train from scratch and
+   inspect the data pipeline, model, optimizer, and evaluation code.
+2. **Benchmark agentic autoresearch.** Let an agent test training recipes under
+   a fixed budget, select improvements across repeated seeds, and check whether
+   they carry over to longer training runs.
 
-This is early work. The training path, the data release, and the contact
-evaluator run end to end, but the evaluation suite is still growing and the
-autoresearch loop has only a few rounds behind it. If you work on protein
-language models or on agentic autoresearch, we would like the help: new
-evaluation tasks, recipe candidates, reproductions on other hardware, or
-arguments that something here is measuring the wrong thing. Open an issue or a
-pull request.
+The evaluation suite is still growing. Contributions of evaluation tasks,
+training recipes, and reproductions on other hardware are welcome through
+issues and pull requests.
 
 ## Data
 
@@ -33,7 +24,7 @@ source roles and a similar quality-filtering, deduplication, and 70%-identity
 clustering pipeline. After evaluation decontamination, this produces a public
 training dataset of 665,970,495 proteins.
 
-The release is screened against the complete protected evaluation union,
+The release is screened against all protected evaluation datasets,
 including every RCSB Protein Data Bank chain used for contact P@L. Exact
 matches and homologs at 30% or greater sequence identity with at least 80%
 bidirectional coverage are removed before validation and training records are
@@ -54,24 +45,21 @@ with a public, redistributable JGI-scale source is future work.
 
 Construction is documented in full in [`docs/DATA.md`](docs/DATA.md).
 
-- 🤗 [Hugging Face](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259).
+Download the pinned release from
+[Hugging Face](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259).
 
 ## Evaluation
 
-What we are trying to produce is a good residue-level representation of a
-protein. Almost everything built on a protein LM reads those representations
-rather than the weights: ESMFold, for example, predicts structure from the
-representations of a pretrained ESM encoder. The encoder therefore sets a
-ceiling on what the models above it can do, which makes it worth measuring
-directly instead of trusting training loss as a stand-in.
+We measure held-out masked language-model (MLM) loss and the structural
+information available from a frozen encoder. **Validation loss is the default
+autoresearch reward; lower is better.** Training loss and contact precision are
+reported alongside it.
 
-Long-range contact precision is the most informative cheap proxy we have for
-that. Recovering which residue pairs are in physical contact while far apart in
-sequence is close to the core of what a folding model needs from its encoder,
-and it can be read out of a frozen model with a small probe. Following the ESMC
-paper, we use full long-range contact precision at L (P@L) over a frozen
-20,775-chain population as the headline metric. Training and validation MLM
-losses are reported alongside it as diagnostics.
+For structure, we follow the ESMC paper's long-range contact precision at L
+(P@L) over a fixed 20,775-chain population. A small probe predicts which
+residues are in physical contact despite being far apart in sequence. This
+checks a property of the learned representation that MLM loss alone does not
+establish.
 
 Our evaluation and the paper's both start from the RCSB Protein Data Bank at
 the 2024-02-28 snapshot date, contain 20,775 chains, and follow the same
@@ -89,113 +77,138 @@ to decontaminate the training corpus.
 | ESMC-600M | 0.589 ± 0.002 | 0.5803 |
 | ESMC-6B | 0.725 ± 0.002 | 0.7126 |
 
-Contact precision is one view of one property, so we are also building a
-broader frozen-representation suite, P-CORE, covering remote homology,
-secondary structure, subcellular localization, and mutational fitness. It is a
-reporting panel today, not a selection metric.
+We are also building P-CORE, a suite of frozen-representation evaluations for
+remote homology, secondary structure, subcellular localization, and mutational
+fitness. These results do not affect autoresearch selection.
 
-See [`docs/EVALUATION.md`](docs/EVALUATION.md) for dataset lineage, exact
-splits, probe definitions, P-CORE results, confidence intervals, and execution.
+See [docs/EVALUATION.md](docs/EVALUATION.md) for dataset lineage, splits, probe
+definitions, P-CORE results, confidence intervals, and execution.
 
 ## Baselines
 
-The matched 100k-step, four-H100 ESMC-171M comparison has completed:
+Run these from the repository root after cloning it as described in
+[Usage](#usage). Both settings start from the 24-layer, width-768 ESMC-171M
+AdamW baseline.
 
-| Recipe | Validation loss ↓ | Full contact P@L ↑ | Training time |
-|---|---:|---:|---:|
-| Project default (AdamW) | 2.47436 | 26.50% | 12h 01m |
-| R02 (Muon + retained architecture) | **2.43698** | **30.31%** | 12h 57m |
+Research setting: one hour on four L40S GPUs per seed, global batch 256.
 
-Both use batch 1,024, base LR 5e-4, base WD 0.01, and 1,000-step warmup.
-Evaluation uses 4,096 held-out MLM sequences and 20,775 contact chains;
-one training seed per recipe. See the
-[results, confidence intervals, and audit receipts](reports/fir-171m-100k-20260906/README.md).
+```bash
+for seed in 42 43; do
+  CONFIG="$PWD/configs/program2/baseline_seed${seed}.yaml" \
+  NUM_GPUS=4 \
+  CUDA_VISIBLE_DEVICES=0,1,2,3 \
+  WALLTIME_SECONDS=3600 \
+  RUN_NAME="baseline-171m-1h-seed${seed}" \
+    bash runs/speedrun.sh
+done
+```
+
+Scale-up setting: 100,000 steps on four H100 GPUs, global batch 1,024.
+The 16-hour wall-time guard leaves room to finish the step budget.
+
+```bash
+CONFIG="$PWD/configs/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml" \
+NUM_GPUS=4 \
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+WALLTIME_SECONDS=57600 \
+RUN_NAME=baseline-171m-100k \
+  bash runs/speedrun.sh
+```
+
+These commands train and save checkpoints. Use a fresh run name for repeats;
+evaluation requires the prepared datasets and commands in
+[docs/EVALUATION.md](docs/EVALUATION.md). The exact research evaluation is
+specified in [program2.md](program2.md).
 
 ## AutoResearch
 
-The reason the data and the evaluation are frozen is that we want to hand this
-repository to agentic systems and ask them to do the research: propose a change
-to the training recipe, run it, measure it, and keep it only if it worked. A
-protein LM recipe is a large search space of architecture, optimizer, loss,
-schedule, and systems choices, most of it explored by hand today. The question
-we put to the agent is:
+An agent proposes a training change, trains from scratch, evaluates it, and
+keeps it only if it passes the rule below. **ESMC-171M with validation-loss
+selection is the default**, using the protocol from
+[`autoresearch-171m-val-loss`](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/tree/autoresearch-171m-val-loss),
+recorded locally in [program2.md](program2.md).
 
-> Train a protein sequence encoder from scratch under a fixed compute
-> budget and improve the biological information exposed by its frozen
-> representations.
+The benchmark has two settings:
 
-**Scope.** A candidate may change the model, optimizer, loss, schedule,
-batching, kernels, and other training-efficiency components. The processed
-corpus, tokenizer, dependency lock, hardware class, training clock, evaluation
-examples, probes, and metrics stay fixed.
+1. **Research:** a small budget for testing ideas. Each seed gets one hour of
+   synchronized training on four L40S GPUs, with at most 171M trainable
+   parameters. The starting model has 24 layers, width 768, and 12 heads.
+   Validation uses 32 fixed held-out sequences at context length 512.
+2. **Scale-up:** longer runs to test whether each kept improvement still helps.
+   The current setting trains the 171M model family for 100,000 steps on four
+   H100 GPUs at batch 1,024, then evaluates 4,096 held-out MLM sequences and
+   all 20,775 contact chains. Each recipe starts from scratch and is compared
+   with the baseline and preceding recipe under the same scale-up settings.
 
-**Budget.** One round is one hour of synchronized training time on four NVIDIA
-L40S GPUs, starting from scratch — roughly ten minutes on eight H100s. That is
-short enough for an agent to run many rounds per day and long enough that the
-model learns something measurable.
+Every kept research change needs a scale-up check before we claim it transfers
+to longer training. Completed results and remaining checks are listed in the
+[scale-up leaderboard](#scale-up-leaderboard). Raw losses from the two settings
+are reported separately because training budgets and validation sample sizes
+differ.
 
-**Evaluation.** Selecting on a single metric at a single compute budget is easy
-to game, and we assume an agent will find the cheap wins. One hour of training
-is short enough that a recipe can win by front-loading progress in ways that
-cost capacity later, and optimizing P@L alone rewards changes that suit this
-particular probe rather than the representation. So the search budget is not
-the acceptance budget: a retained recipe is re-run at about 36× the compute —
-1.5 days on four L40S — and is only credited if the gain survives the scale-up.
-Those runs are in progress and the table is not published yet.
+**Reward and acceptance.** Minimize the frozen evaluator's `sequence_mean_nll`
+in `eval-validation/VALIDATION_MLM.json`. Run each method, including the baseline,
+on at least **N independent training seeds (default N = 2)**. Choose the seeds
+before running and use the same seed set for candidates and the current best
+accepted recipe. Compute the mean and sample standard deviation across all
+repeats (`ddof=1`). Keep a candidate only when:
 
-| Model | P@L | Delta vs. original | Train loss | Validation loss | Steps | Model tokens (M) | Parameters (M) | Peak VRAM (GB) | Train (h) |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Original ESMC | 0.0925 | — | 2.723 | 2.699 | 5,883 | 358 | 333 | 35 | 1 |
-| **AutoResearch-Codex-Round1** | **0.0960** | **+0.0036 (+3.87%)** | **2.720** | 2.704 | 5,682 | 346 | 333 | 37 | 1 |
+```text
+candidate_mean_val_loss < current_best_mean_val_loss - candidate_val_loss_std
+```
 
-Round 1's retained recipe adds learned residual/input routing, parameter-free
-transformer RMSNorm, depth-scaled attention-output and FFN-down initialization,
-and a final-20% linear learning-rate cooldown ending at 0.1× peak.
+The standard deviation is the candidate's variation across training seeds.
+A tie or a single run cannot qualify. This is a selection rule, not a formal
+significance test. Training loss and contact P@L are required diagnostics and
+do not affect this decision.
 
-### ESMC-171M AutoResearch
+**What can change.** Model architecture, optimizer, training loss, batching,
+and training implementation. The corpus and mixture, tokenizer, dependency
+lock, hardware, training budget, and evaluators stay fixed within each setting.
+Research runs use a 554-step linear warmup followed by constant learning rates,
+with no cooldown. See [program2.md](program2.md) for the full contract.
 
-The 171M campaign transfers the retained architecture and Muon optimizer to a
-24-layer, width-768 model, then evaluates each recipe from scratch for one hour
-on four L40S GPUs. We re-ran the starting baseline and all three retained
-changes with matched seeds 42, 43, and 44. R02 won on every seed and is now the
-retained 171M AutoResearch preset:
-[`configs/autoresearch_171m_4xl40s_1h.yaml`](configs/autoresearch_171m_4xl40s_1h.yaml).
+**29-round history.** The September 6, 2026 snapshot contains the AdamW baseline
+and 29 candidate rounds: 60 one-hour runs across seeds 42 and 43, with five kept
+changes. The accepted sequence is Muon → balanced ranks → square-root
+target-count loss weights → FFN width 1536 → tied embeddings. Mean validation
+loss falls from **2.63868 to 2.58057 (2.20%)**. R29's accepted configs are
+available for [seed 42](configs/program2/r29_tied_seed42.yaml) and
+[seed 43](configs/program2/r29_tied_seed43.yaml).
 
-| Recipe | Seed 42 P@L | Seed 43 P@L | Seed 44 P@L | Mean P@L ± SD | Delta vs. baseline |
-|---|---:|---:|---:|---:|---:|
-| Starting baseline | 0.1056 | 0.1008 | 0.0925 | 0.0996 ± 0.0067 | — |
-| R01: differential Muon LR | 0.1068 | 0.1032 | 0.0955 | 0.1019 ± 0.0058 | +0.0022 (+2.22%) |
-| **R02: R01 + RoPE base 20,000** | **0.1081** | **0.1058** | **0.1091** | **0.1077 ± 0.0017** | **+0.0080 (+8.06%)** |
-| R03: R02 + attention Muon LR 1.0 | 0.1055 | 0.1024 | 0.1054 | 0.1044 ± 0.0018 | +0.0048 (+4.82%) |
+Each point below is a method's mean validation loss with thin **±1 sample SD**
+error bars. The green line follows the current best accepted recipe; lower
+means that fail the acceptance rule do not advance it. Full history:
+[methods.tsv](reports/program2/methods.tsv) and
+[run records and audit](reports/program2/README.md).
+Regenerate the [SVG](reports/program2/validation-loss.svg) and PNG with
+[the plotting script](scripts/plot_autoresearch_history.py).
 
-The promoted R02 recipe uses Muon LR scales of 0.9 for attention and 0.75 for
-FFNs, with RoPE base 20,000. It has 170.56M trainable parameters and processed
-561.65M model tokens on average within the fixed one-hour training window.
+![Validation loss over the baseline and 29 autoresearch rounds, with mean ± sample SD across two seeds and the accepted loss decreasing from 2.63868 to 2.58057.](reports/program2/validation-loss.png)
 
-The starting baseline in this table already uses Muon and the retained
-architecture; it is distinct from `configs/esmc-171m-original.yaml`. Validation
-loss mean and standard deviation are not published in the campaign record.
+## Scale-up leaderboard
 
-See [`docs/AUTORESEARCH.md`](docs/AUTORESEARCH.md) for the experiment contract
-and [`docs/BASELINES.md`](docs/BASELINES.md) for detailed baseline context.
+Completed 100,000-step runs on four H100s, ordered by validation loss:
 
-### Validation-loss AutoResearch (Program 2)
+| Recipe | Validation loss ↓ | Full contact P@L ↑ | Training time |
+|---|---:|---:|---:|
+| R02 (Muon + retained architecture) | **2.43698** | **30.31%** | 12h 57m |
+| AdamW baseline | 2.47436 | 26.50% | 12h 01m |
 
-The separate Program 2 campaign completed 30 paired-seed methods through R29.
-Its accepted sequence is Muon → balanced ranks → square-root target-count loss
-weights → FFN width 1536 → tied embeddings. Mean one-hour validation loss fell
-from 2.63868 to 2.58057; these use a smaller validation sample and training
-budget than the completed H100 comparison above.
+Both use batch 1,024, base LR 5e-4, base WD 0.01, and a 1,000-step warmup.
+Evaluation uses 4,096 held-out MLM sequences and 20,775 contact chains.
+There is one training seed per recipe, so these results do not yet measure
+variation across training seeds. See the
+[full results and run records](reports/fir-171m-100k-20260906/README.md).
 
-See the [published Program 2 snapshot and audit](reports/program2/README.md) and
-[architecture/config differences with matched 100k H100 presets](docs/PROGRAM2_SCALEUP.md).
-The accepted implementations and H100 presets are available on main. All four
-200-step H100 technical trials passed, and the production queue has started;
-see the [launch record](reports/fir-r02-rope10k-100k-20260906/README.md).
-The active scale-up is four cumulative
-settings: **completed R02 with RoPE 10k → batch balance → sqrt loss → tied
-embeddings**, all retaining FFN width 2048. FFN narrowing is deferred to
-[TODO](TODO.md). See the [GPU training plan](docs/PROGRAM2_GPU_PLAN.md).
+R02 comes from the earlier contact-selected campaign. Scale-up results for the
+validation-loss search are pending in the published
+[launch record](reports/fir-r02-rope10k-100k-20260906/README.md). That comparison
+starts from R02 with RoPE reset to 10k, then adds rank balancing, square-root
+loss weights, and tied embeddings cumulatively. It retains FFN width 2048;
+the kept FFN-narrowing change still needs its scale-up check and is tracked in
+[TODO](TODO.md). See the [matched recipes](docs/PROGRAM2_SCALEUP.md) for the
+differences from the one-hour search.
 
 ## Usage
 
@@ -205,13 +218,13 @@ four visible BF16-capable GPUs:
 ```bash
 git clone https://github.com/Lumin-Science/LuminBench-Nano-ESMC.git
 cd LuminBench-Nano-ESMC
-bash runs/speedrun.sh
 ```
 
-The speedrun creates the locked environment, downloads and verifies the
-required processed-data shards, qualifies CUDA, trains ESMC-300M, and verifies
-the final artifacts. Configuration, smoke-run, and evaluation commands are in
-[`docs/USAGE.md`](docs/USAGE.md).
+Then run one of the [baseline commands](#baselines) above. The speedrun creates
+the locked environment, downloads and verifies the required processed-data
+shards, qualifies CUDA, trains the selected model, and checks the saved
+artifacts. Configuration, smoke-run, and evaluation commands are in
+[docs/USAGE.md](docs/USAGE.md).
 
 Source and issues:
 [Lumin-Science/LuminBench-Nano-ESMC](https://github.com/Lumin-Science/LuminBench-Nano-ESMC).

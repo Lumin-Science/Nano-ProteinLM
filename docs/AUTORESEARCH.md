@@ -1,98 +1,82 @@
 # AutoResearch
 
-LuminBench Nano ESMC asks a practical scientific question: **how much useful
-protein biology can a compact, sequence-only ESMC encoder learn under a fixed
-and reproducible compute budget?** The repository provides the public training
-data, model implementation, frozen evaluations, baselines, and end-to-end
-training path needed to answer that question.
+The default benchmark uses ESMC-171M and selects training changes by held-out
+MLM validation loss. The full experiment instructions are in
+[program2.md](../program2.md), from the
+[`autoresearch-171m-val-loss` branch](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/tree/autoresearch-171m-val-loss).
+Earlier contact-selected campaigns remain documented in
+[BASELINES.md](BASELINES.md).
 
-## Research task
+## Research setting
 
-| Field | Definition |
-|---|---|
-| **Task** | Compute-bounded protein representation learning with ESMC-300M |
-| **Scientific lead** | Muchen Li |
-| **Version** | 1.0 |
-| **Status** | Pilot-ready |
+Start from the original AdamW baseline: 24 layers, width 768, 12 heads, and
+170,671,168 trainable parameters. Each run starts from scratch on four L40S
+GPUs, with a synchronized 3,600-second training budget and a 171M parameter cap.
 
-The goal is to train a compact protein language model whose residue- and
-protein-level embeddings expose useful structural and functional information
-to frozen downstream readouts.
+Candidates may change model architecture, optimizer, training loss, batching,
+and training implementation. The corpus, mixture, tokenizer, dependency lock,
+hardware, training budget, and evaluation remain fixed. Every learning-rate
+group warms linearly for 554 steps, then stays at its configured peak.
 
-> Given a verified, evaluation-decontaminated corpus of protein sequences,
-> produce an ESMC-300M-class encoder checkpoint within the fixed compute budget
-> that improves frozen protein representation quality.
+The reward is `sequence_mean_nll` in `eval-validation/VALIDATION_MLM.json`,
+computed over 32 fixed held-out sequences at context 512 with evaluation seed
+20260821. Training loss and full 20,775-chain contact P@L are required
+diagnostics and do not affect selection.
 
-Inputs are public amino-acid sequences from UniRef90, MGnify, and OMG/IMG.
-Outputs are a checkpoint, embeddings produced from that checkpoint, and the
-data, environment, and training receipts needed to verify the run. The task
-excludes structure-conditioned inputs, task-specific encoder fine-tuning,
-private training data, evaluation-set adaptation, and changes to the frozen
-evaluator.
+## Repeats and acceptance
 
-## Experiment contract
+Run the baseline and every candidate on at least N independent training seeds,
+with **N = 2 by default**. Choose the seeds before running, compare methods on
+the same seed set, and keep evaluation seeds fixed. Every repeat receives the
+full training budget and a fresh output directory.
 
-Candidates may change the model, optimizer, training loss, learning-rate
-schedule, batching, kernels, compilation, precision strategy, packing, and
-checkpointing. The following remain fixed across comparisons:
+Compute arithmetic mean loss and sample standard deviation (`ddof=1`) from all
+completed repeats. Keep a candidate only if:
 
-- the pinned training corpus, mixture, tokenizer, and dependency lock;
-- four matched GPUs and 3,600 seconds of synchronized training-loop time;
-- held-out validation data and the frozen contact evaluator; and
-- evaluation sequences, probes, masking seed, metrics, and reductions.
-
-Every completed experiment reports full long-range contact P@L, final-window
-training loss, frozen held-out validation loss, realized steps, model tokens,
-parameter count, peak memory, and elapsed evaluation time. P@L is the primary
-selection metric. A candidate is kept only when its P@L is strictly higher than
-the incumbent under the same contract.
-
-The public production reference uses the same task with a four-hour training
-budget. Promotion beyond development additionally requires a controlled clean
-rebuild, repeated runs, checkpoint verification, uncertainty reporting, and
-review of trusted-task regressions.
-
-The exact retained one-hour preset is
-[`configs/autoresearch_300m_4xa100_1h.yaml`](../configs/autoresearch_300m_4xa100_1h.yaml).
-It is opt-in; the public speedrun remains on the original ESMC-compatible
-configuration unless `CONFIG` is set explicitly.
-
-## AutoResearch-Codex Round 1
-
-| Model | P@L | Delta vs. original | Train loss | Validation loss | Steps | Model tokens (M) | Parameters (M) | Peak VRAM (GB) | Train (h) |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Original ESMC | 0.0925 | — | 2.723 | 2.699 | 5,883 | 358 | 333 | 35 | 1 |
-| **AutoResearch-Codex-Round1** | **0.0960** | **+0.0036 (+3.87%)** | **2.720** | 2.704 | 5,682 | 346 | 333 | 37 | 1 |
-
-These results use Stage 1 training only, four NVIDIA L40S GPUs, and one hour of
-synchronized training time per model. Relative to original ESMC, the retained
-candidate adds learned residual/input routing, parameter-free transformer
-RMSNorm, depth-scaled attention-output and FFN-down initialization, and a
-linear learning-rate cooldown over the final 20% of training that ends at
-0.1× the peak learning rate.
-
-Subsequent decontaminated experiments and the current incumbent are recorded in
-[`BASELINES.md`](BASELINES.md). Detailed experimental instructions live in
-[`program.md` on the `auto-research` branch](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/blob/auto-research/program.md).
-
-## Run the supported training path
-
-From a fresh clone, the project-level prerequisite is `uv >=0.11.31,<0.12`,
-plus a supported NVIDIA driver and four visible BF16-capable GPUs:
-
-```bash
-git clone https://github.com/Lumin-Science/LuminBench-Nano-ESMC.git
-cd LuminBench-Nano-ESMC
-bash runs/speedrun.sh
+```text
+candidate_mean_val_loss < current_best_mean_val_loss - candidate_val_loss_std
 ```
 
-The script creates the locked environment, downloads and verifies the required
-public shard prefix, materializes on-disk training data, qualifies CUDA, and
-trains ESMC-300M. See [`USAGE.md`](USAGE.md) for the concise usage guide.
+The threshold uses the candidate's standard deviation. A tie fails; a single
+run cannot qualify. The current best is the last accepted recipe, even when a
+discarded candidate has a lower mean. This rule measures improvement relative
+to observed seed variation; it is not a formal significance test.
 
-## Reference documentation
+## Scale-up setting
 
-- [`DATA.md`](DATA.md): training corpus, provenance, and download behavior.
-- [`EVALUATION.md`](EVALUATION.md): datasets, splits, metrics, and execution.
-- [`BASELINES.md`](BASELINES.md): baseline versions and results.
-- [`USAGE.md`](USAGE.md): training and evaluation commands.
+Every kept research change needs a longer run to establish whether its gain
+transfers. The current scale-up uses the 171M model family, four H100 GPUs,
+100,000 optimizer steps, global batch 1,024, and a 1,000-step warmup followed by
+constant learning rates. Evaluate 4,096 held-out MLM sequences and all 20,775
+contact chains. Compare each recipe with the baseline and preceding recipe
+under these matched settings.
+
+The completed AdamW/R02 comparison has one training seed per recipe. The
+validation-loss campaign's scale-up results remain pending in the published
+[launch record](../reports/fir-r02-rope10k-100k-20260906/README.md). That plan
+adds rank balance, square-root loss weights, and tied embeddings to R02 with
+RoPE 10k, retaining FFN width 2048. The FFN-narrowing check is deferred in
+[TODO](../TODO.md). See [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md) for the exact
+recipes and evaluation contract.
+
+## Commands and results
+
+- [Baseline commands](../README.md#baselines) for research and scale-up training.
+- [29-round curve](../README.md#autoresearch), including all means and sample SDs.
+- [Scale-up leaderboard](../README.md#scale-up-leaderboard).
+- [Published research history and audit](../reports/program2/README.md).
+- [Per-method statistics](../reports/program2/methods.tsv) and
+  [all 60 runs](../reports/program2/runs.tsv).
+- [Evaluation setup and execution](EVALUATION.md).
+
+To regenerate the curve without changing the training environment:
+
+```bash
+python3 -m venv /tmp/nano-esmc-plot
+/tmp/nano-esmc-plot/bin/python -m pip install 'matplotlib==3.11.1'
+/tmp/nano-esmc-plot/bin/python scripts/plot_autoresearch_history.py
+```
+
+Run these commands from the repository root. The script verifies seed means,
+sample SDs, and keep/discard decisions before writing PNG and SVG files to
+`reports/program2/`.
