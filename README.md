@@ -118,7 +118,7 @@ RUN_NAME=baseline-171m-100k \
 These commands train and save checkpoints. Use a fresh run name for repeats;
 evaluation requires the prepared datasets and commands in
 [docs/EVALUATION.md](docs/EVALUATION.md). The exact research evaluation is
-specified in [program2.md](program2.md).
+specified in [program.md](program.md).
 
 ## AutoResearch
 
@@ -126,7 +126,7 @@ An agent proposes a training change, trains from scratch, evaluates it, and
 keeps it only if it passes the rule below. **ESMC-171M with validation-loss
 selection is the default**, using the protocol from
 [`autoresearch-171m-val-loss`](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/tree/autoresearch-171m-val-loss),
-recorded locally in [program2.md](program2.md).
+now the default [program.md](program.md) on main.
 
 The benchmark has two settings:
 
@@ -166,7 +166,7 @@ do not affect this decision.
 and training implementation. The corpus and mixture, tokenizer, dependency
 lock, hardware, training budget, and evaluators stay fixed within each setting.
 Research runs use a 554-step linear warmup followed by constant learning rates,
-with no cooldown. See [program2.md](program2.md) for the full contract.
+with no cooldown. See [program.md](program.md) for the full contract.
 
 **29-round history.** The September 6, 2026 snapshot contains the AdamW baseline
 and 29 candidate rounds: 60 one-hour runs across seeds 42 and 43, with five kept

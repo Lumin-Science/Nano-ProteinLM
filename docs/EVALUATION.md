@@ -20,7 +20,7 @@ when its mean loss is below the current best accepted mean by more than the
 candidate's sample standard deviation. Training loss and full long-range
 contact P@L are required diagnostics; P-CORE provides additional representation
 measurements. These diagnostics do not affect research selection. See
-[program2.md](../program2.md) for the exact rule and fixed evaluation sample,
+[program.md](../program.md) for the exact rule and fixed evaluation sample,
 and [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md) for the larger evaluation used
 to check transfer to longer training.
 

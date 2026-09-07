@@ -2,7 +2,7 @@
 
 The default benchmark uses ESMC-171M and selects training changes by held-out
 MLM validation loss. The full experiment instructions are in
-[program2.md](../program2.md), from the
+[program.md](../program.md), adapted from the
 [`autoresearch-171m-val-loss` branch](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/tree/autoresearch-171m-val-loss).
 Earlier contact-selected campaigns remain documented in
 [BASELINES.md](BASELINES.md).
