@@ -38,5 +38,9 @@
   "production_queue_step": "58303724.9",
   "production_queue_driver_pid": 1109182,
   "trial_qualification_utc": "2026-09-06T23:54:21.836498+00:00",
-  "trial_status": "all_four_passed"
+  "trial_status": "all_four_passed",
+  "setting1_slurm_step": "58303658.14",
+  "setting1_driver_pid": 2610432,
+  "setting1_launch_utc": "2026-09-07T08:02:34Z",
+  "setting1_launch_status": "verified_healthy"
 }
