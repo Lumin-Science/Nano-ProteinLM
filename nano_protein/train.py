@@ -1,4 +1,4 @@
-"""Step- and time-budgeted four-GPU ESMC pretraining loop."""
+"""Step-, token- and time-budgeted distributed ESMC pretraining loop."""
 
 from __future__ import annotations
 
@@ -61,6 +61,42 @@ def resolve_step_budgets(config: dict[str, Any]) -> tuple[int | None, int | None
     if max_steps is not None and schedule_steps is not None and schedule_steps > max_steps:
         raise ValueError("schedule_steps cannot exceed max_steps")
     return max_steps, schedule_steps
+
+
+def resolve_token_budget(config: dict[str, Any]) -> int | None:
+    """An optional total endpoint using the existing global non-padding token meter."""
+    value = config.get("max_model_tokens")
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError("max_model_tokens must be a positive integer")
+    stages = config.get("stages", [])
+    if (
+        len(stages) != 1
+        or stages[0]["name"] != "stage1"
+        or config.get("stage1_cooldown_fraction", 0) != 0
+    ):
+        raise ValueError("token budgets require a single constant-LR Stage 1 after warmup")
+    return value
+
+
+def training_stop_reason(
+    *,
+    model_tokens: int,
+    max_model_tokens: int | None,
+    optimizer_step: int,
+    max_steps: int | None,
+    training_seconds: float,
+    walltime_seconds: float,
+) -> str | None:
+    """Check only optimizer boundaries; a reached token endpoint wins over safety caps."""
+    if max_model_tokens is not None and model_tokens >= max_model_tokens:
+        return "max_model_tokens"
+    if max_steps is not None and optimizer_step >= max_steps:
+        return "max_steps"
+    if training_seconds >= walltime_seconds:
+        return "walltime"
+    return None
 
 
 def validate_data_manifest(
@@ -527,6 +563,7 @@ def train(
     resume_checkpoint: Path | None = None,
 ) -> None:
     config = load_config(config_path)
+    max_model_tokens = resolve_token_budget(config)
     loss_reduction = str(config.get("training_loss_reduction", "sequence_mean"))
     if loss_reduction not in {"sequence_mean", "sqrt_mask_count"}:
         raise ValueError(f"unknown training loss reduction {loss_reduction!r}")
@@ -586,7 +623,11 @@ def train(
                     else None
                 ),
                 "training_budget_semantics": (
-                    "true synchronized training-loop wall time; setup, final checkpoint, "
+                    "global non-padding model tokens including BOS/EOS; stop at the first "
+                    "completed optimizer update reaching the token endpoint; time/step "
+                    "limits remain independent safety caps"
+                    if max_model_tokens is not None
+                    else "true synchronized training-loop wall time; setup, final checkpoint, "
                     "and evaluation are outside the training clock"
                 ),
                 "world_size": world_size,
@@ -704,6 +745,7 @@ def train(
     training_seconds = 0.0
     compute_seconds_total = 0.0
     model_tokens = int(resumed["model_tokens"]) if resumed else 0
+    last_step_model_tokens = 0
     filled_residues = int(resumed["filled_residues"]) if resumed else 0
     sequences_seen = int(resumed["sequences_seen"]) if resumed else 0
     current_stage_name: str | None = str(resumed["stage"]) if resumed else None
@@ -752,9 +794,15 @@ def train(
         if world_size > 1:
             dist.all_reduce(elapsed, op=dist.ReduceOp.MAX)
         training_seconds = float(elapsed.item())
-        if training_seconds >= walltime_seconds or (
-            max_steps is not None and optimizer_step >= max_steps
-        ):
+        stop_reason = training_stop_reason(
+            model_tokens=model_tokens,
+            max_model_tokens=max_model_tokens,
+            optimizer_step=optimizer_step,
+            max_steps=max_steps,
+            training_seconds=training_seconds,
+            walltime_seconds=walltime_seconds,
+        )
+        if stop_reason is not None:
             break
         if schedule_steps is not None:
             stage, stage_progress = stage_for_progress(
@@ -872,6 +920,7 @@ def train(
             int(value) for value in step_counts.tolist()
         )
         model_tokens += global_step_tokens
+        last_step_model_tokens = global_step_tokens
         filled_residues += global_step_filled
         sequences_seen += global_step_sequences
 
@@ -917,7 +966,12 @@ def train(
 
         evaluation_due = bool(evaluation_interval and optimizer_step % evaluation_interval == 0)
         checkpoint_due = bool(checkpoint_interval and optimizer_step % checkpoint_interval == 0)
-        if (checkpoint_due or evaluation_due) and optimizer_step != max_steps:
+        token_endpoint = max_model_tokens is not None and model_tokens >= max_model_tokens
+        if (
+            (checkpoint_due or evaluation_due)
+            and optimizer_step != max_steps
+            and not token_endpoint
+        ):
             runtime = capture_runtime(batchers, data_seed=data_seed)
             if rank == 0:
                 latest_checkpoint = save_checkpoint(
@@ -1012,11 +1066,7 @@ def train(
             "resume_data_mode": resume_data_mode,
             "compute_seconds": compute_seconds_total,
             "walltime_budget_seconds": walltime_seconds,
-            "stop_reason": (
-                "max_steps"
-                if max_steps is not None and optimizer_step >= max_steps
-                else "walltime"
-            ),
+            "stop_reason": stop_reason,
             "model_tokens": model_tokens,
             "filled_residues": filled_residues,
             "sequences_seen": sequences_seen,
@@ -1032,6 +1082,13 @@ def train(
             "stage_checkpoint": stage_checkpoint,
             "final_checkpoint": final_checkpoint,
         }
+        if max_model_tokens is not None:
+            completion.update(
+                target_model_tokens=max_model_tokens,
+                model_token_budget_reached=model_tokens >= max_model_tokens,
+                model_token_overrun=max(0, model_tokens - max_model_tokens),
+                last_optimizer_step_model_tokens=last_step_model_tokens,
+            )
         _write_json(output_root / "TRAINING_COMPLETE.json", completion)
         print(json.dumps(completion, sort_keys=True), flush=True)
     if world_size > 1:

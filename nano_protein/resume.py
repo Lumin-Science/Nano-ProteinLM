@@ -66,6 +66,7 @@ def validate_resume(
             raise ValueError("resume must preserve the global sequence batch size")
     for key in (
         "max_steps",
+        "max_model_tokens",
         "schedule_steps",
         "walltime_seconds",
         "log_interval",
@@ -79,9 +80,17 @@ def validate_resume(
     if old != new:
         raise ValueError("resume config changes the model, optimizer, or data/loss recipe")
     step = int(packet["optimizer_step"])
-    if config.get("max_steps") is None or int(config["max_steps"]) <= step:
+    step_limit = config.get("max_steps")
+    token_limit = config.get("max_model_tokens")
+    if step_limit is None and token_limit is None:
+        raise ValueError("resume requires a total max_steps or max_model_tokens endpoint")
+    if step_limit is not None and int(step_limit) <= step:
         raise ValueError(
             "resume max_steps is the total endpoint and must exceed the saved step"
+        )
+    if token_limit is not None and int(token_limit) <= int(packet["model_tokens"]):
+        raise ValueError(
+            "resume max_model_tokens is the total endpoint and must exceed the saved tokens"
         )
     # Extending a constant Stage-1 schedule does not move warmup or a decay boundary.
     old_schedule = packet["train_config"].get(

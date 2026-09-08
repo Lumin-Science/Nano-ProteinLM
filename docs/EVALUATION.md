@@ -21,11 +21,10 @@ candidate's sample standard deviation. Training loss and full long-range
 contact P@L are required diagnostics; P-CORE provides additional representation
 measurements. These diagnostics do not affect research selection. See
 [program.md](../program.md) for the exact rule and fixed evaluation sample,
-and [the v1 test protocol](../program.md#5-test-protocol-and-success-criteria)
+and [Test of Progress](../program.md#test-of-progress)
 for token-budget confirmation. [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md)
-records the executed historical 100k-step comparison. The v1 task specification
-requires a token-stopping adapter before execution and does not relabel those
-single-seed results.
+records the executed historical 100k-step comparison. The current token-budget verification
+protocol does not relabel those single-seed results.
 
 ## Released ESMC checkpoint P@L
 

@@ -9,10 +9,8 @@
   remain available. See the [current Test Leaderboard](README.md#test-leaderboard)
   and [archived six-recipe comparison](docs/archive/TEST_LEADERBOARD_20260908.md).
 
-- [ ] **Implement the v1 fixed-token test adapter.** The
-  [task contract](tasks/protein-embedding.yaml) specifies 24,200,224,761 global
-  non-padding tokens, terminal-update overrun receipts and N=2 matched seeds.
-  The trainer currently implements time/step stopping only. Verify synchronized
-  counting, exact-boundary behavior, terminal-step overrun, incomplete wall-time
-  stops and checkpoint/resume semantics before any new v1 test launch.
-  Historical 100k-step results keep their original protocol.
+- [x] **Support the Test of Progress token budget.** Training now accepts
+  `max_model_tokens`, stops at a synchronized optimizer boundary, records the
+  target/actual tokens and overrun, and can resume to a larger token endpoint.
+  The complete train-and-evaluate example is in [program.md](program.md#test-of-progress).
+  Historical time/step-based runs keep their existing behavior.

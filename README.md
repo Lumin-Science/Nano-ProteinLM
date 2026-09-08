@@ -125,66 +125,17 @@ specified in [program.md](program.md).
 
 ## AutoResearch
 
-Each task declares **a research question, an established codebase, a search
-protocol, experiment boundaries, and a final test protocol**. We call the
-optimization target the **search score**; final outcomes are **test metrics**.
-See the [reusable task standard](docs/AUTORESEARCH_TASK_STANDARD.md),
-[protein task contract](program.md), [structured specification](tasks/protein-embedding.yaml)
-and [OpenMM examples](tasks/examples/).
+The authoritative task definition is [program.md](program.md), organized as:
+**Background** (research question and established codebase), **Autoresearch**
+(protocol and boundaries), and **Test of Progress**. It includes complete
+train/evaluate commands, score extraction, fixed settings and success criteria.
 
-An agent proposes a training change, trains from scratch, evaluates it, and
-keeps it only if it passes the rule below. **ESMC-171M with validation-loss
-selection is the default**, using the protocol from
-[`autoresearch-171m-val-loss`](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/tree/autoresearch-171m-val-loss),
-now the default [program.md](program.md) on main.
-
-The benchmark has two settings:
-
-1. **Research:** a small budget for testing ideas. Each seed gets one hour of
-   synchronized training on four L40S GPUs, with trainable parameters within
-   ±5% of the original 170,671,168-parameter baseline. The starting model has
-   24 layers, width 768, and 12 heads.
-   Validation uses 32 fixed held-out sequences at context length 512.
-2. **Scale-up:** longer runs to test whether each kept improvement still helps.
-   The current setting trains the 171M model family for 100,000 steps on four
-   H100 GPUs at batch 1,024, then evaluates 4,096 held-out MLM sequences and
-   all 20,775 contact chains. Each recipe starts from scratch and is compared
-   with the baseline and preceding recipe under the same scale-up settings.
-
-Every kept research change needs a scale-up check before we claim it transfers
-to longer training. Completed results and remaining checks are listed in the
-[Test Leaderboard](#test-leaderboard). Raw losses from the two settings
-are reported separately because training budgets and validation sample sizes
-differ.
-
-The new **v1 test contract** fixes exposure at **24,200,224,761 non-padding
-model tokens per seed**, including BOS/EOS, and specifies **N=2** matched seeds.
-It requires lower mean MLM loss **and** higher mean P@L. A token-stopping
-adapter is required before running it. The completed leaderboard below retains
-its original 100k-step, single-seed protocol. See
-[the exact test definition](program.md#5-test-protocol-and-success-criteria).
-
-**Search score and acceptance.** Minimize the frozen evaluator's `sequence_mean_nll`
-in `eval-validation/VALIDATION_MLM.json`. Run each method, including the baseline,
-on at least **N independent training seeds (default N = 2)**. Choose the seeds
-before running and use the same seed set for candidates and the current best
-accepted recipe. Compute the mean and sample standard deviation across all
-repeats (`ddof=1`). Keep a candidate only when:
-
-```text
-candidate_mean_val_loss < current_best_mean_val_loss - candidate_val_loss_std
-```
-
-The standard deviation is the candidate's variation across training seeds.
-A tie or a single run cannot qualify. This is a selection rule, not a formal
-significance test. Training loss and contact P@L are required diagnostics and
-do not affect this decision.
-
-**What can change.** Model architecture, optimizer, training loss, batching,
-and training implementation. The corpus and mixture, tokenizer, dependency
-lock, hardware, training budget, and evaluators stay fixed within each setting.
-Research runs use a 554-step linear warmup followed by constant learning rates,
-with no cooldown. See [program.md](program.md) for the full contract.
+Research selects lower mean MLM validation loss across N=2 training seeds after
+one hour on four L40S GPUs per seed. The new Test of Progress uses 24,200,224,761
+non-padding model tokens per seed on four H100s and requires both lower mean
+MLM loss and higher mean P@L. The completed leaderboard below retains its original
+100k-step, single-seed protocol. Raw research and verification scores remain
+separate because their budgets and MLM evaluation sizes differ.
 
 **38-round history.** The updated run log contains the AdamW baseline and 38
 candidate rounds: 78 one-hour runs across seeds 42 and 43, with five kept

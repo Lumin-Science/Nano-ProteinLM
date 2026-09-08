@@ -115,6 +115,43 @@ class ResumeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "recipe"):
             validate_resume(packet, new, world_size=4, data_manifest_sha256="same-data")
 
+    def test_token_endpoint_can_extend_with_a_changed_gpu_layout(self):
+        config = {
+            "max_model_tokens": 1000,
+            "schedule_steps": 100000,
+            "stages": [
+                {
+                    "name": "stage1",
+                    "context_length": 512,
+                    "micro_batch_size": 64,
+                    "gradient_accumulation": 4,
+                }
+            ],
+        }
+        packet = {
+            "train_config": config,
+            "world_size": 8,
+            "optimizer_step": 3,
+            "model_tokens": 1010,
+            "data_manifest_sha256": "same-data",
+        }
+        new = copy.deepcopy(config)
+        new["max_model_tokens"] = 2000
+        new["stages"][0]["gradient_accumulation"] = 8
+        validate_resume(packet, new, world_size=4, data_manifest_sha256="same-data")
+        for endpoint in (1000, 1010):
+            with self.subTest(endpoint=endpoint), self.assertRaisesRegex(ValueError, "tokens"):
+                validate_resume(
+                    packet,
+                    {**new, "max_model_tokens": endpoint},
+                    world_size=4,
+                    data_manifest_sha256="same-data",
+                )
+        with self.assertRaisesRegex(ValueError, "saved step"):
+            validate_resume(
+                packet, {**new, "max_steps": 3}, world_size=4, data_manifest_sha256="same-data"
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

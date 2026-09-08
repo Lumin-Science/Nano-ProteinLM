@@ -1,294 +1,243 @@
-# Protein AutoResearch task contract — v1
+# Protein embedding training recipes
 
-**Task:** `protein-embedding-recipe-v1`. The five sections below define the
-experiment. [tasks/protein-embedding.yaml](tasks/protein-embedding.yaml) is its
-structured counterpart; the [shared task standard](docs/AUTORESEARCH_TASK_STANDARD.md)
-explains how to use the same format for other tasks, including OpenMM.
-The operational appendix retains the existing research commands and ledger.
-[program2.md](program2.md) is an immutable historical campaign definition.
+This is the authoritative task definition. Commands run from the repository root
+on the specified GPU host; replace the input paths and choose a fresh run name.
+Existing training configs are executable recipes, not separate task definitions.
 
-## 1. Research question
+## Background
 
-**Which training-recipe changes produce more useful protein representations
-at approximately fixed model size and data?** Search under a fixed training-time
-budget, then test whether improvements transfer to a matched token budget.
+### Research question
 
-The comparator is the repository's original ESMC-like AdamW baseline. Held-out
-masked language-model (MLM) loss is the search proxy. The practical test asks for
-both better MLM loss and better long-range contact P@L. P@L uses attention maps;
-it does not by itself establish better performance on every downstream embedding
-task. P-CORE supplies additional frozen-representation diagnostics.
+Which training-recipe changes produce more useful protein representations at
+approximately fixed model size and data? Search under a fixed training-time
+budget, then verify progress with longer training at matched token exposure.
+The comparator is the original ESMC-like AdamW baseline. MLM loss is the search
+proxy; both MLM loss and contact P@L assess progress. An attention-based contact
+probe alone does not establish improvement on every downstream embedding task.
 
-## 2. What the codebase establishes
+### Established codebase
 
-| Component | Established implementation |
+- **Baseline:** [ESMC-171M AdamW](configs/esmc-171m-original.yaml), 24 layers,
+  width 768, 12 heads, FFN 2048, 170,671,168 parameters, LayerNorm, RoPE 10k.
+- **Inputs:** pinned, decontaminated UniRef90/MGnify/OMG-IMG corpus, fixed
+  tokenizer, masking and mixture sampling. This is a public ESMC-like reconstruction.
+- **Training:** distributed BF16, FA2/FA3, time/step/token stopping and full
+  model/optimizer checkpoints; model, optimizer, batching and backward-loss experiments.
+- **Evaluation:** frozen sequence-mean MLM and full 20,775-chain contact P@L,
+  with checkpoint-bound records and chain-bootstrap intervals. See [evaluation](docs/EVALUATION.md).
+- **Evidence:** [research history](reports/program2/README.md) and the
+  [Test Leaderboard](README.md#test-leaderboard). Historical protocols remain unchanged.
+
+## Autoresearch
+
+### Protocol
+
+| Setting | Definition |
 |---|---|
-| Baseline | [Original ESMC-171M](configs/esmc-171m-original.yaml): 24 layers, width 768, 12 heads, FFN 2048, 170,671,168 parameters; AdamW, LayerNorm, RoPE 10k, untied embeddings |
-| Training inputs | Pinned, decontaminated UniRef90, MGnify and OMG/IMG data, fixed tokenizer, mixture sampling and masked-target corruption |
-| Training | Distributed BF16, FA2/FA3, synchronized wall-time and step stopping, full checkpoints/optimizer state; model, optimizer, batching and loss experiments |
-| Evaluation | Frozen sequence-mean MLM evaluator; full 20,775-chain contact evaluation with fixed probe procedure and bootstrap; checkpoint/data/environment receipts |
-| Evidence | [Two-seed research history](reports/program2/README.md) and [completed 100k-step tests](README.md#test-leaderboard), with their original protocols preserved |
+| Training per repeat | From scratch, 4 L40S, BF16, 3,600 synchronized training-loop seconds |
+| Schedule / input | 554-step linear warmup, then constant LR; Stage 1, context 512; baseline batch 256 |
+| Repeats | N=2 by default, seeds 42 and 43; same declared seed set for baseline, incumbent and candidate |
+| Search score (reward) | Minimize mean `sequence_mean_nll` over all N runs; report sample SD (`ddof=1`) |
+| MLM evaluation | 32 sequences, 8 batches × 4, context 512, evaluation seed 20260821, equal source weights |
+| Other measurements | Full 20,775-chain P@L, training loss, steps/tokens, parameters, memory and timing |
 
-The public recipe is an ESMC-like reconstruction, not the paper's exact corpus
-or calibrated recipe. **The current trainer stops on time or steps, not tokens.**
-Section 5 defines the requested new token-budget protocol; its runner adapter
-must be implemented and verified before that phase can be launched. The task
-YAML is a specification, not input to `nano_protein.train`.
+Within each sequence, average cross-entropy over masked targets; then average
+across sequences. Keep the evaluator fixed even when changing the backward loss.
+Accept only when **incumbent mean loss − candidate mean loss > candidate SD**.
+The incumbent is the last accepted recipe. Ties and single runs cannot qualify;
+P@L does not select research candidates. This is a heuristic, not a significance test.
 
-## 3. Research protocol and search score
+The clock includes batching, computation, communication, logging and lazy work
+inside the loop; setup, final checkpoint and subsequent evaluation are excluded.
+Stop at the first update boundary after the limit and record overrun. Require
+`stop_reason=walltime`, complete evaluation and `ROUND_STATE=complete` for every
+repeat. Record all seeds, failures and keep/discard decisions; do not rerun to
+replace unfavorable completed scores. Use an isolated campaign worktree, one
+conceptual change per round and fresh output paths; freeze code/input/environment
+identities and preserve the original baseline and all previous evidence.
 
-| Item | Fixed definition |
-|---|---|
-| Execution | Train from scratch on **4 NVIDIA L40S GPUs**, then evaluate the final checkpoint |
-| Budget per seed | **3,600 seconds** of synchronized training-loop wall time; no evaluation inside this budget |
-| Repeats | **N=2 by default**, seeds **42 and 43**; same predeclared seed set for baseline, incumbent and candidate |
-| Baseline batch / context | Global batch 256; context 512. Candidate batch size may change; context and sampling semantics stay fixed |
-| LR schedule | Exactly **554 optimizer steps** of linear warmup, then constant peak LR in every parameter group |
-| Search metric | `sequence_mean_nll` from `eval-validation/VALIDATION_MLM.json`, **minimize** |
-| Search evaluation | **32 fixed held-out sequences**, 8 batches × 4, context 512, seed **20260821**, equal source weights |
-| Required diagnostics | Training loss, full 20,775-chain P@L, tokens/steps, parameter count, memory and timing |
-
-Call this the **search score**, rather than reward. It is separate from the
-candidate's backward training loss. Within each validation sequence, average
-cross-entropy over its masked targets; then average over sequences. The method
-score is the arithmetic mean of these per-run losses over all N training seeds.
-Compute sample SD over seeds with `ddof=1`.
-
-Keep the existing acceptance rule:
-
-```text
-improvement = incumbent_mean_validation_loss - candidate_mean_validation_loss
-keep iff all runs are valid and improvement > candidate_sample_sd
-```
-
-The incumbent is the last accepted recipe, not the lowest noisy observation.
-A tie fails; a single run cannot qualify. Training loss and P@L do not affect
-research selection. The rule is a noise-margin heuristic, not a significance
-test. Report all repeats and failures; never select favorable seeds or rerun to
-replace an unfavorable completed result. A change to N or the rule requires a
-new protocol version and a matched baseline/incumbent comparison.
-
-The clock starts at the synchronized pre-loop barrier. Batching, transfers,
-forward/backward, optimization, communication, logging and lazy first-use work
-inside the loop count. Setup, final checkpoint serialization and subsequent
-evaluation do not. Stop at the first optimizer-update boundary after the limit,
-record the actual duration/overrun, and require `stop_reason=walltime` plus
-`ROUND_STATE=complete`. No checkpoint selection by evaluation score.
-
-Contact evaluation uses the fixed 16-chain probe fit / 4-chain selection and
-20-chain refit procedure; all 20,775 reporting chains stay outside probe fitting.
-Pair sampling uses seed 20260819; chain ordering and the 5,000-resample 95%
-bootstrap use seed 20260820. Evaluation assets, seeds and reductions are frozen.
-See [the evaluator contract](docs/EVALUATION.md).
-
-## 4. Experiment boundaries
-
-These rules apply **during candidate research**. Contract maintenance between
-campaigns may change them, with a new version and comparable baseline. All paths
-are repository-relative. Protected entries win; unlisted files are protected.
-The [task YAML](tasks/protein-embedding.yaml) contains the complete path/key lists.
-
-| May change | Purpose |
-|---|---|
-| `nano_protein/model.py` | Model architecture, initialization and parameter grouping, within the parameter bound |
-| `nano_protein/train.py` | Optimizer, backward objective and training execution, subject to the frozen semantics below |
-| `nano_protein/batch_balance.py`, `nano_protein/flash_attention.py` | Batch redistribution and attention execution under the same data/model contract |
-| `nano_protein/experiments/**`, `configs/candidates/**`, `tests/candidates/**` | Candidate helpers, configs and additional tests |
-| `.dev/program2/**`, fresh `outputs/program2/<run-id>/**` | Candidate wrappers, notes and new immutable output records |
-
-| Must not change | Protected paths or assets |
-|---|---|
-| Task definition and evidence | `program.md`, `program2.md`, `tasks/**`, `README.md`, `docs/**`, `reports/**`; previous run outputs |
-| Frozen baseline/history configs | `configs/esmc-171m-original.yaml`, `configs/program2/**`, `configs/program2_h100_100k/**`; other configs are protected unless explicitly allowed |
-| Data and tokenizer | `nano_protein/data.py`, `nano_protein/sharded_data.py`, `nano_protein/tokenizer.py`; downloaded corpora, manifests, mixture/source weights and evaluation fixtures |
-| Evaluator and execution contract | `nano_protein/evaluate.py`, `nano_protein/pcore_task.py`, `nano_protein/contact_cache.py`, `runs/**`, `scripts/**`, external evaluation source |
-| Schedule and lifecycle | `nano_protein/schedule.py`, `nano_protein/resume.py`, `nano_protein/periodic_evaluation.py`; budget, sampling and receipt logic inside editable training code |
-| Environment and existing tests | `pyproject.toml`, `uv.lock`, `.gitmodules`, `tests/test_*.py` |
-
-Additional invariants:
-
-- Keep **actual trainable parameters within ±5% of 170,671,168**: inclusive
-  **162,137,610–179,204,726**. Count real model tensors; no dummy parameters.
-  The historical 142M narrowed-FFN runs predate this rule and cannot qualify
-  under v1. Compensating changes to width/depth are allowed within the bound.
-- Keep the corpus release and its verified prepared data fixed. Stage-1 source
-  weights are UniRef90 0.36, MGnify 0.11, OMG/IMG 0.54, normalized by their sum.
-  Preserve context 512, tokenizer, crop/mask semantics and evaluation exclusion.
-  No new data, distillation targets, pretrained initialization or held-out training.
-- Hyperparameters, optimizer, trainable model and backward loss may change.
-  Batch-size/accumulation changes and redistribution are allowed; replacing,
-  filtering or resampling examples to favor benchmark outcomes is not.
-- Editable training code cannot alter the clock, stopping criteria, token meter,
-  frozen scheduler, data semantics, metric extraction or provenance checks.
-  Shared model code cannot detect evaluation identities or substitute answers.
-  Preserve normal checkpoint loading and inference semantics.
-- Keep hardware class/count and the campaign-pinned environment fixed. Use
-  `uv sync --frozen` / `uv run --frozen`. Record any allowed execution backend
-  choice within that environment. Other hardware is a separate comparison.
-- Pin the code/contract, corpus, external evaluator, dependency and environment
-  receipts before running; use fresh outputs and retain failures. Shared input
-  caches are read-only. Existing checks plus source review enforce this policy;
-  neither a file list nor schema validation is a complete runtime sandbox.
-
-## 5. Test protocol and success criteria
-
-The **test** measures transfer at fixed training exposure. Freeze the candidate
-commit and transfer configuration before training from scratch. Apply the same
-protocol to the original baseline and each preceding cumulative recipe.
-
-| Item | v1 test definition |
-|---|---|
-| Training budget per seed | **24,200,224,761 global non-padding model tokens**, including BOS/EOS, excluding padding and evaluation |
-| Token meter | Sum input `attention_mask` across ranks/microbatches; count consumed inputs once, independently of recomputation or rank redistribution |
-| Stop boundary | First completed optimizer update at or above target; report actual tokens and overrun, less than one update (at most 524,288 tokens at batch 1024/context 512) |
-| Hardware / execution | **4 H100**, BF16, FA3; matched pinned environment |
-| Transfer settings | Global batch **1,024**, context **512**, Stage 1, base LR **5e-4**, base WD **0.01**, **1,000-step warmup**, then constant LR |
-| Candidate group settings | Preserve and report its declared optimizer-group multipliers; freeze before tests |
-| New v1 repeats | **N=2**, seeds **42, 43**, matched across all tested recipes; report every seed |
-| MLM evaluation | **4,096 sequences**, 1,024 batches × 4, context 512, seed 20260821; fixed sequence-mean NLL |
-| Contact evaluation | All **20,775 chains**; same frozen probe, chain order and 5,000-resample chain bootstrap |
-| Checkpoint | Final budget endpoint, including full optimizer/runtime state for future continuation |
-
-The exact token target matches the observed exposure in the completed four-H100
-comparison. **100k steps is historical context, not the new stop condition**;
-new seeds can reach the token limit at different steps. A safety wall-time limit
-is nonbinding: if it stops a run before the token budget, that run is incomplete.
-A token-stop adapter and audited endpoint receipts are required before launch.
-
-For each named comparator, define:
-
-```text
-loss_gain = comparator_mean_validation_loss - candidate_mean_validation_loss
-contact_gain = candidate_mean_p_at_l - comparator_mean_p_at_l
-successful transfer iff all runs are valid and loss_gain > 0 and contact_gain > 0
-```
-
-Report the two metrics separately, mean ± sample SD across training seeds,
-paired seed deltas, and each seed's chain-bootstrap P@L CI. A tie or one-metric
-regression does not meet this two-metric criterion. State whether a result beats
-both the baseline and preceding recipe, or only one comparator. This directional
-criterion is not a significance claim; chain CIs do not establish repeatability
-across training seeds.
-
-This is **confirmation at a larger training budget on reused evaluation assets**,
-not a blind holdout: research already reports P@L on these chains and uses the
-same held-out MLM reservoir. Final test metrics cannot select checkpoints or
-modify the declared recipe during that test. Follow-up changes start a new
-research iteration and retain their evaluation history.
-
-The [published Test Leaderboard](README.md#test-leaderboard) remains a historical
-100k-step, batch-1024, **single-seed (20260824)** comparison. It is not retroactively
-an N=2 token-stopped test. Its Settings 1/2/3/5 use the recorded R02-based recipe;
-Setting 1 contains more changes than the research Muon-only ablation. Keep that
-qualification when comparing search and test results.
-
-## Operational appendix: research isolation, execution and records
-
-Create a separate worktree/branch, `autoresearch-171m-val-loss-<campaign-id>`,
-from a pinned `main` revision for a new v1 campaign. Continue existing results
-only under the same contract and seed set; otherwise establish a fresh baseline.
-All paths below are relative to that worktree. Preserve historical campaigns'
-branches, launchers, configs and results, including `autoresearch-171m-val-loss`. Share only verified read-only data/evaluation assets; reserve
-four idle GPUs for each run.
-
-| Purpose | Path |
-| --- | --- |
-| Results (untracked) | `.dev/program2/results.tsv` |
-| Candidate launcher (untracked) | `.dev/program2/rounds.sh` |
-| Candidate configs | `configs/candidates/` |
-| Checkpoints, evaluation, and run logs | `outputs/program2/<unique-run-id>/` |
-| Prepared data and download cache | `.exps/program2/` |
-| UV cache | `.uv-cache/program2/` |
-| Notes, plots, and continuation state | `.dev/program2/` |
-
-Use `program2-171m-<campaign-id>` for any tmux session or wakeup identity. Resume only this
-campaign's records and incumbent.
-
-Start with `configs/esmc-171m-original.yaml`: the repository's original,
-family-scaled ESMC baseline, with 24 layers, width 768, 12 heads, 170,671,168
-parameters, AdamW, LayerNorm, RoPE base 10,000, and default residuals and
-initialization. Preserve this config and `runs/autoresearch_4xl40s_1h.sh`.
-The runner defaults to this original AdamW baseline and supplies the frozen
-data release and evaluation contract. Set `CONFIG` explicitly for every
-candidate and seed repeat.
-
-Evaluate the baseline with at least two runs at campaign start, before
-modifying training code. The command below launches the first run; use the pinned
-`configs/program2/baseline_seed42.yaml` and `baseline_seed43.yaml` for the
-default repeats. Run the second command with `baseline_seed43.yaml` and a fresh
-output path. New seed identities require predeclared baseline copies.
+**Complete example: train, evaluate and read the two-seed score.** The protected
+runner prepares/verifies the frozen training release, trains and runs both MLM
+and full P@L evaluation. Change `AR_RECIPE` to a candidate recipe for another method.
 
 ```bash
-CONTACT_ROOT=/path/to/frozen-contact-data \
-EXTERNAL_SRC=/path/to/evaluation-source \
-ARTIFACT_ROOT="$PWD/.exps/program2" \
-UV_CACHE_DIR="$PWD/.uv-cache/program2" \
-CONFIG="$PWD/configs/program2/baseline_seed42.yaml" \
-OUTPUT_ROOT="$PWD/outputs/program2/baseline-<unique-run-id>" \
-CUDA_VISIBLE_DEVICES=0,1,2,3 \
-bash runs/autoresearch_4xl40s_1h.sh
+set -euo pipefail
+export CONTACT_ROOT=/path/to/frozen-contact-data
+export EXTERNAL_SRC=/path/to/pinned-evaluation-source
+export ARTIFACT_ROOT="$PWD/.exps/program2"
+export UV_CACHE_DIR="$PWD/.uv-cache/program2"
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+unset DATA_ROOT DATA_CACHE_ROOT CONTACT_SCORING_CACHE_ROOT
+AR_RECIPE="$PWD/configs/esmc-171m-original.yaml"
+AR_RUN_ROOT="$PWD/outputs/program2/research-example-01"
+mkdir -p "$(dirname "$AR_RUN_ROOT")"
+mkdir "$AR_RUN_ROOT" # Refuse an existing method output directory.
+uv sync --frozen
+uv run --frozen ruff check nano_protein scripts tests
+uv run --frozen ruff format --check nano_protein scripts tests
+for AR_SEED in 42 43; do
+  uv run --frozen python - "$AR_RECIPE" "$AR_RUN_ROOT" "$AR_SEED" <<'PY'
+import pathlib, sys, yaml
+recipe, root, seed = sys.argv[1:]
+config = yaml.safe_load(pathlib.Path(recipe).read_text())
+config['seed'] = int(seed)
+pathlib.Path(root, f'config-{seed}.yaml').write_text(yaml.safe_dump(config))
+PY
+  CONFIG="$AR_RUN_ROOT/config-$AR_SEED.yaml" \
+  OUTPUT_ROOT="$AR_RUN_ROOT/seed-$AR_SEED" \
+    bash runs/autoresearch_4xl40s_1h.sh
+done
+uv run --frozen python - "$AR_RUN_ROOT" <<'PY'
+import json, math, pathlib, statistics, sys
+rows = [json.loads((pathlib.Path(sys.argv[1])/f'seed-{s}/ROUND_SUMMARY.json').read_text()) for s in (42, 43)]
+for metric in ('validation_loss', 'p_at_l'):
+    values = [r[metric] for r in rows]
+    assert all(math.isfinite(v) for v in values), (metric, values)
+    print(metric, 'per_seed=', values, 'mean=', statistics.mean(values), 'SD=', statistics.stdev(values))
+PY
 ```
 
-Replace placeholders for the environment. Unset inherited `DATA_ROOT` and
-`DATA_CACHE_ROOT` overrides unless they point to verified read-only inputs.
-Candidate launchers use the same command with a config under `configs/candidates/`
-and a fresh output directory. Never reuse a run directory or alter another
-campaign's launcher.
+The search score is the printed mean validation loss. Compare it and its SD
+with the incumbent's matching records using the acceptance rule above. Preserve
+`ROUND_SUMMARY.json`, final checkpoints, configs, source revision, environment/data
+receipts and a per-run ledger with seed, metrics, hypothesis and decision.
 
-### Results and loop
+### Boundaries
 
-Each method, including the baseline and incumbent, requires at least N
-independent, completed runs from scratch, with **N = 2 by default** and never
-fewer than two. Choose distinct training seeds before running and compare
-methods on the same seed set; evaluation seeds stay fixed.
-Keep the method's code and recipe identical across repeats. Each run receives
-the full one-hour budget and a fresh output directory.
+**Disallowed changes:**
 
-Use all repeats to compute arithmetic mean validation loss and sample standard
-deviation (`ddof=1`). Define `delta = incumbent_mean - candidate_mean` before
-updating the incumbent. Accept only if `delta > candidate_std`; a tie fails.
-For exactly two candidate losses, `candidate_std = abs(loss1 - loss2) / sqrt(2)`.
-A single run cannot qualify. Equivalently:
+- Never alter evaluation code, metrics/reductions, examples, probes, seeds or
+  correctness checks: `nano_protein/evaluate.py`, `nano_protein/pcore_task.py`,
+  `nano_protein/contact_cache.py`, `scripts/**`, `runs/**`, and external evaluator assets.
+- Never change data sources, release, mixture, splits, tokenizer, cropping or
+  masking: `nano_protein/data.py`, `nano_protein/sharded_data.py`,
+  `nano_protein/tokenizer.py`. Training weights remain UniRef90 0.36, MGnify 0.11,
+  OMG/IMG 0.54, normalized by their sum. No held-out training, added data or pretrained weights.
+- Never alter the budget meter, stopping/receipt logic, evaluation invocation or
+  frozen schedule, even inside otherwise editable code. Protect
+  `nano_protein/schedule.py`, `nano_protein/resume.py`, `nano_protein/periodic_evaluation.py`.
+- Never change the task, existing tests, dependency lock or recorded evidence:
+  `program.md`, `program2.md`, `README.md`, `docs/**`, `reports/**`, `tests/test_*.py`,
+  `pyproject.toml`, `uv.lock`, original configs and previous run outputs.
+- Never move trainable parameters outside **162,137,610–179,204,726** (±5% of
+  170,671,168), add dummy parameters to satisfy this bound, change the declared
+  hardware/context, shorten the budget or specialize model outputs to evaluation identities.
 
-```text
-candidate_mean_val_loss < current_best_mean_val_loss - candidate_val_loss_std
+**Allowed changes:** model architecture/init/parameter grouping in
+`nano_protein/model.py`; optimizer, backward loss and training execution in
+`nano_protein/train.py`; rank redistribution in `nano_protein/batch_balance.py`;
+attention execution in `nano_protein/flash_attention.py`; helpers/configs/tests
+under `nano_protein/experiments/**`, `configs/candidates/**`, `tests/candidates/**`.
+Hyperparameters and research batch/accumulation may vary within the frozen rules.
+Redistribution preserves selected examples; filtering or resampling them is forbidden.
+New campaign records may be written under `.dev/program2/**` and fresh
+`outputs/program2/**`; verified input caches remain read-only.
+
+Protected rules override allowed paths; unlisted source files remain protected.
+These restrictions govern candidate experiments. A task revision between campaigns
+must establish a new comparable baseline; shared editable code requires source audit.
+
+## Test of Progress
+
+Freeze the candidate and transfer recipe, then train from scratch under the
+settings below. Run the original baseline and preceding cumulative recipe under
+the same settings. **Progress requires both lower mean MLM loss and higher mean
+P@L** against each named comparator; report ties, regressions and mixed results.
+
+| Setting | Definition |
+|---|---|
+| Budget per seed | 24,200,224,761 global non-padding model tokens, including BOS/EOS; exclude padding/evaluation |
+| Endpoint | First completed update reaching the token target; record actual count/overrun, less than one update (524,288 tokens maximum at batch 1024/context 512) |
+| Hardware / repeats | 4 H100, BF16, FA3; N=2 from-scratch runs, seeds 42 and 43 |
+| Transfer | Stage 1, context 512, batch 1024; base LR 5e-4, base WD 0.01, 1,000-step warmup then constant; retain declared optimizer-group multipliers |
+| MLM | 4,096 sequences, 1,024 batches × 4, context 512, seed 20260821, sequence-mean NLL |
+| P@L | All 20,775 chains; 16-chain probe fit / 4-chain selection / 20-chain refit; pair seed 20260819; fixed ordering and 5,000-resample 95% chain bootstrap, seed 20260820 |
+| Output | Final budget checkpoint with full optimizer/runtime state; both full evaluations, per-seed values and mean ± sample SD |
+
+The token count is summed across all ranks/microbatches before redistribution;
+recomputation does not add tokens. The 16-hour guard is an emergency stop: an
+under-budget run is incomplete. A 100k-step cap is removed for this protocol.
+
+**Complete example: larger training, budget verification, full evaluation and
+metric extraction.** Run on four H100s with the pinned FA3 environment and frozen
+prepared corpus. Change `AR_RECIPE` to the accepted candidate's recipe; the block
+applies the same transfer settings to every method. Use fresh outputs each time.
+
+```bash
+set -euo pipefail
+export DATA_ROOT=/path/to/frozen-prepared-training-data
+export CONTACT_ROOT=/path/to/frozen-contact-data
+export EXTERNAL_SRC=/path/to/pinned-evaluation-source
+export UV_CACHE_DIR="$PWD/.uv-cache/program2"
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+unset CONTACT_SCORING_CACHE_ROOT
+AR_RECIPE="$PWD/configs/esmc-171m-original.yaml"
+AR_RUN_ROOT="$PWD/outputs/program2/progress-example-01"
+mkdir -p "$(dirname "$AR_RUN_ROOT")"
+mkdir "$AR_RUN_ROOT"
+uv sync --frozen
+uv run --frozen python scripts/check_environment.py --require-gpus 4 \
+  --attention-backend flash3 --output "$AR_RUN_ROOT/ENVIRONMENT.json"
+uv run --frozen python - "$AR_RECIPE" "$AR_RUN_ROOT" <<'PY'
+import copy, json, os, pathlib, sys, yaml
+recipe, root = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+assert 'H100' in json.loads((root/'ENVIRONMENT.json').read_text())['gpu']
+m = json.loads((pathlib.Path(os.environ['DATA_ROOT'])/'manifest.json').read_text())
+assert m['release_manifest_sha256'] == 'fe1ac0657085ab19fe6f56786006e9eb004ca66bc6c5b81dfd8e6bc3dcfda6ff'
+assert {k: m['sources'][k]['train']['records'] for k in ('uniref90','mgnify','omg_img')} == {'uniref90':2430914,'mgnify':1437829,'omg_img':3240726}
+sys.path.insert(0, os.environ['EXTERNAL_SRC'])
+from autoresearch_esm.paper_contact_runtime import ContactDataset
+assert ContactDataset(pathlib.Path(os.environ['CONTACT_ROOT'])).manifest_receipt.manifest_sha256 == 'c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3'
+original = yaml.safe_load(recipe.read_text())
+assert 162137610 <= original['expected_parameter_count'] <= 179204726
+assert len(original['stages']) == 1 and original['stages'][0]['name'] == 'stage1'
+for seed in (42, 43):
+    config = copy.deepcopy(original)
+    config.pop('max_steps', None)
+    config.pop('periodic_evaluation_command', None)
+    config.update(seed=seed, max_model_tokens=24200224761, schedule_steps=100000,
+                  learning_rate=5e-4, weight_decay=0.01, warmup_steps=1000,
+                  attention_backend='flash3', expected_world_size=4, walltime_seconds=57600,
+                  stage1_cooldown_fraction=0, checkpoint_interval=0, periodic_evaluation_interval=0)
+    config['stages'][0].update(context_length=512, micro_batch_size=64, gradient_accumulation=4,
+                              mixture={'uniref90':0.36,'mgnify':0.11,'omg_img':0.54})
+    (root/f'config-{seed}.yaml').write_text(yaml.safe_dump(config))
+PY
+for AR_SEED in 42 43; do
+  AR_RUN="$AR_RUN_ROOT/seed-$AR_SEED"
+  uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
+    -m nano_protein.train --config "$AR_RUN_ROOT/config-$AR_SEED.yaml" \
+    --data-root "$DATA_ROOT" --output-root "$AR_RUN" --walltime-seconds 57600
+  uv run --frozen python - "$AR_RUN/TRAINING_COMPLETE.json" <<'PY'
+import json, pathlib, sys
+r = json.loads(pathlib.Path(sys.argv[1]).read_text())
+assert r['stop_reason'] == 'max_model_tokens' and r['target_model_tokens'] == 24200224761
+assert r['model_token_budget_reached'] and r['model_tokens'] >= r['target_model_tokens']
+assert 0 <= r['model_token_overrun'] < r['last_optimizer_step_model_tokens'] <= 524288
+PY
+  CUDA_VISIBLE_DEVICES=0 uv run --frozen python -m nano_protein.evaluate \
+    --checkpoint "$AR_RUN/checkpoint-final.pt" --data-root "$DATA_ROOT" \
+    --output-root "$AR_RUN/eval-validation" --validation-batches 1024 \
+    --validation-batch-size 4 --validation-context 512
+  OUTPUT_ROOT="$AR_RUN" CHECKPOINT="$AR_RUN/checkpoint-final.pt" \
+  EVAL_OUTPUT_ROOT="$AR_RUN/eval-p-at-l" EVAL_GPUS=0,1,2,3 \
+  CONTACT_CHAINS=20775 CONTACT_SHARDS=16 bash runs/evaluate_p_at_l_parallel.sh
+done
+uv run --frozen python - "$AR_RUN_ROOT" <<'PY'
+import json, math, pathlib, statistics, sys
+root = pathlib.Path(sys.argv[1])
+for filename, metric in [('eval-validation/VALIDATION_MLM.json','sequence_mean_nll'), ('eval-p-at-l/P_AT_L.json','p_at_l')]:
+    values = [json.loads((root/f'seed-{s}'/filename).read_text())[metric] for s in (42, 43)]
+    assert all(math.isfinite(v) for v in values), (metric, values)
+    print(metric, 'per_seed=', values, 'mean=', statistics.mean(values), 'SD=', statistics.stdev(values))
+PY
 ```
 
-The standard deviation is the candidate's sample SD across training seeds.
-This is a selection rule, not a formal significance test.
-
-Create `.dev/program2/results.tsv` only if absent, with this tab-separated header:
-
-```text
-method_id\trun_id\tseed\tcommit\tvalidation_loss\tn_runs\tvalidation_loss_mean\tvalidation_loss_std\tdelta\tp_at_l\ttrain_loss\ttraining_seconds\tactual_steps\tmodel_tokens_M\tparams_M\tmemory_GB\tevaluation_seconds\tstatus\tdescription
-```
-
-For an older log, preserve its rows, add the new fields, and reconstruct method
-summaries from saved runs; complete missing repeats before making decisions.
-
-Record one row per run, repeating the method's `n_runs`, mean, standard
-deviation, delta, and decision on its rows after all repeats complete. Use `0`
-for the baseline delta and `NA` for unavailable fields or an uncommitted run.
-Training loss is the mean of the final 100 recorded MLM losses (all records if
-fewer). Copy per-run metrics from
-`ROUND_SUMMARY.json`; map `num_params_M` to `params_M` and divide
-`peak_vram_mb` by 1024 for `memory_GB`.
-
-1. Require `ROUND_STATE` to show `state=complete`; verify checkpoint, config,
-   data, environment, and lockfile receipts for every repeat. Record the initial
-   method as `baseline`. Reuse its runs on continuation under the same fixed
-   contract; complete any missing repeats before comparing candidates.
-2. Test one conceptual change per round in the dedicated worktree. Before each
-   launch, including the baseline, run
-   `uv run --frozen ruff check nano_protein scripts tests` and
-   `uv run --frozen ruff format --check nano_protein scripts tests`.
-   Check maintained code; preserve archived source snapshots in `reports/`.
-3. Train and evaluate all repeats, verify completion and receipts, and append
-   all metrics with method/run IDs, seeds, and a description of the change.
-   Commit on the campaign branch as `keep` only when
-   `incumbent_mean - candidate_mean > candidate_std`; otherwise record `discard`
-   and restore only that candidate's changes. The accepted mean and seed set
-   become the new incumbent reference.
-4. Record failed training/evaluation or non-finite metrics as `crash`, with the
-   cause, and restore only candidate changes. Continue from the incumbent until
-   stopped.
+Compare both printed means with the matching baseline and previous recipe;
+report paired per-seed deltas and each run's P@L interval from `P_AT_L.json`.
+Chain-bootstrap intervals are separate from training-seed SD and must not be
+averaged into an across-seed CI. The directional progress rule is not a significance test.
+Freeze recipes before verification; do not select checkpoints using these scores.
+The evaluation assets overlap research, so this checks budget transfer, not a blind holdout.
+The historical 100k-step/single-seed leaderboard and the old 142M FFN results
+retain their original labels and are not new-protocol results.
