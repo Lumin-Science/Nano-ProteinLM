@@ -2,12 +2,13 @@
 
 Status: **running**. Production relaunched from scratch at **03:54:43 Toronto on
 September 8, 2026**, in step **12162637.11**, using all eight H100s on `g27`.
-At **14:03 Toronto on September 8**, it had reached **79,830 / 100,000 steps**
-with finite losses/gradients, after successfully evaluating all seven checkpoints through 70k
-and continuing training. It measures approximately 0.434 seconds/step; the
-completion estimate including remaining evaluations is **about 16:46 Toronto
-on September 8**. Monitoring every **two hours** will report each newly completed checkpoint
-evaluation. Frozen training commit: `caa95a15b55ff2ca2395687f71e1c4b3a294b3d4`.
+At **16:01 Toronto on September 8**, it had reached **95,120 / 100,000 steps**
+with finite losses/gradients, after successfully evaluating all nine checkpoints
+through 90k and continuing training. It measures approximately
+0.435 seconds/step; the completion estimate including final
+evaluation is **about 16:42 Toronto on September 8**. Monitoring every **two hours**
+reports each newly completed checkpoint evaluation. Frozen training commit:
+`caa95a15b55ff2ca2395687f71e1c4b3a294b3d4`.
 
 ## Production learning curve
 
@@ -20,13 +21,15 @@ evaluation. Frozen training commit: `caa95a15b55ff2ca2395687f71e1c4b3a294b3d4`.
 | 50,000 | 102,400,000 | 2.469885 | 11.82109 | 0.231730 | [0.229560, 0.233906] | 336.78 seconds |
 | 60,000 | 122,880,000 | 2.457411 | 11.67455 | 0.245712 | [0.243524, 0.247987] | 215.67 seconds |
 | 70,000 | 143,360,000 | 2.445850 | 11.54035 | 0.248257 | [0.246073, 0.250561] | 376.66 seconds |
+| 80,000 | 163,840,000 | 2.435416 | 11.42057 | 0.256296 | [0.254007, 0.258595] | 239.76 seconds |
+| 90,000 | 184,320,000 | 2.428474 | 11.34157 | 0.272598 | [0.270307, 0.274937] | 205.63 seconds |
 
-All seven checkpoint evaluations passed independent local audits of all 16 shard
+All nine checkpoint evaluations passed independent local audits of all 16 shard
 hashes, checkpoint receipt bindings, the exact 20,775-chain set and probe
 protocol against the earlier AdamW baseline, and the independently recomputed
 5,000-replicate bootstrap intervals. The latest audit is at
-[70k](full/evaluations/step-070000/LOCAL_AUDIT.json); that evaluation finished
-around 12:51:58 Toronto. Training metrics through step 79,930 are finite and
+[90k](full/evaluations/step-090000/LOCAL_AUDIT.json); that evaluation finished
+around 15:24:27 Toronto. Training metrics through step 95,250 are finite and
 demonstrate continued progress after each evaluation.
 See [machine-readable learning curve](learning-curve.json) and
 [checkpoint receipts](full/evaluations/). The CI measures uncertainty

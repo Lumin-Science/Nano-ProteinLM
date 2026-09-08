@@ -1,0 +1,15 @@
+{
+  "observed_utc": "2026-09-08T20:08:52.212147+00:00",
+  "qualification_passed": false,
+  "runs": {},
+  "queue": {
+    "observed_utc": "2026-09-08T20:07:55.848598+00:00",
+    "state": "waiting_for_baseline",
+    "detail": "Waiting for baseline step 12162637.11: 100k training, all ten evaluations and persistent checkpoint.",
+    "allocation": "12162637",
+    "node": "g27",
+    "predecessor_step": "12162637.11",
+    "source_commit": "c76a07998987a4746d4bffc89d878a758cd735cb",
+    "driver_pid": 1532960
+  }
+}

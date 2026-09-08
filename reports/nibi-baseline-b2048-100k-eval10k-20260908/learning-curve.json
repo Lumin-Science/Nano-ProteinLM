@@ -136,6 +136,44 @@
       "training_seconds": 30432.83549577347,
       "evaluation_seconds": 376.6647011130117,
       "audit": "full/evaluations/step-070000/LOCAL_AUDIT.json"
+    },
+    {
+      "optimizer_steps": 80000,
+      "sequences_seen": 163840000,
+      "checkpoint_sha256": "6b85e166677c2df65fcc4312dbc0f215851c6f08ca413b3a539a0fb4a2a00551",
+      "validation_loss": 2.435416075449666,
+      "perplexity": 11.420569543554777,
+      "p_at_l": 0.25629567360223926,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.2540068763525939,
+          0.2585953010130739
+        ]
+      },
+      "training_seconds": 34784.75910758437,
+      "evaluation_seconds": 239.7569957759697,
+      "audit": "full/evaluations/step-080000/LOCAL_AUDIT.json"
+    },
+    {
+      "optimizer_steps": 90000,
+      "sequences_seen": 184320000,
+      "checkpoint_sha256": "1729c864c15c5fd6fe655689a4bfbe2624381b355a39280b9586804383a50f14",
+      "validation_loss": 2.4284743073949357,
+      "perplexity": 11.34156513113972,
+      "p_at_l": 0.2725980979485708,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.2703066560288641,
+          0.2749372777138754
+        ]
+      },
+      "training_seconds": 39134.42123640957,
+      "evaluation_seconds": 205.6335485498421,
+      "audit": "full/evaluations/step-090000/LOCAL_AUDIT.json"
     }
   ]
 }

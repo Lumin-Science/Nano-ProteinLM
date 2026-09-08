@@ -1,0 +1,4 @@
+g27.nibi.sharcnet
+/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/bin/git
+c76a07998987a4746d4bffc89d878a758cd735cb
+Python 3.11.4

@@ -1,0 +1,25 @@
+{
+  "status": "repaired_and_waiting",
+  "verified_utc": "2026-09-08T20:06:59.196824+00:00",
+  "host": "l4.nibi.sharcnet",
+  "process": "1532960       1 S          01:03 /bin/bash /scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/queue-after-baseline-system.sh",
+  "hangup_ignored": true,
+  "queue": {
+    "observed_utc": "2026-09-08T20:06:55.686954+00:00",
+    "state": "waiting_for_baseline",
+    "detail": "Waiting for baseline step 12162637.11: 100k training, all ten evaluations and persistent checkpoint.",
+    "allocation": "12162637",
+    "node": "g27",
+    "predecessor_step": "12162637.11",
+    "source_commit": "c76a07998987a4746d4bffc89d878a758cd735cb",
+    "driver_pid": 1532960
+  },
+  "controller_path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/queue-after-baseline-system.sh",
+  "controller_sha256": "c1c3a27999f470ffc7d88cd11cdedbbee10fb913ec04bda2ba074b0f59ea9941",
+  "frozen_training_source_unchanged": "c76a07998987a4746d4bffc89d878a758cd735cb",
+  "previous_failure": "Login-node CVMFS Python became unavailable: Transport endpoint is not connected (exit 126).",
+  "previous_attempt_archive": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/queue-attempts/attempt-1-cvmfs-failure",
+  "old_process_absent": true,
+  "qualification_started": false,
+  "production_launched": false
+}

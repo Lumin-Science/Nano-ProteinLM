@@ -7,12 +7,13 @@ Nibi allocation **12162637**, node **g27**. It is sequenced after the current
 The queue waits for that baseline's full training, all ten evaluations, durable
 checkpoint copy, and compute-step exit before qualifying and launching Setting 3.
 
-The queue was **verified waiting at 15:12 Toronto on September 8**, controller
-PID **4065953** on `l4.nibi.sharcnet`, frozen source
-**`c76a07998987a4746d4bffc89d878a758cd735cb`**. See
-[`QUEUE_RECORD.json`](QUEUE_RECORD.json) and the [deployment check](deployment.txt).
-Production and GPU qualification have not started at this observation; the baseline
-was still training at step 88,850. Qualification scores are not production results. See the [completed Fir comparison and detailed
+The repaired queue was **verified waiting at 16:06 Toronto on September 8**,
+controller PID **1532960** on `l4.nibi.sharcnet`. The frozen training source remains
+**`c76a07998987a4746d4bffc89d878a758cd735cb`**. See the current
+[`QUEUE_RECOVERY.json`](QUEUE_RECOVERY.json), [status](STATUS-latest.json), and
+original [activation record](QUEUE_RECORD.json). Production and GPU qualification
+have not started at this observation; the baseline is still training.
+Qualification scores are not production results. See the [completed Fir comparison and detailed
 recipe explanation](../../docs/BEST_RECIPE_VS_BASELINE.md) for the evidence behind
 selecting Setting 3 (validation loss **2.418720**, P@L **32.682%**, at batch 1,024).
 
@@ -54,7 +55,8 @@ exposure, not a replication of the batch-1,024 trajectory.
 
 ## Queue and qualification
 
-`queue-after-baseline.sh` is a detached, locked queue controller. It reads small
+`queue-after-baseline-system.sh` is the active detached, locked queue controller.
+It reads small
 metadata on the login node once per minute. It never cancels jobs or alters the
 predecessor. After the baseline is complete and no other compute step remains,
 it requests a step inside the **existing** allocation:
@@ -62,7 +64,7 @@ it requests a step inside the **existing** allocation:
 ```bash
 srun --jobid=12162637 --overlap --nodes=1 --ntasks=1 \
   --cpus-per-task=64 --gres=gpu:8 --nodelist=g27 \
-  bash /scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908-run/reports/nibi-setting3-b2048-100k-eval10k-20260908/run-queued.sh
+  /bin/bash --login /scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908-run/reports/nibi-setting3-b2048-100k-eval10k-20260908/run-queued.sh
 ```
 
 All expensive checks, training and evaluation run on the allocated compute node.
@@ -82,6 +84,20 @@ checkpoint hash and ten evaluation artifacts, then runs these qualification step
 Any failed check stops this queue and leaves a failure receipt. A lock and existing
 output checks prevent duplicate launches. The retained allocation and unrelated
 workloads remain user-owned.
+
+**Controller recovery, September 8:** the original controller (PID 4065953) exited
+with code 126 while waiting because the login-node CVMFS Python executable became
+unavailable (`Transport endpoint is not connected`). No qualification or production
+had started. After checking the old process was absent and taking the queue lock,
+its receipts were archived under `queue-attempts/attempt-1-cvmfs-failure`.
+The [replacement controller](queue-after-baseline-system.sh) lives in the artifact
+root, outside the frozen training checkout. It uses system-local Python 3.9 and
+utilities for polling and checks the frozen launcher manifest and config SHA.
+The eventual compute step starts a login shell so it can load the compute node's
+software environment. A [CPU-only check](compute-environment-recovery.txt) confirmed
+Git, clean source `c76a079` and the frozen Python 3.11.4 runtime on `g27`.
+Full Git/source checks in the original launcher remain mandatory before training.
+The replacement was confirmed detached, ignoring SIGHUP, and polling repeatedly.
 
 At planning time (15:06 Toronto, September 8), the baseline was at 88,010 steps,
 with completion estimated around **16:45 Toronto**. Allowing for qualification and
