@@ -7,9 +7,12 @@ Nibi allocation **12162637**, node **g27**. It is sequenced after the current
 The queue waits for that baseline's full training, all ten evaluations, durable
 checkpoint copy, and compute-step exit before qualifying and launching Setting 3.
 
-Queue activation and the frozen source commit are recorded in `QUEUE_RECORD.json`
-when deployment is verified. This page describes the production plan; qualification
-scores are not production results. See the [completed Fir comparison and detailed
+The queue was **verified waiting at 15:12 Toronto on September 8**, controller
+PID **4065953** on `l4.nibi.sharcnet`, frozen source
+**`c76a07998987a4746d4bffc89d878a758cd735cb`**. See
+[`QUEUE_RECORD.json`](QUEUE_RECORD.json) and the [deployment check](deployment.txt).
+Production and GPU qualification have not started at this observation; the baseline
+was still training at step 88,850. Qualification scores are not production results. See the [completed Fir comparison and detailed
 recipe explanation](../../docs/BEST_RECIPE_VS_BASELINE.md) for the evidence behind
 selecting Setting 3 (validation loss **2.418720**, P@L **32.682%**, at batch 1,024).
 

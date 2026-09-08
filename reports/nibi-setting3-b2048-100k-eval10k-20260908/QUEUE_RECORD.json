@@ -1,0 +1,38 @@
+{
+  "status": "verified_waiting",
+  "observed_utc": "2026-09-08T19:12:34.808706+00:00",
+  "login_host": "l4.nibi.sharcnet",
+  "process": "4065953 S          00:41 bash /scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908-run/reports/nibi-setting3-b2048-100k-eval10k-20260908/queue-after-baseline.sh",
+  "queue": {
+    "observed_utc": "2026-09-08T19:11:53.576286+00:00",
+    "state": "waiting_for_baseline",
+    "detail": "Waiting for baseline step 12162637.11: 100k training, all ten evaluations and persistent checkpoint.",
+    "allocation": "12162637",
+    "node": "g27",
+    "predecessor_step": "12162637.11",
+    "source_commit": "c76a07998987a4746d4bffc89d878a758cd735cb",
+    "driver_pid": 4065953
+  },
+  "source_commit": "c76a07998987a4746d4bffc89d878a758cd735cb",
+  "source_clean": true,
+  "config_sha256": "76a6f26e7ef6d381c8777a0b772c79741f5d25d5f6c84e888839521dfea882ac",
+  "baseline": {
+    "state": "training",
+    "optimizer_step": 88850,
+    "metrics_age_seconds": 2.314222812652588,
+    "estimated_completion_toronto": "2026-09-08T16:44:14.751389-04:00",
+    "evaluation_steps": [
+      10000,
+      20000,
+      30000,
+      40000,
+      50000,
+      60000,
+      70000,
+      80000
+    ]
+  },
+  "production_launched": false,
+  "qualification_started": false,
+  "allocation": "12162637|RUNNING|g27|5-16:11:29"
+}
