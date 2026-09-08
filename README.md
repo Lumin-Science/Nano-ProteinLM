@@ -168,9 +168,10 @@ lock, hardware, training budget, and evaluators stay fixed within each setting.
 Research runs use a 554-step linear warmup followed by constant learning rates,
 with no cooldown. See [program.md](program.md) for the full contract.
 
-**29-round history.** The September 6, 2026 snapshot contains the AdamW baseline
-and 29 candidate rounds: 60 one-hour runs across seeds 42 and 43, with five kept
-changes. The accepted sequence is Muon → balanced ranks → square-root
+**38-round history.** The updated run log contains the AdamW baseline and 38
+candidate rounds: 78 one-hour runs across seeds 42 and 43, with five kept
+changes. R30–R38 were all discarded, so R29 remains the best accepted recipe.
+The accepted sequence is Muon → balanced ranks → square-root
 target-count loss weights → FFN width 1536 → tied embeddings. Mean validation
 loss falls from **2.63868 to 2.58057 (2.20%)**. R29's accepted configs are
 available for [seed 42](configs/program2/r29_tied_seed42.yaml) and
@@ -178,13 +179,13 @@ available for [seed 42](configs/program2/r29_tied_seed42.yaml) and
 
 Each point below is a method's mean validation loss with thin **±1 sample SD**
 error bars. The green line follows the current best accepted recipe; lower
-means that fail the acceptance rule do not advance it. Full history:
-[methods.tsv](reports/program2/methods.tsv) and
-[run records and audit](reports/program2/README.md).
+means that fail the acceptance rule do not advance it. Source:
+[run log through R38](reports/program2/runs-through-r38.tsv), with
+[import details and the original R29 audit](reports/program2/README.md).
 Regenerate the [SVG](reports/program2/validation-loss.svg) and PNG with
 [the plotting script](scripts/plot_autoresearch_history.py).
 
-![Validation loss over the baseline and 29 autoresearch rounds, with mean ± sample SD across two seeds and the accepted loss decreasing from 2.63868 to 2.58057.](reports/program2/validation-loss.png)
+![Validation loss over the baseline and 38 autoresearch rounds, with mean ± sample SD across two seeds. R29 remains the best accepted recipe at 2.58057 through R38.](reports/program2/validation-loss.png)
 
 ## Scale-up leaderboard
 

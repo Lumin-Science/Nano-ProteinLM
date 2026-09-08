@@ -62,11 +62,11 @@ recipes and evaluation contract.
 ## Commands and results
 
 - [Baseline commands](../README.md#baselines) for research and scale-up training.
-- [29-round curve](../README.md#autoresearch), including all means and sample SDs.
+- [38-round curve](../README.md#autoresearch), including all means and sample SDs.
 - [Scale-up leaderboard](../README.md#scale-up-leaderboard).
-- [Published research history and audit](../reports/program2/README.md).
-- [Per-method statistics](../reports/program2/methods.tsv) and
-  [all 60 runs](../reports/program2/runs.tsv).
+- [All 78 runs through R38](../reports/program2/runs-through-r38.tsv).
+- [Import details and the original R29 audit](../reports/program2/README.md).
+- [Per-method statistics through R29](../reports/program2/methods.tsv).
 - [Evaluation setup and execution](EVALUATION.md).
 
 To regenerate the curve without changing the training environment:
@@ -79,4 +79,5 @@ python3 -m venv /tmp/nano-esmc-plot
 
 Run these commands from the repository root. The script verifies seed means,
 sample SDs, and keep/discard decisions before writing PNG and SVG files to
-`reports/program2/`.
+`reports/program2/`. It reads `reports/program2/runs-through-r38.tsv` by default;
+use `--input path/to/results.tsv` for another per-run or per-method log.

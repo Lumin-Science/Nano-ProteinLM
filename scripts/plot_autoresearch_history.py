@@ -4,7 +4,8 @@
 Run with a separate plotting environment (the training lock is unchanged):
     python scripts/plot_autoresearch_history.py
 
-Requires matplotlib >= 3.9, < 4. Writes PNG and SVG beside methods.tsv.
+Requires matplotlib >= 3.9, < 4. Accepts per-run or per-method TSV data.
+Writes PNG and SVG to reports/program2/ by default.
 """
 
 from __future__ import annotations
@@ -31,11 +32,59 @@ GRAY = "#94a3b8"
 TEAL = "#087f70"
 
 
+def summarize_runs(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], list[str]]:
+    """Convert a run log to method rows without changing its recorded decisions."""
+    groups: dict[str, list[dict[str, str]]] = {}
+    run_ids: set[str] = set()
+    for row in rows:
+        if row["run_id"] in run_ids:
+            raise ValueError(f"Duplicate run: {row['run_id']}")
+        run_ids.add(row["run_id"])
+        groups.setdefault(row["method_id"], []).append(row)
+    if not groups:
+        raise ValueError("Run log is empty")
+    seed_ids = sorted({row["seed"] for row in rows}, key=int)
+    seeds = [f"seed{seed}" for seed in seed_ids]
+
+    methods = []
+    incumbent_id = ""
+    for method_id, runs in groups.items():
+        if len(runs) != len(seeds) or {row["seed"] for row in runs} != set(seed_ids):
+            raise ValueError(f"Expected one run per matched seed for {method_id}")
+        first = runs[0]
+        for row in runs:
+            if int(row["n_runs"]) != len(runs):
+                raise ValueError(f"Incorrect run count for {method_id}")
+            if row["status"] != first["status"]:
+                raise ValueError(f"Inconsistent decisions for {method_id}")
+            for field in ["validation_loss_mean", "validation_loss_std", "delta"]:
+                if not math.isclose(
+                    float(row[field]), float(first[field]), rel_tol=0, abs_tol=1e-12
+                ):
+                    raise ValueError(f"Inconsistent {field} for {method_id}")
+        methods.append(
+            {
+                "method_id": method_id,
+                "incumbent_before": incumbent_id,
+                "mean": first["validation_loss_mean"],
+                "sample_sd": first["validation_loss_std"],
+                "delta": first["delta"],
+                "decision": first["status"],
+                **{f"seed{row['seed']}": row["validation_loss"] for row in runs},
+            }
+        )
+        if first["status"] in {"baseline", "keep"}:
+            incumbent_id = method_id
+    return methods, seeds
+
+
 def load_history(path: Path) -> tuple[list[dict[str, str]], list[str], list[float]]:
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle, delimiter="\t")
         seeds = [name for name in reader.fieldnames or [] if re.fullmatch(r"seed\d+", name)]
         rows = list(reader)
+        if "validation_loss" in (reader.fieldnames or []):
+            rows, seeds = summarize_runs(rows)
     if len(seeds) < 2 or not rows or rows[0]["method_id"] != "baseline":
         raise ValueError("Expected a baseline followed by rounds with at least two seeds")
 
@@ -50,6 +99,9 @@ def load_history(path: Path) -> tuple[list[dict[str, str]], list[str], list[floa
             raise ValueError(f"Mean does not match seed losses for {row['method_id']}")
         if not math.isclose(sd, statistics.stdev(losses), rel_tol=0, abs_tol=1e-12):
             raise ValueError(f"SD does not match seed losses for {row['method_id']}")
+        delta = 0.0 if index == 0 else float(incumbent["mean"]) - mean
+        if not math.isclose(float(row["delta"]), delta, rel_tol=0, abs_tol=1e-12):
+            raise ValueError(f"Gain does not match the incumbent for {row['method_id']}")
         if index == 0:
             if row["decision"] != "baseline":
                 raise ValueError("The first method must have the baseline decision")
@@ -188,19 +240,37 @@ def plot_history(source: Path, output: Path) -> None:
         ax.spines[spine].set_visible(False)
     ax.spines["bottom"].set_color("#d8e0e7")
 
+    short_labels = {
+        "r01_muon": "Muon",
+        "r04_batchbalance": "rank balance",
+        "r10_sqrtloss": "sqrt loss",
+        "r22_ffn1536": "FFN 1536",
+        "r29_tied": "tied embeddings",
+    }
+    kept_labels = [
+        f"R{index:02d} "
+        + short_labels.get(
+            rows[index]["method_id"],
+            rows[index]["method_id"].split("_", 1)[1].replace("_", " "),
+        )
+        for index in kept
+    ]
     fig.text(
         0.082,
         0.083,
-        "Kept: R01 Muon · R04 rank balance · R10 sqrt loss · "
-        "R22 FFN 1536 · R29 tied embeddings",
+        "Kept: " + " · ".join(kept_labels),
         fontsize=9,
         color=TEAL,
+    )
+    source_path = source.resolve()
+    source_label = (
+        source_path.relative_to(ROOT) if source_path.is_relative_to(ROOT) else source.name
     )
     fig.text(
         0.082,
         0.04,
-        "Source: reports/program2/methods.tsv · 2026-09-06 snapshot · "
-        f"Sample SD across {len(seeds)} training seeds; 32 fixed validation sequences.",
+        f"Source: {source_label} · {len(rows) * len(seeds)} runs · "
+        f"SD across {len(seeds)} training seeds; 32 fixed validation sequences.",
         fontsize=8.5,
         color=MUTED,
     )
@@ -217,7 +287,9 @@ def plot_history(source: Path, output: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, default=ROOT / "reports/program2/methods.tsv")
+    parser.add_argument(
+        "--input", type=Path, default=ROOT / "reports/program2/runs-through-r38.tsv"
+    )
     parser.add_argument(
         "--output", type=Path, default=ROOT / "reports/program2/validation-loss"
     )

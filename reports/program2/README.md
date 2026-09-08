@@ -1,5 +1,18 @@
 # Program 2: validation-loss autoresearch progress
 
+**Figure update, September 8, 2026:** the [run log through R38](runs-through-r38.tsv)
+contains 39 completed methods / 78 runs. R30–R38 were all discarded; R29 remains
+the best accepted recipe at **2.58056811 ± 0.00544206**. The
+[updated curve](validation-loss.png) includes all 38 candidate rounds with
+sample-SD error bars across seeds 42 and 43.
+
+The added log is a byte-for-byte copy of
+`.dev/ar/ar_l40x4_val_loss_r40_results.tsv`; despite the filename, it contains no
+R39 or R40 results. Its first 60 rows match [the original run log](runs.tsv).
+SHA-256: `ac3225ea909e2aceffbb1b2b8bd92817f14e03b6b3be145e547fcbd52164ff75`.
+The report, per-method table, and audit archive below describe the original
+R29 snapshot; only the TSV supplies the added R30–R38 results.
+
 Snapshot: **2026-09-06T22:34:54Z**. **30 completed methods / 60 full-hour runs / 5 accepted changes.** The completed runs represent 240 GPU-hours of scheduled training, excluding preflight and evaluation.
 
 Current accepted recipe: **R29 shared input/output embeddings**, mean validation loss **2.58056811 ± 0.00544206** (sample SD across seeds 42 and 43). This is **0.05811235 lower (2.20%)** than the original AdamW baseline. Accepted code: [`fc0a125`](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/commit/fc0a1253a8919615714fd7f95bbe1a7a00235172).
