@@ -194,27 +194,36 @@ Regenerate the [SVG](reports/program2/validation-loss.svg) and PNG with
 
 ## Scale-up leaderboard
 
-Completed 100,000-step runs on four H100s, ordered by validation loss:
+All six recipes completed **100,000 Stage-1 steps on four H100s**, with batch
+**1,024**, **102.4M sampled sequences**, and the same full evaluations. Settings
+1–4 add changes cumulatively; every run starts from scratch.
 
-| Recipe | Validation loss ↓ | Full contact P@L ↑ | Training time |
-|---|---:|---:|---:|
-| R02 (Muon + retained architecture) | **2.43698** | **30.31%** | 12h 57m |
-| AdamW baseline | 2.47436 | 26.50% | 12h 01m |
+| Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
+|---|---:|---:|---:|---:|
+| ESMC-like baseline — AdamW | 2.47436 | 26.505% | 26.295–26.719% | 12h 01m |
+| Previous R02 — RoPE20k | 2.43698 | 30.310% | 30.079–30.547% | 12h 57m |
+| 1: R02 — RoPE10k | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
+| 2: + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
+| **3: + sqrt loss** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
+| 4: + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
 
-Both use batch 1,024, base LR 5e-4, base WD 0.01, and a 1,000-step warmup.
-Evaluation uses 4,096 held-out MLM sequences and 20,775 contact chains.
-There is one training seed per recipe, so these results do not yet measure
-variation across training seeds. See the
-[full results and run records](reports/fir-171m-100k-20260906/README.md).
+**Setting 3 is best on both metrics:** validation loss is **2.25% lower** and
+P@L is **6.18 percentage points higher** than the AdamW baseline, with **4.71%
+longer training**. It combines hybrid Muon/AdamW, parameter-free transformer
+RMSNorm, learned residual/input routing, depth-scaled initialization, rank
+balancing, and square-root masked-target weighting. RoPE remains 10k, FFN
+width remains 2048, and its embeddings are untied.
 
-R02 comes from the earlier contact-selected campaign. Scale-up results for the
-validation-loss search are pending in the published
-[launch record](reports/fir-r02-rope10k-100k-20260906/README.md). That comparison
-starts from R02 with RoPE reset to 10k, then adds rank balancing, square-root
-loss weights, and tied embeddings cumulatively. It retains FFN width 2048;
-the kept FFN-narrowing change still needs its scale-up check and is tracked in
-[TODO](TODO.md). See the [matched recipes](docs/PROGRAM2_SCALEUP.md) for the
-differences from the one-hour search.
+All use base LR 5e-4, base WD 0.01, and a 1,000-step warmup; Muon retains R02's
+per-group LR/WD multipliers. Validation uses the same 4,096 held-out sequences
+and P@L uses the same 20,775 chains. Intervals are 5,000-resample chain-bootstrap
+95% CIs, not training-seed uncertainty; each recipe has one training seed.
+Training times exclude evaluation and are approximate to the minute.
+
+See **[best recipe versus baseline: differences, figures, and worked examples](docs/BEST_RECIPE_VS_BASELINE.md)**,
+the [complete results and adjacent comparisons](reports/fir-r02-rope10k-100k-20260906/README.md),
+and the [historical baseline/R02 records](reports/fir-171m-100k-20260906/README.md).
+The narrower-FFN change remains deferred in [TODO](TODO.md).
 
 ## Usage
 
