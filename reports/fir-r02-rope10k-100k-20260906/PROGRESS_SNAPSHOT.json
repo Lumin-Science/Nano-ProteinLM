@@ -1,6 +1,265 @@
 {
-  "observed_utc": "2026-09-07T21:11:52.660699+00:00",
-  "queue_current": "r10_sqrtloss",
+  "ALL_TRIALS_PASSED.json": {
+    "observed_utc": "2026-09-06T23:54:21.836498+00:00",
+    "production_config_sha256": {
+      "r02_rope10k": "d0ecf91435e98feb0e4b1e731e21582fc21ee7f9387196a32741b4393839e1f2",
+      "r04_batchbalance": "f3e0193b1bee00f43544f305a9371c46a8b46390b89eea85fd0475a08c52bc87",
+      "r10_sqrtloss": "06d6173acd831f1b553777b689066522d2c75261d1b34ec2bc10c07df008786c",
+      "r29_tied": "8ed1677ba55dcc1c34eede778627324a126ea0b42a2e73f602865964e28e5fb9"
+    },
+    "qualification_scope": "Technical stability at configured peak LR, full model/batch/FA3, checkpoint/optimizer/attention reload and 32-sequence MLM smoke evaluation. No quality selection from short trials. Production remains 100k steps and 1000 warmup.",
+    "source_commit": "253c3ea442f2a1657eeb0f3ce2127ac0b1adfb25",
+    "status": "passed",
+    "trial_overrides": {
+      "max_steps": 200,
+      "schedule_steps": 200,
+      "walltime_seconds": 1200,
+      "warmup_steps": 50
+    },
+    "trials": [
+      {
+        "all_parameters_finite": true,
+        "attention_feature_layout": true,
+        "checkpoint_reload": true,
+        "checkpoint_sha256": "65759966e43c91f5dff10689e6b927648efb33d82b3417ec35eb24d414eec001",
+        "config_sha256": "ec729aa21d45febcb6f11bbe0c12a6cf7490d45b73dc6cafe3c87de50fa230fb",
+        "diagnostic_validation": {
+          "masked_residues": 994,
+          "perplexity": 15.973650244680261,
+          "protocol": "heldout-cluster-representative-mlm-v1",
+          "sequence_mean_nll": 2.7709405049681664,
+          "sequence_median_nll": 2.8360437154769897,
+          "sequences": 32,
+          "source_counts": {
+            "mgnify": 9,
+            "omg_img": 13,
+            "uniref90": 10
+          }
+        },
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.4642585208173841,
+        "method": "r02_rope10k",
+        "mode": "trial",
+        "model_tokens": 48479810,
+        "optimizer_groups": [
+          {
+            "lr": 0.00045000000000000004,
+            "name": "muon_attention",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.000375,
+            "name": "muon_ffn",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_decay",
+            "tensors": 3,
+            "weight_decay": 0.01
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_no_decay",
+            "tensors": 6,
+            "weight_decay": 0.0
+          }
+        ],
+        "optimizer_steps": 200,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 24553401344,
+        "sequences_seen": 204800,
+        "status": "passed",
+        "tied_weight_ownership_verified": true,
+        "training_seconds": 98.35478102741763,
+        "trial_receipt_sha256": "b721869b1b86decc9dc969355314bfafccb69a55bcc5511df7b787d59edf6aa6"
+      },
+      {
+        "all_parameters_finite": true,
+        "attention_feature_layout": true,
+        "checkpoint_reload": true,
+        "checkpoint_sha256": "685193a1b9f42bb226c24b895724bdc4ef3dd80db7a41171fac957fbc13f30e2",
+        "config_sha256": "1408542d9046de8dc845f7e58c356dd838f18c5bafe1c64a90cdf8937b3187a7",
+        "diagnostic_validation": {
+          "masked_residues": 994,
+          "perplexity": 16.00746090534842,
+          "protocol": "heldout-cluster-representative-mlm-v1",
+          "sequence_mean_nll": 2.7730549201369286,
+          "sequence_median_nll": 2.844452381134033,
+          "sequences": 32,
+          "source_counts": {
+            "mgnify": 9,
+            "omg_img": 13,
+            "uniref90": 10
+          }
+        },
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.45173751693218944,
+        "method": "r04_batchbalance",
+        "mode": "trial",
+        "model_tokens": 48479810,
+        "optimizer_groups": [
+          {
+            "lr": 0.00045000000000000004,
+            "name": "muon_attention",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.000375,
+            "name": "muon_ffn",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_decay",
+            "tensors": 3,
+            "weight_decay": 0.01
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_no_decay",
+            "tensors": 6,
+            "weight_decay": 0.0
+          }
+        ],
+        "optimizer_steps": 200,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 21842023424,
+        "sequences_seen": 204800,
+        "status": "passed",
+        "tied_weight_ownership_verified": true,
+        "training_seconds": 90.96328465128317,
+        "trial_receipt_sha256": "502ca9a21f075b98de4871dd9859266e798e69d198dd7c5e4030ab7a10abee89"
+      },
+      {
+        "all_parameters_finite": true,
+        "attention_feature_layout": true,
+        "checkpoint_reload": true,
+        "checkpoint_sha256": "052bf415a5c85ffd7e1a6d7c12b25c6672ded371c7ed28f2b8f389aaeae30614",
+        "config_sha256": "a7d55488ce0781f15282acbcf20cb400e4abf0b9f55d94af326d426470f9661e",
+        "diagnostic_validation": {
+          "masked_residues": 994,
+          "perplexity": 16.007544510245964,
+          "protocol": "heldout-cluster-representative-mlm-v1",
+          "sequence_mean_nll": 2.773060142993927,
+          "sequence_median_nll": 2.836123466491699,
+          "sequences": 32,
+          "source_counts": {
+            "mgnify": 9,
+            "omg_img": 13,
+            "uniref90": 10
+          }
+        },
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.45239091380964963,
+        "method": "r10_sqrtloss",
+        "mode": "trial",
+        "model_tokens": 48479810,
+        "optimizer_groups": [
+          {
+            "lr": 0.00045000000000000004,
+            "name": "muon_attention",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.000375,
+            "name": "muon_ffn",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_decay",
+            "tensors": 3,
+            "weight_decay": 0.01
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_no_decay",
+            "tensors": 6,
+            "weight_decay": 0.0
+          }
+        ],
+        "optimizer_steps": 200,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 21842024448,
+        "sequences_seen": 204800,
+        "status": "passed",
+        "tied_weight_ownership_verified": true,
+        "training_seconds": 91.12769813509658,
+        "trial_receipt_sha256": "de7170553e05c2507d7b8e918f53158e8056138a4fb100a67e2e2aae33a63248"
+      },
+      {
+        "all_parameters_finite": true,
+        "attention_feature_layout": true,
+        "checkpoint_reload": true,
+        "checkpoint_sha256": "e04d2b0dcdde0f6b5d6087208307113f23224fc7eff81f0a26f6fe9484160bfd",
+        "config_sha256": "959684b8efbd5009b9bdb07aa16fed0d9221ec0b18e755f09fd127a4215742dc",
+        "diagnostic_validation": {
+          "masked_residues": 994,
+          "perplexity": 15.925515343846103,
+          "protocol": "heldout-cluster-representative-mlm-v1",
+          "sequence_mean_nll": 2.7679225616157055,
+          "sequence_median_nll": 2.810956120491028,
+          "sequences": 32,
+          "source_counts": {
+            "mgnify": 9,
+            "omg_img": 13,
+            "uniref90": 10
+          }
+        },
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.4526169726625085,
+        "method": "r29_tied",
+        "mode": "trial",
+        "model_tokens": 48479810,
+        "optimizer_groups": [
+          {
+            "lr": 0.00045000000000000004,
+            "name": "muon_attention",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.000375,
+            "name": "muon_ffn",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_decay",
+            "tensors": 2,
+            "weight_decay": 0.01
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_no_decay",
+            "tensors": 6,
+            "weight_decay": 0.0
+          }
+        ],
+        "optimizer_steps": 200,
+        "parameter_count": 170510704,
+        "peak_cuda_memory_bytes": 21837208064,
+        "sequences_seen": 204800,
+        "status": "passed",
+        "tied_weight_ownership_verified": true,
+        "training_seconds": 91.04534849897027,
+        "trial_receipt_sha256": "f8622e8dfdd10955bac8642b91e6ffb543354b4acc6113507b40e45cf481e0fb"
+      }
+    ]
+  },
+  "QUEUE_CURRENT.txt": "r29_tied",
   "full": {
     "r02_rope10k": {
       "contact": {
@@ -72,7 +331,7 @@
         "tokens_per_second": 528662.1416714927,
         "training_seconds": 46674.236734824255
       },
-      "metrics_age_seconds": 466.66069889068604,
+      "metrics_age_seconds": 17860.62183904648,
       "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r02_rope10k",
       "state": "complete",
       "timing": {
@@ -233,7 +492,7 @@
         "tokens_per_second": 539051.3612532214,
         "training_seconds": 45221.839008656796
       },
-      "metrics_age_seconds": 31365.660698890686,
+      "metrics_age_seconds": 48759.62183904648,
       "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r04_batchbalance",
       "state": "complete",
       "timing": {
@@ -311,64 +570,814 @@
       }
     },
     "r10_sqrtloss": {
+      "contact": {
+        "checkpoint_sha256": "f28021f4c8069c344279172da5fe25c1afd36d07eddee111e5e17ce1eba0e29d",
+        "evaluation_chains": 20775,
+        "p_at_l": 0.32682479636194167,
+        "protocol": "autoresearch-frozen-full-contact-merge-v1",
+        "random_p_at_l": 0.016893223436056953,
+        "schema_version": 1,
+        "selected_C": 1.0,
+        "selection_seed": 20260820,
+        "validation_trace": [
+          {
+            "C": 0.01,
+            "validation_average_precision": 0.5722808271392883
+          },
+          {
+            "C": 0.1,
+            "validation_average_precision": 0.5961117636091237
+          },
+          {
+            "C": 1.0,
+            "validation_average_precision": 0.6682172593046157
+          },
+          {
+            "C": 10.0,
+            "validation_average_precision": 0.6659600185144876
+          }
+        ]
+      },
+      "contact_uncertainty": {
+        "checkpoint_sha256": "f28021f4c8069c344279172da5fe25c1afd36d07eddee111e5e17ce1eba0e29d",
+        "note": "Across-chain bootstrap confidence interval, not training-seed SD.",
+        "p_at_l": 0.32682479636194167,
+        "uncertainty": {
+          "confidence_interval_95": [
+            0.3244734819504504,
+            0.3291970216319941
+          ],
+          "replicates": 5000,
+          "unit_count": 20775
+        }
+      },
       "finite_logged_losses_and_gradients": true,
       "identity": "NODE=fc10212\nSLURM_JOB_ID=58303724\nSLURM_STEP_ID=9\nMODE=full\nMETHOD=r10_sqrtloss",
       "latest": {
         "attention_backend": "flash3",
         "batch_balance": {
           "rank_tokens_after": [
-            15786,
-            15787,
-            15785,
-            15787
+            15627,
+            15629,
+            15629,
+            15626
           ],
           "rank_tokens_before": [
-            15954,
-            17064,
-            14047,
-            16080
+            15716,
+            14180,
+            16416,
+            16199
           ]
         },
-        "estimated_training_flops": 16900353634150624992,
+        "estimated_training_flops": 24765521102422766496,
         "event": "train",
-        "filled_residues": 16374831627,
-        "gradient_norm": 0.1030094102025032,
+        "filled_residues": 23995424761,
+        "gradient_norm": 0.10699453949928284,
         "learning_rate": 0.00045000000000000004,
-        "loss": 2.4382999539375305,
-        "mfu_6n": 0.13939363463297647,
+        "loss": 2.4043731093406677,
+        "mfu_6n": 0.13923751073892313,
         "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
-        "model_tokens": 16514587147,
-        "objective_loss": 2.375963270664215,
+        "model_tokens": 24200224761,
+        "objective_loss": 2.343265175819397,
         "optimizer": "muon",
-        "optimizer_step": 68240,
-        "sequences_seen": 69877760,
+        "optimizer_step": 100000,
+        "sequences_seen": 102400000,
         "source_counts_rank0": {
-          "mgnify": 1899143,
-          "omg_img": 9338955,
-          "uniref90": 6231342
+          "mgnify": 2785794,
+          "omg_img": 13686781,
+          "uniref90": 9127425
         },
         "stage": "stage1",
-        "stage_progress": 0.68239,
-        "step_compute_seconds": 0.4544703522697091,
-        "step_model_tokens": 245017,
-        "tokens_per_second": 539126.4771757711,
+        "stage_progress": 0.99999,
+        "step_compute_seconds": 0.4544172892346978,
+        "step_model_tokens": 244714,
+        "tokens_per_second": 538522.6438283907,
         "training_loss_reduction": "sqrt_mask_count",
-        "training_seconds": 30921.4770602691
+        "training_seconds": 45279.49896548269
       },
-      "metrics_age_seconds": 4.660698890686035,
+      "metrics_age_seconds": 3040.6218390464783,
       "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r10_sqrtloss",
-      "state": "training",
+      "state": "complete",
       "timing": {
-        "seconds_per_step": 0.45289833694463594,
-        "training_eta_toronto": "2026-09-07T21:11:32.051181-04:00"
+        "seconds_per_step": 0.4516910371440463,
+        "training_eta_toronto": "2026-09-07T21:11:06-04:00"
       },
-      "training_started_utc": "2026-09-07T12:36:10Z"
+      "training_completion": {
+        "compute_seconds": 45191.89135975344,
+        "event": "training_complete",
+        "filled_residues": 23995424761,
+        "final_checkpoint": {
+          "filled_residues": 23995424761,
+          "model_tokens": 24200224761,
+          "optimizer_step": 100000,
+          "path": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r10_sqrtloss/checkpoint-final.pt",
+          "sequences_seen": 102400000,
+          "sha256": "f28021f4c8069c344279172da5fe25c1afd36d07eddee111e5e17ce1eba0e29d",
+          "training_seconds": 45279.50012921309
+        },
+        "model_tokens": 24200224761,
+        "optimizer_steps": 100000,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 23047821824,
+        "schedule_optimizer_steps": 100000,
+        "sequences_seen": 102400000,
+        "source_counts": {
+          "stage1": {
+            "mgnify": 11152045,
+            "omg_img": 54747234,
+            "uniref90": 36500721
+          }
+        },
+        "source_epoch_maxima": {
+          "stage1": {
+            "mgnify": 7,
+            "omg_img": 16,
+            "uniref90": 15
+          }
+        },
+        "stage_checkpoint": null,
+        "stop_reason": "max_steps",
+        "target_optimizer_steps": 100000,
+        "training_seconds": 45279.50012921309,
+        "walltime_budget_seconds": 57600.0
+      },
+      "training_started_utc": "2026-09-07T12:36:10Z",
+      "validation": {
+        "masked_residues": 139963,
+        "perplexity": 11.231472395545648,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.418719872849124,
+        "sequence_median_nll": 2.4985378980636597,
+        "sequences": 4096,
+        "source_counts": {
+          "mgnify": 1393,
+          "omg_img": 1387,
+          "uniref90": 1316
+        }
+      },
+      "verification": {
+        "checkpoint_sha256": "f28021f4c8069c344279172da5fe25c1afd36d07eddee111e5e17ce1eba0e29d",
+        "config_sha256": "7fcf7cd1719fd1e2262cf589dae8bcedcbe5f970d61615cbf9e757a5ffd33891",
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.45192391485907135,
+        "method": "r10_sqrtloss",
+        "mode": "full",
+        "model_tokens": 24200224761,
+        "optimizer_steps": 100000,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 23047821824,
+        "sequences_seen": 102400000,
+        "status": "passed",
+        "training_seconds": 45279.50012921309
+      }
     },
     "r29_tied": {
-      "state": "pending"
+      "finite_logged_losses_and_gradients": true,
+      "identity": "NODE=fc10212\nSLURM_JOB_ID=58303724\nSLURM_STEP_ID=9\nMODE=full\nMETHOD=r29_tied",
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            14097,
+            14095,
+            14095,
+            14096
+          ],
+          "rank_tokens_before": [
+            11922,
+            14861,
+            15457,
+            14143
+          ]
+        },
+        "estimated_training_flops": 1408871460957463776,
+        "event": "train",
+        "filled_residues": 1365456379,
+        "gradient_norm": 0.20032891631126404,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.596145808696747,
+        "mfu_6n": 0.13834944180534528,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 1377109499,
+        "objective_loss": 2.5947559475898743,
+        "optimizer": "muon",
+        "optimizer_step": 5690,
+        "sequences_seen": 5826560,
+        "source_counts_rank0": {
+          "mgnify": 158617,
+          "omg_img": 779432,
+          "uniref90": 518591
+        },
+        "stage": "stage1",
+        "stage_progress": 0.05689,
+        "step_compute_seconds": 0.4335570391267538,
+        "step_model_tokens": 232058,
+        "tokens_per_second": 535242.1459178663,
+        "training_loss_reduction": "sqrt_mask_count",
+        "training_seconds": 2597.2408779221587
+      },
+      "metrics_age_seconds": 0.6218390464782715,
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/full/r29_tied",
+      "state": "training",
+      "timing": {
+        "seconds_per_step": 0.4523334102705121,
+        "training_eta_toronto": "2026-09-08T09:52:45.563923-04:00"
+      },
+      "training_started_utc": "2026-09-08T01:18:13Z"
     }
   },
-  "new_completed_result": "r02_rope10k",
-  "result_verified_utc": "2026-09-07T21:11:58.144706+00:00",
-  "action": "Setting1 completed 100k steps and full MLM/P@L; independently verified and archived. Setting2 results remain verified. Setting3 healthy; setting4 queued. Notify setting1 result and matched adjacent comparison. Keep all user allocations; no new dispatch."
+  "observed_utc": "2026-09-08T02:01:46.621839+00:00",
+  "trials": {
+    "r02_rope10k": {
+      "finite_logged_losses_and_gradients": true,
+      "identity": "NODE=fc10212\nSLURM_JOB_ID=58303724\nSLURM_STEP_ID=8\nMODE=trial\nMETHOD=r02_rope10k",
+      "latest": {
+        "attention_backend": "flash3",
+        "estimated_training_flops": 49612256475044160,
+        "event": "train",
+        "filled_residues": 48070210,
+        "gradient_norm": 0.3311033844947815,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.7836755514144897,
+        "mfu_6n": 0.13937913004833785,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 48479810,
+        "optimizer": "muon",
+        "optimizer_step": 200,
+        "sequences_seen": 204800,
+        "source_counts_rank0": {
+          "mgnify": 5566,
+          "omg_img": 27329,
+          "uniref90": 18305
+        },
+        "stage": "stage1",
+        "stage_progress": 0.995,
+        "step_compute_seconds": 0.4529241630807519,
+        "step_model_tokens": 244158,
+        "tokens_per_second": 539070.3784475925,
+        "training_seconds": 98.35370905743912
+      },
+      "metrics_age_seconds": 94487.62183904648,
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/trials/r02_rope10k",
+      "state": "complete",
+      "timing": {
+        "seconds_per_step": 0.46329738073050974,
+        "training_eta_toronto": "2026-09-06T19:46:59-04:00"
+      },
+      "training_completion": {
+        "compute_seconds": 98.13877430418506,
+        "event": "training_complete",
+        "filled_residues": 48070210,
+        "final_checkpoint": {
+          "filled_residues": 48070210,
+          "model_tokens": 48479810,
+          "optimizer_step": 200,
+          "path": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/trials/r02_rope10k/checkpoint-final.pt",
+          "sequences_seen": 204800,
+          "sha256": "65759966e43c91f5dff10689e6b927648efb33d82b3417ec35eb24d414eec001",
+          "training_seconds": 98.35478102741763
+        },
+        "model_tokens": 48479810,
+        "optimizer_steps": 200,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 24553401344,
+        "schedule_optimizer_steps": 200,
+        "sequences_seen": 204800,
+        "source_counts": {
+          "stage1": {
+            "mgnify": 22261,
+            "omg_img": 109541,
+            "uniref90": 72998
+          }
+        },
+        "source_epoch_maxima": {
+          "stage1": {
+            "mgnify": 0,
+            "omg_img": 0,
+            "uniref90": 0
+          }
+        },
+        "stage_checkpoint": null,
+        "stop_reason": "max_steps",
+        "target_optimizer_steps": 200,
+        "training_seconds": 98.35478102741763,
+        "walltime_budget_seconds": 1200.0
+      },
+      "training_started_utc": "2026-09-06T23:44:56Z",
+      "validation": {
+        "masked_residues": 994,
+        "perplexity": 15.973650244680261,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.7709405049681664,
+        "sequence_median_nll": 2.8360437154769897,
+        "sequences": 32,
+        "source_counts": {
+          "mgnify": 9,
+          "omg_img": 13,
+          "uniref90": 10
+        }
+      },
+      "verification": {
+        "all_parameters_finite": true,
+        "attention_feature_layout": true,
+        "checkpoint_reload": true,
+        "checkpoint_sha256": "65759966e43c91f5dff10689e6b927648efb33d82b3417ec35eb24d414eec001",
+        "config_sha256": "ec729aa21d45febcb6f11bbe0c12a6cf7490d45b73dc6cafe3c87de50fa230fb",
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.4642585208173841,
+        "method": "r02_rope10k",
+        "mode": "trial",
+        "model_tokens": 48479810,
+        "optimizer_groups": [
+          {
+            "lr": 0.00045000000000000004,
+            "name": "muon_attention",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.000375,
+            "name": "muon_ffn",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_decay",
+            "tensors": 3,
+            "weight_decay": 0.01
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_no_decay",
+            "tensors": 6,
+            "weight_decay": 0.0
+          }
+        ],
+        "optimizer_steps": 200,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 24553401344,
+        "sequences_seen": 204800,
+        "status": "passed",
+        "tied_weight_ownership_verified": true,
+        "training_seconds": 98.35478102741763
+      }
+    },
+    "r04_batchbalance": {
+      "finite_logged_losses_and_gradients": true,
+      "identity": "NODE=fc10212\nSLURM_JOB_ID=58303724\nSLURM_STEP_ID=8\nMODE=trial\nMETHOD=r04_batchbalance",
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            15284,
+            15283,
+            15282,
+            15283
+          ],
+          "rank_tokens_before": [
+            15726,
+            15530,
+            14275,
+            15601
+          ]
+        },
+        "estimated_training_flops": 49612256475044160,
+        "event": "train",
+        "filled_residues": 48070210,
+        "gradient_norm": 0.35922691226005554,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.7670055627822876,
+        "mfu_6n": 0.13915049468461071,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 48479810,
+        "optimizer": "muon",
+        "optimizer_step": 200,
+        "sequences_seen": 204800,
+        "source_counts_rank0": {
+          "mgnify": 5566,
+          "omg_img": 27329,
+          "uniref90": 18305
+        },
+        "stage": "stage1",
+        "stage_progress": 0.995,
+        "step_compute_seconds": 0.453668353613466,
+        "step_model_tokens": 244158,
+        "tokens_per_second": 538186.095757579,
+        "training_seconds": 90.96237520035356
+      },
+      "metrics_age_seconds": 94346.62183904648,
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/trials/r04_batchbalance",
+      "state": "complete",
+      "timing": {
+        "seconds_per_step": 0.4518405827476333,
+        "training_eta_toronto": "2026-09-06T19:49:20-04:00"
+      },
+      "training_completion": {
+        "compute_seconds": 90.79317868268117,
+        "event": "training_complete",
+        "filled_residues": 48070210,
+        "final_checkpoint": {
+          "filled_residues": 48070210,
+          "model_tokens": 48479810,
+          "optimizer_step": 200,
+          "path": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/trials/r04_batchbalance/checkpoint-final.pt",
+          "sequences_seen": 204800,
+          "sha256": "685193a1b9f42bb226c24b895724bdc4ef3dd80db7a41171fac957fbc13f30e2",
+          "training_seconds": 90.96328465128317
+        },
+        "model_tokens": 48479810,
+        "optimizer_steps": 200,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 21842023424,
+        "schedule_optimizer_steps": 200,
+        "sequences_seen": 204800,
+        "source_counts": {
+          "stage1": {
+            "mgnify": 22261,
+            "omg_img": 109541,
+            "uniref90": 72998
+          }
+        },
+        "source_epoch_maxima": {
+          "stage1": {
+            "mgnify": 0,
+            "omg_img": 0,
+            "uniref90": 0
+          }
+        },
+        "stage_checkpoint": null,
+        "stop_reason": "max_steps",
+        "target_optimizer_steps": 200,
+        "training_seconds": 90.96328465128317,
+        "walltime_budget_seconds": 1200.0
+      },
+      "training_started_utc": "2026-09-06T23:47:35Z",
+      "validation": {
+        "masked_residues": 994,
+        "perplexity": 16.00746090534842,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.7730549201369286,
+        "sequence_median_nll": 2.844452381134033,
+        "sequences": 32,
+        "source_counts": {
+          "mgnify": 9,
+          "omg_img": 13,
+          "uniref90": 10
+        }
+      },
+      "verification": {
+        "all_parameters_finite": true,
+        "attention_feature_layout": true,
+        "checkpoint_reload": true,
+        "checkpoint_sha256": "685193a1b9f42bb226c24b895724bdc4ef3dd80db7a41171fac957fbc13f30e2",
+        "config_sha256": "1408542d9046de8dc845f7e58c356dd838f18c5bafe1c64a90cdf8937b3187a7",
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.45173751693218944,
+        "method": "r04_batchbalance",
+        "mode": "trial",
+        "model_tokens": 48479810,
+        "optimizer_groups": [
+          {
+            "lr": 0.00045000000000000004,
+            "name": "muon_attention",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.000375,
+            "name": "muon_ffn",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_decay",
+            "tensors": 3,
+            "weight_decay": 0.01
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_no_decay",
+            "tensors": 6,
+            "weight_decay": 0.0
+          }
+        ],
+        "optimizer_steps": 200,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 21842023424,
+        "sequences_seen": 204800,
+        "status": "passed",
+        "tied_weight_ownership_verified": true,
+        "training_seconds": 90.96328465128317
+      }
+    },
+    "r10_sqrtloss": {
+      "finite_logged_losses_and_gradients": true,
+      "identity": "NODE=fc10212\nSLURM_JOB_ID=58303724\nSLURM_STEP_ID=8\nMODE=trial\nMETHOD=r10_sqrtloss",
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            15284,
+            15283,
+            15282,
+            15283
+          ],
+          "rank_tokens_before": [
+            15726,
+            15530,
+            14275,
+            15601
+          ]
+        },
+        "estimated_training_flops": 49612256475044160,
+        "event": "train",
+        "filled_residues": 48070210,
+        "gradient_norm": 0.3149188458919525,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.7651087641716003,
+        "mfu_6n": 0.13884395371101568,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 48479810,
+        "objective_loss": 2.776320219039917,
+        "optimizer": "muon",
+        "optimizer_step": 200,
+        "sequences_seen": 204800,
+        "source_counts_rank0": {
+          "mgnify": 5566,
+          "omg_img": 27329,
+          "uniref90": 18305
+        },
+        "stage": "stage1",
+        "stage_progress": 0.995,
+        "step_compute_seconds": 0.45466996682807803,
+        "step_model_tokens": 244158,
+        "tokens_per_second": 537000.5010520569,
+        "training_loss_reduction": "sqrt_mask_count",
+        "training_seconds": 91.12677229288965
+      },
+      "metrics_age_seconds": 94208.62183904648,
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/trials/r10_sqrtloss",
+      "state": "complete",
+      "timing": {
+        "seconds_per_step": 0.45238680522578456,
+        "training_eta_toronto": "2026-09-06T19:51:38-04:00"
+      },
+      "training_completion": {
+        "compute_seconds": 90.98613155493513,
+        "event": "training_complete",
+        "filled_residues": 48070210,
+        "final_checkpoint": {
+          "filled_residues": 48070210,
+          "model_tokens": 48479810,
+          "optimizer_step": 200,
+          "path": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/trials/r10_sqrtloss/checkpoint-final.pt",
+          "sequences_seen": 204800,
+          "sha256": "052bf415a5c85ffd7e1a6d7c12b25c6672ded371c7ed28f2b8f389aaeae30614",
+          "training_seconds": 91.12769813509658
+        },
+        "model_tokens": 48479810,
+        "optimizer_steps": 200,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 21842024448,
+        "schedule_optimizer_steps": 200,
+        "sequences_seen": 204800,
+        "source_counts": {
+          "stage1": {
+            "mgnify": 22261,
+            "omg_img": 109541,
+            "uniref90": 72998
+          }
+        },
+        "source_epoch_maxima": {
+          "stage1": {
+            "mgnify": 0,
+            "omg_img": 0,
+            "uniref90": 0
+          }
+        },
+        "stage_checkpoint": null,
+        "stop_reason": "max_steps",
+        "target_optimizer_steps": 200,
+        "training_seconds": 91.12769813509658,
+        "walltime_budget_seconds": 1200.0
+      },
+      "training_started_utc": "2026-09-06T23:49:53Z",
+      "validation": {
+        "masked_residues": 994,
+        "perplexity": 16.007544510245964,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.773060142993927,
+        "sequence_median_nll": 2.836123466491699,
+        "sequences": 32,
+        "source_counts": {
+          "mgnify": 9,
+          "omg_img": 13,
+          "uniref90": 10
+        }
+      },
+      "verification": {
+        "all_parameters_finite": true,
+        "attention_feature_layout": true,
+        "checkpoint_reload": true,
+        "checkpoint_sha256": "052bf415a5c85ffd7e1a6d7c12b25c6672ded371c7ed28f2b8f389aaeae30614",
+        "config_sha256": "a7d55488ce0781f15282acbcf20cb400e4abf0b9f55d94af326d426470f9661e",
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.45239091380964963,
+        "method": "r10_sqrtloss",
+        "mode": "trial",
+        "model_tokens": 48479810,
+        "optimizer_groups": [
+          {
+            "lr": 0.00045000000000000004,
+            "name": "muon_attention",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.000375,
+            "name": "muon_ffn",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_decay",
+            "tensors": 3,
+            "weight_decay": 0.01
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_no_decay",
+            "tensors": 6,
+            "weight_decay": 0.0
+          }
+        ],
+        "optimizer_steps": 200,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 21842024448,
+        "sequences_seen": 204800,
+        "status": "passed",
+        "tied_weight_ownership_verified": true,
+        "training_seconds": 91.12769813509658
+      }
+    },
+    "r29_tied": {
+      "finite_logged_losses_and_gradients": true,
+      "identity": "NODE=fc10212\nSLURM_JOB_ID=58303724\nSLURM_STEP_ID=8\nMODE=trial\nMETHOD=r29_tied",
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            15284,
+            15283,
+            15282,
+            15283
+          ],
+          "rank_tokens_before": [
+            15726,
+            15530,
+            14275,
+            15601
+          ]
+        },
+        "estimated_training_flops": 49597959197317440,
+        "event": "train",
+        "filled_residues": 48070210,
+        "gradient_norm": 0.3365914821624756,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.765867233276367,
+        "mfu_6n": 0.1386621866834019,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 48479810,
+        "objective_loss": 2.776278555393219,
+        "optimizer": "muon",
+        "optimizer_step": 200,
+        "sequences_seen": 204800,
+        "source_counts_rank0": {
+          "mgnify": 5566,
+          "omg_img": 27329,
+          "uniref90": 18305
+        },
+        "stage": "stage1",
+        "stage_progress": 0.995,
+        "step_compute_seconds": 0.45513477781787515,
+        "step_model_tokens": 244158,
+        "tokens_per_second": 536452.0838653671,
+        "training_loss_reduction": "sqrt_mask_count",
+        "training_seconds": 91.04445288702846
+      },
+      "metrics_age_seconds": 94070.62183904648,
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/trials/r29_tied",
+      "state": "complete",
+      "timing": {
+        "seconds_per_step": 0.4525644679646939,
+        "training_eta_toronto": "2026-09-06T19:53:56-04:00"
+      },
+      "training_completion": {
+        "compute_seconds": 90.88344730623066,
+        "event": "training_complete",
+        "filled_residues": 48070210,
+        "final_checkpoint": {
+          "filled_residues": 48070210,
+          "model_tokens": 48479810,
+          "optimizer_step": 200,
+          "path": "/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906/trials/r29_tied/checkpoint-final.pt",
+          "sequences_seen": 204800,
+          "sha256": "e04d2b0dcdde0f6b5d6087208307113f23224fc7eff81f0a26f6fe9484160bfd",
+          "training_seconds": 91.04534849897027
+        },
+        "model_tokens": 48479810,
+        "optimizer_steps": 200,
+        "parameter_count": 170510704,
+        "peak_cuda_memory_bytes": 21837208064,
+        "schedule_optimizer_steps": 200,
+        "sequences_seen": 204800,
+        "source_counts": {
+          "stage1": {
+            "mgnify": 22261,
+            "omg_img": 109541,
+            "uniref90": 72998
+          }
+        },
+        "source_epoch_maxima": {
+          "stage1": {
+            "mgnify": 0,
+            "omg_img": 0,
+            "uniref90": 0
+          }
+        },
+        "stage_checkpoint": null,
+        "stop_reason": "max_steps",
+        "target_optimizer_steps": 200,
+        "training_seconds": 91.04534849897027,
+        "walltime_budget_seconds": 1200.0
+      },
+      "training_started_utc": "2026-09-06T23:52:11Z",
+      "validation": {
+        "masked_residues": 994,
+        "perplexity": 15.925515343846103,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.7679225616157055,
+        "sequence_median_nll": 2.810956120491028,
+        "sequences": 32,
+        "source_counts": {
+          "mgnify": 9,
+          "omg_img": 13,
+          "uniref90": 10
+        }
+      },
+      "verification": {
+        "all_parameters_finite": true,
+        "attention_feature_layout": true,
+        "checkpoint_reload": true,
+        "checkpoint_sha256": "e04d2b0dcdde0f6b5d6087208307113f23224fc7eff81f0a26f6fe9484160bfd",
+        "config_sha256": "959684b8efbd5009b9bdb07aa16fed0d9221ec0b18e755f09fd127a4215742dc",
+        "finite_logged_losses_and_gradients": true,
+        "flash3_verified": true,
+        "measured_seconds_per_step": 0.4526169726625085,
+        "method": "r29_tied",
+        "mode": "trial",
+        "model_tokens": 48479810,
+        "optimizer_groups": [
+          {
+            "lr": 0.00045000000000000004,
+            "name": "muon_attention",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.000375,
+            "name": "muon_ffn",
+            "tensors": 48,
+            "weight_decay": 0.0075
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_decay",
+            "tensors": 2,
+            "weight_decay": 0.01
+          },
+          {
+            "lr": 0.0005,
+            "name": "adamw_no_decay",
+            "tensors": 6,
+            "weight_decay": 0.0
+          }
+        ],
+        "optimizer_steps": 200,
+        "parameter_count": 170510704,
+        "peak_cuda_memory_bytes": 21837208064,
+        "sequences_seen": 204800,
+        "status": "passed",
+        "tied_weight_ownership_verified": true,
+        "training_seconds": 91.04534849897027
+      }
+    }
+  }
 }

@@ -1,7 +1,7 @@
 # Four-setting 100k H100 training plan
 
-Status: **settings 1 and 2 completed their 100k runs and full evaluations;
-setting 3 is training, setting 4 is queued**. All four H100 technical trials
+Status: **settings 1–3 completed their 100k runs and full evaluations;
+setting 4 is training after its automatic launch**. All four H100 technical trials
 passed. Setting 1 ran as `58303658.14`; the sequential settings 2–4 queue is
 `58303724.9`. The user authorized
 settings **2 → 3 → 4 sequentially on fc10212** after qualification, and a

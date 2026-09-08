@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "method": "r10_sqrtloss",
+  "mode": "full",
+  "config_sha256": "7fcf7cd1719fd1e2262cf589dae8bcedcbe5f970d61615cbf9e757a5ffd33891",
+  "checkpoint_sha256": "f28021f4c8069c344279172da5fe25c1afd36d07eddee111e5e17ce1eba0e29d",
+  "optimizer_steps": 100000,
+  "model_tokens": 24200224761,
+  "sequences_seen": 102400000,
+  "parameter_count": 170559856,
+  "training_seconds": 45279.50012921309,
+  "peak_cuda_memory_bytes": 23047821824,
+  "finite_logged_losses_and_gradients": true,
+  "flash3_verified": true,
+  "measured_seconds_per_step": 0.45192391485907135
+}

@@ -1,5 +1,5 @@
 {
-  "updated_utc": "2026-09-07T21:11:58.770045+00:00",
+  "updated_utc": "2026-09-08T02:02:51.213873+00:00",
   "comparison_order": [
     "historical_r02_rope20k",
     "r02_rope10k",
@@ -38,6 +38,23 @@
       ],
       "training_time_delta_seconds": -1452.4054685262963,
       "training_time_relative_delta_percent": -3.11179159687075,
+      "paired_contact_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "bootstrap_seed": 20260820
+    },
+    {
+      "baseline": "r04_batchbalance",
+      "candidate": "r10_sqrtloss",
+      "increment": "Add sqrt-mask-count training loss",
+      "validation_loss_delta": -0.019998751631646883,
+      "validation_loss_relative_delta_percent": -0.8200516218186071,
+      "p_at_l_delta_percentage_points": 1.9672857382624476,
+      "p_at_l_paired_chain_bootstrap_delta_95ci_percentage_points": [
+        1.9055657437854048,
+        2.026304139677099
+      ],
+      "training_time_delta_seconds": 57.65305502898991,
+      "training_time_relative_delta_percent": 0.12748938568212242,
       "paired_contact_chains": 20775,
       "bootstrap_replicates": 5000,
       "bootstrap_seed": 20260820
