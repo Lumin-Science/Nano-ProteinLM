@@ -1,6 +1,12 @@
 # Nibi baseline with evaluation every 10,000 steps
 
-Status: implementation and qualification in progress; production relaunch pending.
+Status: **running**. Production relaunched from scratch at **03:54:43 Toronto on
+September 8, 2026**, in step **12162637.11**, using all eight H100s on `g27`.
+At 03:55:51 it had passed step 110 with finite loss/gradients and measured
+0.437 seconds/step. Including ten full evaluations, the initial completion
+estimate is **about 17:00 Toronto on September 8** (approximately 13 hours).
+Hourly monitoring is active and will report each newly completed checkpoint
+evaluation. Frozen training commit: `caa95a15b55ff2ca2395687f71e1c4b3a294b3d4`.
 
 At the user's request, the initial Nibi training step `12162637.7` was cancelled
 after approximately 500 steps. Allocation `12162637` remains running on `g27`.
@@ -25,9 +31,24 @@ from the training clock. Results live under `full/evaluations/step-NNNNNN/`.
 The rolling checkpoint is retained until the next interval; the final full-state
 checkpoint is copied to persistent project storage before its final evaluation.
 
-The new qualification uses the full model/batch, evaluates the complete frozen
-benchmark at step 10, then requires training to continue to step 20. Its short-run
-scores are technical checks, not production quality results.
+The qualification **passed** using the full model/batch: it evaluated all 4,096
+MLM sequences (139,963 masked residues) and all 20,775 contact chains at step 10,
+then continued to step 20 in the same training processes. The evaluation pause
+took **329.51 seconds**; ten such evaluations add roughly 55 minutes. All 16
+contact-shard hashes, chain coverage, the mean P@L, and the exact 5,000-replicate
+bootstrap interval were independently rechecked locally. These short-run scores
+are technical checks, not production quality results.
+
+The distributed unit tests also proved that evaluations can exceed the collective
+timeout without deadlock and that evaluator failures reach every rank. Twelve
+focused periodic-evaluation/resume/budget tests passed. The earlier full-model
+eight-to-four-GPU continuation and exact AdamW-state restoration checks remain
+applicable; this change does not alter checkpoint-state layout.
+
+See [`LAUNCH_VERIFIED.json`](LAUNCH_VERIFIED.json),
+[`PERIODIC_EVALUATION_TRIAL_PASSED.json`](PERIODIC_EVALUATION_TRIAL_PASSED.json),
+[`trial/`](trial/) and [`full/`](full/) for receipts and the exact executed configs.
+Large checkpoints and raw contact-shard dumps are retained outside Git.
 
 Artifact root: `/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-eval10k-20260908`.
 Source checkout: the artifact root with `-run` appended.
