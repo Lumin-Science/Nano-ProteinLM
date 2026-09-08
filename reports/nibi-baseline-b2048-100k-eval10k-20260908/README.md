@@ -2,11 +2,36 @@
 
 Status: **running**. Production relaunched from scratch at **03:54:43 Toronto on
 September 8, 2026**, in step **12162637.11**, using all eight H100s on `g27`.
-At 03:55:51 it had passed step 110 with finite loss/gradients and measured
-0.437 seconds/step. Including ten full evaluations, the initial completion
-estimate is **about 17:00 Toronto on September 8** (approximately 13 hours).
-Hourly monitoring is active and will report each newly completed checkpoint
+At **06:03 Toronto on September 8**, it had reached **17,220 / 100,000 steps**
+with finite losses/gradients, after successfully evaluating the 10k checkpoint
+and continuing training. It measures approximately 0.434 seconds/step; the
+completion estimate including remaining evaluations is **about 16:52 Toronto
+on September 8**. Monitoring every **two hours** will report each newly completed checkpoint
 evaluation. Frozen training commit: `caa95a15b55ff2ca2395687f71e1c4b3a294b3d4`.
+
+## Production learning curve
+
+| Optimizer step | Sequences seen | Validation MLM loss | Perplexity | Contact P@L | 95% chain-bootstrap CI | Evaluation pause |
+| --- | --- | --- | --- | --- | --- | --- |
+| 10,000 | 20,480,000 | 2.588700 | 13.31245 | 0.154617 | [0.153168, 0.156062] | 224.55 seconds |
+
+The first evaluation started at 05:07:31 Toronto and finished around 05:11:16.
+Its [independent local audit](full/evaluations/step-010000/LOCAL_AUDIT.json)
+checks all 16 shard hashes, checkpoint receipt bindings, the exact 20,775-chain
+set and probe protocol against the earlier AdamW baseline, and independently
+recomputes the 5,000-replicate bootstrap interval. Training metrics through
+step 17,230 are finite and demonstrate continued progress after evaluation.
+See [machine-readable learning curve](learning-curve.json) and
+[checkpoint receipts](full/evaluations/step-010000/). The CI measures uncertainty
+across evaluation chains, not variation across independent training runs.
+
+To audit a downloaded evaluation again, run
+`python reports/nibi-baseline-b2048-100k-eval10k-20260908/verify_evaluation.py 10000`
+from the repository root. Raw shard JSON must be available in the corresponding
+local `.exps` directory. The compressed per-chain table is published with each
+audited evaluation; large checkpoints and raw shards remain outside Git.
+
+## Run setup and qualification
 
 At the user's request, the initial Nibi training step `12162637.7` was cancelled
 after approximately 500 steps. Allocation `12162637` remains running on `g27`.
