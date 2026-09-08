@@ -2,10 +2,10 @@
 
 Status: **running**. Production relaunched from scratch at **03:54:43 Toronto on
 September 8, 2026**, in step **12162637.11**, using all eight H100s on `g27`.
-At **06:03 Toronto on September 8**, it had reached **17,220 / 100,000 steps**
-with finite losses/gradients, after successfully evaluating the 10k checkpoint
+At **08:02 Toronto on September 8**, it had reached **32,600 / 100,000 steps**
+with finite losses/gradients, after successfully evaluating the 10k, 20k and 30k checkpoints
 and continuing training. It measures approximately 0.434 seconds/step; the
-completion estimate including remaining evaluations is **about 16:52 Toronto
+completion estimate including remaining evaluations is **about 16:48 Toronto
 on September 8**. Monitoring every **two hours** will report each newly completed checkpoint
 evaluation. Frozen training commit: `caa95a15b55ff2ca2395687f71e1c4b3a294b3d4`.
 
@@ -14,13 +14,18 @@ evaluation. Frozen training commit: `caa95a15b55ff2ca2395687f71e1c4b3a294b3d4`.
 | Optimizer step | Sequences seen | Validation MLM loss | Perplexity | Contact P@L | 95% chain-bootstrap CI | Evaluation pause |
 | --- | --- | --- | --- | --- | --- | --- |
 | 10,000 | 20,480,000 | 2.588700 | 13.31245 | 0.154617 | [0.153168, 0.156062] | 224.55 seconds |
+| 20,000 | 40,960,000 | 2.536814 | 12.63933 | 0.188483 | [0.186730, 0.190295] | 222.76 seconds |
+| 30,000 | 61,440,000 | 2.506595 | 12.26310 | 0.209679 | [0.207729, 0.211703] | 201.72 seconds |
 
 The first evaluation started at 05:07:31 Toronto and finished around 05:11:16.
 Its [independent local audit](full/evaluations/step-010000/LOCAL_AUDIT.json)
 checks all 16 shard hashes, checkpoint receipt bindings, the exact 20,775-chain
 set and probe protocol against the earlier AdamW baseline, and independently
-recomputes the 5,000-replicate bootstrap interval. Training metrics through
-step 17,230 are finite and demonstrate continued progress after evaluation.
+recomputes the 5,000-replicate bootstrap interval. The same audits passed for
+[20k](full/evaluations/step-020000/LOCAL_AUDIT.json) and
+[30k](full/evaluations/step-030000/LOCAL_AUDIT.json), with evaluations completing
+around 06:27:25 and 07:43:12 Toronto, respectively. Training metrics through
+step 32,660 are finite and demonstrate continued progress after each evaluation.
 See [machine-readable learning curve](learning-curve.json) and
 [checkpoint receipts](full/evaluations/step-010000/). The CI measures uncertainty
 across evaluation chains, not variation across independent training runs.

@@ -1,5 +1,5 @@
 {
-  "observed_utc": "2026-09-08T10:03:31.200262+00:00",
+  "observed_utc": "2026-09-08T12:02:01.920095+00:00",
   "qualification_passed": true,
   "runs": {
     "trial": {
@@ -47,7 +47,7 @@
         "tokens_per_second": 1118448.8412485092,
         "training_seconds": 15.343120591947809
       },
-      "metrics_age_seconds": 7811.759258508682,
+      "metrics_age_seconds": 14922.47832274437,
       "seconds_per_step": 0.7565144861092497,
       "training_completion": {
         "compute_seconds": 9.536420105490834,
@@ -118,46 +118,74 @@
             "unit_count": 20775
           },
           "checkpoint_sha256": "8fd1ceeb406e54c3a14741bbb99f9c1d6afcaa72be533778e501afb2b9c9eeac"
+        },
+        {
+          "step": 20000,
+          "validation_loss": 2.5368135089429416,
+          "p_at_l": 0.18848336876311478,
+          "uncertainty": {
+            "confidence_interval_95": [
+              0.1867300019934236,
+              0.19029539720091332
+            ],
+            "replicates": 5000,
+            "unit_count": 20775
+          },
+          "checkpoint_sha256": "456819621bd2d9cabab7de442d9a0529ffb2ff070358ca75eb9580f701e08123"
+        },
+        {
+          "step": 30000,
+          "validation_loss": 2.5065947588075232,
+          "p_at_l": 0.2096787150995752,
+          "uncertainty": {
+            "confidence_interval_95": [
+              0.2077292950819486,
+              0.2117028029699353
+            ],
+            "replicates": 5000,
+            "unit_count": 20775
+          },
+          "checkpoint_sha256": "1d51ef08542e95a314b77570b999c9be3a03f22b3dd3b8a0d3163a50a6ee5c66"
         }
       ],
       "latest": {
         "attention_backend": "flash3",
-        "estimated_training_flops": 8534456795961235200,
+        "estimated_training_flops": 16157384102006254080,
         "event": "train",
-        "filled_residues": 8263677530,
-        "gradient_norm": 0.1082068532705307,
+        "filled_residues": 15644749660,
+        "gradient_norm": 0.14883014559745789,
         "learning_rate": 0.0005,
-        "loss": 2.4924263954162598,
-        "mfu_6n": 0.14306204310034562,
+        "loss": 2.480812132358551,
+        "mfu_6n": 0.14241727613389404,
         "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
-        "model_tokens": 8334210650,
+        "model_tokens": 15778279260,
         "optimizer": "adamw",
-        "optimizer_step": 17220,
-        "sequences_seen": 35266560,
+        "optimizer_step": 32600,
+        "sequences_seen": 66764800,
         "source_counts_rank0": {
-          "mgnify": 480034,
-          "omg_img": 2355971,
-          "uniref90": 1572315
+          "mgnify": 907971,
+          "omg_img": 4460856,
+          "uniref90": 2976773
         },
         "stage": "stage1",
-        "stage_progress": 0.17219,
-        "step_compute_seconds": 0.4404328630771488,
-        "step_model_tokens": 487078,
-        "tokens_per_second": 1105907.4851884532,
-        "training_seconds": 7482.472406028071
+        "stage_progress": 0.32599,
+        "step_compute_seconds": 0.44134411099366844,
+        "step_model_tokens": 485886,
+        "tokens_per_second": 1100923.2657620541,
+        "training_seconds": 14170.222301984672
       },
-      "metrics_age_seconds": 3.0326154232025146,
-      "seconds_per_step": 0.4339527286641137,
+      "metrics_age_seconds": 1.5143730640411377,
+      "seconds_per_step": 0.4342926002033736,
       "periodic_evaluation": {
         "status": "passed",
-        "optimizer_step": 10000,
+        "optimizer_step": 30000,
         "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-eval10k-20260908/full/checkpoint-latest.pt",
-        "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-eval10k-20260908/full/evaluations/step-010000",
-        "started_utc": "2026-09-08T09:07:31.239857+00:00",
-        "wall_seconds": 224.5477283189539
+        "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-eval10k-20260908/full/evaluations/step-030000",
+        "started_utc": "2026-09-08T11:39:50.047351+00:00",
+        "wall_seconds": 201.72072879620828
       },
-      "remaining_hours_estimate": 10.802270961299623,
-      "estimated_completion_toronto": "2026-09-08T16:51:39.375186-04:00"
+      "remaining_hours_estimate": 8.77163183198795,
+      "estimated_completion_toronto": "2026-09-08T16:48:19.793385-04:00"
     }
   }
 }

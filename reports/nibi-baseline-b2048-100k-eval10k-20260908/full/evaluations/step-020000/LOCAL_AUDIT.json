@@ -1,0 +1,64 @@
+{
+  "status": "passed",
+  "verified_utc": "2026-09-08T12:02:37.987775+00:00",
+  "source_commit": "caa95a15b55ff2ca2395687f71e1c4b3a294b3d4",
+  "optimizer_steps": 20000,
+  "sequences_seen": 40960000,
+  "checkpoint_sha256": "456819621bd2d9cabab7de442d9a0529ffb2ff070358ca75eb9580f701e08123",
+  "validation": {
+    "masked_residues": 139963,
+    "perplexity": 12.63933161730639,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.5368135089429416,
+    "sequence_median_nll": 2.608016014099121,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  },
+  "p_at_l": 0.18848336876311478,
+  "uncertainty": {
+    "replicates": 5000,
+    "unit_count": 20775,
+    "confidence_interval_95": [
+      0.1867300019934236,
+      0.19029539720091332
+    ]
+  },
+  "complete_shards": 16,
+  "component_sha256": {
+    "eval-p-at-l/components/contact-shard-0/EVALUATION.json": "523ce3fa4d005ebc9349bbe1f06dba19c73360066250078a37c9c4f6ca7b3851",
+    "eval-p-at-l/components/contact-shard-1/EVALUATION.json": "36ca5ead1272e14c282cacc202140df4447c722b2bd08e9fd29bb2c9e32536c0",
+    "eval-p-at-l/components/contact-shard-2/EVALUATION.json": "9c5263406cb22f70f54428c82bc02bbaf003c2855f80d13759ef3fa8ae38c4e6",
+    "eval-p-at-l/components/contact-shard-3/EVALUATION.json": "299b85bbe7297982a744ee50226149aebe7c49c806ba5e29cae509d6d73fe597",
+    "eval-p-at-l/components/contact-shard-4/EVALUATION.json": "6e977afd8614ab50338003ddeb2dbc638a33e19a969b2f37befd95f3b58c8bdf",
+    "eval-p-at-l/components/contact-shard-5/EVALUATION.json": "7d71f270bb35bd465e848ad5858a78f5a1168110810686432d2c8530e979058c",
+    "eval-p-at-l/components/contact-shard-6/EVALUATION.json": "b2820e5b7355e4eb6e241661f7614a2e765e25fec492b03f32926dd057d4f307",
+    "eval-p-at-l/components/contact-shard-7/EVALUATION.json": "5147bbf24ebfd93e33cf1b20b5f8cc47a29343262b8fda19aba7760e7cbaa5b0",
+    "eval-p-at-l/components/contact-shard-8/EVALUATION.json": "8a80a6a16b09234e01cb44cf33743d9c0dbdfbb32269af323ff4b96abbf8a71c",
+    "eval-p-at-l/components/contact-shard-9/EVALUATION.json": "c5e82e275578127e72b61a57070eb71c511377c6b76372357d8c188711af0ee0",
+    "eval-p-at-l/components/contact-shard-10/EVALUATION.json": "246fec131fe01d1e755579c04efd90f99be51be8247969022f399490ae8e8e40",
+    "eval-p-at-l/components/contact-shard-11/EVALUATION.json": "a8aafd95dbb8cd6691279e963715c0051060ebc63262ebf43363410abfaab978",
+    "eval-p-at-l/components/contact-shard-12/EVALUATION.json": "809b79713b7e956d5fdc9c13071fdadd1c7c2e517d546ed2d0b3ef7a64d881b9",
+    "eval-p-at-l/components/contact-shard-13/EVALUATION.json": "2a5830987d6973871c5d7be52c8e1c3e1b67a2c5188281f7ec5baa8ada56291a",
+    "eval-p-at-l/components/contact-shard-14/EVALUATION.json": "dfbca994febe747b261b8fb9bab3a8e509faad95cea50dc93421940b4393f9a0",
+    "eval-p-at-l/components/contact-shard-15/EVALUATION.json": "3ac072533288681ef3a6518b57a0dd6474c1213caab5053071b04285e65f3ce3"
+  },
+  "bootstrap_independently_recomputed": true,
+  "same_contact_chain_set_as_historical_comparison": true,
+  "same_probe_split_and_fit_protocol_as_historical_comparison": true,
+  "checkpoint_receipt_bindings_verified": true,
+  "latest_verified_training_step": 32660,
+  "training_continued_after_evaluation": true,
+  "per_chain_table_sha256": "02b9231d1aac35a237f2135f6596905ff395cdf6a8517b01093e88d85ad28969",
+  "evaluation_run": {
+    "status": "passed",
+    "optimizer_step": 20000,
+    "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-eval10k-20260908/full/checkpoint-latest.pt",
+    "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-eval10k-20260908/full/evaluations/step-020000",
+    "started_utc": "2026-09-08T10:23:41.861803+00:00",
+    "wall_seconds": 222.76335714012384
+  }
+}

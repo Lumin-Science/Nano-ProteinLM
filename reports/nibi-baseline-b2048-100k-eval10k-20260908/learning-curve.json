@@ -22,6 +22,44 @@
       "training_seconds": 4344.388481658185,
       "evaluation_seconds": 224.5477283189539,
       "audit": "full/evaluations/step-010000/LOCAL_AUDIT.json"
+    },
+    {
+      "optimizer_steps": 20000,
+      "sequences_seen": 40960000,
+      "checkpoint_sha256": "456819621bd2d9cabab7de442d9a0529ffb2ff070358ca75eb9580f701e08123",
+      "validation_loss": 2.5368135089429416,
+      "perplexity": 12.63933161730639,
+      "p_at_l": 0.18848336876311478,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.1867300019934236,
+          0.19029539720091332
+        ]
+      },
+      "training_seconds": 8689.945615536999,
+      "evaluation_seconds": 222.76335714012384,
+      "audit": "full/evaluations/step-020000/LOCAL_AUDIT.json"
+    },
+    {
+      "optimizer_steps": 30000,
+      "sequences_seen": 61440000,
+      "checkpoint_sha256": "1d51ef08542e95a314b77570b999c9be3a03f22b3dd3b8a0d3163a50a6ee5c66",
+      "validation_loss": 2.5065947588075232,
+      "perplexity": 12.263100066827151,
+      "p_at_l": 0.2096787150995752,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.2077292950819486,
+          0.2117028029699353
+        ]
+      },
+      "training_seconds": 13035.645492184907,
+      "evaluation_seconds": 201.72072879620828,
+      "audit": "full/evaluations/step-030000/LOCAL_AUDIT.json"
     }
   ]
 }
