@@ -1,0 +1,16 @@
+{
+  "status": "complete",
+  "config_difference": "Same AdamW recipe and 100k steps; 8 H100s/global batch2048 versus4 H100s/global batch1024, hence doubled sequence exposure.",
+  "batch1024": {
+    "validation_loss": 2.474360477990558,
+    "p_at_l": 0.2650493828142967,
+    "sequences_seen": 102400000
+  },
+  "batch2048": {
+    "validation_loss": 2.4225219895711234,
+    "p_at_l": 0.2775484848922026,
+    "sequences_seen": 204800000
+  },
+  "validation_loss_delta": -0.051838488419434725,
+  "p_at_l_percentage_point_delta": 1.2499102077905888
+}

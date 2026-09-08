@@ -1,0 +1,88 @@
+{
+  "status": "passed",
+  "source_commit": "c76a07998987a4746d4bffc89d878a758cd735cb",
+  "periodic_evaluation_trial": {
+    "status": "passed",
+    "source_commit": "c76a07998987a4746d4bffc89d878a758cd735cb",
+    "full_evaluation_at_step10": {
+      "status": "passed",
+      "scope": "checkpoint_at_step",
+      "full_training_complete": false,
+      "checkpoint_sha256": "12f090d88a3f836a34529fff9aadd9bd739952d04ba79816f770f44f74480080",
+      "optimizer_steps": 10,
+      "sequences_seen": 20480,
+      "validation": {
+        "masked_residues": 139963,
+        "perplexity": 17.621876805571194,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.8691411304753274,
+        "sequence_median_nll": 2.871875047683716,
+        "sequences": 4096,
+        "source_counts": {
+          "mgnify": 1393,
+          "omg_img": 1387,
+          "uniref90": 1316
+        }
+      },
+      "p_at_l": 0.056638796260296456,
+      "uncertainty": {
+        "confidence_interval_95": [
+          0.056187955404130546,
+          0.05710314883401061
+        ],
+        "replicates": 5000,
+        "unit_count": 20775
+      }
+    },
+    "execution": {
+      "status": "passed",
+      "optimizer_step": 10,
+      "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/trial/checkpoint-latest.pt",
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/trial/evaluations/step-000010",
+      "started_utc": "2026-09-08T20:41:54.568285+00:00",
+      "wall_seconds": 147.53092206898145
+    },
+    "training_continued_to_step20": true
+  },
+  "eight_to_four_resume": {
+    "status": "passed",
+    "checkpoint_sha256": "44140e6e4ecc109f345987b4d961d4328c431fc3c0c3549fd8680fb21e6895cd",
+    "config_sha256": "5a86715344931b7646224298adffd6cf982f203c924216d232c611c59d61eeaa",
+    "optimizer_steps": 22,
+    "sequences_seen": 45056,
+    "model_tokens": 10644276,
+    "world_size": 4,
+    "parameter_count": 170559856,
+    "optimizer_parameters_with_state": 105,
+    "optimizer_children": {
+      "muon": 96,
+      "adamw": 9
+    },
+    "optimizer_layout": "replicated_ddp_full_state",
+    "finite_model_and_optimizer": true,
+    "model_and_optimizer_roundtrip_exact": true,
+    "flash3_verified": true,
+    "training_seconds": 2.0833542649634182,
+    "measured_seconds_per_step": 0.892598767997697,
+    "peak_cuda_memory_bytes": 21030852608,
+    "resume": {
+      "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/trial/checkpoint-final.pt",
+      "data_mode": "new_deterministic_stream_for_changed_gpu_layout",
+      "data_seed": 41260887,
+      "global_batch_preserved": true,
+      "optimizer_restored": true,
+      "optimizer_step": 20,
+      "prior_training_seconds": 13.737378468969837,
+      "source_world_size": 8,
+      "world_size": 4
+    }
+  },
+  "execution": {
+    "status": "passed",
+    "optimizer_step": 10,
+    "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/trial/checkpoint-latest.pt",
+    "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/trial/evaluations/step-000010",
+    "started_utc": "2026-09-08T20:41:54.568285+00:00",
+    "wall_seconds": 147.53092206898145
+  }
+}

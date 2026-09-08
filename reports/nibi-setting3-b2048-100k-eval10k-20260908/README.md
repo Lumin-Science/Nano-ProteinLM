@@ -1,21 +1,36 @@
 # Nibi Setting 3: batch 2,048, 100k steps, evaluation every 10k
 
-The next experiment is a fresh 100,000-step run of the best completed Fir recipe,
-**Setting 3: R02 RoPE10k + batch balance + sqrt loss**, using all eight H100s in
-Nibi allocation **12162637**, node **g27**. It is sequenced after the current
-[Nibi AdamW baseline](../nibi-baseline-b2048-100k-eval10k-20260908/README.md).
-The queue waits for that baseline's full training, all ten evaluations, durable
-checkpoint copy, and compute-step exit before qualifying and launching Setting 3.
+**Status: running.** Setting 3 started from scratch at **16:45:16 Toronto on
+September 8, 2026**, in step **12162637.14**, after the Nibi AdamW baseline finished
+training, all ten evaluations and durable checkpoint preservation. The full
+periodic-evaluation qualification and **eight-to-four-GPU Muon/AdamW checkpoint
+continuation test both passed**. See [launch verification](LAUNCH_VERIFIED.json),
+[qualification](QUALIFICATION_PASSED.json), and [baseline hash checks](BASELINE_READY.json).
 
-The repaired queue was **verified waiting at 16:06 Toronto on September 8**,
-controller PID **1532960** on `l4.nibi.sharcnet`. The frozen training source remains
-**`c76a07998987a4746d4bffc89d878a758cd735cb`**. See the current
-[`QUEUE_RECOVERY.json`](QUEUE_RECOVERY.json), [status](STATUS-latest.json), and
-original [activation record](QUEUE_RECORD.json). Production and GPU qualification
-have not started at this observation; the baseline is still training.
-Qualification scores are not production results. See the [completed Fir comparison and detailed
-recipe explanation](../../docs/BEST_RECIPE_VS_BASELINE.md) for the evidence behind
-selecting Setting 3 (validation loss **2.418720**, P@L **32.682%**, at batch 1,024).
+At **18:04 Toronto**, production had reached **10,080 / 100,000 steps** on eight
+H100s, batch **2,048**, with finite loss/objective/gradients and pinned FA3.
+Its first full 10k evaluation passed and training continued. The current ETA,
+including remaining evaluations, is **about 05:45 Toronto on September 9**.
+The training source remains **`c76a07998987a4746d4bffc89d878a758cd735cb`**.
+Two-hour monitoring continues through final evaluation and checkpoint preservation.
+
+The recipe is the best completed Fir setting: R02 RoPE10k + batch balance + sqrt
+loss. See the [completed Fir comparison and detailed explanation](../../docs/BEST_RECIPE_VS_BASELINE.md)
+for its batch-1,024 result: validation loss **2.418720**, P@L **32.682%**.
+The [original queue activation](QUEUE_RECORD.json) and [login-node controller
+recovery](QUEUE_RECOVERY.json) remain archived below.
+
+## Production learning curve
+
+| Optimizer step | Sequences seen | Validation MLM loss | Perplexity | P@L | 95% chain-bootstrap CI | Evaluation pause |
+| --- | --- | --- | --- | --- | --- | --- |
+| 10,000 | 20,480,000 | 2.536788 | 12.63900 | 22.31377% | [22.12376%, 22.50470%] | 211.61 seconds |
+
+The [independent 10k audit](full/evaluations/step-010000/LOCAL_AUDIT.json) checks
+all 16 shard hashes, checkpoint bindings, the fixed 4,096 MLM sequences and exact
+20,775-chain population, probe protocol, and a recomputed 5,000-replicate bootstrap
+CI. These are production results; qualification scores are separate.
+See the [machine-readable learning curve](learning-curve.json).
 
 ## Production configuration
 

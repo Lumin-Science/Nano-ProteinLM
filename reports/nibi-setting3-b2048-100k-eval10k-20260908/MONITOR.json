@@ -5,5 +5,5 @@
   "status": "ACTIVE",
   "rrule": "FREQ=HOURLY;INTERVAL=2;BYMINUTE=0;BYSECOND=0",
   "target_thread_id": "01a074b8-1cc2-7c81-9b5c-49e0d5f616fc",
-  "updated_at": 1788898113040
+  "updated_at": 1788905299207
 }

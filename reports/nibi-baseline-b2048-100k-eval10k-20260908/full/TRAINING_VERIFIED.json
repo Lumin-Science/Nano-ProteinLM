@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "checkpoint_sha256": "b4d42be629b0bdc6e324357c44dda7e636a715436538249872dd109acbdbf32c",
+  "config_sha256": "ba75f5700883788c4401bc25b6d49e3fb400e6164f810a034f9a8d1280e8072f",
+  "optimizer_steps": 100000,
+  "sequences_seen": 204800000,
+  "model_tokens": 48400179450,
+  "world_size": 8,
+  "optimizer_state_tensors": 248,
+  "optimizer_layout": "replicated_ddp_full_state",
+  "finite_model_and_optimizer": true,
+  "flash3_verified": true,
+  "training_seconds": 43486.74336295156,
+  "measured_seconds_per_step": 0.433018292266772,
+  "peak_cuda_memory_bytes": 25901404160
+}

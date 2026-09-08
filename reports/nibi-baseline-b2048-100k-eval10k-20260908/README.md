@@ -1,14 +1,18 @@
 # Nibi baseline with evaluation every 10,000 steps
 
-Status: **running**. Production relaunched from scratch at **03:54:43 Toronto on
-September 8, 2026**, in step **12162637.11**, using all eight H100s on `g27`.
-At **16:01 Toronto on September 8**, it had reached **95,120 / 100,000 steps**
-with finite losses/gradients, after successfully evaluating all nine checkpoints
-through 90k and continuing training. It measures approximately
-0.435 seconds/step; the completion estimate including final
-evaluation is **about 16:42 Toronto on September 8**. Monitoring every **two hours**
-reports each newly completed checkpoint evaluation. Frozen training commit:
-`caa95a15b55ff2ca2395687f71e1c4b3a294b3d4`.
+Status: **complete**. The baseline finished **100,000 steps / 204,800,000 sequences**
+and all ten full evaluations at **16:40:32 Toronto on September 8, 2026**, in step
+**12162637.11** on eight H100s (`g27`). Training took **12h 04m 47s**; elapsed time
+from the production start at 03:54:43 to all checks/evaluations finishing was
+**12h 45m 49s**. The final full AdamW checkpoint is preserved in project storage,
+with a matching SHA independently checked on the compute node before Setting 3
+launched. See [completion and preservation verification](COMPLETION_VERIFIED.json).
+Frozen training commit: `caa95a15b55ff2ca2395687f71e1c4b3a294b3d4`.
+
+Final **validation loss 2.422522**, **P@L 27.75485%**, **95% CI 27.51793–27.99261%**.
+The subsequent [Setting 3 run](../nibi-setting3-b2048-100k-eval10k-20260908/README.md)
+launched at **16:45:16 Toronto** after its full evaluation and four-GPU-resume
+qualification passed. Two-hour monitoring continues for that run.
 
 ## Production learning curve
 
@@ -23,14 +27,15 @@ reports each newly completed checkpoint evaluation. Frozen training commit:
 | 70,000 | 143,360,000 | 2.445850 | 11.54035 | 0.248257 | [0.246073, 0.250561] | 376.66 seconds |
 | 80,000 | 163,840,000 | 2.435416 | 11.42057 | 0.256296 | [0.254007, 0.258595] | 239.76 seconds |
 | 90,000 | 184,320,000 | 2.428474 | 11.34157 | 0.272598 | [0.270307, 0.274937] | 205.63 seconds |
+| 100,000 | 204,800,000 | 2.422522 | 11.27426 | 0.277548 | [0.275179, 0.279926] | Final evaluation outside training loop |
 
-All nine checkpoint evaluations passed independent local audits of all 16 shard
+All ten checkpoint evaluations passed independent local audits of all 16 shard
 hashes, checkpoint receipt bindings, the exact 20,775-chain set and probe
 protocol against the earlier AdamW baseline, and the independently recomputed
 5,000-replicate bootstrap intervals. The latest audit is at
-[90k](full/evaluations/step-090000/LOCAL_AUDIT.json); that evaluation finished
-around 15:24:27 Toronto. Training metrics through step 95,250 are finite and
-demonstrate continued progress after each evaluation.
+[100k](full/evaluations/step-100000/LOCAL_AUDIT.json). Training metrics through
+step 100,000 are finite and demonstrate continued progress after each intermediate
+evaluation. The final evaluation runs after training has completed.
 See [machine-readable learning curve](learning-curve.json) and
 [checkpoint receipts](full/evaluations/). The CI measures uncertainty
 across evaluation chains, not variation across independent training runs.
@@ -40,6 +45,19 @@ To audit a downloaded evaluation again, run
 from the repository root. Raw shard JSON must be available in the corresponding
 local `.exps` directory. The compressed per-chain table is published with each
 audited evaluation; large checkpoints and raw shards remain outside Git.
+
+## Comparison with the completed batch-1,024 AdamW baseline
+
+| AdamW run | GPUs | Global batch | Steps | Sequences | Validation loss | P@L |
+| --- | --- | --- | --- | --- | --- | --- |
+| Fir | 4 H100 | 1,024 | 100,000 | 102.4M | 2.474360 | 26.50494% |
+| Nibi | 8 H100 | 2,048 | 100,000 | 204.8M | 2.422522 | 27.75485% |
+
+Nibi improves validation loss by **0.051838** and P@L by **1.24991 percentage
+points**. The larger batch doubles sampled sequence exposure at the same step
+count; this comparison does not isolate batch size at a fixed token budget.
+See [exact values](BATCH_SIZE_COMPARISON.json). The pending full Setting 3 run uses
+Nibi's same batch, step budget and evaluation protocol for a matched comparison.
 
 ## Run setup and qualification
 

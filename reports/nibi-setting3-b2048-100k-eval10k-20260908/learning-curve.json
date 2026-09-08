@@ -1,0 +1,27 @@
+{
+  "source_commit": "c76a07998987a4746d4bffc89d878a758cd735cb",
+  "status": "in_progress",
+  "global_batch_size": 2048,
+  "target_optimizer_steps": 100000,
+  "evaluations": [
+    {
+      "optimizer_steps": 10000,
+      "sequences_seen": 20480000,
+      "checkpoint_sha256": "8e66c5264fc6b4ef9191d00597a7eb61c9f86fd8a8600d601ba3e2a2d2c8302b",
+      "validation_loss": 2.536787519905374,
+      "perplexity": 12.639003137510615,
+      "p_at_l": 0.22313772806301765,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.22123761595447874,
+          0.22504704761902378
+        ]
+      },
+      "training_seconds": 4487.323877784889,
+      "evaluation_seconds": 211.61125050787814,
+      "audit": "full/evaluations/step-010000/LOCAL_AUDIT.json"
+    }
+  ]
+}

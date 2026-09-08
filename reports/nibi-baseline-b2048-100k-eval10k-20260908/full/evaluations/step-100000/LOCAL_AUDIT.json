@@ -1,0 +1,57 @@
+{
+  "status": "passed",
+  "verified_utc": "2026-09-08T22:04:33.654034+00:00",
+  "source_commit": "caa95a15b55ff2ca2395687f71e1c4b3a294b3d4",
+  "optimizer_steps": 100000,
+  "sequences_seen": 204800000,
+  "checkpoint_sha256": "b4d42be629b0bdc6e324357c44dda7e636a715436538249872dd109acbdbf32c",
+  "validation": {
+    "masked_residues": 139963,
+    "perplexity": 11.274257049135295,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.4225219895711234,
+    "sequence_median_nll": 2.5030078887939453,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  },
+  "p_at_l": 0.2775484848922026,
+  "uncertainty": {
+    "replicates": 5000,
+    "unit_count": 20775,
+    "confidence_interval_95": [
+      0.2751793341685231,
+      0.27992609500926235
+    ]
+  },
+  "complete_shards": 16,
+  "component_sha256": {
+    "eval-p-at-l/components/contact-shard-0/EVALUATION.json": "1caf8c5cac1d6a20030319e8915fc47a89f002722b1b16f068440e5132d5e1d8",
+    "eval-p-at-l/components/contact-shard-1/EVALUATION.json": "5dbb8cb546f1aaacae76ba8b1b67696a5c94b47fe252e8a9167ab414c9b5441e",
+    "eval-p-at-l/components/contact-shard-2/EVALUATION.json": "9f99e5d375d35fe664941b65f66403d0ecce4b8e9eae0b885f1bd4fa8785859a",
+    "eval-p-at-l/components/contact-shard-3/EVALUATION.json": "b60c840d8ab54e4efecd77343e1ad2a10625d9d3e61e1957a1d87cd2be520ab4",
+    "eval-p-at-l/components/contact-shard-4/EVALUATION.json": "f63969692654fb422f875be9d782f062e962ce5f08db44c574d717bf797e84fc",
+    "eval-p-at-l/components/contact-shard-5/EVALUATION.json": "ccb0b6b6e9b944f100111e3e12a2d1c2c4954a8e0574f74fbaa1ade748085b7d",
+    "eval-p-at-l/components/contact-shard-6/EVALUATION.json": "76c2228346bc4761cf3237e1d7e07812bbd9c894da2db8f374fff3f7a6f895a8",
+    "eval-p-at-l/components/contact-shard-7/EVALUATION.json": "5362bbcadea553856e02271408f15239f4eb4355611666785d7a95afb3d8d545",
+    "eval-p-at-l/components/contact-shard-8/EVALUATION.json": "b51fefca8714214789797c0cf5f13a63371057a6698f674f5768e4595e25e5cf",
+    "eval-p-at-l/components/contact-shard-9/EVALUATION.json": "4b3d054ffdf72380cfe7980fa214c9758ee0358a6ab74a5cfbd3c4ad48500d89",
+    "eval-p-at-l/components/contact-shard-10/EVALUATION.json": "34f640f45509393ec7ebb60fdcfbd8a6aee1e566037c82da37ff2c3dc42625d8",
+    "eval-p-at-l/components/contact-shard-11/EVALUATION.json": "1acc201fed27055011687e1c3d4e5834633e83d04399735fcb79555fe4d2a80f",
+    "eval-p-at-l/components/contact-shard-12/EVALUATION.json": "3e556d9ceab566e21fdac7f53709a97de2a5507b4d6b45a9f15fa0a68194bd23",
+    "eval-p-at-l/components/contact-shard-13/EVALUATION.json": "cdb26b80fea80d7692f2db8c3232cc09ba36aabe142e7b1fcaa3fdc65e5ae394",
+    "eval-p-at-l/components/contact-shard-14/EVALUATION.json": "f20c9317eb82d1af84567dcf279303f78cc785b833dc64536fe8f2af6f296546",
+    "eval-p-at-l/components/contact-shard-15/EVALUATION.json": "89062f34fc5bbe1164fd92cf9f658eeaf3269ea88801ac67409b16c7e54e5840"
+  },
+  "bootstrap_independently_recomputed": true,
+  "same_contact_chain_set_as_historical_comparison": true,
+  "same_probe_split_and_fit_protocol_as_historical_comparison": true,
+  "checkpoint_receipt_bindings_verified": true,
+  "latest_verified_training_step": 100000,
+  "training_continued_after_evaluation": false,
+  "per_chain_table_sha256": "6347fe7294dc07e9a61e07d722cd228dc55333d33b542fe6d5684454aa76663a",
+  "evaluation_run": null
+}

@@ -1,11 +1,309 @@
 {
-  "observed_utc": "2026-09-08T20:08:52.212147+00:00",
-  "qualification_passed": false,
-  "runs": {},
+  "observed_utc": "2026-09-08T22:04:38.192059+00:00",
+  "qualification_passed": true,
+  "runs": {
+    "trial": {
+      "state": "complete",
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/trial",
+      "evaluations": [
+        {
+          "step": 10,
+          "validation_loss": 2.8691411304753274,
+          "p_at_l": 0.056638796260296456,
+          "uncertainty": {
+            "confidence_interval_95": [
+              0.056187955404130546,
+              0.05710314883401061
+            ],
+            "replicates": 5000,
+            "unit_count": 20775
+          },
+          "checkpoint_sha256": "12f090d88a3f836a34529fff9aadd9bd739952d04ba79816f770f44f74480080"
+        }
+      ],
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            14823,
+            14823,
+            14823,
+            14823,
+            14822,
+            14822,
+            14822,
+            14823
+          ],
+          "rank_tokens_before": [
+            14495,
+            16047,
+            14136,
+            16286,
+            15394,
+            15352,
+            13347,
+            13524
+          ]
+        },
+        "estimated_training_flops": 9912984199641696,
+        "event": "train",
+        "filled_residues": 9604791,
+        "gradient_norm": 2.670632839202881,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.8259912729263306,
+        "mfu_6n": 0.13878984273593195,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+        "model_tokens": 9686711,
+        "objective_loss": 2.8393645882606506,
+        "optimizer": "muon",
+        "optimizer_step": 20,
+        "sequences_seen": 40960,
+        "source_counts_rank0": {
+          "mgnify": 561,
+          "omg_img": 2704,
+          "uniref90": 1855
+        },
+        "stage": "stage1",
+        "stage_progress": 0.95,
+        "step_compute_seconds": 0.43576625688001513,
+        "step_model_tokens": 467831,
+        "tokens_per_second": 1073582.4369458088,
+        "training_loss_reduction": "sqrt_mask_count",
+        "training_seconds": 13.733218401903287
+      },
+      "metrics_age_seconds": 4811.591272592545,
+      "seconds_per_step": 0.6644836173172256,
+      "training_completion": {
+        "compute_seconds": 9.92775083030574,
+        "cumulative_training_seconds": 13.737378468969837,
+        "event": "training_complete",
+        "filled_residues": 9604791,
+        "final_checkpoint": {
+          "filled_residues": 9604791,
+          "model_tokens": 9686711,
+          "optimizer_step": 20,
+          "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/trial/checkpoint-final.pt",
+          "sequences_seen": 40960,
+          "sha256": "eee3e7c494e286633584523bff3033c90b85c08740559a80230fb818d028b8e2",
+          "training_seconds": 13.737378468969837
+        },
+        "model_tokens": 9686711,
+        "optimizer_steps": 20,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 20882375680,
+        "periodic_evaluation_seconds": 147.53092206898145,
+        "resume_data_mode": "fresh",
+        "schedule_optimizer_steps": 20,
+        "sequences_seen": 40960,
+        "source_counts": {
+          "stage1": {
+            "mgnify": 4461,
+            "omg_img": 21930,
+            "uniref90": 14569
+          }
+        },
+        "source_counts_scope": "current_sampler_stream_including_restored_history",
+        "source_epoch_maxima": {
+          "stage1": {
+            "mgnify": 0,
+            "omg_img": 0,
+            "uniref90": 0
+          }
+        },
+        "stage_checkpoint": null,
+        "stop_reason": "max_steps",
+        "target_optimizer_steps": 20,
+        "training_seconds": 13.737378468969837,
+        "walltime_budget_seconds": 1800.0
+      },
+      "periodic_evaluation": {
+        "status": "passed",
+        "optimizer_step": 10,
+        "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/trial/checkpoint-latest.pt",
+        "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/trial/evaluations/step-000010",
+        "started_utc": "2026-09-08T20:41:54.568285+00:00",
+        "wall_seconds": 147.53092206898145
+      }
+    },
+    "resume4": {
+      "state": "complete",
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/resume4",
+      "evaluations": [],
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            15087,
+            15086,
+            15086,
+            15087
+          ],
+          "rank_tokens_before": [
+            13983,
+            16476,
+            14348,
+            15539
+          ]
+        },
+        "estimated_training_flops": 10892917090705536,
+        "event": "train",
+        "filled_residues": 10554164,
+        "gradient_norm": 1.8236697912216187,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.841578960418701,
+        "mfu_6n": 0.14210996412210727,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
+        "model_tokens": 10644276,
+        "objective_loss": 2.83484223484993,
+        "optimizer": "muon",
+        "optimizer_step": 22,
+        "sequences_seen": 45056,
+        "source_counts_rank0": {
+          "mgnify": 117,
+          "omg_img": 554,
+          "uniref90": 353
+        },
+        "stage": "stage1",
+        "stage_progress": 0.9545454545454546,
+        "step_compute_seconds": 0.8853773658629507,
+        "step_model_tokens": 486632,
+        "tokens_per_second": 549632.3022959757,
+        "training_loss_reduction": "sqrt_mask_count",
+        "training_seconds": 2.079925552010536
+      },
+      "metrics_age_seconds": 4777.187249183655,
+      "seconds_per_step": 0.892598767997697,
+      "training_completion": {
+        "compute_seconds": 2.0694763767533004,
+        "cumulative_training_seconds": 15.820732733933255,
+        "event": "training_complete",
+        "filled_residues": 10554164,
+        "final_checkpoint": {
+          "filled_residues": 10554164,
+          "model_tokens": 10644276,
+          "optimizer_step": 22,
+          "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/resume4/checkpoint-final.pt",
+          "sequences_seen": 45056,
+          "sha256": "44140e6e4ecc109f345987b4d961d4328c431fc3c0c3549fd8680fb21e6895cd",
+          "training_seconds": 15.820732733933255
+        },
+        "model_tokens": 10644276,
+        "optimizer_steps": 22,
+        "parameter_count": 170559856,
+        "peak_cuda_memory_bytes": 21030852608,
+        "periodic_evaluation_seconds": 0.0,
+        "resume_data_mode": "new_deterministic_stream_for_changed_gpu_layout",
+        "schedule_optimizer_steps": 22,
+        "sequences_seen": 45056,
+        "source_counts": {
+          "stage1": {
+            "mgnify": 474,
+            "omg_img": 2197,
+            "uniref90": 1425
+          }
+        },
+        "source_counts_scope": "new_stream_since_gpu_layout_change",
+        "source_epoch_maxima": {
+          "stage1": {
+            "mgnify": 0,
+            "omg_img": 0,
+            "uniref90": 0
+          }
+        },
+        "stage_checkpoint": null,
+        "stop_reason": "max_steps",
+        "target_optimizer_steps": 22,
+        "training_seconds": 2.0833542649634182,
+        "walltime_budget_seconds": 1800.0
+      }
+    },
+    "full": {
+      "state": "training",
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/full",
+      "evaluations": [
+        {
+          "step": 10000,
+          "validation_loss": 2.536787519905374,
+          "p_at_l": 0.22313772806301765,
+          "uncertainty": {
+            "confidence_interval_95": [
+              0.22123761595447874,
+              0.22504704761902378
+            ],
+            "replicates": 5000,
+            "unit_count": 20775
+          },
+          "checkpoint_sha256": "8e66c5264fc6b4ef9191d00597a7eb61c9f86fd8a8600d601ba3e2a2d2c8302b"
+        }
+      ],
+      "latest": {
+        "attention_backend": "flash3",
+        "batch_balance": {
+          "rank_tokens_after": [
+            15151,
+            15151,
+            15151,
+            15151,
+            15150,
+            15151,
+            15151,
+            15150
+          ],
+          "rank_tokens_before": [
+            15596,
+            15647,
+            14966,
+            13634,
+            14451,
+            17029,
+            13749,
+            16134
+          ]
+        },
+        "estimated_training_flops": 4992729080019068832,
+        "event": "train",
+        "filled_residues": 4837477657,
+        "gradient_norm": 0.1825489103794098,
+        "learning_rate": 0.00045000000000000004,
+        "loss": 2.543455719947815,
+        "mfu_6n": 0.13987791145827289,
+        "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+        "model_tokens": 4878765337,
+        "objective_loss": 2.5045685172080994,
+        "optimizer": "muon",
+        "optimizer_step": 10080,
+        "sequences_seen": 20643840,
+        "source_counts_rank0": {
+          "mgnify": 280964,
+          "omg_img": 1379833,
+          "uniref90": 919683
+        },
+        "stage": "stage1",
+        "stage_progress": 0.10079,
+        "step_compute_seconds": 0.44630078808404505,
+        "step_model_tokens": 482897,
+        "tokens_per_second": 1081998.9856461184,
+        "training_loss_reduction": "sqrt_mask_count",
+        "training_seconds": 4528.132060596021
+      },
+      "metrics_age_seconds": 3.5475757122039795,
+      "seconds_per_step": 0.45221601747048257,
+      "periodic_evaluation": {
+        "status": "passed",
+        "optimizer_step": 10000,
+        "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/full/checkpoint-latest.pt",
+        "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/full/evaluations/step-010000",
+        "started_utc": "2026-09-08T22:00:27.361429+00:00",
+        "wall_seconds": 211.61125050787814
+      },
+      "remaining_hours_estimate": 11.66417849710184,
+      "estimated_completion_toronto": "2026-09-09T05:44:29.233858-04:00"
+    }
+  },
   "queue": {
-    "observed_utc": "2026-09-08T20:07:55.848598+00:00",
-    "state": "waiting_for_baseline",
-    "detail": "Waiting for baseline step 12162637.11: 100k training, all ten evaluations and persistent checkpoint.",
+    "observed_utc": "2026-09-08T20:45:14.338398+00:00",
+    "state": "training",
+    "detail": "Qualification passed; starting Setting 3 from scratch for 100k steps with evaluation every 10k.",
     "allocation": "12162637",
     "node": "g27",
     "predecessor_step": "12162637.11",
