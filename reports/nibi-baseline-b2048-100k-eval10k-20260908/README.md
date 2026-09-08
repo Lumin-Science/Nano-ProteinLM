@@ -16,6 +16,12 @@ qualification passed. Two-hour monitoring continues for that run.
 
 ## Production learning curve
 
+![All ten audited baseline checkpoints: validation loss and contact P@L with 95% chain-bootstrap confidence intervals.](learning-curve.png)
+
+Download the [vector figure](learning-curve.svg). Regenerate it from the exact
+[checkpoint data](learning-curve.json) with `python plot_learning_curve.py`
+(Matplotlib and NumPy required).
+
 | Optimizer step | Sequences seen | Validation MLM loss | Perplexity | Contact P@L | 95% chain-bootstrap CI | Evaluation pause |
 | --- | --- | --- | --- | --- | --- | --- |
 | 10,000 | 20,480,000 | 2.588700 | 13.31245 | 0.154617 | [0.153168, 0.156062] | 224.55 seconds |
