@@ -21,6 +21,12 @@ and occupies 109,661,312,410 compressed bytes. A run downloads only the
 smallest checksum-bound whole-shard prefix that covers its declared training
 budget, plus all validation shards.
 
+The companion [raw clustering release](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
+preserves the source-specific 70%-identity representative FASTAs and cluster
+membership maps before evaluation decontamination and final packing. Use the
+processed release above for training; the raw release supports inspection of
+the preceding clustering stage.
+
 ## Nano-ESMC production funnel
 
 The following table mirrors Table 5 of the technical report and is the central

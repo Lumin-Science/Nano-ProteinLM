@@ -19,6 +19,9 @@ build/
 dist/
 *.egg-info/
 data/processed/
+data/training/
+data/evaluation/
+data/cache/
 outputs/
 output/
 tmp/

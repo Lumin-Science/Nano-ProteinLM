@@ -2,123 +2,111 @@
 
 ## Requirements
 
-The supported training path requires `uv >=0.11.31,<0.12`, a compatible NVIDIA
-driver, and four visible BF16-capable GPUs. Python and project dependencies are
-defined by `.python-version`, `pyproject.toml`, and `uv.lock`.
+Use Linux, a compatible NVIDIA driver and `uv >=0.11.31,<0.12`. Python and
+project dependencies are pinned in the repository. Research uses four L40S GPUs;
+the recommended 100k-step training example uses four H100s and BF16/FA3.
 
-## Train
+## Setup
 
-From a fresh clone:
-
-```bash
-git clone https://github.com/Lumin-Science/LuminBench-Nano-ESMC.git
-cd LuminBench-Nano-ESMC
-bash runs/speedrun.sh
-```
-
-`runs/speedrun.sh` creates the locked environment, downloads and verifies the
-required data shards, materializes on-disk training data, qualifies the CUDA
-path, trains ESMC-300M, and verifies the final artifacts. Generated state
-defaults to `.exps/`.
-
-Copy the example environment file to customize the artifact root, data
-revision, training samples, config, GPU count, wall time, or run name:
+Run commands from the repository root. Copy the environment example and edit
+only the two root paths; no cache, model, seed or budget settings belong in `.env`.
 
 ```bash
 cp .env.example .env
+# Edit DATA_ROOT and OUTPUT_ROOT in .env for this machine.
+set -a
+source .env
+set +a
+uv sync --frozen
 ```
 
-The default is the original four-GPU, four-hour configuration. For a short
-end-to-end smoke run:
+The standard layout is:
+
+```text
+$DATA_ROOT/
+  training/             # Verified prepared corpus, including MLM validation data
+  evaluation/contact/   # Frozen contact dataset
+  evaluation/source/    # Pinned evaluator source containing autoresearch_esm
+  cache/                # Downloaded corpus shards, managed by data preparation
+$OUTPUT_ROOT/
+  <experiment>/         # Checkpoints, effective configs, logs and evaluation records
+```
+
+Prepare the fixed corpus used by the benchmark:
 
 ```bash
-TRAINING_SAMPLES=1 \
-WALLTIME_SECONDS=60 \
-RUN_NAME=smoke \
-  bash runs/speedrun.sh
+uv run --frozen python scripts/download_data.py \
+  --repo-id LuminScience/LuminBench-Nano-ESMC \
+  --revision bd38448d50d8f426d7b9bd4410b53159ea001259 \
+  --training-samples 5376000 \
+  --cache-root "$DATA_ROOT/cache" --output-root "$DATA_ROOT/training"
 ```
 
-The measured one-hour AutoResearch incumbent is available but deliberately
-off by default. Opt in explicitly:
+Install the frozen contact payload and evaluator source at the locations above
+before contact evaluation; existing verified directories can be linked there.
+See [evaluation provenance](EVALUATION.md#dataset-provenance-and-split-contract).
+Contact data/source packaging for a fresh public installation remains part of
+the [release cleanup](CONFIG_CLEANUP_PLAN.md); these are not downloaded by the
+training-data command. Training and MLM evaluation do not require them.
+
+## Training
+
+Use the [README's direct training command](../README.md#training-a-170m-model). It selects
+[Setting 3](../configs/default.yaml), with 100,000 steps and a 16-hour guard.
+The recipe contains model/optimizer settings; command-line options select the
+execution budget and can override seed, attention, warmup and batch layout.
+Every run records the source config hash and writes its effective `config.yaml`.
+
+To inspect a resolved recipe without GPUs or training:
 
 ```bash
-CONFIG="$PWD/configs/autoresearch_300m_4xa100_1h.yaml" \
-WALLTIME_SECONDS=3600 \
-RUN_NAME=autoresearch-incumbent-1h \
-  bash runs/speedrun.sh
+uv run --frozen python -m nano_protein.train --config configs/default.yaml \
+  --seed 42 --max-steps 100000 --walltime-seconds 57600 --print-config
 ```
 
-`configs/esmc-300m-current-best.yaml` is the stable public alias for this exact
-incumbent. Both retain the winning model/training recipe; neither changes the
-default original-ESMC speedrun.
+Budget arguments accept `none` to clear an inherited step/token limit explicitly.
+Batch-layout overrides require a single-stage recipe. Use fresh output directories;
+see [checkpoint continuation](checkpoint-resume.md) for resuming saved optimizer state.
 
-The validated ESMC-171M R02 preset is also available:
+## AutoResearch
+
+[program.md](../program.md) directs an agent to the selected
+[task definition](../task/171m-validation-loss.md). Run one complete research
+measurement with the transparent shell example:
 
 ```bash
-CONFIG="$PWD/configs/autoresearch_171m_4xl40s_1h.yaml" \
-NUM_GPUS=4 \
-WALLTIME_SECONDS=3600 \
-RUN_NAME=autoresearch-171m-r02-1h \
-  bash runs/speedrun.sh
+bash task/171m-validation-loss_ar.sh configs/default.yaml experiment-001
 ```
 
-Its published results use four L40S GPUs. The preset uses Muon, RoPE base
-20,000, and warmup followed by constant LR. Set `WALLTIME_SECONDS` explicitly:
-the speedrun's four-hour default overrides the duration in the YAML.
+It loads `.env`, checks the frozen inputs and four L40S GPUs, runs seeds 42 and 43
+through the ordinary training/evaluation APIs, and reports mean loss and sample
+SD in `$OUTPUT_ROOT/experiment-001/summary.json`. It records full contact P@L as a
+diagnostic. It does not search, decide acceptance or launch Test of Progress.
 
-Each successful run records its resolved configuration, immutable data
-revision, environment and corpus receipts, metrics, completion receipt, final
-checkpoint, and checkpoint hash.
+## Evaluation
 
-### H100 FlashAttention-3 baseline
-
-`configs/esmc-171m-original-h100-fa3-12h.yaml` keeps the original ESMC-171M
-recipe and selects `attention_backend: flash3` with a 43,200-second budget.
-It requires Hopper GPUs and Linux/CUDA 12.6 or 13.0 PyTorch. The dependency
-lock uses CUDA 12.6; CUDA 13.0 measurements must identify their runtime explicitly.
-The first use downloads the matching pinned FA3 build from
-`kernels-community/flash-attn3` at revision
-`e29f138fc363b396e5d2706c8a5f6fa7d36f41e0`; packaged files are checked
-against SHA-256 hashes before importing the kernel.
-
-Qualify forward/backward numerics and verify FA3 profiler events before training:
+To evaluate one saved checkpoint directly:
 
 ```bash
-uv run --frozen python scripts/check_environment.py \
-  --require-gpus 4 --attention-backend flash3 --output /path/to/ENVIRONMENT.json
+uv run --frozen python -m nano_protein.evaluate \
+  --checkpoint "$OUTPUT_ROOT/setting3-100k/checkpoint-final.pt" \
+  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/setting3-100k/evaluation" \
+  --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
+  --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
+  --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
 ```
 
-Pass the H100 config and `WALLTIME_SECONDS=43200` to the training entry point.
-Training receipts identify the actual attention backend and pinned kernel build.
+Test of Progress is a separate, owner-run experiment using the
+[manual commands](EVALUATION.md#manual-test-of-progress). There is no verification
+launcher. Optional parallel evaluation tools and metric details are documented
+in [EVALUATION.md](EVALUATION.md).
 
-## Evaluate
+## Existing launch helpers
 
-The production training-and-evaluation entry point is:
-
-```bash
-bash runs/stage1_300m_4xa100_4h.sh
-```
-
-Full evaluation requires the separately prepared representation-probe and
-contact datasets. Contact P@L uses the one-probe, sparse-scoring fast path by
-default; a receipt-bound static scoring cache can be enabled with
-`CONTACT_SCORING_CACHE_ROOT`.
-See [`EVALUATION.md`](EVALUATION.md) for dataset lineage, split roles, metrics,
-and restartable execution details.
-
-### ESMC-171M default at global batch 1,024
-
-`configs/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml` prepares the
-Stage-1 default with peak LR `5e-4`, 1,000 warmup steps, and 100,000 optimizer
-steps. On four H100s it uses microbatch 64 with accumulation 4 and FA3/BF16.
-The 16-hour wall-time guard allows the projected roughly 13-hour step budget
-to finish; overriding it to 43,200 seconds can stop before 100k steps.
-See [the three-way recipe comparison](171M_RECIPES.md) for the retained R02
-settings and the paper reference. This preset does not change an active run.
-
-The matched R02 comparison preset is
-`configs/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml`. It shares the default's
-base LR/WD, warmup, batch, seed, context, mixture, and 100k-step budget, while
-retaining the R02 architecture and Muon group multipliers. Use the same data
-root and evaluation arguments for both; see the linked comparison contract.
-The original one-hour R02 preset remains the historical record.
+`runs/speedrun.sh` remains an optional data-preparation/training convenience. It
+now reads the same two roots, defaults to Setting 3 for 100k steps on four H100s,
+qualifies the configured attention backend, and uses normal UV cache defaults.
+Its `RUN_NAME` selects a child directory of `OUTPUT_ROOT`; it no longer treats
+`OUTPUT_ROOT` as the individual run directory or `DATA_ROOT` as prepared data.
+Other files in `runs/` preserve historical interfaces until the remaining cleanup.
+The direct Python APIs remain available independently of these helpers.

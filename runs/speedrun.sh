@@ -18,18 +18,23 @@ if ! command -v "$uv_bin" >/dev/null 2>&1; then
   exit 1
 fi
 
-artifact_root="${ARTIFACT_ROOT:-$repo_root/.exps}"
+data_base="${DATA_ROOT:-$repo_root/data}"
+output_base="${OUTPUT_ROOT:-$repo_root/outputs}"
 data_repo_id="${DATA_REPO_ID:-LuminScience/LuminBench-Nano-ESMC}"
 data_revision="${DATA_REVISION:-bd38448d50d8f426d7b9bd4410b53159ea001259}"
 training_samples="${TRAINING_SAMPLES:-5376000}"
 download_workers="${DOWNLOAD_WORKERS:-8}"
 num_gpus="${NUM_GPUS:-4}"
-walltime_seconds="${WALLTIME_SECONDS:-14400}"
-run_name="${RUN_NAME:-esmc-300m-original}"
-config="${CONFIG:-$repo_root/configs/esmc-300m-original.yaml}"
-data_cache_root="${DATA_CACHE_ROOT:-$artifact_root/cache/huggingface-dataset}"
-data_root="${DATA_ROOT:-$artifact_root/data/training-samples-$training_samples}"
-output_root="${OUTPUT_ROOT:-$artifact_root/runs/$run_name}"
+walltime_seconds="${WALLTIME_SECONDS:-57600}"
+run_name="${RUN_NAME:-setting3-171m-100k}"
+config="${CONFIG:-$repo_root/configs/default.yaml}"
+data_cache_root="${DATA_CACHE_ROOT:-$data_base/cache}"
+data_root="$data_base/training"
+output_root="$output_base/$run_name"
+step_args=()
+if [[ "$config" == "$repo_root/configs/default.yaml" || "$config" == "configs/default.yaml" ]]; then
+  step_args=(--max-steps 100000)
+fi
 
 for value_name in training_samples download_workers num_gpus walltime_seconds; do
   value="${!value_name}"
@@ -48,11 +53,7 @@ if [[ -e "$output_root" ]]; then
   exit 1
 fi
 
-export HF_HOME="${HF_HOME:-$artifact_root/cache/huggingface-client}"
-export UV_CACHE_DIR="${UV_CACHE_DIR:-$artifact_root/cache/uv}"
-export UV_PROJECT_ENVIRONMENT="${UV_PROJECT_ENVIRONMENT:-$artifact_root/venv}"
-
-mkdir -p "$artifact_root" "$data_cache_root"
+mkdir -p "$data_cache_root"
 
 echo "[1/4] Creating the locked Python/CUDA environment with uv"
 "$uv_bin" sync --frozen --no-dev
@@ -75,12 +76,15 @@ else
 fi
 
 mkdir -p "$output_root"
+attention_backend="$("$uv_bin" run --frozen --no-dev python -c \
+  'import sys, yaml; print(yaml.safe_load(open(sys.argv[1])).get("attention_backend", "flash"))' "$config")"
 echo "[3/4] Qualifying CUDA, BF16, FlashAttention, and a forward/backward pass"
 "$uv_bin" run --frozen --no-dev python scripts/check_environment.py \
   --require-gpus "$num_gpus" \
+  --attention-backend "$attention_backend" \
   --output "$output_root/ENVIRONMENT.json"
 
-echo "[4/4] Training ESMC-300M on $num_gpus GPUs for up to $walltime_seconds seconds"
+echo "[4/4] Training $config on $num_gpus GPUs for up to $walltime_seconds seconds"
 "$uv_bin" run --frozen --no-dev python -m torch.distributed.run \
   --standalone \
   --nproc-per-node="$num_gpus" \
@@ -88,6 +92,7 @@ echo "[4/4] Training ESMC-300M on $num_gpus GPUs for up to $walltime_seconds sec
   --config "$config" \
   --data-root "$data_root" \
   --output-root "$output_root" \
+  "${step_args[@]}" \
   --walltime-seconds "$walltime_seconds"
 
 for receipt in \

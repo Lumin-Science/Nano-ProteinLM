@@ -5,7 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 # Original ESMC-171M AdamW baseline: four L40S GPUs for one hour.
-# Frozen training and evaluation settings for the default program.md.
+# Historical launcher. The current task uses task/171m-validation-loss_ar.sh.
 data_repo_id="LuminScience/LuminBench-Nano-ESMC"
 data_revision="bd38448d50d8f426d7b9bd4410b53159ea001259"
 release_manifest_sha256="fe1ac0657085ab19fe6f56786006e9eb004ca66bc6c5b81dfd8e6bc3dcfda6ff"

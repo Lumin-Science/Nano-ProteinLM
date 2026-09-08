@@ -1,5 +1,9 @@
 # Baseline contract and results
 
+This page preserves historical baseline workflows. The current starting recipe
+is [Setting 3](../configs/default.yaml), with direct commands in
+[Usage](USAGE.md) and the current [task definition](../task/171m-validation-loss.md).
+
 This page separates baseline evidence from the evaluation definition. Every
 number below is meaningful only with the frozen datasets, probes, metrics, and
 aggregation in [`EVALUATION.md`](EVALUATION.md).
@@ -19,8 +23,7 @@ aggregation are defined in [`EVALUATION.md`](EVALUATION.md).
 `configs/esmc-300m-original.yaml` is the checkpoint-compatible ESMC-300M
 training recipe: 30 layers, width 960, 15 attention heads, and 332,997,184
 parameters. It uses four GPUs, context length 512, 64 sequences per GPU, and a
-14,400-second training-loop limit. This is the default public speedrun and the
-simple model-training baseline for future production comparisons.
+14,400-second training-loop limit. This was the original public speedrun default.
 
 Historical project campaigns establish compute scaling but used the earlier
 9-million-protein materialization that is no longer a supported training
@@ -40,8 +43,8 @@ the public record for these historical comparisons.
 
 `configs/esmc-300m-current-best.yaml` is the opt-in, exact one-hour
 AutoResearch incumbent; `configs/autoresearch_300m_4xa100_1h.yaml` is its
-campaign-named alias. The public speedrun continues to default to the original
-ESMC recipe. The incumbent keeps the ESMC-300M class while adding learned
+campaign-named alias. That campaign used the original ESMC recipe as its
+reference. Its incumbent keeps the ESMC-300M class while adding learned
 residual/input routing, parameter-free transformer RMSNorm, depth-scaled
 residual initialization, and a final-20% learning-rate cooldown. It has
 332,823,484 parameters.
@@ -78,7 +81,7 @@ Across matched seeds 42, 43, and 44, R02 recorded contact P@L of 0.1081,
 The reported improvement is +8.06% over the campaign's starting baseline,
 which already used Muon and the retained architecture. This is not a
 comparison against `configs/esmc-171m-original.yaml`.
-The full candidate table is in the [README](../README.md#esmc-171m-autoresearch).
+The retained recipe is documented in the [historical recipe comparison](171M_RECIPES.md).
 
 The checked-in campaign record does not report validation-loss mean or SD,
 and the per-seed validation-loss receipts are not included. The P@L standard

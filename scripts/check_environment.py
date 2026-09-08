@@ -17,6 +17,7 @@ from nano_protein.model import _varlen_flash_attention, build_model
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--require-gpus", type=int, default=1)
+    parser.add_argument("--gpu-name", help="Require this substring in every visible GPU name")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--attention-backend", choices=("flash", "flash3"), default="flash")
     args = parser.parse_args()
@@ -32,6 +33,11 @@ def main() -> None:
         )
     if not torch.cuda.is_bf16_supported():
         raise RuntimeError("the visible GPUs do not support bfloat16")
+    if args.gpu_name and any(
+        args.gpu_name not in torch.cuda.get_device_name(index)
+        for index in range(torch.cuda.device_count())
+    ):
+        raise RuntimeError(f"every visible GPU must match {args.gpu_name!r}")
 
     device = torch.device("cuda", 0)
     attention = prepare_attention(args.attention_backend, device)

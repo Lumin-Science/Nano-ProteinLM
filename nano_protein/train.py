@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import platform
@@ -39,6 +40,47 @@ def load_config(path: Path) -> dict[str, Any]:
     if not isinstance(config, dict):
         raise TypeError("training config must be a mapping")
     return config
+
+
+def resolve_config_overrides(
+    config: dict[str, Any], overrides: dict[str, Any]
+) -> dict[str, Any]:
+    """Apply explicit CLI settings without changing the source recipe."""
+    resolved = copy.deepcopy(config)
+    stage_keys = {"micro_batch_size", "gradient_accumulation"}
+    for key, value in overrides.items():
+        if key in stage_keys:
+            if len(resolved["stages"]) != 1:
+                raise ValueError(f"--{key.replace('_', '-')} requires a single-stage recipe")
+            resolved["stages"][0][key] = value
+        else:
+            resolved[key] = value
+    resolve_step_budgets(resolved)
+    resolve_token_budget(resolved)
+    return resolved
+
+
+def optional_positive_int(value: str) -> int | None:
+    if value.lower() == "none":
+        return None
+    result = int(value)
+    if result <= 0:
+        raise argparse.ArgumentTypeError("use a positive integer, or 'none' to clear a limit")
+    return result
+
+
+def nonnegative_int(value: str) -> int:
+    result = int(value)
+    if result < 0:
+        raise argparse.ArgumentTypeError("use a nonnegative integer")
+    return result
+
+
+def positive_int(value: str) -> int:
+    result = int(value)
+    if result <= 0:
+        raise argparse.ArgumentTypeError("use a positive integer")
+    return result
 
 
 def resolve_step_budgets(config: dict[str, Any]) -> tuple[int | None, int | None]:
@@ -561,8 +603,16 @@ def train(
     output_root: Path,
     walltime_override: int | None = None,
     resume_checkpoint: Path | None = None,
+    config_overrides: dict[str, Any] | None = None,
 ) -> None:
-    config = load_config(config_path)
+    overrides = dict(config_overrides or {})
+    if walltime_override is not None:
+        overrides["walltime_seconds"] = walltime_override
+    config = resolve_config_overrides(load_config(config_path), overrides)
+    if float(config.get("walltime_seconds", 0)) <= 0:
+        raise ValueError(
+            "supply a positive --walltime-seconds or walltime_seconds in the recipe"
+        )
     max_model_tokens = resolve_token_budget(config)
     loss_reduction = str(config.get("training_loss_reduction", "sequence_mean"))
     if loss_reduction not in {"sequence_mean", "sqrt_mask_count"}:
@@ -604,11 +654,18 @@ def train(
     if rank == 0:
         project_root = Path(__file__).resolve().parents[1]
         uv_lock = project_root / "uv.lock"
+        resolved_path = output_root / "config.yaml"
+        if resolved_path.resolve() == config_path.resolve():
+            resolved_path = output_root / "config.resolved.yaml"
+        resolved_path.write_text(yaml.safe_dump(config, sort_keys=False))
         _write_json(
             output_root / "run_contract.json",
             {
                 "config_path": str(config_path.resolve()),
                 "config_sha256": file_sha256(config_path),
+                "config_overrides": overrides,
+                "resolved_config_path": str(resolved_path.resolve()),
+                "resolved_config_sha256": file_sha256(resolved_path),
                 "data_manifest": str((data_root / "manifest.json").resolve()),
                 "data_manifest_sha256": file_sha256(data_root / "manifest.json"),
                 "homology_exclusion": data_manifest.get("decontamination", {}).get(
@@ -1096,24 +1153,71 @@ def train(
         dist.destroy_process_group()
 
 
-def main() -> None:
+def training_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, required=True)
-    parser.add_argument("--data-root", type=Path, required=True)
-    parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--walltime-seconds", type=int)
+    parser.add_argument("--data-root", type=Path)
+    parser.add_argument("--output-root", type=Path)
+    parser.add_argument("--walltime-seconds", type=positive_int)
+    parser.add_argument(
+        "--print-config", action="store_true", help="Print resolved YAML and exit"
+    )
+    # SUPPRESS distinguishes an omitted option from an explicit 'none' budget override.
+    for name in ("max-steps", "max-model-tokens", "schedule-steps"):
+        parser.add_argument(f"--{name}", type=optional_positive_int, default=argparse.SUPPRESS)
+    for name in ("seed", "warmup-steps", "checkpoint-interval", "periodic-evaluation-interval"):
+        parser.add_argument(f"--{name}", type=nonnegative_int, default=argparse.SUPPRESS)
+    for name in ("micro-batch-size", "gradient-accumulation"):
+        parser.add_argument(f"--{name}", type=positive_int, default=argparse.SUPPRESS)
+    for name in ("learning-rate", "weight-decay", "peak-bf16-tflops-per-gpu"):
+        parser.add_argument(f"--{name}", type=float, default=argparse.SUPPRESS)
+    parser.add_argument(
+        "--attention-backend",
+        choices=("auto", "math", "flash", "flash3"),
+        default=argparse.SUPPRESS,
+    )
     parser.add_argument(
         "--resume",
         type=Path,
         help="Restore full model/optimizer state into a fresh output directory",
     )
+    return parser
+
+
+def main() -> None:
+    parser = training_parser()
     args = parser.parse_args()
+    overrides = {
+        key: value
+        for key, value in vars(args).items()
+        if key
+        not in {
+            "config",
+            "data_root",
+            "output_root",
+            "walltime_seconds",
+            "print_config",
+            "resume",
+        }
+    }
+    if args.walltime_seconds is not None:
+        overrides["walltime_seconds"] = args.walltime_seconds
+    if args.print_config:
+        print(
+            yaml.safe_dump(
+                resolve_config_overrides(load_config(args.config), overrides), sort_keys=False
+            )
+        )
+        return
+    if args.data_root is None or args.output_root is None:
+        parser.error("training requires --data-root and --output-root")
     train(
         args.config,
         data_root=args.data_root,
         output_root=args.output_root,
         walltime_override=args.walltime_seconds,
         resume_checkpoint=args.resume,
+        config_overrides=overrides,
     )
 
 

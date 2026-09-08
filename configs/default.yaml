@@ -1,0 +1,45 @@
+# Setting 3: best completed 171M recipe. Specify stopping budgets in the training command.
+# Source: reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml
+schema_version: 1
+model: esmc_171m
+expected_parameter_count: 170559856
+seed: 20260824
+optimizer: muon
+muon_momentum: 0.95
+muon_lr_scale: 0.8
+muon_attention_lr_scale: 0.9
+muon_ffn_lr_scale: 0.75
+muon_weight_decay_scale: 0.75
+muon_nesterov: true
+muon_ns_steps: 5
+muon_adjust_lr_fn: match_rms_adamw
+learning_rate: 0.0005
+weight_decay: 0.01
+betas:
+- 0.9
+- 0.95
+gradient_clip_norm: 1.0
+warmup_steps: 1000
+rotary_base: 10000.0
+attention_backend: flash3
+gradient_checkpointing: false
+learned_residual_routing: true
+transformer_norm: rmsnorm
+depth_scaled_residual_init: true
+compile: false
+compile_mode: default
+log_interval: 10
+peak_bf16_tflops_per_gpu: 989.5
+stages:
+- name: stage1
+  context_length: 512
+  micro_batch_size: 64
+  gradient_accumulation: 4
+  mixture:
+    uniref90: 0.36
+    mgnify: 0.11
+    omg_img: 0.54
+ffn_hidden_dim: 2048
+tie_word_embeddings: false
+balance_batches_across_ranks: true
+training_loss_reduction: sqrt_mask_count

@@ -14,17 +14,66 @@ All structures and structural contact labels for the P@L evaluation come from
 the frozen 2024-02-28 RCSB Protein Data Bank snapshot. This is also the PDB
 population protected during training-corpus decontamination.
 
-The default ESMC-171M AutoResearch protocol selects on held-out sequence-mean
-MLM loss across at least two matched training seeds. A candidate is kept only
-when its mean loss is below the current best accepted mean by more than the
-candidate's sample standard deviation. Training loss and full long-range
+The ESMC-171M AutoResearch score is held-out sequence-mean MLM loss averaged
+across two matched training seeds, with sample SD reported separately. The
+agent chooses its acceptance strategy. Training loss and full long-range
 contact P@L are required diagnostics; P-CORE provides additional representation
 measurements. These diagnostics do not affect research selection. See
-[program.md](../program.md) for the exact rule and fixed evaluation sample,
-and [Test of Progress](../program.md#test-of-progress)
+[task/171m-validation-loss.md](../task/171m-validation-loss.md) for the scoring rule and executable protocol,
+and [Test of Progress](../task/171m-validation-loss.md#test-of-progress)
 for token-budget confirmation. [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md)
 records the executed historical 100k-step comparison. The current token-budget verification
 protocol does not relabel those single-seed results.
+
+## Manual Test of Progress
+
+The benchmark owner runs this separately from the agent's research loop. After
+[setup](USAGE.md#setup), select a frozen recipe and fresh experiment name. Run
+the original AdamW reference and selected recipe with the same command/settings.
+Use four H100s; these commands retain the recipe's optimizer-group multipliers
+while fixing batch 1,024, base LR/WD and warmup. The standard trainer saves the
+full optimizer state and checks the first completed update at the token endpoint.
+
+```bash
+set -a
+source .env
+set +a
+recipe=configs/default.yaml
+experiment="$OUTPUT_ROOT/manual-verification-001"
+mkdir -p "$OUTPUT_ROOT"
+mkdir "$experiment"
+uv run --frozen python scripts/check_environment.py \
+  --require-gpus 4 --gpu-name H100 --attention-backend flash3 \
+  --output "$experiment/environment.json"
+for seed in 42 43; do
+  run_dir="$experiment/seed-$seed"
+  uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
+    -m nano_protein.train --config "$recipe" --seed "$seed" \
+    --data-root "$DATA_ROOT/training" --output-root "$run_dir" \
+    --max-steps none --max-model-tokens 24200224761 --schedule-steps 100000 \
+    --walltime-seconds 57600 --attention-backend flash3 --warmup-steps 1000 \
+    --learning-rate 5e-4 --weight-decay 0.01 \
+    --micro-batch-size 64 --gradient-accumulation 4 \
+    --checkpoint-interval 0 --periodic-evaluation-interval 0 \
+    --peak-bf16-tflops-per-gpu 989.5
+  uv run --frozen python -m nano_protein.evaluate \
+    --checkpoint "$run_dir/checkpoint-final.pt" --data-root "$DATA_ROOT/training" \
+    --output-root "$run_dir/evaluation" \
+    --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
+    --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
+    --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
+done
+uv run --frozen python scripts/summarize_training_runs.py \
+  "$experiment/seed-42" "$experiment/seed-43" --validation-sequences 4096 \
+  --output "$experiment/summary.json"
+```
+
+Require `stop_reason=max_model_tokens` and `model_token_budget_reached=true` in
+each `TRAINING_COMPLETE.json`. The count includes non-padding model tokens and
+BOS/EOS, stopping at the first update reaching 24,200,224,761; an early wall-time
+stop is incomplete. Report actual tokens/overrun, both metric means, sample SDs,
+and the per-run chain-bootstrap P@L intervals. Evaluation assets overlap research;
+this checks transfer to the larger budget, not a blind holdout.
 
 ## Released ESMC checkpoint P@L
 

@@ -1,10 +1,15 @@
 # Training configurations
 
-There are 28 YAML presets and one scale-up manifest. For new autoresearch,
-start with `esmc-171m-original.yaml` or its seed-42/43 copies. For the longer
-H100 baseline, use `esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml`.
+There are 29 YAML presets and one scale-up manifest. New training and task runs
+use Setting 3 via [`default.yaml`](default.yaml); the original AdamW
+recipe remains the comparator. The [cleanup plan](../docs/CONFIG_CLEANUP_PLAN.md)
+targets four maintained presets: Setting 3 as `default.yaml`, plus original
+ESMC-like 171M, 300M and 600M. The historical files below are still present pending
+that migration; the 600M training YAML has not yet been added. `default.yaml`
+preserves Setting 3's model/optimizer choices; stopping budgets are explicit
+training arguments. The default's source is included in the historical index below.
 
-The current [program](../program.md) requires total trainable parameters within
+The [171M task](../task/171m-validation-loss.md) requires total trainable parameters within
 ±5% of the original 170,671,168: **162,137,610–179,204,726**. Rescale overall
 width or depth when a component change would take the model outside that range.
 R22 and R29's 142M research presets are historical; rescale and rerun them
@@ -18,7 +23,7 @@ differ only in training seed.
 
 | Recipe | Configs | Parameters | Role |
 |---|---|---:|---|
-| Original AdamW | [original](esmc-171m-original.yaml) | 170,671,168 | Default; seed 20260824 |
+| Original AdamW | [original](esmc-171m-original.yaml) | 170,671,168 | Scientific baseline; seed 20260824 |
 | Paired AdamW baseline | [42](program2/baseline_seed42.yaml), [43](program2/baseline_seed43.yaml) | 170,671,168 | Baseline for the published research history |
 | R01 Muon | [42](program2/r01_muon_seed42.yaml), [43](program2/r01_muon_seed43.yaml) | 170,671,168 | Historical recipe; within the size bound |
 | R04 + rank balance | [42](program2/r04_batchbalance_seed42.yaml), [43](program2/r04_batchbalance_seed43.yaml) | 170,671,168 | Historical recipe; within the size bound |
@@ -71,11 +76,11 @@ after the Nibi baseline and preserves the full final Muon/AdamW checkpoint.
 | [171M AdamW, H100 12 hours](esmc-171m-original-h100-fa3-12h.yaml) | Earlier batch-256 FA3 preset with a wall-time budget |
 | [171M AdamW, H100 10k steps](esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml) | Cancelled pilot, superseded by the 100k comparison |
 | [171M R02, H100 10k steps](esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml) | Cancelled pilot, superseded by the 100k comparison |
-| [300M original](esmc-300m-original.yaml) | Original reproduction recipe; still the default for the general speedrun and Stage-1 launchers |
+| [300M original](esmc-300m-original.yaml) | Original reproduction recipe; retained by the historical Stage-1 launcher |
 | [300M one-hour autoresearch](autoresearch_300m_4xa100_1h.yaml) | Earlier contact-selected recipe with a final-20% cooldown |
 | [300M current-best alias](esmc-300m-current-best.yaml) | Same configuration values as the preceding preset; compatibility alias |
 
 The one-hour autoresearch launcher defaults to the original 171M AdamW preset.
-When using `runs/speedrun.sh`, set `CONFIG` and `WALLTIME_SECONDS` explicitly as
-shown in the [baseline commands](../README.md#baselines). Older paths remain
+The general `runs/speedrun.sh` helper now defaults to Setting 3; the
+[recommended training command](../README.md#training-a-170m-model) calls the Python API directly. Older paths remain
 available because scripts, published results, and audit records reference them.

@@ -12,5 +12,10 @@
 - [x] **Support the Test of Progress token budget.** Training now accepts
   `max_model_tokens`, stops at a synchronized optimizer boundary, records the
   target/actual tokens and overrun, and can resume to a larger token endpoint.
-  The complete train-and-evaluate example is in [program.md](program.md#test-of-progress).
+  The complete train-and-evaluate command is in [task/171m-validation-loss.md](task/171m-validation-loss.md#test-of-progress).
   Historical time/step-based runs keep their existing behavior.
+
+- [ ] **Consolidate maintained recipes and remove unused settings.** Follow the
+  [cleanup plan](docs/CONFIG_CLEANUP_PLAN.md): Setting 3 as default, plus original
+  ESMC-like 171M/300M/600M presets; archive old recipes, migrate launchers/tests,
+  and preserve evaluation and checkpoint compatibility.
