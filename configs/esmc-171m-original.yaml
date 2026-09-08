@@ -3,7 +3,9 @@ model: esmc-171m
 expected_parameter_count: 170671168
 seed: 20260824
 
-# Family-scaled ESMC baseline: 24 layers, width 768, 12 attention heads.
+# Small-budget baseline following the paper's 170M scaling architecture:
+# Appendix A.1.4.1, Table S4 (24 layers, width 768, 12 attention heads).
+# https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29
 # Learning rate and weight decay use nano_protein.schedule.mup_hyperparameters.
 learning_rate: 0.000326599
 weight_decay: 0.0183712

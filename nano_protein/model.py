@@ -1,4 +1,8 @@
-"""Checkpoint-compatible ESMC architecture and family-scaled variants in plain PyTorch.
+"""Released ESMC architectures and the paper’s 170M scaling backbone in PyTorch.
+
+The 171M variant supports small-budget experiments using the 24-layer,
+width-768 backbone from Appendix A.1.4.1, Table S4. The 300M/600M shapes
+follow Appendix A.1.1, Table S1.
 
 The tensor shapes and parameterization follow Biohub's released implementation:
 pre-norm bias-free linear layers, whole-projection Q/K LayerNorm, non-interleaved

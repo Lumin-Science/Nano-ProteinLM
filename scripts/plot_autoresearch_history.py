@@ -36,7 +36,7 @@ ACCEPTED_CHANGES = {
     "r04_batchbalance": (2, "Batch balance"),
     "r10_sqrtloss": (3, "Sqrt loss"),
     "r22_ffn1536": (4, "FFN 1536*"),
-    "r29_tied": (5, "Tied embeddings"),
+    "r29_tied": (5, "Tied embeddings*"),
 }
 
 
@@ -148,76 +148,61 @@ def plot_history(source: Path, output: Path) -> None:
             "svg.hashsalt": "nano-protein-autoresearch-history",
         }
     )
-    fig, ax = plt.subplots(figsize=(12.8, 6.8), facecolor="white")
-    fig.subplots_adjust(left=0.082, right=0.975, bottom=0.25, top=0.79)
+    fig, ax = plt.subplots(figsize=(11.8, 5.6), facecolor="white")
+    fig.subplots_adjust(left=0.085, right=0.98, bottom=0.25, top=0.76)
+    fig.text(0.085, 0.92, "Autoresearch progress", fontsize=20, weight="bold")
     fig.text(
-        0.082,
-        0.93,
-        f"Validation loss across {len(rows) - 1} autoresearch rounds",
-        fontsize=19,
-        weight="bold",
-    )
-    seed_labels = ", ".join(seed.removeprefix("seed") for seed in seeds)
-    fig.text(
-        0.082,
-        0.883,
-        f"171M parameter cap · 4 × L40S · 1 hour per seed · seeds {seed_labels}",
-        fontsize=11,
-        color=MUTED,
-    )
-    fig.text(
-        0.975,
-        0.835,
-        f"{means[0]:.5f} → {accepted_means[-1]:.5f}  |  {gain:.2f}% lower",
+        0.98,
+        0.92,
+        f"−{gain:.2f}% loss",
         ha="right",
-        fontsize=11,
+        fontsize=18,
         weight="bold",
         color=TEAL,
     )
+    fig.text(
+        0.085,
+        0.858,
+        f"171M baseline · 4 × L40S · 1 h per seed · {len(seeds)} seeds",
+        fontsize=10,
+        color=MUTED,
+    )
 
     ax.set_axisbelow(True)
-    ax.grid(axis="y", color="#e9edf1", linewidth=0.8)
-    ax.plot(rounds, means, color=GRAY, alpha=0.6, linewidth=0.85, zorder=2)
-    all_methods = ax.errorbar(
+    ax.grid(axis="y", color="#eef1f4", linewidth=0.7)
+    ax.errorbar(
         rounds,
         means,
         yerr=deviations,
         fmt="o",
-        markersize=3.8,
+        markersize=3.5,
         markerfacecolor="white",
-        markeredgecolor=MUTED,
-        ecolor=GRAY,
-        elinewidth=0.85,
-        capsize=2,
-        capthick=0.85,
-        zorder=3,
-        label="Each recipe: mean ± 1 SD",
+        markeredgecolor=GRAY,
+        ecolor="#cbd5e1",
+        elinewidth=0.8,
+        capsize=1.8,
+        capthick=0.8,
+        alpha=0.8,
+        zorder=2,
     )
-    (best_line,) = ax.step(
-        rounds,
-        accepted_means,
-        where="post",
-        color=TEAL,
-        linewidth=2,
-        zorder=4,
-        label="Current best accepted",
-    )
+    ax.step(rounds, accepted_means, where="post", color=TEAL, linewidth=2.1, zorder=3)
     for index in [0, *kept]:
         change = ACCEPTED_CHANGES.get(rows[index]["method_id"])
-        color = INK if index == 0 else AMBER if change and change[0] == 4 else TEAL
+        # R29 inherits the narrower FFN: both changes 4 and 5 are ~142M models.
+        color = INK if index == 0 else AMBER if change and change[0] >= 4 else TEAL
         ax.errorbar(
             index,
             means[index],
             yerr=deviations[index],
             fmt="o",
             color=color,
-            markersize=13 if change else 5.2,
+            markersize=12 if change else 5,
             markeredgecolor="white",
-            markeredgewidth=0.7,
+            markeredgewidth=0.8,
             elinewidth=1,
-            capsize=2.5,
+            capsize=2,
             capthick=1,
-            zorder=5,
+            zorder=4,
         )
         if change:
             ax.text(
@@ -229,70 +214,72 @@ def plot_history(source: Path, output: Path) -> None:
                 color="white",
                 weight="bold",
                 fontsize=8,
-                zorder=6,
+                zorder=5,
             )
 
-    kept_marker = Line2D([], [], color=TEAL, marker="o", linestyle="none", markersize=5)
     ax.legend(
-        [all_methods, best_line, kept_marker],
-        ["Each recipe: mean ± 1 SD", "Current best accepted", "Accepted changes 1–5"],
+        [
+            Line2D(
+                [],
+                [],
+                marker="o",
+                markerfacecolor="white",
+                markeredgecolor=GRAY,
+                color="#cbd5e1",
+                linestyle="none",
+                markersize=4,
+            ),
+            Line2D([], [], color=TEAL, linewidth=2.1),
+        ],
+        ["Trials ± SD", "Retained recipe"],
         loc="upper right",
         frameon=False,
         fontsize=9,
-        ncols=3,
-        columnspacing=1.5,
-        borderaxespad=0.4,
+        ncols=2,
+        columnspacing=1.6,
+        borderaxespad=0,
     )
     ax.set_xlim(-0.65, rounds[-1] + 0.65)
     lower = min(mean - sd for mean, sd in zip(means, deviations, strict=True))
     upper = max(mean + sd for mean, sd in zip(means, deviations, strict=True))
-    ax.set_ylim(lower - 0.006, upper + 0.012)
-    ax.set_xticks(rounds)
-    ax.tick_params(axis="both", length=0, pad=8, labelsize=9)
-    for index, label in enumerate(ax.get_xticklabels()):
-        if index in kept:
-            label.set_color(TEAL)
-            label.set_weight("bold")
+    ax.set_ylim(lower - 0.004, upper + 0.004)
+    ax.set_xticks(sorted({0, *range(10, rounds[-1], 10), rounds[-1]}))
+    ax.tick_params(axis="both", length=0, pad=7, labelsize=9)
     ax.yaxis.set_major_locator(MultipleLocator(0.02))
     ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.2f}"))
-    ax.set_xlabel("Autoresearch round (0 = AdamW baseline)", labelpad=13)
-    ax.set_ylabel("Held-out MLM loss · lower is better", labelpad=13)
-    for spine in ["top", "right", "left"]:
-        ax.spines[spine].set_visible(False)
-    ax.spines["bottom"].set_color("#d8e0e7")
+    ax.set_xlabel("Research round", labelpad=9)
+    ax.set_ylabel("Validation loss ↓", labelpad=10)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
 
-    kept_labels = [
-        f"[{ACCEPTED_CHANGES[rows[index]['method_id']][0]}] "
-        f"{ACCEPTED_CHANGES[rows[index]['method_id']][1]} (R{index:02d})"
-        for index in kept
-        if rows[index]["method_id"] in ACCEPTED_CHANGES
-    ]
+    for position, index in enumerate(kept):
+        change = ACCEPTED_CHANGES.get(rows[index]["method_id"])
+        if change is None:
+            continue
+        number, label = change
+        color = AMBER if number >= 4 else TEAL
+        fig.text(
+            0.085 + position * 0.186,
+            0.098,
+            f"{number}  {label}",
+            fontsize=10,
+            weight="normal",
+            color=color,
+        )
     fig.text(
-        0.082,
-        0.115,
-        " · ".join(kept_labels),
-        fontsize=9,
-        color=TEAL,
-    )
-    fig.text(
-        0.082,
-        0.076,
-        "*Change 4 reduces model size: retained in research history, excluded from "
-        "the fixed-size Test Leaderboard.",
-        fontsize=9,
-        color=AMBER,
-    )
-    source_path = source.resolve()
-    source_label = (
-        source_path.relative_to(ROOT) if source_path.is_relative_to(ROOT) else source.name
-    )
-    fig.text(
-        0.082,
-        0.036,
-        f"Source: {source_label} · {len(rows) * len(seeds)} runs · "
-        f"SD across {len(seeds)} training seeds; 32 fixed validation sequences.",
+        0.085,
+        0.044,
+        "0 = AdamW baseline",
         fontsize=8.5,
         color=MUTED,
+    )
+    fig.text(
+        0.98,
+        0.044,
+        "*4–5 use ~142M models",
+        ha="right",
+        fontsize=8.5,
+        color=AMBER,
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output.with_suffix(".png"), dpi=180, metadata={"Software": "Matplotlib"})

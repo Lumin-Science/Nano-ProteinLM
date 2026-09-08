@@ -161,25 +161,18 @@ are in [task/171m-validation-loss.md](task/171m-validation-loss.md).
 
 ### Experiments
 
-The validation-loss campaign tested **38 candidate rounds** across two seeds and kept
-**five cumulative changes**, reducing mean validation loss by **2.20%**.
-The figure marks those changes; error bars show ±1 sample SD.
-
-![Validation loss across 38 search rounds, marking 1 Muon, 2 batch balance, 3 sqrt loss, 4 narrower FFN and 5 tied embeddings.](reports/program2/validation-loss.png)
+![Autoresearch progress across 38 rounds: five cumulative improvements reduce validation loss by 2.20%; changes 4–5 use smaller models.](reports/program2/validation-loss.png)
 
 | Research metric | Baseline | 1: + Muon | 2: + batch balance | 3: + sqrt loss | 4: + FFN 1536* | 5: + tied embeddings* |
 |---|---:|---:|---:|---:|---:|---:|
 | Validation loss ↓ | 2.63868 ± 0.01303 | 2.61807 ± 0.00945 | 2.60415 ± 0.00650 | 2.59437 ± 0.00578 | 2.59095 ± 0.00132 | **2.58057 ± 0.00544** |
 | P@L (%) ↑ | 9.648 ± 0.598 | 9.795 ± 0.189 | 9.370 ± 0.270 | **10.533 ± 0.366** | 9.829 ± 0.286 | 9.527 ± 0.720 |
 
-Values are mean ± sample SD across seeds 42 and 43; P@L uses percent and SD uses
-percentage points. Each run used one hour on four L40S GPUs, batch 256 and 32
-MLM validation sequences. See the [run log](reports/program2/README.md) and
-[additional experiments](docs/AUTORESEARCH.md).
+Two-seed mean ± sample SD; one hour on four L40S GPUs per seed.
+[Protocol and all 38 rounds](reports/program2/README.md) · [More experiments](docs/AUTORESEARCH.md)
 
-*Changes 4 and 5 used a narrower, roughly 142M model and predate the ±5% size
-rule. The fixed-size tests below skip change 4 and add tied embeddings directly
-to change 3, retaining FFN width 2,048.
+*Changes 4–5 use ~142M models and predate the ±5% size rule. The fixed-size
+leaderboard skips 4 and applies tied embeddings directly to 3.
 
 ## Test Leaderboard
 

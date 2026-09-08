@@ -7,8 +7,9 @@ Two 171M recipes are recommended for small-budget experiments:
 | Current best — Setting 3 | [default.yaml](default.yaml) | 170,559,856 | Muon, RMSNorm, residual routing and initialization, batch balance, sqrt loss |
 | Original ESMC-like AdamW | [esmc-171m-original.yaml](esmc-171m-original.yaml) | 170,671,168 | Original 171M reference recipe |
 
-Both use the 24-layer, 768-wide backbone with FFN width 2,048 and untied
-embeddings. The default has RoPE 10k, base LR 5e-4, base WD 0.01, warmup 1,000,
+Both use the paper's 170M scaling backbone from
+[Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29):
+24 layers, width 768, FFN width 2,048 and untied embeddings. The default has RoPE 10k, base LR 5e-4, base WD 0.01, warmup 1,000,
 and a four-H100 batch layout of 1,024 with FA3. The original retains its
 family-scaled LR/WD, 554-step warmup and four-L40S batch layout of 256 with FA2.
 Selecting the original recipe does not make these hyperparameters match.

@@ -2,7 +2,7 @@
 
 ## Implemented
 
-- Two recommended 171M recipes: [current-best Setting 3](../configs/default.yaml) and
+- Two recommended recipes for small-budget 171M experiments: [current-best Setting 3](../configs/default.yaml) and
   [original 171M AdamW](../configs/esmc-171m-original.yaml). All 27 other YAMLs
   and the scale-up manifest are in the [config archive](../configs/archive/README.md),
   preserving their bytes and recorded hashes. This replaces the earlier plan

@@ -27,6 +27,11 @@ research, call `scripts/download_data.py` directly with `--training-samples`,
 
 ## Training
 
+The default 171M model targets small-budget experiments and follows the paper's
+170M scaling backbone ([Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
+For larger models, select a [300M or 600M reference config](../configs/reference/README.md);
+their local training assumptions are documented alongside the presets.
+
 The speedrun is a readable shell script that calls the ordinary Python API:
 
 ```bash

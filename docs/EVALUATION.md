@@ -14,7 +14,9 @@ All structures and structural contact labels for the P@L evaluation come from
 the frozen 2024-02-28 RCSB Protein Data Bank snapshot. This is also the PDB
 population protected during training-corpus decontamination.
 
-The ESMC-171M AutoResearch score is held-out sequence-mean MLM loss averaged
+The small-budget 171M task uses the paper's 170M scaling backbone
+([architecture and scope](../task/171m-validation-loss.md#background)).
+Its AutoResearch score is held-out sequence-mean MLM loss averaged
 across two matched training seeds, with sample SD reported separately. The
 agent chooses its acceptance strategy. Training loss and full long-range
 contact P@L are required diagnostics; P-CORE provides additional representation
@@ -36,7 +38,8 @@ full optimizer state and checks the first completed update at the token endpoint
 
 ```bash
 set -a
-source .env
+if [ -f .env ]; then source .env; fi
+source .env.example
 set +a
 recipe=configs/default.yaml
 experiment="$OUTPUT_ROOT/manual-verification-001"

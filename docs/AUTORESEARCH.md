@@ -1,6 +1,9 @@
 # AutoResearch records
 
-The task definition is [171M validation loss](../task/171m-validation-loss.md).
+The [171M validation-loss task](../task/171m-validation-loss.md) is designed for
+small-budget training experiments. Its baseline backbone follows the paper's
+170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29));
+[300M/600M references](../configs/reference/README.md) are separate from this task.
 Its [research shell script](../task/171m-validation-loss_ar.sh) calls the standard
 training/evaluation APIs directly. [program.md](../program.md) asks an agent to
 optimize the task; Test of Progress is manual. This page is a results index.
@@ -40,6 +43,12 @@ python3 -m venv /tmp/nano-esmc-plot
 ```
 
 Run these commands from the repository root. The script verifies seed means,
-sample SDs, and keep/discard decisions before writing PNG and SVG files to
+sample SDs, and historical keep/discard decisions before writing PNG and SVG files to
 `reports/program2/`. It reads `reports/program2/runs-through-r38.tsv` by default;
 use `--input path/to/results.tsv` for another per-run or per-method log.
+
+The figure shows every tested recipe as a faint point with a sample-SD bar and
+the retained recipe as a teal step line. Numbers 1–5 identify the cumulative
+changes in the table below it. Amber markers 4–5 use roughly 142M parameters.
+The plot omits long provenance text; the source TSV and full protocol remain in
+the linked campaign report.

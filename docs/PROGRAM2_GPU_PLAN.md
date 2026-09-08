@@ -1,5 +1,9 @@
 # Four-setting 100k H100 training plan
 
+These completed experiments use the small-budget 171M backbone from the paper's
+170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
+The current protocol is defined in the [171M task](../task/171m-validation-loss.md).
+
 Status: **all four settings completed their 100k runs and full evaluations**.
 Setting 4 finished at **September 8, 9:58:59 AM Toronto**. All four H100 technical trials
 passed. Setting 1 ran as `58303658.14`; the completed sequential settings 2–4 queue was
@@ -26,7 +30,7 @@ All use our completed R02 architecture with RoPE reset from 20k to **10k**.
 Shared architecture: **24 layers, width 768, 12 heads, SwiGLU FFN width 2048,
 parameter-free RMSNorm, learned residual/input routing, depth-scaled residual
 projection initialization**. The prediction-head LayerNorm remains. R22
-narrower FFNs are on [TODO](../TODO.md), outside these four runs.
+narrower FFNs are excluded from these fixed-size runs ([decision](../TODO.md)).
 
 ## Common training contract
 

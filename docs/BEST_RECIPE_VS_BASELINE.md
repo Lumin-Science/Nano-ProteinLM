@@ -21,7 +21,10 @@ optimizer-group settings also matter to reproducing this result.
 
 This is our ESMC-like project baseline, not a released ESMC checkpoint or an
 exact reproduction of all paper settings. The models have approximately 171M
-parameters. The eight-H100 batch-2,048 Nibi run is a separate experiment; the
+parameters and target small-budget training, using the backbone from
+[ESMC Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29).
+For the original-size architectures, see the
+[300M/600M reference configs](../configs/reference/README.md). The eight-H100 batch-2,048 Nibi run is a separate experiment; the
 results below all use batch 1,024.
 
 ## 1. The complete comparison

@@ -1,20 +1,28 @@
 # ESMC-171M recipe comparison
 
-“175M” in this project refers to the 24-layer, width-768, 12-head family.
-The new default is prepared in
+This page records the September 6, 2026 comparison. The current default is
+[Setting 3](../configs/default.yaml); the AdamW preset below is historical.
+
+The 171M model targets small-budget training experiments and follows the paper's
+170M scaling backbone: 24 layers, width 768 and 12 heads
+([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
+“175M” is a legacy project name for this same backbone. Original-size
+[300M/600M presets](../configs/reference/README.md) are available separately.
+
+The historical AdamW baseline is recorded in
 [`esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml`](../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml).
 Its peak LR of **5e-4**, base weight decay of **0.01**, and **1,000-step warmup**
 are explicit user settings.
-The matched R02 variant is prepared in
+The matched R02 variant is recorded in
 [`esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml`](../configs/archive/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml).
-The table now compares these two aligned presets with the paper reference.
+The table compares these two historical aligned presets with the paper reference.
 Both aligned variants completed training and evaluation on September 6, 2026.
 R02 reached validation loss **2.43698** and P@L **30.31%**, compared with
 **2.47436** and **26.50%** for default. See the
 [verified 100k results and receipts](../reports/fir-171m-100k-20260906/README.md).
 The original one-hour R02 record remains unchanged.
 
-| Setting | Aligned 171M R02 recipe | New project default | ESMC paper reference |
+| Setting | Aligned 171M R02 recipe | Historical AdamW baseline | ESMC paper reference |
 |---|---|---|---|
 | Parameters | 170,559,856 | 170,671,168 | 170.7M in the scaling experiment |
 | Optimizer | Muon on transformer matrices; AdamW elsewhere | AdamW | AdamW |
@@ -52,11 +60,11 @@ on Fir `fc10212`. The user corrected the intended budget to 100,000 steps
 and explicitly requested cancellation and fresh relaunches. Both pilot
 training steps were cancelled on September 6, 2026, while preserving the
 parent allocations and logs. These configs remain historical records; the
-active default and R02 recipes are the 100k-step presets linked above.
+completed AdamW and R02 comparisons use the 100k-step presets linked above.
 
 ### Full comparison
 
-Run the default on Fir `fc10111` and R02 on `fc10212` from fresh initialization.
+The historical plan ran the AdamW baseline on Fir `fc10111` and R02 on `fc10212` from fresh initialization.
 Both `max_steps` and `schedule_steps` must be 100,000; the wall-time guard is
 57,600 seconds (16 hours). Each completed run sees 102.4 million sequences.
 

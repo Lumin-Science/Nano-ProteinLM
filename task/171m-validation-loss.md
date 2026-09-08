@@ -2,10 +2,15 @@
 
 ## Background
 
-Improve training recipes for useful protein representations using the existing
-ESMC-like training stack, public decontaminated corpus and frozen evaluations.
-[current_best](../configs/default.yaml) is the default starting recipe;
-[original 171M AdamW](../configs/esmc-171m-original.yaml) is the reference.
+Improve protein-embedding training recipes under a small compute budget.
+The 171M baseline follows the paper's 170M scaling model: 24 layers, width 768,
+and 170.7M parameters ([Appendix A.1.4.1, Table S4, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
+The codebase provides the training stack, public decontaminated data and frozen evaluations.
+
+[Setting 3](../configs/default.yaml) is the starting recipe;
+[171M AdamW](../configs/esmc-171m-original.yaml) is the reference.
+The [300M/600M reference configs](../configs/reference/README.md) support separate,
+larger-model experiments and are outside this task's size bound.
 
 ## Autoresearch protocol
 

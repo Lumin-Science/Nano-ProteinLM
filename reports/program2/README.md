@@ -19,6 +19,15 @@ Current accepted recipe: **R29 shared input/output embeddings**, mean validation
 
 Program 2 selects on frozen held-out MLM loss. Contact P@L and training loss are diagnostics; the repository’s separate P@L campaign has its own results and selection rules.
 
+## Research curve
+
+![Validation-loss search history with five numbered improvements.](validation-loss.png)
+
+All 38 rounds are shown; points and bars are two-seed means ± sample SD.
+The line follows the retained recipe. Changes 4–5 use roughly 142M parameters
+and predate the current fixed-size task. See the [source TSV](runs-through-r38.tsv)
+and [current task definition](../../task/171m-validation-loss.md) for their distinct protocols.
+
 ## R29 improvement
 
 R29 ties the input embedding to the final vocabulary projection. Both roles contribute gradients to one AdamW-owned parameter; the rest of R22 is retained. It removes 49,152 parameters, giving **142,310,464** trainable parameters.

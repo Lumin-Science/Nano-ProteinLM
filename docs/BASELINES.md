@@ -4,6 +4,11 @@ This page preserves historical baseline workflows. The current starting recipe
 is [Setting 3](../configs/default.yaml), with direct commands in
 [Usage](USAGE.md) and the current [task definition](../task/171m-validation-loss.md).
 
+The 171M recipes target small-budget experiments using the paper's 170M
+scaling backbone ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
+For the original-size ESMC architectures, use the
+[300M/600M reference configs](../configs/reference/README.md).
+
 This page separates baseline evidence from the evaluation definition. Every
 number below is meaningful only with the frozen datasets, probes, metrics, and
 aggregation in [`EVALUATION.md`](EVALUATION.md).
@@ -39,7 +44,7 @@ The two runs use different seeds. Paired evaluation intervals compare their
 fixed predictions and do not estimate training-seed uncertainty. This table is
 the public record for these historical comparisons.
 
-### Current compute-matched workflow
+### Historical compute-matched workflow
 
 `configs/archive/esmc-300m-current-best.yaml` is the opt-in, exact one-hour
 AutoResearch incumbent; `configs/archive/autoresearch_300m_4xa100_1h.yaml` is its
@@ -49,7 +54,7 @@ residual/input routing, parameter-free transformer RMSNorm, depth-scaled
 residual initialization, and a final-20% learning-rate cooldown. It has
 332,823,484 parameters.
 
-Under the current four-GPU, one-hour, decontaminated AutoResearch contract, the
+Under that campaign’s four-GPU, one-hour AutoResearch contract, the
 incumbent progression was:
 
 | Candidate | Full contact P@L | Status |

@@ -1,4 +1,5 @@
 # Setting 3: best completed 171M recipe. Specify stopping budgets in the training command.
+# Backbone: paper 170M scaling architecture, Appendix A.1.4.1, Table S4.
 # Source: reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml
 schema_version: 1
 model: esmc_171m

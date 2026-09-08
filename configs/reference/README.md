@@ -2,8 +2,9 @@
 
 These presets use the released ESMC architecture shapes in
 [Appendix A.1.1, Table S1 (p. 29)](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29).
-The [171M baseline](../esmc-171m-original.yaml) instead follows the smaller
-170M scaling experiment in Appendix A.1.4.1, Table S4 on the same page.
+The [171M baseline](../esmc-171m-original.yaml) targets small-budget experiments
+using the paper's 170M scaling backbone from
+[Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29).
 
 | Preset | Layers | Width | Heads | FFN width | Parameters |
 |---|---:|---:|---:|---:|---:|

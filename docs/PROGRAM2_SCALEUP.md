@@ -1,5 +1,9 @@
 # Program 2 versus the completed H100 R02, and matched 100k presets
 
+These completed experiments use the small-budget 171M backbone from the paper's
+170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
+The current protocol is defined in the [171M task](../task/171m-validation-loss.md).
+
 The completed comparison contains **four settings based on our H100 R02**:
 reset RoPE from 20k to 10k, then add batch balance, sqrt loss and tied embeddings
 cumulatively. Every setting retains RMSNorm, learned residual/input routing,
@@ -7,7 +11,7 @@ depth-scaled initialization and **FFN width 2048**, with the same optimizer
 groups and 100k training contract as the completed R02. Each run starts from
 scratch; cumulative refers to recipe changes, not checkpoint continuation.
 
-**R22 FFN narrowing is deferred to [TODO](../TODO.md)**. The earlier unlaunched
+**R22 FFN narrowing is excluded from the fixed-size comparison** ([decision](../TODO.md)). The earlier unlaunched
 five-setting proposal with Program 2's LayerNorm architecture is superseded.
 Historical Program 2 results below remain unchanged. All four full-size H100
 technical trials and all four 100k-step runs with full evaluations passed; see the
