@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "verified_utc": "2026-09-08T19:09:53.013028+00:00",
+  "production_config_unchanged_scientific_fields_vs_fir_setting3": true,
+  "global_batch": 2048,
+  "optimizer_steps": 100000,
+  "evaluation_interval": 10000,
+  "parameter_count": 170559856,
+  "optimizer_parameter_groups": {
+    "muon_attention": 48,
+    "muon_ffn": 48,
+    "adamw_decay": 3,
+    "adamw_no_decay": 6
+  },
+  "muon_state_field_checked": "momentum_buffer",
+  "python_shell_embedded_python_syntax": "passed",
+  "ruff_check": "passed",
+  "tests": {
+    "command": "GLOO_SOCKET_IFNAME=lo0 .venv/bin/python -m unittest tests.test_resume tests.test_training_losses tests.test_batch_balance tests.test_periodic_evaluation -v",
+    "count": 15,
+    "result": "OK"
+  },
+  "gpu_qualification": "Queued after baseline; not yet run"
+}

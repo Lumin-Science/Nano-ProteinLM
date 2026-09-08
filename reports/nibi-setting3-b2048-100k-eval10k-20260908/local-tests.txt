@@ -1,0 +1,24 @@
+test_adamw_restores_moments_step_and_next_update (tests.test_resume.ResumeTests.test_adamw_restores_moments_step_and_next_update) ... ok
+test_batcher_restores_next_crop_source_rng_and_epoch_boundary (tests.test_resume.ResumeTests.test_batcher_restores_next_crop_source_rng_and_epoch_boundary) ... ok
+test_eight_to_four_gpu_resume_keeps_global_batch_and_training_recipe (tests.test_resume.ResumeTests.test_eight_to_four_gpu_resume_keeps_global_batch_and_training_recipe) ... ok
+test_optimizer_bundle_restores_next_update_and_live_parameter_groups (tests.test_resume.ResumeTests.test_optimizer_bundle_restores_next_update_and_live_parameter_groups) ... ok
+test_ddp_matches_global_weighted_mean_with_unequal_and_empty_ranks (tests.test_training_losses.TrainingLossTests.test_ddp_matches_global_weighted_mean_with_unequal_and_empty_ranks) ... ok
+test_default_preserves_sequence_mean_value_and_gradient (tests.test_training_losses.TrainingLossTests.test_default_preserves_sequence_mean_value_and_gradient) ... ok
+test_no_targets_has_finite_zero_loss_and_gradient (tests.test_training_losses.TrainingLossTests.test_no_targets_has_finite_zero_loss_and_gradient) ... ok
+test_rejects_unknown_reduction (tests.test_training_losses.TrainingLossTests.test_rejects_unknown_reduction) ... ok
+test_sqrt_weighting_matches_global_reference_but_keeps_sequence_diagnostic (tests.test_training_losses.TrainingLossTests.test_sqrt_weighting_matches_global_reference_but_keeps_sequence_diagnostic) ... ok
+test_equal_counts_no_duplicates_and_nonincreasing_max_load (tests.test_batch_balance.BatchBalanceTests.test_equal_counts_no_duplicates_and_nonincreasing_max_load) ... ok
+test_real_ddp_preserves_examples_masks_rng_and_global_gradient (tests.test_batch_balance.BatchBalanceTests.test_real_ddp_preserves_examples_masks_rng_and_global_gradient) ... /Users/jojo/workspace/AutoResearch_ESMC/nano-protein-embedding/.venv/lib/python3.11/site-packages/torch/distributed/c10d_logger.py:83: FutureWarning: `torch.distributed.all_gather_into_tensor` is deprecated. Please use `torch.distributed.all_gather_single` instead.
+  return func(*args, **kwargs)
+/Users/jojo/workspace/AutoResearch_ESMC/nano-protein-embedding/.venv/lib/python3.11/site-packages/torch/distributed/c10d_logger.py:83: FutureWarning: `torch.distributed.all_gather_into_tensor` is deprecated. Please use `torch.distributed.all_gather_single` instead.
+  return func(*args, **kwargs)
+ok
+test_rejects_bad_partitions (tests.test_batch_balance.BatchBalanceTests.test_rejects_bad_partitions) ... ok
+test_single_rank_is_identity (tests.test_batch_balance.BatchBalanceTests.test_single_rank_is_identity) ... ok
+test_all_ranks_wait_beyond_collective_timeout_and_continue (tests.test_periodic_evaluation.PeriodicEvaluationTests.test_all_ranks_wait_beyond_collective_timeout_and_continue) ... ok
+test_evaluator_failure_is_propagated_to_every_rank (tests.test_periodic_evaluation.PeriodicEvaluationTests.test_evaluator_failure_is_propagated_to_every_rank) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 12.612s
+
+OK

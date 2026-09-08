@@ -214,6 +214,13 @@ RMSNorm, learned residual/input routing, depth-scaled initialization, rank
 balancing, and square-root masked-target weighting. RoPE remains 10k, FFN
 width remains 2048, and its embeddings are untied.
 
+The next scale-up comparison uses **eight H100s, batch 2,048, 100,000 steps,
+and full evaluation every 10,000 steps** on Nibi. The [AdamW baseline
+learning curve](reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md)
+is followed by [Setting 3](reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md).
+Both preserve their full final optimizer checkpoints for continuation. These
+runs have twice the sequence exposure of the four-GPU table above.
+
 All use base LR 5e-4, base WD 0.01, and a 1,000-step warmup; Muon retains R02's
 per-group LR/WD multipliers. Validation uses the same 4,096 held-out sequences
 and P@L uses the same 20,775 chains. Intervals are 5,000-resample chain-bootstrap
