@@ -114,7 +114,7 @@ Two branches were stopped after preflight and have no model-quality result: batc
 - Current model: 24 layers, width 768, 12 heads, SwiGLU FFN width 1536, whole-projection Q/K LayerNorm, RoPE base 10,000, and tied vocabulary embeddings.
 - Native Muon handles 96 transformer matrices; AdamW handles embeddings, prediction head, and scalar parameters. Global batch 256, context 512, 15% masking, balanced ranks, and square-root target-count weighting remain accepted.
 
-Full contract: [program2.md](../../program2.md). Accepted seed configs: [seed 42](../../configs/program2/r29_tied_seed42.yaml), [seed 43](../../configs/program2/r29_tied_seed43.yaml). The runner requires `CONFIG` to select these explicitly; its default belongs to the separate P@L campaign.
+Full contract: [program2.md](../../docs/archive/program2.md). Accepted seed configs: [seed 42](../../configs/archive/program2/r29_tied_seed42.yaml), [seed 43](../../configs/archive/program2/r29_tied_seed43.yaml). The runner requires `CONFIG` to select these explicitly; its default belongs to the separate P@L campaign.
 
 ## Evidence and research provenance
 

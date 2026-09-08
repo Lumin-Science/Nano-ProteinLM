@@ -1,86 +1,29 @@
 # Training configurations
 
-There are 29 YAML presets and one scale-up manifest. New training and task runs
-use Setting 3 via [`default.yaml`](default.yaml); the original AdamW
-recipe remains the comparator. The [cleanup plan](../docs/CONFIG_CLEANUP_PLAN.md)
-targets four maintained presets: Setting 3 as `default.yaml`, plus original
-ESMC-like 171M, 300M and 600M. The historical files below are still present pending
-that migration; the 600M training YAML has not yet been added. `default.yaml`
-preserves Setting 3's model/optimizer choices; stopping budgets are explicit
-training arguments. The default's source is included in the historical index below.
+Two recipes are maintained:
 
-The [171M task](../task/171m-validation-loss.md) requires total trainable parameters within
-±5% of the original 170,671,168: **162,137,610–179,204,726**. Rescale overall
-width or depth when a component change would take the model outside that range.
-R22 and R29's 142M research presets are historical; rescale and rerun them
-before using them under this rule.
-
-## 171M one-hour research: 13 presets
-
-These use four L40S GPUs, global batch 256, context 512, and a 554-step warmup
-followed by constant learning rates. Each paired recipe has two files that
-differ only in training seed.
-
-| Recipe | Configs | Parameters | Role |
+| Recipe | File | Parameters | Role |
 |---|---|---:|---|
-| Original AdamW | [original](esmc-171m-original.yaml) | 170,671,168 | Scientific baseline; seed 20260824 |
-| Paired AdamW baseline | [42](program2/baseline_seed42.yaml), [43](program2/baseline_seed43.yaml) | 170,671,168 | Baseline for the published research history |
-| R01 Muon | [42](program2/r01_muon_seed42.yaml), [43](program2/r01_muon_seed43.yaml) | 170,671,168 | Historical recipe; within the size bound |
-| R04 + rank balance | [42](program2/r04_batchbalance_seed42.yaml), [43](program2/r04_batchbalance_seed43.yaml) | 170,671,168 | Historical recipe; within the size bound |
-| R10 + square-root loss weights | [42](program2/r10_sqrtloss_seed42.yaml), [43](program2/r10_sqrtloss_seed43.yaml) | 170,671,168 | Historical recipe; within the size bound |
-| R22 + FFN width 1536 | [42](program2/r22_ffn1536_seed42.yaml), [43](program2/r22_ffn1536_seed43.yaml) | 142,359,616 | Historical; below the current size bound |
-| R29 + tied embeddings | [42](program2/r29_tied_seed42.yaml), [43](program2/r29_tied_seed43.yaml) | 142,310,464 | Historical; below the current size bound |
+| Current best — Setting 3 | [default.yaml](default.yaml) | 170,559,856 | Muon, RMSNorm, residual routing and initialization, batch balance, sqrt loss |
+| Original ESMC-like AdamW | [esmc-171m-original.yaml](esmc-171m-original.yaml) | 170,671,168 | Original 171M reference recipe |
 
-## H100 100k-step comparisons: 6 presets
+Both use the 24-layer, 768-wide backbone with FFN width 2,048 and untied
+embeddings. The default has RoPE 10k, base LR 5e-4, base WD 0.01, warmup 1,000,
+and a four-H100 batch layout of 1,024 with FA3. The original retains its
+family-scaled LR/WD, 554-step warmup and four-L40S batch layout of 256 with FA2.
+Selecting the original recipe does not make these hyperparameters match.
 
-All use four H100 GPUs, FA3, global batch 1,024, context 512, base LR 5e-4,
-base WD 0.01, a 1,000-step warmup, and a 16-hour guard. Each run starts from
-scratch. The four cumulative presets retain FFN width 2048 and about 171M
-parameters; their R29 differs from the narrower one-hour R29 above.
+[`runs/speedrun.sh`](../runs/speedrun.sh) calls setup, then trains the current
+best for 100k steps with a 16-hour guard. It accepts a recipe, fresh run name
+and ordinary training options; see [training](../docs/USAGE.md#training).
+The Python API remains available directly. Every run saves its effective
+configuration, so execution settings do not need another permanent YAML.
 
-| Recipe | Config | Role |
-|---|---|---|
-| AdamW | [default 100k](esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml) | Scale-up baseline |
-| R02, RoPE 20k | [R02 100k](esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml) | Completed reference recipe |
-| R02, RoPE 10k | [setting 1](program2_h100_100k/r02_rope10k.yaml) | Starting recipe for the cumulative comparison |
-| + rank balance | [setting 2](program2_h100_100k/r04_batchbalance.yaml) | Cumulative change |
-| + square-root loss weights | [setting 3](program2_h100_100k/r10_sqrtloss.yaml) | Cumulative change |
-| + tied embeddings | [setting 4](program2_h100_100k/r29_tied.yaml) | Cumulative change |
+The [171M research task](../task/171m-validation-loss.md) supplies its own
+fixed-time protocol and requires **162,137,610–179,204,726** trainable parameters
+(±5% of the original reference).
 
-The [manifest](program2_h100_100k/manifest.json) records settings and config
-hashes. See the [recipe differences](../docs/PROGRAM2_SCALEUP.md) and
-[results](../reports/fir-r02-rope10k-100k-20260906/README.md) for the comparison.
-
-## Nibi eight-H100 comparisons: 2 presets
-
-The [batch-2,048 AdamW baseline](esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml)
-keeps the four-GPU baseline's 100,000 steps, LR 5e-4, WD 0.01, and warmup 1,000.
-It uses 64 sequences/GPU and four accumulation steps on eight H100s, with a
-24-hour training guard and checkpoint evaluation every 10,000 steps (full
-validation MLM and contact P@L, with evaluation time recorded separately). See the
-[launch record](../reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md) and
-[four-GPU continuation instructions](../docs/checkpoint-resume.md).
-
-The [batch-2,048 Setting 3](esmc-171m-setting3-nibi-fa3-b2048-stage1-100k.yaml)
-uses the same budget, batch, base LR/WD, warmup and evaluation cadence. It retains
-the winning Fir recipe's Muon group multipliers, RMSNorm, residual routing and
-initialization, batch balance and sqrt loss. Its [queue and qualification
-record](../reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md) places it
-after the Nibi baseline and preserves the full final Muon/AdamW checkpoint.
-
-## Older presets and reproduction references: 7 presets
-
-| Config | Purpose |
-|---|---|
-| [171M R02, one hour](autoresearch_171m_4xl40s_1h.yaml) | Earlier contact-selected campaign; Muon, retained architecture, RoPE 20k |
-| [171M AdamW, H100 12 hours](esmc-171m-original-h100-fa3-12h.yaml) | Earlier batch-256 FA3 preset with a wall-time budget |
-| [171M AdamW, H100 10k steps](esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml) | Cancelled pilot, superseded by the 100k comparison |
-| [171M R02, H100 10k steps](esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml) | Cancelled pilot, superseded by the 100k comparison |
-| [300M original](esmc-300m-original.yaml) | Original reproduction recipe; retained by the historical Stage-1 launcher |
-| [300M one-hour autoresearch](autoresearch_300m_4xa100_1h.yaml) | Earlier contact-selected recipe with a final-20% cooldown |
-| [300M current-best alias](esmc-300m-current-best.yaml) | Same configuration values as the preceding preset; compatibility alias |
-
-The one-hour autoresearch launcher defaults to the original 171M AdamW preset.
-The general `runs/speedrun.sh` helper now defaults to Setting 3; the
-[recommended training command](../README.md#training-a-170m-model) calls the Python API directly. Older paths remain
-available because scripts, published results, and audit records reference them.
+The [archive](archive/README.md) preserves all 27 retired presets and the scale-up
+manifest, including the 300M, paired-seed, H100 and Nibi experiments. Historical
+configs and hashes are unchanged. The 300M and 600M architectures remain in code;
+additional maintained recipes can be added when needed.

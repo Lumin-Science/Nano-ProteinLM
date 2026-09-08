@@ -150,7 +150,7 @@ CONTACT_ROOT=/path/to/frozen-contact-data \
 EXTERNAL_SRC=/path/to/evaluation-source \
 CONTACT_SCORING_CACHE_ROOT=/path/to/contact-scoring-cache \
 EVAL_GPUS=0,1,2,3 \
-  bash runs/evaluate_p_at_l_parallel.sh
+  bash scripts/evaluate_p_at_l_parallel.sh
 ```
 
 Omit `CONTACT_SCORING_CACHE_ROOT` to disable only the static cache. Probe reuse,

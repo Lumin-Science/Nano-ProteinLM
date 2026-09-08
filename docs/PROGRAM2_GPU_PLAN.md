@@ -18,10 +18,10 @@ All use our completed R02 architecture with RoPE reset from 20k to **10k**.
 
 | Setting | Config | Added change | Parameters |
 |---|---|---|---:|
-| 1. R02-RoPE10k | [r02_rope10k.yaml](../configs/program2_h100_100k/r02_rope10k.yaml) | Completed R02 recipe, RoPE 10k | 170,559,856 |
-| 2. + batch balance | [r04_batchbalance.yaml](../configs/program2_h100_100k/r04_batchbalance.yaml) | Balance the same masked examples across ranks | 170,559,856 |
-| 3. + sqrt loss | [r10_sqrtloss.yaml](../configs/program2_h100_100k/r10_sqrtloss.yaml) | Square-root masked-target weighting | 170,559,856 |
-| 4. + tied embeddings | [r29_tied.yaml](../configs/program2_h100_100k/r29_tied.yaml) | Share input/output vocabulary weights | 170,510,704 |
+| 1. R02-RoPE10k | [r02_rope10k.yaml](../configs/archive/program2_h100_100k/r02_rope10k.yaml) | Completed R02 recipe, RoPE 10k | 170,559,856 |
+| 2. + batch balance | [r04_batchbalance.yaml](../configs/archive/program2_h100_100k/r04_batchbalance.yaml) | Balance the same masked examples across ranks | 170,559,856 |
+| 3. + sqrt loss | [r10_sqrtloss.yaml](../configs/archive/program2_h100_100k/r10_sqrtloss.yaml) | Square-root masked-target weighting | 170,559,856 |
+| 4. + tied embeddings | [r29_tied.yaml](../configs/archive/program2_h100_100k/r29_tied.yaml) | Share input/output vocabulary weights | 170,510,704 |
 
 Shared architecture: **24 layers, width 768, 12 heads, SwiGLU FFN width 2048,
 parameter-free RMSNorm, learned residual/input routing, depth-scaled residual

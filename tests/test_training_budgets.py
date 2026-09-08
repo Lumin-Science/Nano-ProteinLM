@@ -100,9 +100,9 @@ class TrainingBudgetTests(unittest.TestCase):
 
     def test_public_best_alias_matches_canonical_incumbent(self) -> None:
         root = Path(__file__).resolve().parents[1]
-        with (root / "configs/esmc-300m-current-best.yaml").open() as handle:
+        with (root / "configs/archive/esmc-300m-current-best.yaml").open() as handle:
             public_best = yaml.safe_load(handle)
-        with (root / "configs/autoresearch_300m_4xa100_1h.yaml").open() as handle:
+        with (root / "configs/archive/autoresearch_300m_4xa100_1h.yaml").open() as handle:
             campaign_incumbent = yaml.safe_load(handle)
         self.assertEqual(public_best, campaign_incumbent)
 

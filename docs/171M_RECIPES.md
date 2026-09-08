@@ -2,11 +2,11 @@
 
 “175M” in this project refers to the 24-layer, width-768, 12-head family.
 The new default is prepared in
-[`esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml`](../configs/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml).
+[`esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml`](../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml).
 Its peak LR of **5e-4**, base weight decay of **0.01**, and **1,000-step warmup**
 are explicit user settings.
 The matched R02 variant is prepared in
-[`esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml`](../configs/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml).
+[`esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml`](../configs/archive/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml).
 The table now compares these two aligned presets with the paper reference.
 Both aligned variants completed training and evaluation on September 6, 2026.
 R02 reached validation loss **2.43698** and P@L **30.31%**, compared with
@@ -45,9 +45,9 @@ A.1.1–A.1.4.1 and Tables S3–S4 of
 ### Superseded 10k-step pilot
 
 The initial paired pilot used
-[`esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml`](../configs/esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml)
+[`esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml`](../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml)
 on Fir `fc10111` and
-[`esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml`](../configs/esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml)
+[`esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml`](../configs/archive/esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml)
 on Fir `fc10212`. The user corrected the intended budget to 100,000 steps
 and explicitly requested cancellation and fresh relaunches. Both pilot
 training steps were cancelled on September 6, 2026, while preserving the

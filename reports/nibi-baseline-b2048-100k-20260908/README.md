@@ -35,7 +35,7 @@ of an undisclosed paper optimizer calibration.
 | Corpus | Same public, homology-filtered corpus as the Fir comparison |
 | Checkpoints | Rolling latest every 10,000 steps; final retained on project storage |
 
-Configuration: [`esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml`](../../configs/esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml).
+Configuration: [`esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml`](../../configs/archive/esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml).
 Continuation instructions: [`checkpoint-resume.md`](../../docs/checkpoint-resume.md).
 
 Scratch root: `/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-20260908`.

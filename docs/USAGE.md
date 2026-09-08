@@ -1,91 +1,100 @@
 # Usage
 
-## Requirements
-
-Use Linux, a compatible NVIDIA driver and `uv >=0.11.31,<0.12`. Python and
-project dependencies are pinned in the repository. Research uses four L40S GPUs;
-the recommended 100k-step training example uses four H100s and BF16/FA3.
-
 ## Setup
 
-Run commands from the repository root. Copy the environment example and edit
-only the two root paths; no cache, model, seed or budget settings belong in `.env`.
-
-```bash
-cp .env.example .env
-# Edit DATA_ROOT and OUTPUT_ROOT in .env for this machine.
-set -a
-source .env
-set +a
-uv sync --frozen
-```
-
-The standard layout is:
+The [README](../README.md#setup) contains the supported setup and training
+quickstart. Run `bash runs/setup_env_and_data.sh` to prepare the environment and
+training data, or `bash runs/speedrun.sh` to perform setup and train the default
+recipe in one call. The only local settings are `DATA_ROOT` and `OUTPUT_ROOT`
+in an optional `.env`; defaults are the repository's `data/` and `outputs/`.
 
 ```text
 $DATA_ROOT/
-  training/             # Verified prepared corpus, including MLM validation data
-  evaluation/contact/   # Frozen contact dataset
-  evaluation/source/    # Pinned evaluator source containing autoresearch_esm
-  cache/                # Downloaded corpus shards, managed by data preparation
+  training/             # Verified training subset and MLM validation data
+  cache/                # Downloaded corpus shards
+  evaluation/contact/   # Frozen contact dataset, installed separately
+  evaluation/source/    # Pinned source containing autoresearch_esm
 $OUTPUT_ROOT/
-  <experiment>/         # Checkpoints, effective configs, logs and evaluation records
+  <run-name>/           # Checkpoints, effective config, logs and evaluation records
 ```
 
-Prepare the fixed corpus used by the benchmark:
-
-```bash
-uv run --frozen python scripts/download_data.py \
-  --repo-id LuminScience/LuminBench-Nano-ESMC \
-  --revision bd38448d50d8f426d7b9bd4410b53159ea001259 \
-  --training-samples 5376000 \
-  --cache-root "$DATA_ROOT/cache" --output-root "$DATA_ROOT/training"
-```
-
-Install the frozen contact payload and evaluator source at the locations above
-before contact evaluation; existing verified directories can be linked there.
-See [evaluation provenance](EVALUATION.md#dataset-provenance-and-split-contract).
-Contact data/source packaging for a fresh public installation remains part of
-the [release cleanup](CONFIG_CLEANUP_PLAN.md); these are not downloaded by the
-training-data command. Training and MLM evaluation do not require them.
+The setup script pins the release revision and downloads the same whole-shard
+prefix used by the benchmark: 7,109,469 training proteins, plus all 12,288
+validation proteins. Training repeatedly samples this subset; it does not
+consume the full 666.0M release. To prepare a different corpus size for independent
+research, call `scripts/download_data.py` directly with `--training-samples`,
+`--revision`, `--cache-root` and `--output-root`.
 
 ## Training
 
-Use the [README's direct training command](../README.md#training-a-170m-model). It selects
-[Setting 3](../configs/default.yaml), with 100,000 steps and a 16-hour guard.
-The recipe contains model/optimizer settings; command-line options select the
-execution budget and can override seed, attention, warmup and batch layout.
-Every run records the source config hash and writes its effective `config.yaml`.
+The speedrun is a readable shell script that calls the ordinary Python API:
 
-To inspect a resolved recipe without GPUs or training:
+```bash
+# Same best recipe, fresh output directory, different seed.
+bash runs/speedrun.sh configs/default.yaml setting3-seed42 --seed 42
+
+# Original AdamW recipe with its original one-hour budget and no step cap.
+bash runs/speedrun.sh configs/esmc-171m-original.yaml adamw-1h \
+  --max-steps none --walltime-seconds 3600
+```
+
+It uses four GPUs. Arguments after the recipe and run name pass through to
+`nano_protein.train`, overriding the default 100k-step/16-hour limits. For
+example, `--attention-backend flash` selects FA2 on L40S; a long run on slower
+hardware may also need a larger `--walltime-seconds` guard. `.env` contains paths,
+not these execution settings. Each output directory must be fresh.
+
+For other GPU counts or full control, call the training API directly:
+
+```bash
+set -a
+if [ -f .env ]; then source .env; fi
+source .env.example
+set +a
+uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
+  -m nano_protein.train --config configs/default.yaml \
+  --max-steps 100000 --walltime-seconds 57600 \
+  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/setting3-direct"
+```
+
+The recipe owns model and optimizer settings. CLI options select the execution
+budget and can override seed, attention, warmup and batch layout. Every run
+records the source config hash and saves its effective `config.yaml`. To inspect
+the resolved recipe without GPUs or training:
 
 ```bash
 uv run --frozen python -m nano_protein.train --config configs/default.yaml \
   --seed 42 --max-steps 100000 --walltime-seconds 57600 --print-config
 ```
 
-Budget arguments accept `none` to clear an inherited step/token limit explicitly.
-Batch-layout overrides require a single-stage recipe. Use fresh output directories;
-see [checkpoint continuation](checkpoint-resume.md) for resuming saved optimizer state.
+Budget arguments accept `none` to clear inherited step/token limits. Batch-layout
+overrides require a single-stage recipe. Full final checkpoints include optimizer
+state; see [continuation](checkpoint-resume.md) for resuming on another GPU count.
 
 ## AutoResearch
 
 [program.md](../program.md) directs an agent to the selected
-[task definition](../task/171m-validation-loss.md). Run one complete research
-measurement with the transparent shell example:
+[task definition](../task/171m-validation-loss.md). Run one research measurement:
 
 ```bash
 bash task/171m-validation-loss_ar.sh configs/default.yaml experiment-001
 ```
 
-It loads `.env`, checks the frozen inputs and four L40S GPUs, runs seeds 42 and 43
-through the ordinary training/evaluation APIs, and reports mean loss and sample
-SD in `$OUTPUT_ROOT/experiment-001/summary.json`. It records full contact P@L as a
-diagnostic. It does not search, decide acceptance or launch Test of Progress.
+The task script loads `.env`, checks frozen inputs and four L40S GPUs, runs seeds
+42 and 43 through the standard training/evaluation APIs, and reports mean loss
+and sample SD in `$OUTPUT_ROOT/experiment-001/summary.json`. It records full
+contact P@L as a diagnostic. Search and acceptance decisions belong to the agent.
 
 ## Evaluation
 
-To evaluate one saved checkpoint directly:
+Training and MLM validation are ready after setup. For contact P@L, install the
+frozen contact payload under `$DATA_ROOT/evaluation/contact/` and the pinned
+evaluator source under `$DATA_ROOT/evaluation/source/`; existing verified
+directories can be linked there. These are not downloaded by the setup script.
+Public packaging remains [release work](CONFIG_CLEANUP_PLAN.md); see
+[evaluation provenance](EVALUATION.md#dataset-provenance-and-split-contract).
+
+With the two roots loaded in your shell, evaluate a saved checkpoint:
 
 ```bash
 uv run --frozen python -m nano_protein.evaluate \
@@ -96,17 +105,7 @@ uv run --frozen python -m nano_protein.evaluate \
   --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
 ```
 
-Test of Progress is a separate, owner-run experiment using the
-[manual commands](EVALUATION.md#manual-test-of-progress). There is no verification
-launcher. Optional parallel evaluation tools and metric details are documented
-in [EVALUATION.md](EVALUATION.md).
-
-## Existing launch helpers
-
-`runs/speedrun.sh` remains an optional data-preparation/training convenience. It
-now reads the same two roots, defaults to Setting 3 for 100k steps on four H100s,
-qualifies the configured attention backend, and uses normal UV cache defaults.
-Its `RUN_NAME` selects a child directory of `OUTPUT_ROOT`; it no longer treats
-`OUTPUT_ROOT` as the individual run directory or `DATA_ROOT` as prepared data.
-Other files in `runs/` preserve historical interfaces until the remaining cleanup.
-The direct Python APIs remain available independently of these helpers.
+Omit `--run-contact` and the contact arguments for MLM alone. Parallel evaluation
+helpers live in `scripts/`; [EVALUATION.md](EVALUATION.md) documents their interfaces.
+Test of Progress is owner-run using the [manual commands](EVALUATION.md#manual-test-of-progress).
+There is no verification launcher.

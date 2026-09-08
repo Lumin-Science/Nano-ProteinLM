@@ -1,0 +1,155 @@
+"""Exercise shell control flow without CUDA; resolve recipes with the real training CLI."""
+
+import json
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+MOCK_UV = r"""#!/usr/bin/env python3
+import json, os, subprocess, sys
+from pathlib import Path
+args = sys.argv[1:]
+with Path(os.environ['LAUNCH_TEST_LOG']).open('a') as log:
+    log.write(json.dumps(args) + '\n')
+if args[0] == 'sync':
+    sys.exit(0)
+assert args[:4] == ['run', '--frozen', '--no-dev', 'python'], args
+args = args[4:]
+if args[0] == 'scripts/download_data.py':
+    root = Path(args[args.index('--output-root') + 1])
+    root.mkdir(parents=True)
+    for name in ('manifest.json', 'CORPUS_VERIFICATION.json'):
+        (root / name).write_text('{}')
+elif args[0] == '-':
+    # Receipt validation is exercised by the real trainer, not this shell-flow test.
+    assert Path(args[1], 'CORPUS_VERIFICATION.json').is_file()
+    sys.stdin.read()
+elif args[0] == 'scripts/check_environment.py':
+    if os.environ.get('LAUNCH_TEST_QUALIFY_FAIL'):
+        sys.exit(1)
+    Path(args[args.index('--output') + 1]).write_text('{}')
+elif args[:2] == ['-m', 'torch.distributed.run']:
+    train_args = args[args.index('nano_protein.train') + 1:]
+    out = Path(train_args[train_args.index('--output-root') + 1])
+    resolved = subprocess.check_output(
+        [os.environ['LAUNCH_TEST_PYTHON'], '-m', 'nano_protein.train',
+         *train_args, '--print-config'], text=True)
+    (out / 'resolved-test.yaml').write_text(resolved)
+    for name in ('run_contract.json', 'TRAINING_COMPLETE.json', 'checkpoint-final.pt'):
+        (out / name).write_text('test artifact')
+else:
+    sys.exit(subprocess.call([os.environ['LAUNCH_TEST_PYTHON'], *args]))
+"""
+
+
+class LaunchScriptTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        (self.root / "runs").mkdir()
+        (self.root / "configs").mkdir()
+        for name in ("setup_env_and_data.sh", "speedrun.sh"):
+            shutil.copy(ROOT / "runs" / name, self.root / "runs" / name)
+        shutil.copy(ROOT / ".env.example", self.root / ".env.example")
+        shutil.copy(ROOT / "configs/default.yaml", self.root / "configs/default.yaml")
+        self.data = self.root / "data with spaces"
+        self.output = self.root / "outputs with spaces"
+        (self.root / ".env").write_text(
+            f"DATA_ROOT={shlex.quote(str(self.data))}\n"
+            f"OUTPUT_ROOT={shlex.quote(str(self.output))}\n"
+        )
+        uv = self.root / "mock-uv"
+        uv.write_text(MOCK_UV)
+        uv.chmod(0o755)
+        self.log = self.root / "commands.jsonl"
+        self.env = {
+            **os.environ,
+            "UV_BIN": str(uv),
+            "PYTHONPATH": str(ROOT),
+            "LAUNCH_TEST_LOG": str(self.log),
+            "LAUNCH_TEST_PYTHON": sys.executable,
+        }
+        for name in ("DATA_ROOT", "OUTPUT_ROOT"):
+            self.env.pop(name, None)
+
+    def run_script(self, name, *args, success=True):
+        result = subprocess.run(
+            ["bash", str(self.root / "runs" / name), *args],
+            cwd=self.root.parent,
+            env=self.env,
+            capture_output=True,
+            text=True,
+        )
+        if success:
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        else:
+            self.assertNotEqual(result.returncode, 0)
+        return result
+
+    def commands(self):
+        return [json.loads(line) for line in self.log.read_text().splitlines()]
+
+    def test_speedrun_prepares_data_and_resolves_real_default(self):
+        import yaml
+
+        self.run_script("speedrun.sh")
+        output = self.output / "setting3-100k"
+        config = yaml.safe_load((output / "resolved-test.yaml").read_text())
+        self.assertEqual(config["optimizer"], "muon")
+        self.assertEqual(config["max_steps"], 100000)
+        self.assertEqual(config["walltime_seconds"], 57600)
+        self.assertEqual(config["attention_backend"], "flash3")
+        self.assertEqual(config["stages"][0]["gradient_accumulation"], 4)
+        self.assertTrue((output / "checkpoint-final.pt").is_file())
+        before = len(self.commands())
+        self.run_script("speedrun.sh", success=False)
+        self.assertFalse(
+            any("torch.distributed.run" in row for row in self.commands()[before:])
+        )
+
+    def test_setup_reuses_data_and_does_not_launch_training(self):
+        self.run_script("setup_env_and_data.sh")
+        self.run_script("setup_env_and_data.sh")
+        commands = self.commands()
+        self.assertEqual(sum("scripts/download_data.py" in row for row in commands), 1)
+        self.assertFalse(any("torch.distributed.run" in row for row in commands))
+
+    def test_incomplete_data_and_failed_qualification_block_training(self):
+        (self.data / "training").mkdir(parents=True)
+        self.run_script("speedrun.sh", success=False)
+        self.assertFalse(any("torch.distributed.run" in row for row in self.commands()))
+        (self.data / "training").rmdir()
+        self.env["LAUNCH_TEST_QUALIFY_FAIL"] = "1"
+        self.run_script("speedrun.sh", success=False)
+        self.assertFalse(any("torch.distributed.run" in row for row in self.commands()))
+
+    def test_cli_overrides_reach_qualification_and_training(self):
+        import yaml
+
+        self.run_script(
+            "speedrun.sh",
+            "configs/default.yaml",
+            "custom-run",
+            "--attention-backend",
+            "flash",
+            "--seed",
+            "43",
+            "--max-steps",
+            "none",
+            "--walltime-seconds",
+            "3600",
+        )
+        config = yaml.safe_load((self.output / "custom-run/resolved-test.yaml").read_text())
+        self.assertEqual((config["seed"], config["attention_backend"]), (43, "flash"))
+        self.assertIsNone(config["max_steps"])
+        self.assertEqual(config["walltime_seconds"], 3600)
+        check = next(row for row in self.commands() if "scripts/check_environment.py" in row)
+        self.assertEqual(check[check.index("--attention-backend") + 1], "flash")

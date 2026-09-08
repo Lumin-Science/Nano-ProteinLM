@@ -109,10 +109,10 @@ establish how the combined changes behave after 100k steps.
 
 | Prepared config | Increment over preceding row | Balanced ranks | Training loss | FFN hidden width | Tied embeddings | Parameters |
 |---|---|---|---|---:|---|---:|
-| [1. R02 RoPE10k](../configs/program2_h100_100k/r02_rope10k.yaml) | Completed R02 recipe, `rotary_base: 10000.0` | No | Sequence mean | 2048 | No | 170,559,856 |
-| [2. + R04 batch balance](../configs/program2_h100_100k/r04_batchbalance.yaml) | `balance_batches_across_ranks: true` | Yes | Sequence mean | 2048 | No | 170,559,856 |
-| [3. + R10 sqrt loss](../configs/program2_h100_100k/r10_sqrtloss.yaml) | `training_loss_reduction: sqrt_mask_count` | Yes | Square-root target weights | 2048 | No | 170,559,856 |
-| [4. + R29 tied](../configs/program2_h100_100k/r29_tied.yaml) | `tie_word_embeddings: true` | Yes | Square-root target weights | 2048 | Yes | 170,510,704 |
+| [1. R02 RoPE10k](../configs/archive/program2_h100_100k/r02_rope10k.yaml) | Completed R02 recipe, `rotary_base: 10000.0` | No | Sequence mean | 2048 | No | 170,559,856 |
+| [2. + R04 batch balance](../configs/archive/program2_h100_100k/r04_batchbalance.yaml) | `balance_batches_across_ranks: true` | Yes | Sequence mean | 2048 | No | 170,559,856 |
+| [3. + R10 sqrt loss](../configs/archive/program2_h100_100k/r10_sqrtloss.yaml) | `training_loss_reduction: sqrt_mask_count` | Yes | Square-root target weights | 2048 | No | 170,559,856 |
+| [4. + R29 tied](../configs/archive/program2_h100_100k/r29_tied.yaml) | `tie_word_embeddings: true` | Yes | Square-root target weights | 2048 | Yes | 170,510,704 |
 
 The first row changes only the completed R02's effective RoPE setting; explicit
 default fields in the YAML clarify the unchanged FFN/loss/embedding settings.
@@ -172,7 +172,7 @@ Batch 1,024 uses 64 examples/GPU × 4 GPUs × 4 accumulation microsteps. The
 imported R10 implementation normalizes weights **across ranks within each
 256-example microstep**, then averages four microstep gradients. It does not
 normalize once jointly across all 1,024 examples. That retained accumulation
-behavior is explicit in the [machine-readable manifest](../configs/program2_h100_100k/manifest.json).
+behavior is explicit in the [machine-readable manifest](../configs/archive/program2_h100_100k/manifest.json).
 
 Use the same verified training data and evaluate each final checkpoint with
 `--validation-batches 256 --validation-batch-size 16 --validation-context 512`

@@ -1,5 +1,11 @@
 # LuminBench Nano-ESMC
 
+- [Data](#data)
+- [Usage](#usage)
+- [AutoResearch](#autoresearch)
+- [Test Leaderboard](#test-leaderboard)
+- [Citation](#citation)
+
 Nano-ESMC provides ESMC-style protein language-model training with public,
 decontaminated data and fixed evaluations. Use it to reproduce and modify
 protein LM pretraining, or benchmark agentic autoresearch under controlled
@@ -7,11 +13,6 @@ training budgets. Contributions of training recipes, evaluation tasks and
 hardware reproductions are welcome.
 
 ## Data
-
-Following the [ESMC data recipe](https://doi.org/10.64898/2026.06.03.729735),
-we quality-filter, deduplicate and cluster public UniRef90, MGnify and OMG/IMG
-sequences at 70% identity. We remove evaluation matches and homologs before
-splitting and verifying the release, yielding **666.0M training proteins**.
 
 ```mermaid
 flowchart LR
@@ -28,16 +29,51 @@ flowchart LR
     class R output
 ```
 
-| Source | [UniRef90](https://doi.org/10.1093/bioinformatics/btu739) | [MGnify](https://doi.org/10.1093/nar/gkac1080) | [OMG/IMG](https://doi.org/10.1101/2024.08.14.607850) | **Total** |
-|---|---:|---:|---:|---:|
-| Training records (M) | 74.2 | 328.9 | 262.8 | **666.0** |
+<table align="center">
+  <tr>
+    <th align="center">Source</th>
+    <th align="center"><a href="https://doi.org/10.1093/bioinformatics/btu739">UniRef90</a></th>
+    <th align="center"><a href="https://doi.org/10.1093/nar/gkac1080">MGnify</a></th>
+    <th align="center"><a href="https://doi.org/10.1101/2024.08.14.607850">OMG/IMG</a></th>
+    <th align="center">Total</th>
+  </tr>
+  <tr>
+    <td align="center">Training proteins</td>
+    <td align="center">74.2M</td>
+    <td align="center">328.9M</td>
+    <td align="center">262.8M</td>
+    <td align="center"><strong>666.0M</strong></td>
+  </tr>
+</table>
+
+Following the [ESMC data recipe](https://doi.org/10.64898/2026.06.03.729735),
+we combine pinned UniRef90 and MGnify releases with public OMG/IMG proteins.
+Sequences are normalized to uppercase, stripped of whitespace and terminal stop
+characters, and filtered to remove proteins shorter than 60 amino acids or with
+more than 20% non-canonical residues. MGnify-derived records in OMG are excluded
+from the IMG arm to avoid sampling the same source twice.
+
+We collapse exact sequence duplicates and cluster each source with MMseqs2
+Linclust at **70% sequence identity and 80% coverage** of the shorter sequence.
+To protect evaluation, we exclude exact matches and homologs of a frozen union
+of **317,000 evaluation proteins**. The homology filter requires at least 30%
+identity, 80% coverage of both sequences and an E-value of at most 0.001.
+Shared representatives are assigned to one source in UniRef90 → MGnify → OMG/IMG
+order, so they cannot be overweighted through cross-source duplicates.
+
+After the storage-length filter, we reserve **4,096 validation proteins per
+source** and write the remaining **666.0M training proteins** to deterministic
+Parquet shards. An independent verifier checks sequence and shard hashes,
+duplicate removal, evaluation exclusions and train/validation separation before
+publication. The setup script downloads a fixed shard subset of this release
+for the benchmark, together with all three validation shards.
 
 > [!NOTE]
 > **Gap from ESMC:** public OMG/IMG substitutes for the paper's July 2023 JGI
 > snapshot, leaving roughly **1.68B fewer 70%-identity representatives** in that
 > source arm; a public JGI-scale replacement remains future work.
 
-See the [construction details](docs/DATA.md), the [processed training release](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259) and the [raw clustering outputs before decontamination](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW), both hosted by LuminScience on Hugging Face.
+[Data preparation](docs/DATA.md) · [🤗 Processed data](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259) · [🤗 Raw dataset](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
 
 ## Usage
 
@@ -48,32 +84,44 @@ See the [construction details](docs/DATA.md), the [processed training release](h
 - Recommended Minimal Setting: Four L40S-class GPUs for the one-hour research profile;
 
 ```bash
-git clone https://github.com/Lumin-Science/LuminBench-Nano-ESMC.git
-cd LuminBench-Nano-ESMC
+git clone https://github.com/Lumin-Science/Nano-Protein-LM.git
+cd Nano-Protein-LM
 ```
+
+### Setup
+
+Use `data/` and `outputs/` inside the repository by default. To choose different
+locations, copy `.env.example` to `.env` and edit only `DATA_ROOT` and `OUTPUT_ROOT`.
+
+```bash
+bash runs/setup_env_and_data.sh
+```
+
+This installs the locked Python environment, downloads and verifies the benchmark
+training subset, and prepares `$DATA_ROOT/training/`. It reuses verified data on
+later runs; downloaded shards stay in `$DATA_ROOT/cache/`. Setup does not require
+GPUs. Contact evaluation additionally needs the frozen dataset and evaluator source
+under `$DATA_ROOT/evaluation/`; see [evaluation setup](docs/USAGE.md#evaluation).
 
 ### Training a 170M Model
 
-First configure the two roots and prepare the data using [Setup](docs/USAGE.md#setup).
-
-Train the recommended **Setting 3** recipe with the **171M backbone** for
-**100,000 Stage-1 steps**, using **four H100s**, global batch **1,024** and
-**BF16/FA3**:
+Run the current-best **Setting 3** recipe with one command; it calls setup automatically:
 
 ```bash
-set -a
-source .env
-set +a
-uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
-  -m nano_protein.train --config configs/default.yaml \
-  --max-steps 100000 --walltime-seconds 57600 \
-  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/setting3-100k"
+bash runs/speedrun.sh
 ```
 
-Training saves checkpoints and the resolved recipe under
-`$OUTPUT_ROOT/setting3-100k/`. Use a fresh output directory for repeats;
-the 16-hour guard allows the step budget to finish. See [other recipes](configs/README.md)
-and [execution details](docs/USAGE.md).
+The default is **100,000 Stage-1 steps on four H100s**, global batch **1,024**,
+context **512**, **BF16/FA3**, base learning rate **5e-4**, weight decay **0.01**
+and **1,000 warmup steps**. A 16-hour training guard stops an overlong run.
+Checkpoints, the resolved recipe and training records are saved under
+`$OUTPUT_ROOT/setting3-100k/`, including the full final optimizer state for
+[continuation](docs/checkpoint-resume.md). Repeats require a fresh run name.
+
+Two recipes are maintained: [current best](configs/default.yaml) and
+[original 171M AdamW](configs/esmc-171m-original.yaml). The scripts call the standard
+training API; [custom training commands](docs/USAGE.md#training) remain available
+for other budgets, hardware and recipe changes.
 
 ### Evaluation
 

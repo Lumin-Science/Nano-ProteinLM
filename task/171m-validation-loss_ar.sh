@@ -2,11 +2,12 @@
 # One recipe, two seeds: direct training and evaluation, with no search/acceptance policy.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+set -a
 if [[ -f .env ]]; then
-  set -a
   source .env
-  set +a
 fi
+source .env.example
+set +a
 : "${DATA_ROOT:?set DATA_ROOT in .env}"
 : "${OUTPUT_ROOT:?set OUTPUT_ROOT in .env}"
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1,2,3}"

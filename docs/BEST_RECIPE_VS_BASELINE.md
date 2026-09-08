@@ -362,8 +362,8 @@ recipe on its assigned node.
 
 ## 6. Reproduction and figure sources
 
-Use the [baseline preset](../configs/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml)
-and [setting-3 preset](../configs/program2_h100_100k/r10_sqrtloss.yaml).
+Use the [baseline preset](../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml)
+and [setting-3 preset](../configs/archive/program2_h100_100k/r10_sqrtloss.yaml).
 The exact executed configs are archived alongside their results:
 [baseline](../reports/fir-171m-100k-20260906/default/config.yaml) and
 [setting 3](../reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml).

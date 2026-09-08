@@ -25,7 +25,7 @@ fixed-size models on the same data and hardware.
   are protected. Search strategy and acceptance decisions belong to the agent.
 
 Configure the two local roots in [`.env`](../.env.example) using the
-[setup instructions](../docs/USAGE.md#setup). Then run:
+[setup instructions](../README.md#setup). Then run:
 
 ```bash
 bash task/171m-validation-loss_ar.sh configs/default.yaml experiment-001

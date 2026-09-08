@@ -20,7 +20,7 @@ aggregation are defined in [`EVALUATION.md`](EVALUATION.md).
 
 ### Original reference workflow
 
-`configs/esmc-300m-original.yaml` is the checkpoint-compatible ESMC-300M
+`configs/archive/esmc-300m-original.yaml` is the checkpoint-compatible ESMC-300M
 training recipe: 30 layers, width 960, 15 attention heads, and 332,997,184
 parameters. It uses four GPUs, context length 512, 64 sequences per GPU, and a
 14,400-second training-loop limit. This was the original public speedrun default.
@@ -41,8 +41,8 @@ the public record for these historical comparisons.
 
 ### Current compute-matched workflow
 
-`configs/esmc-300m-current-best.yaml` is the opt-in, exact one-hour
-AutoResearch incumbent; `configs/autoresearch_300m_4xa100_1h.yaml` is its
+`configs/archive/esmc-300m-current-best.yaml` is the opt-in, exact one-hour
+AutoResearch incumbent; `configs/archive/autoresearch_300m_4xa100_1h.yaml` is its
 campaign-named alias. That campaign used the original ESMC recipe as its
 reference. Its incumbent keeps the ESMC-300M class while adding learned
 residual/input routing, parameter-free transformer RMSNorm, depth-scaled
@@ -65,7 +65,7 @@ The experiment contract and retained changes are summarized in
 
 ### Validated ESMC-171M preset
 
-[`configs/autoresearch_171m_4xl40s_1h.yaml`](../configs/autoresearch_171m_4xl40s_1h.yaml)
+[`configs/archive/autoresearch_171m_4xl40s_1h.yaml`](../configs/archive/autoresearch_171m_4xl40s_1h.yaml)
 records the R02 winner from `autoresearch-171m`, promoted in `f3293e4` and
 documented in `9ec883b`. It has 170,559,856 parameters: 24 layers, width 768,
 and 12 attention heads. It combines learned residual/input routing,
