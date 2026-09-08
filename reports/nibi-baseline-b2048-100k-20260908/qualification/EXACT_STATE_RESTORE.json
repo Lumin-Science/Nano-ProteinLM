@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "all_model_tensors_restored_exactly": true,
+  "all_adamw_tensors_restored_exactly": true,
+  "adamw_parameter_states": 248,
+  "after_100_resumed_updates_model_relative_l2_difference": 0.026075188341849288
+}

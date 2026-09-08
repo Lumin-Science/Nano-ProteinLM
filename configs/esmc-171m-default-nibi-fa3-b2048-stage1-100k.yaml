@@ -19,6 +19,10 @@ max_steps: 100000
 schedule_steps: 100000
 walltime_seconds: 86400
 checkpoint_interval: 10000
+periodic_evaluation_interval: 10000
+periodic_evaluation_command:
+  - bash
+  - /scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-eval10k-20260908-run/reports/nibi-baseline-b2048-100k-eval10k-20260908/evaluate-checkpoint.sh
 log_interval: 10
 peak_bf16_tflops_per_gpu: 989.5
 stages:

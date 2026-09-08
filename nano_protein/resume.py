@@ -71,6 +71,8 @@ def validate_resume(
         "log_interval",
         "checkpoint_interval",
         "expected_world_size",
+        "periodic_evaluation_interval",
+        "periodic_evaluation_command",
     ):
         old.pop(key, None)
         new.pop(key, None)

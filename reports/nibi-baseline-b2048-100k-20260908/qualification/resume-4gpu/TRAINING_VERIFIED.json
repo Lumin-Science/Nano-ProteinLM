@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "checkpoint_sha256": "7cd29d91fe8428165b07e25376e15ef0c16bd5030405bf59678d04b82e969bc4",
+  "config_sha256": "1165aff51f9fd74af0fda03cf46763d3ee6a2fb03910a4726e4ef80d0f5c031e",
+  "optimizer_steps": 220,
+  "sequences_seen": 450560,
+  "model_tokens": 106586842,
+  "world_size": 4,
+  "optimizer_state_tensors": 248,
+  "optimizer_layout": "replicated_ddp_full_state",
+  "finite_model_and_optimizer": true,
+  "flash3_verified": true,
+  "training_seconds": 17.255839928984642,
+  "measured_seconds_per_step": 0.8457911861827597,
+  "peak_cuda_memory_bytes": 24254697472,
+  "resume": {
+    "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-20260908/trial-8gpu/checkpoint-final.pt",
+    "data_mode": "new_deterministic_stream_for_changed_gpu_layout",
+    "data_seed": 221261427,
+    "global_batch_preserved": true,
+    "optimizer_restored": true,
+    "optimizer_step": 200,
+    "prior_training_seconds": 94.0915251399856,
+    "source_world_size": 8,
+    "world_size": 4
+  }
+}

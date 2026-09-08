@@ -51,8 +51,9 @@ hashes. See the [recipe differences](../docs/PROGRAM2_SCALEUP.md) and
 The [batch-2,048 AdamW baseline](esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml)
 keeps the four-GPU baseline's 100,000 steps, LR 5e-4, WD 0.01, and warmup 1,000.
 It uses 64 sequences/GPU and four accumulation steps on eight H100s, with a
-24-hour guard and a rolling checkpoint every 10,000 steps. See the
-[launch record](../reports/nibi-baseline-b2048-100k-20260908/README.md) and
+24-hour training guard and checkpoint evaluation every 10,000 steps (full
+validation MLM and contact P@L, with evaluation time recorded separately). See the
+[launch record](../reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md) and
 [four-GPU continuation instructions](../docs/checkpoint-resume.md).
 
 ## Older presets and reproduction references: 7 presets

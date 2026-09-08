@@ -1,6 +1,17 @@
 # Nibi: ESMC-like AdamW baseline, batch 2,048
 
-Status: preparing the authorized run; GPU qualification and full launch are pending.
+Status: **cancelled at the user's request** after approximately 500 steps on
+September 8, 2026, to add evaluation every 10,000 steps and restart from scratch.
+Only production step **12162637.7** was cancelled; the parent allocation remains
+running. The [replacement run](../nibi-baseline-b2048-100k-eval10k-20260908/README.md)
+uses the same recipe with periodic evaluation. Early throughput of this initial
+run was 0.437 seconds/step, with finite losses and gradients.
+
+The frozen training commit is `b653f7a54e286a756150b54eb6111cb236653bbc`.
+The exact 83 Fir runtime package versions were reproduced on Nibi, including
+PyTorch 2.13.0/CUDA 13.0. Kernel hashes, BF16, packed FA3 forward/backward, and
+agreement with the FA2 numerical reference passed. The hourly monitor covers
+this run and the still-running Fir tied-embedding experiment.
 
 The user selected the **ESMC-like AdamW baseline**, not cumulative Setting 2. This
 run starts from scratch and doubles the previous baseline's global batch while
@@ -32,11 +43,30 @@ Frozen source checkout: the scratch root with `-run` appended.
 Persistent final checkpoint directory:
 `/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-baseline-b2048-100k-20260908`.
 
-Qualification will exercise a 200-step eight-GPU run with a rolling checkpoint at
-step 100, same-layout continuation from 100 to 200, and four-GPU continuation from
-200 to 220 with accumulation doubled. The production run begins only after the
-checkpoint, optimizer state, finite metrics, FA3, and global-batch checks pass.
-The shortened trial uses 50 warmup steps; production retains 1,000.
+Qualification **passed** before production launch:
+
+| Test | Steps | Result |
+|---|---:|---|
+| Eight GPUs, full model and batch | 0 → 200 | Finite weights/gradients and all 248 AdamW parameter states; 0.434 s/step |
+| Eight-GPU checkpoint resume | 100 → 200 | Model, optimizer, counters, sampler and RNG restored; data stream reproduced exactly |
+| Four-GPU continuation, accumulation 8 | 200 → 220 | Batch 2,048 preserved; all AdamW states reached step 220; 0.846 s/step |
+| Direct GPU restoration audit | Saved step 200 | Every model and AdamW tensor loaded exactly |
+| Reloaded four-GPU checkpoint MLM | 32 sequences | Finite loss 2.75440; technical smoke check only |
+
+The shortened trials used 50 warmup steps; production retains 1,000. Subsequent
+training is not guaranteed bitwise deterministic: after 100 more updates, the
+same-layout resumed weights differed from uninterrupted training by 2.61% in
+relative L2 norm (maximum absolute difference 0.01166), despite exact state loading
+and identical sampling/RNG endpoints. Final logged losses were 2.77599 and
+2.77711 respectively. These are restoration/stability checks, not production
+quality results or a training-seed uncertainty estimate.
+
+Receipts are in [`qualification/`](qualification/) and
+[`RUNTIME_REPRODUCED.json`](RUNTIME_REPRODUCED.json). The production configuration,
+source contract and initial metrics are in [`full/`](full/). Checkpoint binaries
+stay on Nibi. This cancelled attempt stopped before its first production
+checkpoint; it has no final production checkpoint. The replacement launch retains
+the final-checkpoint preservation requirement.
 
 Final evaluation uses the same frozen 4,096-sequence validation MLM and full
 20,775-chain contact P@L protocol as the Fir comparison. The 95% interval is a

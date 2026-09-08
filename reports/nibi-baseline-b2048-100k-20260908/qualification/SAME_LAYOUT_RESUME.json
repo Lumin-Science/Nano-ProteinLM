@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "sampler_and_mask_rng_exact": true,
+  "model_bitwise_equal": false,
+  "model_max_absolute_difference": 0.011658445931971073
+}

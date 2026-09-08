@@ -26,6 +26,7 @@ from .batch_balance import rebalance_masked_batch
 from .data import MixtureBatcher, file_sha256
 from .flash_attention import prepare_attention
 from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
+from .periodic_evaluation import run_periodic_evaluation
 from .resume import capture_runtime, restore_runtime, validate_resume
 from .schedule import Stage, stage_for_progress, stage_for_time, wsd_multiplier
 from .sharded_data import validate_search_contracts
@@ -707,6 +708,18 @@ def train(
     sequences_seen = int(resumed["sequences_seen"]) if resumed else 0
     current_stage_name: str | None = str(resumed["stage"]) if resumed else None
     checkpoint_interval = int(config.get("checkpoint_interval", 0))
+    evaluation_interval = int(config.get("periodic_evaluation_interval", 0))
+    evaluation_command = config.get("periodic_evaluation_command")
+    if evaluation_interval < 0 or (
+        evaluation_interval
+        and (
+            not isinstance(evaluation_command, list)
+            or not evaluation_command
+            or not all(isinstance(value, str) and value for value in evaluation_command)
+        )
+    ):
+        raise ValueError("periodic evaluation requires a nonnegative interval and command argv")
+    evaluation_seconds = 0.0
     if checkpoint_interval < 0:
         raise ValueError("checkpoint_interval must be nonnegative")
     if rank == 0 and resumed is not None:
@@ -902,11 +915,9 @@ def train(
                 handle.write(json.dumps(record, sort_keys=True) + "\n")
             print(json.dumps(record, sort_keys=True), flush=True)
 
-        if (
-            checkpoint_interval
-            and optimizer_step % checkpoint_interval == 0
-            and optimizer_step != max_steps
-        ):
+        evaluation_due = bool(evaluation_interval and optimizer_step % evaluation_interval == 0)
+        checkpoint_due = bool(checkpoint_interval and optimizer_step % checkpoint_interval == 0)
+        if (checkpoint_due or evaluation_due) and optimizer_step != max_steps:
             runtime = capture_runtime(batchers, data_seed=data_seed)
             if rank == 0:
                 latest_checkpoint = save_checkpoint(
@@ -927,6 +938,17 @@ def train(
                 _write_json(output_root / "LATEST_CHECKPOINT.json", latest_checkpoint)
             if world_size > 1:
                 dist.barrier()
+            if evaluation_due:
+                paused = run_periodic_evaluation(
+                    evaluation_command,
+                    checkpoint=output_root / "checkpoint-latest.pt",
+                    output_root=output_root,
+                    optimizer_step=optimizer_step,
+                    device=device,
+                    data_root=data_root,
+                )
+                evaluation_seconds += paused
+                training_started += paused
 
     if world_size > 1:
         dist.barrier()
@@ -986,6 +1008,7 @@ def train(
             "schedule_optimizer_steps": schedule_steps,
             "training_seconds": training_seconds,
             "cumulative_training_seconds": prior_training_seconds + training_seconds,
+            "periodic_evaluation_seconds": evaluation_seconds,
             "resume_data_mode": resume_data_mode,
             "compute_seconds": compute_seconds_total,
             "walltime_budget_seconds": walltime_seconds,

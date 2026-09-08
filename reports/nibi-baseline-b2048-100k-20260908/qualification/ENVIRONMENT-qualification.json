@@ -1,0 +1,35 @@
+{
+  "attention": {
+    "build": "build/torch-stable-abi210-cu130-x86_64-linux",
+    "implementation": "FlashAttention-3",
+    "operator": "_flash_attn3_cuda_477ab85",
+    "repository": "kernels-community/flash-attn3",
+    "revision": "e29f138fc363b396e5d2706c8a5f6fa7d36f41e0"
+  },
+  "attention_events": [
+    "FlashAttnVarlenFunc",
+    "FlashAttnVarlenFuncBackward",
+    "_flash_attn3_cuda_477ab85::_flash_attn_backward",
+    "_flash_attn3_cuda_477ab85::_flash_attn_forward",
+    "_flash_attn3_cuda_477ab85::bwd",
+    "_flash_attn3_cuda_477ab85::fwd",
+    "autograd::engine::evaluate_function: FlashAttnVarlenFuncBackward",
+    "void cutlass::device_kernel<flash::FlashAttnBwdPostprocessConvertdQ<cute::tuple<cute::C<128>, cute::C<64> >, cutlass::bfloat16_t, float, cutlass::arch::Sm90, 256, cute::TiledMMA<cute::MMA_Atom<cute::SM90::GMMA::MMA_64x64x16_F32BF16BF16_SS<(cute::SM90::GMMA::Major)0, (cute::SM90::GMMA::Major)1, (cute::SM90::GMMA::ScaleIn)1, (cute::SM90::GMMA::ScaleIn)1> >, cute::Layout<cute::tuple<cute::C<2>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >, false> >(flash::FlashAttnBwdPostprocessConvertdQ<cute::tuple<cute::C<128>, cute::C<64> >, cutlass::bfloat16_t, float, cutlass::arch::Sm90, 256, cute::TiledMMA<cute::MMA_Atom<cute::SM90::GMMA::MMA_64x64x16_F32BF16BF16_SS<(cute::SM90::GMMA::Major)0, (cute::SM90::GMMA::Major)1, (cute::SM90::GMMA::ScaleIn)1, (cute::SM90::GMMA::ScaleIn)1> >, cute::Layout<cute::tuple<cute::C<2>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<1>, cute::C<0>, cute::C<0> > >, cute::tuple<cute::Underscore, cute::Underscore, cute::Underscore> >, false>::Params)",
+    "void cutlass::device_kernel<flash::FlashAttnBwdPreprocess<cute::tuple<cute::C<128>, cute::C<64> >, cutlass::bfloat16_t, float, cutlass::arch::Sm90, true, true> >(flash::FlashAttnBwdPreprocess<cute::tuple<cute::C<128>, cute::C<64> >, cutlass::bfloat16_t, float, cutlass::arch::Sm90, true, true>::Params)",
+    "void cutlass::device_kernel<flash::enable_sm90<flash::FlashAttnBwdSm90<flash::CollectiveMainloopBwdSm90<2, 2, 2, cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >, cutlass::bfloat16_t, float, cutlass::arch::Sm90, false, false, false, true, false, true, false, false, 2, 1, 2, 2, false>, flash::CollectiveEpilogueBwd<cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >, cutlass::bfloat16_t, cutlass::arch::Sm90, 256, true, false, 1>, flash::SingleTileScheduler<true, false, false, 128> > > >(flash::enable_sm90<flash::FlashAttnBwdSm90<flash::CollectiveMainloopBwdSm90<2, 2, 2, cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >, cutlass::bfloat16_t, float, cutlass::arch::Sm90, false, false, false, true, false, true, false, false, 2, 1, 2, 2, false>, flash::CollectiveEpilogueBwd<cute::tuple<cute::C<128>, cute::C<128>, cute::C<64> >, cutlass::bfloat16_t, cutlass::arch::Sm90, 256, true, false, 1>, flash::SingleTileScheduler<true, false, false, 128> > >::Params)",
+    "void cutlass::device_kernel<flash::enable_sm90<flash::FlashAttnFwdSm90<flash::CollectiveMainloopFwdSm90<2, cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<192>, cute::C<192>, cute::C<64> >, 64, cutlass::bfloat16_t, float, cutlass::arch::Sm90, false, false, false, true, false, false, false, false, true, false, false, false>, flash::CollectiveEpilogueFwd<cute::tuple<cute::C<192>, cute::C<64>, cute::C<192> >, cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cutlass::bfloat16_t, cutlass::arch::Sm90, 384, true, false, false, false>, flash::VarlenDynamicPersistentTileScheduler<192, 192, 384, 32, false, false, true, false, true, true> > > >(flash::enable_sm90<flash::FlashAttnFwdSm90<flash::CollectiveMainloopFwdSm90<2, cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cute::tuple<cute::C<192>, cute::C<192>, cute::C<64> >, 64, cutlass::bfloat16_t, float, cutlass::arch::Sm90, false, false, false, true, false, false, false, false, true, false, false, false>, flash::CollectiveEpilogueFwd<cute::tuple<cute::C<192>, cute::C<64>, cute::C<192> >, cute::tuple<cute::C<1>, cute::C<1>, cute::C<1> >, cutlass::bfloat16_t, cutlass::arch::Sm90, 384, true, false, false, false>, flash::VarlenDynamicPersistentTileScheduler<192, 192, 384, 32, false, false, true, false, true, true> > >::Params)",
+    "void flash::prepare_varlen_num_blocks_kernel<1, true>(int, int, int, int const*, int const*, int const*, int const*, int const*, int const*, int, int, int, int, int, cutlass::FastDivmod, cutlass::FastDivmod, int*, int*, int*, int*, int*, bool, bool, bool, int)"
+  ],
+  "cuda": "13.0",
+  "fa2_numerical_comparison": {
+    "backward": true,
+    "forward": true
+  },
+  "forward_backward": true,
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "packed_transformer_forward_backward": true,
+  "python": "3.11.4",
+  "status": "qualified",
+  "torch": "2.13.0+cu130",
+  "visible_gpus": 8
+}

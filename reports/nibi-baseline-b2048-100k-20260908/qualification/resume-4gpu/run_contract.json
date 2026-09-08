@@ -1,0 +1,39 @@
+{
+  "attention_implementation": "whole-transformer-packed-_flash_attn3_cuda_477ab85",
+  "attention_kernel": {
+    "build": "build/torch-stable-abi210-cu130-x86_64-linux",
+    "implementation": "FlashAttention-3",
+    "operator": "_flash_attn3_cuda_477ab85",
+    "repository": "kernels-community/flash-attn3",
+    "revision": "e29f138fc363b396e5d2706c8a5f6fa7d36f41e0"
+  },
+  "config_path": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-20260908/resume-4gpu/config.yaml",
+  "config_sha256": "1165aff51f9fd74af0fda03cf46763d3ee6a2fb03910a4726e4ef80d0f5c031e",
+  "corpus_verification_sha256": "9b81407da3d12d22787f8678070512b9664570c534701d25b3426763d04a9a58",
+  "cuda": "13.0",
+  "data_manifest": "/local/scratch/muchenli.12162637.0/nano-esmc-data-bd38448d/manifest.json",
+  "data_manifest_sha256": "43675d51421066ce8c5f68427886d57980e808c53c5bb1641de90cb74dda39ab",
+  "git_commit": "b653f7a54e286a756150b54eb6111cb236653bbc",
+  "git_dirty": false,
+  "homology_exclusion": true,
+  "homology_exclusion_receipt_sha256": "bb94365a46c0d4d5f5fef16a9fc9b1c393d7ad9b7d2d004caba252002930248b",
+  "python": "3.11.4",
+  "python_executable": "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/bin/python3.11",
+  "resume_checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-20260908/trial-8gpu/checkpoint-final.pt",
+  "resume_checkpoint_sha256": "e229124d741e2bf1784dbdb5e7767f265ff7f96e424d9ef45b8d3eb688071b95",
+  "resume_optimizer_step": 200,
+  "resume_source_world_size": 8,
+  "runtime_packages": {
+    "PyYAML": "6.0.3",
+    "huggingface-hub": "1.27.0",
+    "numpy": "2.4.6",
+    "pyarrow": "25.0.0",
+    "torch": "2.13.0"
+  },
+  "torch": "2.13.0+cu130",
+  "training_budget_semantics": "true synchronized training-loop wall time; setup, final checkpoint, and evaluation are outside the training clock",
+  "uv_lock": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-20260908-run/uv.lock",
+  "uv_lock_sha256": "3dcddbfce190a8b2dabc1841ddcd08c67f06e8a727f52fab86c72b4da0b75f15",
+  "visible_gpu": "NVIDIA H100 80GB HBM3",
+  "world_size": 4
+}
