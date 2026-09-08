@@ -1,6 +1,6 @@
 # Training configurations
 
-There are 26 YAML presets and one scale-up manifest. For new autoresearch,
+There are 27 YAML presets and one scale-up manifest. For new autoresearch,
 start with `esmc-171m-original.yaml` or its seed-42/43 copies. For the longer
 H100 baseline, use `esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml`.
 
@@ -45,6 +45,15 @@ parameters; their R29 differs from the narrower one-hour R29 above.
 The [manifest](program2_h100_100k/manifest.json) records settings and config
 hashes. See the [recipe differences](../docs/PROGRAM2_SCALEUP.md) and
 [results](../reports/fir-r02-rope10k-100k-20260906/README.md) for the comparison.
+
+## Nibi eight-H100 baseline: 1 preset
+
+The [batch-2,048 AdamW baseline](esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml)
+keeps the four-GPU baseline's 100,000 steps, LR 5e-4, WD 0.01, and warmup 1,000.
+It uses 64 sequences/GPU and four accumulation steps on eight H100s, with a
+24-hour guard and a rolling checkpoint every 10,000 steps. See the
+[launch record](../reports/nibi-baseline-b2048-100k-20260908/README.md) and
+[four-GPU continuation instructions](../docs/checkpoint-resume.md).
 
 ## Older presets and reproduction references: 7 presets
 

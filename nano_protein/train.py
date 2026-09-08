@@ -26,6 +26,7 @@ from .batch_balance import rebalance_masked_batch
 from .data import MixtureBatcher, file_sha256
 from .flash_attention import prepare_attention
 from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
+from .resume import capture_runtime, restore_runtime, validate_resume
 from .schedule import Stage, stage_for_progress, stage_for_time, wsd_multiplier
 from .sharded_data import validate_search_contracts
 from .tokenizer import ProteinTokenizer, mask_tokens
@@ -228,6 +229,8 @@ def save_checkpoint(
     sequences_seen: int,
     stage: str,
     parameter_count: int,
+    runtime_states: list[dict[str, Any]] | None = None,
+    data_manifest_sha256: str | None = None,
 ) -> dict[str, object]:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".partial")
@@ -251,6 +254,10 @@ def save_checkpoint(
             "cuda_rng": torch.cuda.get_rng_state_all(),
             "numpy_rng": np.random.get_state(),
             "python_rng": random.getstate(),
+            "optimizer_layout": "replicated_ddp_full_state",
+            "world_size": dist.get_world_size() if dist.is_initialized() else 1,
+            "runtime_states": runtime_states,
+            "data_manifest_sha256": data_manifest_sha256,
         },
         temporary,
     )
@@ -329,6 +336,21 @@ class _OptimizerBundle:
                 for name, optimizer in self.named_optimizers
             ],
         }
+
+    def load_state_dict(self, state: dict[str, Any]) -> None:
+        saved = state.get("optimizers", [])
+        if state.get("class") != self.__class__.__name__ or [x["name"] for x in saved] != [
+            name for name, _ in self.named_optimizers
+        ]:
+            raise ValueError(
+                "checkpoint optimizer bundle differs from the configured optimizers"
+            )
+        for (_, optimizer), packet in zip(self.named_optimizers, saved, strict=True):
+            optimizer.load_state_dict(packet["state_dict"])
+        # PyTorch replaces param-group dictionaries when loading optimizer state.
+        self.param_groups = [
+            group for _, optimizer in self.named_optimizers for group in optimizer.param_groups
+        ]
 
 
 def _canonical_parameter_name(name: str) -> str:
@@ -501,6 +523,7 @@ def train(
     data_root: Path,
     output_root: Path,
     walltime_override: int | None = None,
+    resume_checkpoint: Path | None = None,
 ) -> None:
     config = load_config(config_path)
     loss_reduction = str(config.get("training_loss_reduction", "sequence_mean"))
@@ -509,6 +532,15 @@ def train(
     balance_batches = bool(config.get("balance_batches_across_ranks", False))
     data_manifest = validate_data_manifest(data_root)
     rank, local_rank, world_size = _distributed()
+    if int(config.get("expected_world_size", world_size)) != world_size:
+        raise ValueError("configured GPU count differs from the distributed world size")
+    manifest_sha = file_sha256(data_root / "manifest.json")
+    resumed = None
+    if resume_checkpoint is not None:
+        resumed = torch.load(resume_checkpoint, map_location="cpu", weights_only=False)
+        validate_resume(
+            resumed, config, world_size=world_size, data_manifest_sha256=manifest_sha
+        )
     if not torch.cuda.is_available():
         raise RuntimeError("training requires CUDA")
     device = torch.device("cuda", local_rank)
@@ -522,6 +554,15 @@ def train(
     torch.cuda.manual_seed_all(seed + rank)
 
     output_root.mkdir(parents=True, exist_ok=True)
+    if any(
+        (output_root / name).exists()
+        for name in ("run_contract.json", "metrics.jsonl", "checkpoint-final.pt")
+    ):
+        raise FileExistsError(
+            "training requires a fresh output directory; preserve the source run"
+        )
+    if world_size > 1:
+        dist.barrier()
     if rank == 0:
         project_root = Path(__file__).resolve().parents[1]
         uv_lock = project_root / "uv.lock"
@@ -548,6 +589,14 @@ def train(
                     "and evaluation are outside the training clock"
                 ),
                 "world_size": world_size,
+                "resume_checkpoint": str(resume_checkpoint.resolve())
+                if resume_checkpoint
+                else None,
+                "resume_checkpoint_sha256": file_sha256(resume_checkpoint)
+                if resume_checkpoint
+                else None,
+                "resume_optimizer_step": int(resumed["optimizer_step"]) if resumed else 0,
+                "resume_source_world_size": int(resumed["world_size"]) if resumed else None,
                 "python": platform.python_version(),
                 "cuda": torch.version.cuda,
                 "torch": torch.__version__,
@@ -584,6 +633,10 @@ def train(
         raise RuntimeError(
             f"parameter count drift: expected={expected}, observed={parameter_count}"
         )
+    if resumed is not None:
+        if model.config.to_dict() != resumed["model_config"]:
+            raise ValueError("checkpoint model architecture differs from the configured model")
+        model.load_state_dict(resumed["model"], strict=True)
     if bool(config.get("compile", False)):
         model = torch.compile(
             model,
@@ -599,21 +652,42 @@ def train(
         )
 
     optimizer = build_optimizer(model, config)
+    if resumed is not None:
+        optimizer.load_state_dict(resumed["optimizer"])
     tokenizer = ProteinTokenizer.esmc()
     stages = tuple(_stage(spec) for spec in config["stages"])
     if not 1 <= len(stages) <= 2:
         raise ValueError("training requires one or two stages")
+    saved_runtime = None
+    data_seed = seed
+    resume_data_mode = "fresh"
+    if resumed is not None:
+        if int(resumed["world_size"]) == world_size and resumed.get("runtime_states"):
+            saved_runtime = resumed["runtime_states"][rank]
+            data_seed = int(saved_runtime["data_seed"])
+            resume_data_mode = "restore_rank_rng_and_sampler"
+        else:
+            data_seed = (seed + 1_000_003 * (int(resumed["optimizer_step"]) + 1)) % (
+                2**32 - world_size
+            )
+            random.seed(data_seed + rank)
+            np.random.seed(data_seed + rank)
+            torch.manual_seed(data_seed + rank)
+            torch.cuda.manual_seed_all(data_seed + rank)
+            resume_data_mode = "new_deterministic_stream_for_changed_gpu_layout"
     batchers = {
         stage.name: MixtureBatcher(
             data_root,
             "train",
             stage.mixture,
-            seed=seed,
+            seed=data_seed,
             rank=rank,
             world_size=world_size,
         )
         for stage in stages
     }
+    if saved_runtime is not None:
+        restore_runtime(saved_runtime, batchers)
     walltime_seconds = float(
         walltime_override if walltime_override is not None else config["walltime_seconds"]
     )
@@ -624,13 +698,33 @@ def train(
     clip_norm = float(config.get("gradient_clip_norm", 1.0))
     peak_learning_rate = float(config["learning_rate"])
     metrics_path = output_root / "metrics.jsonl"
-    optimizer_step = 0
+    optimizer_step = int(resumed["optimizer_step"]) if resumed else 0
+    prior_training_seconds = float(resumed["training_seconds"]) if resumed else 0.0
     training_seconds = 0.0
     compute_seconds_total = 0.0
-    model_tokens = 0
-    filled_residues = 0
-    sequences_seen = 0
-    current_stage_name: str | None = None
+    model_tokens = int(resumed["model_tokens"]) if resumed else 0
+    filled_residues = int(resumed["filled_residues"]) if resumed else 0
+    sequences_seen = int(resumed["sequences_seen"]) if resumed else 0
+    current_stage_name: str | None = str(resumed["stage"]) if resumed else None
+    checkpoint_interval = int(config.get("checkpoint_interval", 0))
+    if checkpoint_interval < 0:
+        raise ValueError("checkpoint_interval must be nonnegative")
+    if rank == 0 and resumed is not None:
+        _write_json(
+            output_root / "RESUME.json",
+            {
+                "checkpoint": str(resume_checkpoint.resolve()),
+                "optimizer_step": optimizer_step,
+                "optimizer_restored": True,
+                "source_world_size": int(resumed["world_size"]),
+                "world_size": world_size,
+                "data_mode": resume_data_mode,
+                "data_seed": data_seed,
+                "prior_training_seconds": prior_training_seconds,
+                "global_batch_preserved": True,
+            },
+        )
+    del resumed
     stage_checkpoint: dict[str, object] | None = None
     if world_size > 1:
         dist.barrier()
@@ -663,6 +757,7 @@ def train(
                 stages=stages,
             )
         if current_stage_name is not None and stage.name != current_stage_name:
+            runtime = capture_runtime(batchers, data_seed=data_seed)
             if rank == 0:
                 stage_checkpoint = save_checkpoint(
                     output_root / "checkpoint-stage1.pt",
@@ -670,12 +765,14 @@ def train(
                     optimizer=optimizer,
                     config=config,
                     optimizer_step=optimizer_step,
-                    training_seconds=training_seconds,
+                    training_seconds=prior_training_seconds + training_seconds,
                     model_tokens=model_tokens,
                     filled_residues=filled_residues,
                     sequences_seen=sequences_seen,
                     stage=current_stage_name,
                     parameter_count=parameter_count,
+                    runtime_states=runtime,
+                    data_manifest_sha256=manifest_sha,
                 )
                 print(json.dumps({"event": "stage_checkpoint", **stage_checkpoint}), flush=True)
             if world_size > 1:
@@ -805,6 +902,32 @@ def train(
                 handle.write(json.dumps(record, sort_keys=True) + "\n")
             print(json.dumps(record, sort_keys=True), flush=True)
 
+        if (
+            checkpoint_interval
+            and optimizer_step % checkpoint_interval == 0
+            and optimizer_step != max_steps
+        ):
+            runtime = capture_runtime(batchers, data_seed=data_seed)
+            if rank == 0:
+                latest_checkpoint = save_checkpoint(
+                    output_root / "checkpoint-latest.pt",
+                    model=model,
+                    optimizer=optimizer,
+                    config=config,
+                    optimizer_step=optimizer_step,
+                    training_seconds=prior_training_seconds + training_seconds,
+                    model_tokens=model_tokens,
+                    filled_residues=filled_residues,
+                    sequences_seen=sequences_seen,
+                    stage=current_stage_name,
+                    parameter_count=parameter_count,
+                    runtime_states=runtime,
+                    data_manifest_sha256=manifest_sha,
+                )
+                _write_json(output_root / "LATEST_CHECKPOINT.json", latest_checkpoint)
+            if world_size > 1:
+                dist.barrier()
+
     if world_size > 1:
         dist.barrier()
     source_counts: dict[str, dict[str, int]] = {}
@@ -839,6 +962,7 @@ def train(
     if world_size > 1:
         dist.all_reduce(peak_memory, op=dist.ReduceOp.MAX)
     final_checkpoint: dict[str, object] | None = None
+    runtime = capture_runtime(batchers, data_seed=data_seed)
     if rank == 0:
         final_checkpoint = save_checkpoint(
             output_root / "checkpoint-final.pt",
@@ -846,12 +970,14 @@ def train(
             optimizer=optimizer,
             config=config,
             optimizer_step=optimizer_step,
-            training_seconds=training_seconds,
+            training_seconds=prior_training_seconds + training_seconds,
             model_tokens=model_tokens,
             filled_residues=filled_residues,
             sequences_seen=sequences_seen,
             stage=current_stage_name or "stage1",
             parameter_count=parameter_count,
+            runtime_states=runtime,
+            data_manifest_sha256=manifest_sha,
         )
         completion = {
             "event": "training_complete",
@@ -859,6 +985,8 @@ def train(
             "target_optimizer_steps": max_steps,
             "schedule_optimizer_steps": schedule_steps,
             "training_seconds": training_seconds,
+            "cumulative_training_seconds": prior_training_seconds + training_seconds,
+            "resume_data_mode": resume_data_mode,
             "compute_seconds": compute_seconds_total,
             "walltime_budget_seconds": walltime_seconds,
             "stop_reason": (
@@ -871,6 +999,11 @@ def train(
             "sequences_seen": sequences_seen,
             "source_counts": source_counts,
             "source_epoch_maxima": source_epoch_maxima,
+            "source_counts_scope": (
+                "new_stream_since_gpu_layout_change"
+                if resume_data_mode == "new_deterministic_stream_for_changed_gpu_layout"
+                else "current_sampler_stream_including_restored_history"
+            ),
             "parameter_count": parameter_count,
             "peak_cuda_memory_bytes": int(peak_memory.item()),
             "stage_checkpoint": stage_checkpoint,
@@ -889,12 +1022,18 @@ def main() -> None:
     parser.add_argument("--data-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--walltime-seconds", type=int)
+    parser.add_argument(
+        "--resume",
+        type=Path,
+        help="Restore full model/optimizer state into a fresh output directory",
+    )
     args = parser.parse_args()
     train(
         args.config,
         data_root=args.data_root,
         output_root=args.output_root,
         walltime_override=args.walltime_seconds,
+        resume_checkpoint=args.resume,
     )
 
 

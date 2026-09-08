@@ -151,6 +151,41 @@ class MixtureBatcher:
         }
         self.source_counts: Counter[str] = Counter()
 
+    def state_dict(self) -> dict[str, object]:
+        """Save sampling progress without storing the large shuffle permutations."""
+        return {
+            "names": self.names,
+            "probabilities": self.probabilities.tolist(),
+            "rng": self.rng.bit_generator.state,
+            "source_counts": dict(self.source_counts),
+            "samplers": {
+                name: {
+                    key: getattr(sampler, key)
+                    for key in ("size", "seed", "rank", "world_size", "epoch", "cursor")
+                }
+                for name, sampler in self.row_samplers.items()
+            },
+        }
+
+    def load_state_dict(self, state: Mapping[str, object]) -> None:
+        if (
+            tuple(state["names"]) != self.names
+            or state["probabilities"] != self.probabilities.tolist()
+        ):
+            raise ValueError("checkpoint data mixture differs from the current mixture")
+        for name, sampler in self.row_samplers.items():
+            saved = state["samplers"][name]
+            for key in ("size", "seed", "rank", "world_size"):
+                if saved[key] != getattr(sampler, key):
+                    raise ValueError(f"checkpoint sampler differs at {name}/{key}")
+            sampler.epoch = int(saved["epoch"])
+            sampler.rows = sampler._epoch_rows()
+            sampler.cursor = int(saved["cursor"])
+            if not 0 <= sampler.cursor <= sampler.rows.size:
+                raise ValueError("checkpoint sampler cursor is out of bounds")
+        self.rng.bit_generator.state = state["rng"]
+        self.source_counts = Counter(state["source_counts"])
+
     def batch(
         self,
         batch_size: int,
