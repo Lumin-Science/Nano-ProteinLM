@@ -105,6 +105,18 @@ under `$DATA_ROOT/evaluation/`; see [evaluation setup](docs/USAGE.md#evaluation)
 
 ### Training a 170M Model
 
+> [!NOTE]
+> **Our 171M variant is designed for small-budget training experiments.** Its
+> baseline backbone follows the paper's 170M scaling model: 24 layers, width 768,
+> and approximately 170.7M parameters
+> ([ESMC Appendix A.1.4.1, Table S4, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
+> For the original ESMC **300M** and **600M** architectures, see the
+> [300M config](configs/reference/esmc-300m-original.yaml) and
+> [600M config](configs/reference/esmc-600m-original.yaml), following
+> [Appendix A.1.1, Table S1, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29).
+> These are local training presets; [reference details](configs/reference/README.md)
+> explain how their training settings differ from the released models.
+
 Run the current-best **Setting 3** recipe with one command; it calls setup automatically:
 
 ```bash
@@ -118,7 +130,7 @@ Checkpoints, the resolved recipe and training records are saved under
 `$OUTPUT_ROOT/setting3-100k/`, including the full final optimizer state for
 [continuation](docs/checkpoint-resume.md). Repeats require a fresh run name.
 
-Two recipes are maintained: [current best](configs/default.yaml) and
+For 171M training, choose [current best](configs/default.yaml) or
 [original 171M AdamW](configs/esmc-171m-original.yaml). The scripts call the standard
 training API; [custom training commands](docs/USAGE.md#training) remain available
 for other budgets, hardware and recipe changes.

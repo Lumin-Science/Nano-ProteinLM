@@ -1,0 +1,37 @@
+# Original ESMC architecture from Appendix A.1.1, Table S1:
+# https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29
+# Local Stage-1 training preset, not the released model's full training schedule.
+# LR/WD use nano_protein.schedule.mup_hyperparameters with the repository's
+# assumed proxy LR=6e-4, WD=0.01, width=512, depth=16. See README.md here.
+# Set stopping budgets explicitly through nano_protein.train.
+schema_version: 1
+model: esmc-600m
+expected_parameter_count: 575036992
+seed: 20260821
+
+optimizer: adamw
+learning_rate: 0.00017777777777777776
+weight_decay: 0.03375
+betas: [0.9, 0.95]
+gradient_clip_norm: 1.0
+warmup_steps: 1000
+
+rotary_base: 10000.0
+attention_backend: flash
+gradient_checkpointing: false
+transformer_norm: layernorm
+learned_residual_routing: false
+depth_scaled_residual_init: false
+tie_word_embeddings: false
+compile: false
+compile_mode: default
+log_interval: 25
+# Per-GPU BF16 peak for A100; override for other hardware when reporting MFU.
+peak_bf16_tflops_per_gpu: 312.0
+stages:
+  - name: stage1
+    context_length: 512
+    # Global batch 256 on four GPUs; adjust layout for the available memory.
+    micro_batch_size: 16
+    gradient_accumulation: 4
+    mixture: {uniref90: 0.36, mgnify: 0.11, omg_img: 0.54}

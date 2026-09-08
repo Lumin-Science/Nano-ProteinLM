@@ -1,6 +1,6 @@
 # Training configurations
 
-Two recipes are maintained:
+Two 171M recipes are recommended for small-budget experiments:
 
 | Recipe | File | Parameters | Role |
 |---|---|---:|---|
@@ -25,5 +25,6 @@ fixed-time protocol and requires **162,137,610–179,204,726** trainable paramet
 
 The [archive](archive/README.md) preserves all 27 retired presets and the scale-up
 manifest, including the 300M, paired-seed, H100 and Nibi experiments. Historical
-configs and hashes are unchanged. The 300M and 600M architectures remain in code;
-additional maintained recipes can be added when needed.
+configs and hashes are unchanged. For the original-size ESMC architectures, use
+the [300M and 600M reference presets](reference/README.md), with explicit local
+training assumptions and links to the paper's architecture tables.

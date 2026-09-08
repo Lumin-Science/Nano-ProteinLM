@@ -2,11 +2,13 @@
 
 ## Implemented
 
-- Two maintained recipes: [current-best Setting 3](../configs/default.yaml) and
+- Two recommended 171M recipes: [current-best Setting 3](../configs/default.yaml) and
   [original 171M AdamW](../configs/esmc-171m-original.yaml). All 27 other YAMLs
   and the scale-up manifest are in the [config archive](../configs/archive/README.md),
   preserving their bytes and recorded hashes. This replaces the earlier plan
   to maintain four public presets for now.
+- [300M/600M reference presets](../configs/reference/README.md) expose the paper's
+  original-size architectures separately, with documented local training assumptions.
 - Two entry points in `runs/`: [setup](../runs/setup_env_and_data.sh) installs the
   locked environment and prepares/reuses the fixed training subset;
   [speedrun](../runs/speedrun.sh) calls setup and trains Setting 3 by default.
@@ -33,8 +35,6 @@
 - Review unused code separately: `_OptimizerBundle.set_param_group_value` has no
   known callers; `muon_initial_momentum` may be a checkpoint compatibility alias.
   Check saved configurations before removing either.
-- Add maintained 300M/600M recipes when needed. Both architectures remain in code;
-  the earlier 300M pilot is archived, and a 600M training YAML has not been added.
 
 ## Compatibility to preserve
 
