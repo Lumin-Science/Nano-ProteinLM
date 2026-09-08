@@ -1,8 +1,8 @@
 # Four-setting 100k H100 training plan
 
-Status: **settings 1–3 completed their 100k runs and full evaluations;
-setting 4 is training after its automatic launch**. All four H100 technical trials
-passed. Setting 1 ran as `58303658.14`; the sequential settings 2–4 queue is
+Status: **all four settings completed their 100k runs and full evaluations**.
+Setting 4 finished at **September 8, 9:58:59 AM Toronto**. All four H100 technical trials
+passed. Setting 1 ran as `58303658.14`; the completed sequential settings 2–4 queue was
 `58303724.9`. The user authorized
 settings **2 → 3 → 4 sequentially on fc10212** after qualification, and a
 September 7, 2026 **4:00 AM Toronto** check to launch setting 1 on fc10111 if
@@ -75,12 +75,14 @@ separate workload occupied all four fc10111 GPUs. It must finish or be stopped
 by its owner before setting 1 can start; these launchers never stop it. Check
 both Slurm and `nvidia-smi`, since that workload had no separate Slurm step.
 
-The scheduled heartbeat runs **hourly on the hour**, including September 7 at
+The scheduled heartbeat initially ran **hourly on the hour**, including September 7 at
 **04:00 America/Toronto = 08:00 UTC**. Its task is to monitor all four runs and
 launch setting 1 at or after that timestamp once the node is free. The launcher
 also enforces that timestamp. A busy node at 4 AM defers launch to a later hourly
 check. Setting 1 starts from scratch and can run independently of the fc10212
-queue. No additional allocation has been requested.
+queue. No additional allocation was requested for these Fir runs. All four are
+now complete; the heartbeat continues every **two hours** for the separate
+[Nibi baseline](../reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md).
 
 ## Qualification and production queue
 
@@ -109,7 +111,7 @@ Artifacts and launchers are in the same path without the `-run` suffix.
    and pinned FA3 environment; stage and verify the same corpus on node-local
    storage. The 16-hour training guard remains an operational limit, not a
    replacement for 100k steps.
-5. Monitor hourly. Notify on launch, failure, stall, completion or required
+5. Monitor at the user's requested cadence (initially hourly, now every two hours). Notify on launch, failure, stall, completion or required
    action, and update Toronto ETAs from measured progress. Healthy unchanged
    runs do not need repetitive notifications.
 

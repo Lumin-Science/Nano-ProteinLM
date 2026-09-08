@@ -1,28 +1,29 @@
 # Four cumulative R02 RoPE10k recipes: Fir training results
 
-All four 200-step technical trials **passed**. **Settings 1–3 have completed
-100k steps and full MLM/P@L evaluations.** Setting 4 started automatically and
-is training. Source/configs are frozen at `253c3ea`; report updates on main
-do not change the running checkout.
+All four 200-step technical trials **passed**. **All four settings completed
+100k steps and full MLM/P@L evaluations**, with independently verified results.
+Setting 4 finished at **9:58:59 AM Toronto on September 8**. Setting 3 has the
+lowest validation loss and highest contact P@L in this comparison.
+Training source/configs remain frozen at `253c3ea`.
 
 | Setting | Recipe | Production placement |
 |---|---|---|
 | 1 | R02 with RoPE10k | Completed 100k + evaluations September 7, 5:11 PM Toronto |
 | 2 | + batch balance | Completed 100k + evaluations September 7, 8:35 AM Toronto |
 | 3 | + sqrt loss | Completed 100k + evaluations September 7, 9:17 PM Toronto |
-| 4 | + tied embeddings | fc10212, training since September 7, 9:18 PM Toronto in step 58303724.9 |
+| 4 | + tied embeddings | Completed 100k + evaluations September 8, 9:58 AM Toronto |
 
 All full runs initialize from scratch for 100,000 steps, batch 1,024, warmup
 1,000, base LR 5e-4 and base WD 0.01, with preserved R02 Muon groups, RoPE10k,
 FFN2048, BF16 and FA3. [Full recipes and semantics](../../docs/PROGRAM2_SCALEUP.md).
 R22 narrowing remains deferred in [TODO](../../TODO.md).
 
-## Completed production results (three of four)
+## Completed production results (four of four)
 
-All three new completed runs processed **100,000 steps, 102.4M sequences and
+All four new completed runs processed **100,000 steps, 102.4M sequences and
 24,200,224,761 model tokens**. Setting 1 finished its evaluations at **5:11:09 PM
 Toronto September 7**; setting 2 finished at **8:35:53 AM**, and setting 3 at
-**9:17:55 PM** the same day.
+**9:17:55 PM** the same day. Setting 4 finished at **9:58:59 AM September 8**.
 
 | Recipe | Training time | Validation loss ↓ | Perplexity ↓ | Full P@L ↑ | P@L 95% CI |
 |---|---:|---:|---:|---:|---:|
@@ -31,6 +32,7 @@ Toronto September 7**; setting 2 finished at **8:35:53 AM**, and setting 3 at
 | **Setting 1: R02 RoPE10k** | **12h 57m 54s** | **2.43780741** | **11.44791265** | **30.164593%** | **29.935870–30.393752%** |
 | **Setting 2: + batch balance** | **12h 33m 42s** | **2.43871862** | **11.45834888** | **30.715194%** | **30.486543–30.947846%** |
 | **Setting 3: + sqrt loss** | **12h 34m 40s** | **2.41871987** | **11.23147240** | **32.682480%** | **32.447348–32.919702%** |
+| **Setting 4: + tied embeddings** | **12h 33m 14s** | **2.42304260** | **11.28012810** | **31.884046%** | **31.651090–32.122918%** |
 
 Each result uses the same **4,096 validation sequences / 139,963 masked targets**
 and **20,775 contact chains** as the historical comparison. All 16 contact-shard
@@ -49,32 +51,36 @@ on each assigned node.
 | Historical RoPE20k R02 → setting 1, RoPE10k | +0.00082447 | −0.1458 pp | −0.2059 to −0.0867 pp | +1m 24s (+0.18%) |
 | Setting 1 → setting 2, add batch balancing | +0.00091121 | +0.5506 pp | +0.4942 to +0.6067 pp | −24m 12s (−3.11%) |
 | Setting 2 → setting 3, add sqrt loss | −0.01999875 | +1.9673 pp | +1.9056 to +2.0263 pp | +58s (+0.13%) |
+| Setting 3 → setting 4, tie embeddings | +0.00432273 | −0.7984 pp | −0.8583 to −0.7368 pp | −1m 25s (−0.19%) |
 
 In this matched-seed comparison, batch balancing shortened training and produced
 higher contact P@L, while validation loss was slightly higher (+0.037%). Resetting
 RoPE to 10k produced slightly higher loss and lower P@L than historical RoPE20k.
 Adding sqrt-mask-count loss reduced validation loss by **0.02000 (0.82%)** and
 increased P@L by **1.9673 percentage points**, with almost unchanged training
-time (+0.13%). Setting 3 currently has the lowest validation loss and highest
-P@L among the completed recipes, including both historical references.
+time (+0.13%). Adding tied embeddings then increased validation loss by
+**0.00432 (0.18%)** and reduced P@L by **0.7984 percentage points**, with a
+small training-time reduction (0.19%). Setting 3 has the lowest validation loss
+and highest P@L among all four recipes and both historical references.
 These are observations for these checkpoints. The chain-bootstrap intervals
 condition on the trained models; they **do not measure training-seed uncertainty
 or establish reproducible training effects**. Repeated training seeds remain
-necessary for that claim. The tied-embedding increment is pending.
+necessary for that claim.
 
 Setting 4 launched automatically at **9:17:56 PM Toronto September 7**, following
-setting 3's full evaluations. At **10:01 PM**, it was healthy at **5,690 steps**,
-with training expected to finish around **9:53 AM Toronto September 8**, followed
-by full evaluations. Its exact config, clean frozen source, four-rank FA3 run
-contract and finite loss/gradient progress were verified. All user-owned Slurm
-allocations remain intact.
+setting 3's full evaluations. Its exact config, clean frozen source, four-rank
+FA3 run contract, all logged losses/gradients, exact 100k-step endpoint and full
+evaluation passed the independent completion audit. Queue step `58303724.9`
+finished normally; allocation `58303724` remains running and user-owned.
+The final checkpoint remains in the remote setting-4 artifact directory, with
+SHA-256 `ea5efdb86b3c1826758ade15de9536d131eeed513a1d2d0c84144e71c4f84915`.
 
-[Machine-readable partial results](results.json) ·
+[Machine-readable complete results](results.json) ·
 [Adjacent deltas and paired intervals](ADJACENT_COMPARISONS.json) ·
 [Setting 1 verification](full/r02_rope10k/RESULT_VERIFIED.json) ·
 [Setting 2 verification](full/r04_batchbalance/RESULT_VERIFIED.json) ·
 [Setting 3 verification](full/r10_sqrtloss/RESULT_VERIFIED.json) ·
-[Setting 4 launch evidence](full/r29_tied/) ·
+[Setting 4 verification](full/r29_tied/RESULT_VERIFIED.json) ·
 [Progress and queue snapshot](PROGRESS_SNAPSHOT.json).
 
 Per-chain P@L and complete gzipped training traces are stored in each completed
@@ -104,7 +110,7 @@ active at 96–98% utilization. Measured training speed was
 
 Setting 2 remained healthy at 65,290 steps, with an approximately
 8:30 AM Toronto training ETA. Settings 3 and 4 remain queued behind its full
-evaluations. Hourly monitoring continues.
+evaluations. Monitoring was hourly at this launch snapshot.
 
 [Setting 1 launch snapshot](SETTING1_LAUNCH_SNAPSHOT.json) ·
 [Exact executed config and startup evidence](full/r02_rope10k/) ·
@@ -171,12 +177,13 @@ and full 20,775-chain P@L evaluation, with 16 inference shards and a 5,000-sampl
 chain bootstrap CI. There is one matched training seed, not a seed-variance
 estimate.
 
-The active hourly heartbeat `launch-r02-rope10k-on-fir-at-4-am` performed the
+The heartbeat `launch-r02-rope10k-on-fir-at-4-am` performed the
 **September 7, 04:00 America/Toronto (08:00 UTC)** availability check and launched
 setting 1 after confirming free GPUs. Its timestamp guard prevented earlier
-launch. Existing workloads were not interrupted. The heartbeat continues to
-monitor all four runs; each full launch requires at least 16h 15m of allocation
-time.
+launch. Existing workloads were not interrupted. All four Fir runs are now
+complete and published. The heartbeat continues every **two hours** for the
+[Nibi batch-2,048 baseline](../nibi-baseline-b2048-100k-eval10k-20260908/README.md).
+Each Fir full launch required at least 16h 15m of allocation time.
 
 - [Launch plan and script digests](LAUNCH_PLAN.json).
 - [Exact launch/verification scripts and evaluator snapshot](launch/).

@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "method": "r29_tied",
+  "mode": "full",
+  "config_sha256": "3b0db8ecdc296f98f739bc01a8ea036c230037f9af8be9d72b7391e8d6e2e403",
+  "checkpoint_sha256": "ea5efdb86b3c1826758ade15de9536d131eeed513a1d2d0c84144e71c4f84915",
+  "optimizer_steps": 100000,
+  "model_tokens": 24200224761,
+  "sequences_seen": 102400000,
+  "parameter_count": 170510704,
+  "training_seconds": 45194.140950462315,
+  "peak_cuda_memory_bytes": 23046838272,
+  "finite_logged_losses_and_gradients": true,
+  "flash3_verified": true,
+  "measured_seconds_per_step": 0.4508241821313277
+}

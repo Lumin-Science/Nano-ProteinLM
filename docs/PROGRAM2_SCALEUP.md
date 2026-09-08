@@ -1,6 +1,6 @@
 # Program 2 versus the completed H100 R02, and matched 100k presets
 
-The active plan contains **four settings based on our completed H100 R02**:
+The completed comparison contains **four settings based on our H100 R02**:
 reset RoPE from 20k to 10k, then add batch balance, sqrt loss and tied embeddings
 cumulatively. Every setting retains RMSNorm, learned residual/input routing,
 depth-scaled initialization and **FFN width 2048**, with the same optimizer
@@ -10,9 +10,9 @@ scratch; cumulative refers to recipe changes, not checkpoint continuation.
 **R22 FFN narrowing is deferred to [TODO](../TODO.md)**. The earlier unlaunched
 five-setting proposal with Program 2's LayerNorm architecture is superseded.
 Historical Program 2 results below remain unchanged. All four full-size H100
-technical trials passed and the production queue started; see the
+technical trials and all four 100k-step runs with full evaluations passed; see the
 [GPU training plan](PROGRAM2_GPU_PLAN.md) and
-[launch record](../reports/fir-r02-rope10k-100k-20260906/README.md).
+[results](../reports/fir-r02-rope10k-100k-20260906/README.md).
 
 ## Published Program 2 results
 
@@ -161,8 +161,12 @@ The architecture starts from our completed R02's **parameter-free RMSNorm,
 learned residual/input routing and depth-scaled initialization**, with RoPE
 reset to **10k**. The original Program 2 R01 is no longer an active setting.
 R02-RoPE10k → R04 → R10 → R29 defines the four cumulative recipes. The completed
-default and RoPE20k R02 remain measured historical references; all four new
-results are pending.
+default and RoPE20k R02 remain measured historical references. All four new
+results are complete: setting 3 (+ batch balance + sqrt loss) has the best
+validation loss **2.41871987** and contact P@L **0.32682480**. Adding tied
+embeddings gives loss **2.42304260** and P@L **0.31884046** in this matched-seed
+comparison; full results and paired chain intervals are in the
+[results report](../reports/fir-r02-rope10k-100k-20260906/README.md).
 
 Batch 1,024 uses 64 examples/GPU × 4 GPUs × 4 accumulation microsteps. The
 imported R10 implementation normalizes weights **across ranks within each

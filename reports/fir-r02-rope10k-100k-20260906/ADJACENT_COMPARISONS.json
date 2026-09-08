@@ -1,5 +1,5 @@
 {
-  "updated_utc": "2026-09-08T02:02:51.213873+00:00",
+  "updated_utc": "2026-09-08T14:03:29.466420+00:00",
   "comparison_order": [
     "historical_r02_rope20k",
     "r02_rope10k",
@@ -55,6 +55,23 @@
       ],
       "training_time_delta_seconds": 57.65305502898991,
       "training_time_relative_delta_percent": 0.12748938568212242,
+      "paired_contact_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "bootstrap_seed": 20260820
+    },
+    {
+      "baseline": "r10_sqrtloss",
+      "candidate": "r29_tied",
+      "increment": "Tie input/output embeddings",
+      "validation_loss_delta": 0.004322729551859084,
+      "validation_loss_relative_delta_percent": 0.17871972692593552,
+      "p_at_l_delta_percentage_points": -0.7984335081320071,
+      "p_at_l_paired_chain_bootstrap_delta_95ci_percentage_points": [
+        -0.858275944068053,
+        -0.736756141192788
+      ],
+      "training_time_delta_seconds": -85.35917875077575,
+      "training_time_relative_delta_percent": -0.18851616848063468,
       "paired_contact_chains": 20775,
       "bootstrap_replicates": 5000,
       "bootstrap_seed": 20260820
