@@ -1,0 +1,325 @@
+# Task contract; not a nano_protein.train configuration.
+schema_version: '1.0'
+task:
+  id: protein-embedding-recipe-v1
+  title: Protein representation training under matched resources
+  repository: https://github.com/Lumin-Science/Nano-Protein-LM
+  source_commit: 0d88da3b1913bc8944d9bf52b25230d2415041f7
+  contract_status: defined
+question: Which training-recipe changes improve the usefulness of an ESMC-family protein representation
+  model at approximately fixed model size and data, first under a fixed training-time search budget
+  and then under a matched token-budget test? MLM loss is the search proxy; MLM loss and contact
+  P@L assess transfer. General downstream utility needs additional tasks.
+established:
+  baseline: 'configs/esmc-171m-original.yaml: 24 layers, width 768, 12 heads, FFN 2048, 170671168
+    trainable parameters, AdamW, LayerNorm, RoPE 10000, untied embeddings.'
+  capabilities:
+  - Pinned, decontaminated UniRef90/MGnify/OMG-IMG data and deterministic mixture sampling.
+  - Distributed BF16 training, FA2/FA3 attention, time/step budgets, checkpoints and full optimizer
+    state.
+  - Candidate implementations for hybrid Muon, normalization/routing/init, rank balancing, sqrt-target
+    loss and tied embeddings.
+  - Frozen held-out MLM evaluation and full-chain attention-based contact probe; checkpoint-bound
+    receipts and bootstrap intervals.
+  limitations:
+  - This is an ESMC-like public reconstruction, not the exact paper training corpus or a general
+    downstream-embedding score.
+  - Current trainer has no token-based stop. Completed tests are 100k-step, single-training-seed
+    records.
+  - Shared editable training/model code means semantic restrictions require audit; file lists
+    alone do not enforce them.
+research:
+  score:
+    name: validation_loss
+    direction: minimize
+    unit: nats per masked target, sequence averaged
+    definition: Arithmetic mean across sequences of each sequence's mean masked-target cross-entropy.
+      The evaluator is fixed even if the training objective changes.
+    artifact: eval-validation/VALIDATION_MLM.json:sequence_mean_nll
+    aggregation: Arithmetic mean of the N per-training-seed values.
+  repeats:
+    unit: training_seed
+    count: 2
+    identities:
+    - 42
+    - 43
+    matching: Use the same predeclared seeds for baseline, incumbent and candidate. Every repeat
+      starts from scratch; initialization, training sampling and masking use the declared training
+      seed. Evaluation seeds remain fixed.
+    uncertainty: Sample SD (ddof=1) across all training seeds. No seed cherry-picking. P@L additionally
+      has a separate per-seed 5,000-resample chain-bootstrap 95% CI, seed 20260820.
+  budget:
+    kind: wall_time
+    amount: 3600
+    unit: seconds per training seed
+    meter: Synchronized maximum rank elapsed wall time from the pre-loop barrier. Includes batching,
+      transfer, forward/backward, optimizer, communications, logging and lazy first-use work inside
+      the loop. Setup, final checkpoint and post-training evaluation are excluded.
+    completion: First optimizer-update boundary after 3600 seconds; no intentional overrun or
+      evaluation in the training loop. Record overrun and require stop_reason=walltime, then evaluate
+      checkpoint-final.pt.
+  hardware:
+    description: 4 x NVIDIA L40S; BF16 mixed precision; campaign-pinned software/attention implementation
+    resources:
+      gpu_model: NVIDIA L40S
+      gpu_count: 4
+      precision: BF16 mixed precision; campaign-pinned software/attention implementation
+  evaluation:
+    entrypoint: runs/autoresearch_4xl40s_1h.sh
+    settings:
+      mlm_seed: 20260821
+      mlm_context: 512
+      mlm_source_weights:
+        uniref90: 1.0
+        mgnify: 1.0
+        omg_img: 1.0
+      mlm_reduction: sequence_mean_nll
+      contact_chains: 20775
+      contact_manifest_sha256: c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3
+      contact_probe_fit_chains: 16
+      contact_probe_select_chains: 4
+      contact_probe_refit_chains: 20
+      contact_pair_sampling_seed: 20260819
+      contact_bootstrap_seed: 20260820
+      contact_bootstrap_replicates: 5000
+      contact_max_residues: 510
+      contact_sharding: Execution only; every chain exactly once, frozen global order and reduction.
+      mlm_batches: 8
+      mlm_batch_size: 4
+      mlm_sequences: 32
+      warmup_optimizer_steps: 554
+      post_warmup_lr: constant for every group
+      baseline_global_batch: 256
+      baseline_config_seed42: configs/program2/baseline_seed42.yaml
+      baseline_config_seed43: configs/program2/baseline_seed43.yaml
+  validity_gates:
+  - Train from scratch; exact frozen data/environment/evaluation receipts; complete final checkpoint
+    and ROUND_STATE=complete.
+  - All required per-seed loss and P@L values finite; all repeats complete under the same recipe.
+  - Actual trainable parameter count is within inclusive +/-5% of 170671168; satisfy 95*170671168
+    <= 100*P <= 105*170671168.
+  - No protected-file, semantic-boundary, clock or data violation.
+  promotion:
+    reference: Last accepted incumbent evaluated on the same seed set and contract; original baseline
+      remains a reporting reference.
+    rule: Keep iff incumbent_mean_validation_loss - candidate_mean_validation_loss > candidate_sample_sd.
+      Strict inequality; ties fail. This is the existing heuristic, not a significance test.
+  diagnostics:
+  - Training loss and actual backward objective
+  - Full-chain P@L, independently of search selection
+  - Actual steps, sequences, model tokens, parameter count, peak memory, training/evaluation seconds
+boundaries:
+  default_policy: protected
+  protected_paths_take_precedence: true
+  editable_paths:
+  - nano_protein/model.py
+  - nano_protein/train.py
+  - nano_protein/batch_balance.py
+  - nano_protein/flash_attention.py
+  - nano_protein/experiments/**
+  - configs/candidates/**
+  - tests/candidates/**
+  protected_paths:
+  - program.md
+  - program2.md
+  - tasks/**
+  - README.md
+  - docs/**
+  - reports/**
+  - configs/esmc-171m-original.yaml
+  - configs/program2/**
+  - configs/program2_h100_100k/**
+  - runs/**
+  - scripts/**
+  - nano_protein/data.py
+  - nano_protein/sharded_data.py
+  - nano_protein/tokenizer.py
+  - nano_protein/schedule.py
+  - nano_protein/evaluate.py
+  - nano_protein/contact_cache.py
+  - nano_protein/pcore_task.py
+  - nano_protein/resume.py
+  - nano_protein/periodic_evaluation.py
+  - tests/test_*.py
+  - pyproject.toml
+  - uv.lock
+  - .gitmodules
+  artifact_paths:
+  - .dev/program2/**
+  - outputs/program2/<unique-run-id>/**
+  - .exps/program2/**
+  - .uv-cache/program2/**
+  editable_config_keys:
+  - model and architecture options, subject to actual parameter bound
+  - optimizer and its hyperparameters/group multipliers
+  - training_loss_reduction
+  - balance_batches_across_ranks
+  - stages[0].micro_batch_size
+  - stages[0].gradient_accumulation
+  - gradient_checkpointing
+  - compile and compile_mode
+  - attention_backend within the pinned compatible environment
+  - expected_parameter_count, which must equal independently counted trainable parameters
+  frozen_config_keys:
+  - seed, except the predeclared repeat identity
+  - walltime_seconds=3600 and no earlier stopping budget in research
+  - 'Research: warmup_steps=554; test: warmup_steps=1000. All post-warmup LR reduction disabled
+    in both phases.'
+  - single Stage-1, context_length=512
+  - stages[0].mixture={uniref90:0.36,mgnify:0.11,omg_img:0.54}, normalized by its sum
+  - data release, prepared-corpus receipt, tokenizer and training corruption semantics
+  - all evaluator arguments, reductions, data/probe selection and seeds
+  - test transfer settings declared in this contract
+  rules:
+  - Protected paths override editable paths; all unlisted paths remain protected. These paths
+    are relative to the task repository.
+  - Editable training code may not modify budget accounting, sampling/corruption, checkpoint/evaluation
+    semantics, receipt construction or frozen schedule behavior.
+  - Batching/rebalancing may redistribute already selected examples; no source substitution, changed
+    source weights, held-out training data, selective length filtering or evaluation-specific
+    shortcuts.
+  - Data release is LuminScience/LuminBench-Nano-ESMC revision bd38448d50d8f426d7b9bd4410b53159ea001259;
+    release manifest SHA256 fe1ac0657085ab19fe6f56786006e9eb004ca66bc6c5b81dfd8e6bc3dcfda6ff.
+    Pin exact prepared-corpus and external evaluator digests at campaign creation.
+  - Total trainable parameters must be 162137610 through 179204726 inclusive, counted from actual
+    active model tensors. No dummy parameters to satisfy the bound.
+  - Share verified input caches read-only; artifact paths allow new run records/caches, never
+    alteration of frozen data or past evidence. Candidate launcher wrappers must preserve the
+    protected runner contract.
+  - One conceptual candidate change, isolated worktree, fresh output per attempt, append-only
+    results. No warm starts or pretrained weights.
+  - Use frozen environment dependencies; new source helpers must stay in allowed paths and are
+    subject to the same semantic restrictions.
+test:
+  budget:
+    kind: tokens
+    amount: 24200224761
+    unit: global non-padding model tokens per training seed, including BOS/EOS
+    meter: Sum attention_mask over all consumed training microbatches and GPU ranks before redistribution;
+      exclude padding and evaluation tokens. Count each consumed token once regardless of recomputation.
+    completion: Stop at the first completed optimizer update whose cumulative model_tokens >=
+      target. Record actual count and overrun; overrun < one global update, bounded by 1024*512=524288
+      tokens. A wall-time guard stopping earlier is incomplete, not a test result.
+  hardware:
+    description: 4 x NVIDIA H100; BF16 mixed precision with FA3; pin the tested H100 environment
+      separately from L40S research
+    resources:
+      gpu_model: NVIDIA H100
+      gpu_count: 4
+      precision: BF16 mixed precision with FA3; pin the tested H100 environment separately from
+        L40S research
+  repeats:
+    unit: training_seed
+    count: 2
+    identities:
+    - 42
+    - 43
+    matching: Use the same predeclared seeds for baseline, incumbent and candidate. Every repeat
+      starts from scratch; initialization, training sampling and masking use the declared training
+      seed. Evaluation seeds remain fixed.
+    uncertainty: Sample SD (ddof=1) across all training seeds. No seed cherry-picking. P@L additionally
+      has a separate per-seed 5,000-resample chain-bootstrap 95% CI, seed 20260820.
+  evaluation:
+    entrypoint: A token-budget training adapter is required; then nano_protein.evaluate plus runs/evaluate_p_at_l_parallel.sh
+      on checkpoint-final.pt.
+    settings:
+      mlm_seed: 20260821
+      mlm_context: 512
+      mlm_source_weights:
+        uniref90: 1.0
+        mgnify: 1.0
+        omg_img: 1.0
+      mlm_reduction: sequence_mean_nll
+      contact_chains: 20775
+      contact_manifest_sha256: c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3
+      contact_probe_fit_chains: 16
+      contact_probe_select_chains: 4
+      contact_probe_refit_chains: 20
+      contact_pair_sampling_seed: 20260819
+      contact_bootstrap_seed: 20260820
+      contact_bootstrap_replicates: 5000
+      contact_max_residues: 510
+      contact_sharding: Execution only; every chain exactly once, frozen global order and reduction.
+      mlm_batches: 1024
+      mlm_batch_size: 4
+      mlm_sequences: 4096
+      checkpoint: final budget endpoint; no best-validation checkpoint selection
+  metrics:
+  - name: validation_loss
+    direction: minimize
+    unit: nats per masked target, sequence averaged
+    definition: Arithmetic mean across sequences of each sequence's mean masked-target cross-entropy.
+      The evaluator is fixed even if the training objective changes.
+    artifact: eval-validation/VALIDATION_MLM.json:sequence_mean_nll
+    aggregation: Arithmetic mean of the N per-training-seed values.
+  - name: p_at_l
+    direction: maximize
+    unit: fraction in [0, 1]; display as percent
+    definition: Mean long-range contact precision at L across all 20,775 frozen chains; separation
+      >=24 and distance <8 angstrom.
+    artifact: eval-p-at-l/P_AT_L.json:p_at_l
+    aggregation: Arithmetic mean across chains within a run, then arithmetic mean across training
+      seeds.
+  success_rule: Relative to each named comparator, successful transfer requires strictly lower
+    mean validation loss AND strictly higher mean P@L over all matched training seeds, with all
+    validity gates passed. Report ties, mixed results and failed transfers. Report mean +/- sample
+    SD, paired seed deltas and per-seed chain CIs; this directional rule is not a significance
+    claim.
+  comparison_references:
+  - Original ESMC-like AdamW baseline at the same test budget and settings
+  - Immediately preceding cumulative recipe at the same test budget and settings
+  selection_policy: Freeze candidate code and the transfer recipe before evaluating the final
+    endpoint. Train from scratch. Intermediate diagnostics, if separately scheduled, cannot choose
+    the endpoint or change the recipe.
+  evaluation_overlap: Reuses the research held-out reservoir and full contact chain set; larger-budget
+    confirmation, not a blind unseen-data test. The contact probe is fit/selected only on its
+    20 reserved chains.
+  transfer:
+    base_learning_rate: 0.0005
+    base_weight_decay: 0.01
+    warmup_optimizer_steps: 1000
+    post_warmup_lr: constant
+    global_batch_size: 1024
+    context_length: 512
+    stage: stage1 only
+    default_micro_batch_size: 64
+    default_gradient_accumulation: 4
+    optimizer_group_multipliers: Retain candidate-declared multipliers, record effective LR/WD;
+      freeze before tests.
+    token_budget_origin: Exact observed exposure of the completed four-H100 100k-step comparison;
+      step count can vary with the new seed.
+    test_parameter_bound: Same +/-5% bound as research; historical narrowed-FFN 142M results remain
+      separate.
+    historical_results: 100k steps, batch 1024, seed 20260824, 24200224761 model tokens. Do not
+      relabel these as N=2 token-stopped experiments.
+  validity_gates:
+  - All N=2 predeclared training seeds finish from scratch with the same frozen candidate and
+    transfer configuration.
+  - Actual global model_tokens reach the target at the first terminal optimizer boundary, with
+    recorded target/actual/overrun and no earlier emergency stop.
+  - Every final checkpoint and both full evaluation components are complete and digest-bound;
+    all per-seed loss and P@L values are finite.
+  - Actual trainable parameters remain within +/-5%; shared data/tokenizer/evaluation/provenance
+    boundaries hold. Research-only hardware, time limit and warmup are replaced by the declared
+    test settings.
+implementation:
+  research_status: existing_runner
+  test_status: adapter_required
+  boundary_status: Existing parameter/data/evaluation checks and receipts plus candidate source
+    audit. No automatic allowlist or trusted-clock sandbox is claimed.
+  gaps:
+  - Implement and validate synchronized token-budget stopping/overrun receipts before launching
+    the v1 test phase; tasks YAML is not accepted by nano_protein.train.
+  - 'Resolve and pin a complete campaign manifest: external evaluator source, data/fixture hashes,
+    software/GPU environment, candidate source and contract digest.'
+  - Audit semantic restrictions in editable shared code; a schema check cannot prove the meter
+    or evaluator was not bypassed.
+  - N=2 v1 test results do not yet exist; historical single-seed comparisons remain under their
+    original protocol.
+provenance:
+- program.md
+- runs/autoresearch_4xl40s_1h.sh
+- nano_protein/train.py
+- nano_protein/evaluate.py
+- reports/fir-r02-rope10k-100k-20260906/results.json
+- docs/AUTORESEARCH_TASK_STANDARD.md

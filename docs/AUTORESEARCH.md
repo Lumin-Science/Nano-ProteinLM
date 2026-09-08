@@ -1,67 +1,67 @@
 # AutoResearch
 
-The default benchmark uses ESMC-171M and selects training changes by held-out
-MLM validation loss. The full experiment instructions are in
-[program.md](../program.md), adapted from the
-[`autoresearch-171m-val-loss` branch](https://github.com/Lumin-Science/LuminBench-Nano-ESMC/tree/autoresearch-171m-val-loss).
-Earlier contact-selected campaigns remain documented in
-[BASELINES.md](BASELINES.md).
+An AutoResearch task has five parts: a research question, an established
+codebase, a repeatable search protocol, explicit experiment boundaries, and a
+separate test protocol. Use **search score** for the metric selecting candidates
+and **test metrics** for the final evidence of transfer.
 
-## Research setting
+The [portable task standard](AUTORESEARCH_TASK_STANDARD.md) defines this format.
+The protein task is specified in [program.md](../program.md) and
+[tasks/protein-embedding.yaml](../tasks/protein-embedding.yaml), with a
+[JSON Schema](../tasks/task.schema.json) and [OpenMM examples](../tasks/examples/).
+The structured contracts are specifications; existing runners do not load them.
 
-Start from the original AdamW baseline: 24 layers, width 768, 12 heads, and
-170,671,168 trainable parameters. Each run starts from scratch on four L40S
-GPUs, with a synchronized 3,600-second training budget. Candidates must stay
-within ±5% of that original parameter count, rescaling overall width or depth
-to compensate for changes such as FFN resizing.
+## Protein task
 
-Candidates may change model architecture, optimizer, training loss, batching,
-and training implementation. The corpus, mixture, tokenizer, dependency lock,
-hardware, training budget, and evaluation remain fixed. Every learning-rate
-group warms linearly for 554 steps, then stays at its configured peak.
+Find better training recipes for useful ESMC-family protein representations at
+approximately fixed model size and fixed data. Search on held-out MLM loss;
+confirm transfer using both MLM loss and long-range contact P@L. An attention
+contact probe alone does not establish broad downstream-embedding quality.
 
-The reward is `sequence_mean_nll` in `eval-validation/VALIDATION_MLM.json`,
-computed over 32 fixed held-out sequences at context 512 with evaluation seed
-20260821. Training loss and full 20,775-chain contact P@L are required
-diagnostics and do not affect selection.
+| Property | Research | New v1 test |
+|---|---|---|
+| Budget per training seed | 3,600 synchronized training-loop seconds | 24,200,224,761 non-padding model tokens, including BOS/EOS |
+| Hardware | 4 L40S, BF16 | 4 H100, BF16, FA3 |
+| Repeats | N=2, seeds 42 and 43 | N=2, seeds 42 and 43 |
+| Evaluation | 32 held-out MLM sequences; full P@L diagnostic | 4,096 MLM sequences and all 20,775 contact chains |
+| Decision | Mean loss improvement over incumbent exceeds candidate sample SD | Both mean loss and mean P@L improve relative to the named comparator |
+| LR schedule | 554-step warmup, then constant | 1,000-step warmup, then constant; base LR 5e-4, WD 0.01 |
+| Runner status | Existing wall-time runner | Token stopping adapter required before launch |
 
-## Repeats and acceptance
+N counts independent from-scratch training seeds, not GPU ranks or bootstrap
+samples. Both decisions require all repeats and validity checks. The search
+noise-margin rule and the test direction rule are not significance tests.
+Report mean ± sample SD across seeds and separate per-seed P@L chain-bootstrap
+95% intervals. Test assets overlap research evaluation; this checks transfer
+across training budgets rather than an untouched holdout.
 
-Run the baseline and every candidate on at least N independent training seeds,
-with **N = 2 by default**. Choose the seeds before running, compare methods on
-the same seed set, and keep evaluation seeds fixed. Every repeat receives the
-full training budget and a fresh output directory.
+The [file/key allowlist](../program.md#4-experiment-boundaries) permits model,
+optimizer, backward loss and execution experiments while freezing data,
+tokenizer, evaluation, timing/accounting semantics and environment. Actual
+trainable parameters must remain within **162,137,610–179,204,726**, or ±5% of
+the original 170,671,168-parameter baseline. Unlisted files are protected during
+candidate research; the task owner can revise the contract between campaigns.
 
-Compute arithmetic mean loss and sample standard deviation (`ddof=1`) from all
-completed repeats. Keep a candidate only if:
+## Historical results
 
-```text
-candidate_mean_val_loss < current_best_mean_val_loss - candidate_val_loss_std
-```
+The [38-round research history](../reports/program2/README.md) used its original
+one-hour protocol. Its 142M FFN/tied endpoints predate the ±5% bound and remain
+historical results, not v1-compliant candidates.
 
-The threshold uses the candidate's standard deviation. A tie fails; a single
-run cannot qualify. The current best is the last accepted recipe, even when a
-discarded candidate has a lower mean. This rule measures improvement relative
-to observed seed variation; it is not a formal significance test.
+The [completed Test Leaderboard](../README.md#test-leaderboard) uses 100,000
+steps, global batch 1,024 and one training seed, 20260824. Its matched streams
+consumed 24,200,224,761 model tokens. These runs stopped on steps and are not
+retroactively token-stopped, two-seed tests. All five displayed recipes are
+complete; Setting 3 is best on both metrics in that comparison.
 
-## Scale-up setting
-
-Every kept research change needs a longer run to establish whether its gain
-transfers. The current scale-up uses the 171M model family, four H100 GPUs,
-100,000 optimizer steps, global batch 1,024, and a 1,000-step warmup followed by
-constant learning rates. Evaluate 4,096 held-out MLM sequences and all 20,775
-contact chains. Compare each recipe with the baseline and preceding recipe
-under these matched settings.
-
-The completed AdamW/R02 comparison has one training seed per recipe. The
-validation-loss campaign's scale-up results remain pending in the published
-[launch record](../reports/fir-r02-rope10k-100k-20260906/README.md). That plan
-adds rank balance, square-root loss weights, and tied embeddings to R02 with
-RoPE 10k, retaining FFN width 2048. The FFN-narrowing check is deferred in
-[TODO](../TODO.md). See [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md) for the exact
-recipes and evaluation contract.
+Settings 1 → 2 → 3 → 5 retain the full R02 base, adding batch balance, sqrt loss
+and tied embeddings. Setting 1 is not a pure Muon ablation. The narrower-FFN
+change is excluded from this comparison. See [exact executed configurations](PROGRAM2_SCALEUP.md)
+and [best versus baseline](BEST_RECIPE_VS_BASELINE.md); their original run IDs
+and historical numbering are retained.
 
 ## Commands and results
+
 
 - [Baseline commands](../README.md#baselines) for research and scale-up training.
 - [38-round curve](../README.md#autoresearch), including all means and sample SDs.

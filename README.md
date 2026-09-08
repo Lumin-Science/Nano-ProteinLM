@@ -125,6 +125,13 @@ specified in [program.md](program.md).
 
 ## AutoResearch
 
+Each task declares **a research question, an established codebase, a search
+protocol, experiment boundaries, and a final test protocol**. We call the
+optimization target the **search score**; final outcomes are **test metrics**.
+See the [reusable task standard](docs/AUTORESEARCH_TASK_STANDARD.md),
+[protein task contract](program.md), [structured specification](tasks/protein-embedding.yaml)
+and [OpenMM examples](tasks/examples/).
+
 An agent proposes a training change, trains from scratch, evaluates it, and
 keeps it only if it passes the rule below. **ESMC-171M with validation-loss
 selection is the default**, using the protocol from
@@ -150,7 +157,14 @@ to longer training. Completed results and remaining checks are listed in the
 are reported separately because training budgets and validation sample sizes
 differ.
 
-**Reward and acceptance.** Minimize the frozen evaluator's `sequence_mean_nll`
+The new **v1 test contract** fixes exposure at **24,200,224,761 non-padding
+model tokens per seed**, including BOS/EOS, and specifies **N=2** matched seeds.
+It requires lower mean MLM loss **and** higher mean P@L. A token-stopping
+adapter is required before running it. The completed leaderboard below retains
+its original 100k-step, single-seed protocol. See
+[the exact test definition](program.md#5-test-protocol-and-success-criteria).
+
+**Search score and acceptance.** Minimize the frozen evaluator's `sequence_mean_nll`
 in `eval-validation/VALIDATION_MLM.json`. Run each method, including the baseline,
 on at least **N independent training seeds (default N = 2)**. Choose the seeds
 before running and use the same seed set for candidates and the current best

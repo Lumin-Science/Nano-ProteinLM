@@ -21,8 +21,11 @@ candidate's sample standard deviation. Training loss and full long-range
 contact P@L are required diagnostics; P-CORE provides additional representation
 measurements. These diagnostics do not affect research selection. See
 [program.md](../program.md) for the exact rule and fixed evaluation sample,
-and [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md) for the larger evaluation used
-to check transfer to longer training.
+and [the v1 test protocol](../program.md#5-test-protocol-and-success-criteria)
+for token-budget confirmation. [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md)
+records the executed historical 100k-step comparison. The v1 task specification
+requires a token-stopping adapter before execution and does not relabel those
+single-seed results.
 
 ## Released ESMC checkpoint P@L
 
@@ -124,14 +127,14 @@ how the repository uses it.
 
 | Evaluation | Dataset lineage and publication | Probe fit | Validation | Final test | Metric and role |
 |---|---|---|---|---|---|
-| Held-out MLM | SHA-partitioned representatives from the post-exclusion UniRef90, MGnify, and OMG/IMG reservoirs. Sources: Suzek et al., [UniRef](https://doi.org/10.1093/bioinformatics/btu739); Richardson et al., [MGnify](https://doi.org/10.1093/nar/gkac1080); Cornman et al., [OMG](https://doi.org/10.1101/2024.08.14.607850). | Training corpus only | 4,096 representatives per source; 12,288 total | None | Sequence-mean NLL and perplexity; guardrail |
+| Held-out MLM | SHA-partitioned representatives from the post-exclusion UniRef90, MGnify, and OMG/IMG reservoirs. Sources: Suzek et al., [UniRef](https://doi.org/10.1093/bioinformatics/btu739); Richardson et al., [MGnify](https://doi.org/10.1093/nar/gkac1080); Cornman et al., [OMG](https://doi.org/10.1101/2024.08.14.607850). | Training corpus only | 4,096 representatives per source; 12,288 total | None | Sequence-mean NLL: primary research score; NLL/perplexity also reported in tests |
 | Remote homology | TAPE-distributed SCOP 1.75 fold classification from DeepSF. Sources: Hou et al., [DeepSF](https://doi.org/10.1093/bioinformatics/btx780); Rao et al., [TAPE](https://proceedings.neurips.cc/paper/2019/hash/37f65c068b7723cd7809ee2d31d7861c-Abstract.html). | 12,312 proteins | 736 proteins | 718 fold-holdout proteins | Balanced accuracy; family-group bootstrap; **P-CORE** |
 | Secondary structure | TAPE/NetSurfP-2.0 train and validation payloads with CB513 as test. Sources: Klausen et al., [NetSurfP-2.0](https://doi.org/10.1002/prot.25674); Cuff and Barton, [CB513](https://pubmed.ncbi.nlm.nih.gov/10081963/); Rao et al., [TAPE](https://proceedings.neurips.cc/paper/2019/hash/37f65c068b7723cd7809ee2d31d7861c-Abstract.html). | 8,678 proteins | 2,170 proteins | CB513: 513 records; 434 unique sequences | Residue macro-F1; protein bootstrap; **P-CORE** |
 | Enzyme Commission | Sequence-only adaptation of the TorchDrug/TorchProtein `EnzymeCommission` artifact and its `<30%` identity test column. Sources: Gligorijević et al., [DeepFRI](https://doi.org/10.1038/s41467-021-23303-9); Zhang and Xu, [TorchProtein record](https://doi.org/10.5281/zenodo.6622158). | 15,551 proteins | 1,729 proteins | 720 proteins | Macro average precision; Bayesian label/group bootstrap; **quarantined** |
 | DeepLoc2 | Official `multisub_5_partitions_unique.csv` with all five homology-aware partitions. Source: Thumuluri et al., [DeepLoc 2.0](https://doi.org/10.1093/nar/gkac278). | Three of five partitions per fold | Partition after the test partition | One of five partitions; every protein is test once | Macro average precision pooled over five folds; **P-CORE** |
 | Human PPI | PEER release of Pan's HPRD-derived human interaction set with released negatives and redundancy-filtered split. Sources: Pan et al., [human PPI](https://doi.org/10.1021/pr100618t); Xu et al., [PEER](https://proceedings.neurips.cc/paper_files/paper/2022/hash/e467582d42d9c13fa9603df16f31de6d-Abstract-Datasets_and_Benchmarks.html). | 35,669 pairs; 6,844 proteins | 315 pairs; 277 proteins | 237 pairs; 227 proteins | Average precision; connected-component bootstrap; **quarantined** |
 | FLIP2 Hydro low-to-high | Official Hydrophobic Core `low_to_high` fitness split pooling variants of three wild types. Source: Didi et al., [FLIP2](https://doi.org/10.64898/2026.02.23.707496). | 9,974 variants | 2,493 variants within the training set | 12,468 high-fitness variants | Spearman correlation; variant-group bootstrap; **P-CORE** |
-| Long-range contact | Experimentally determined structures from the frozen 2024-02-28 RCSB PDB snapshot, adapted to the ESM attention-to-contact protocol and ESMC long-range definition. Sources: Berman et al., [PDB](https://doi.org/10.1093/nar/28.1.235); Rao et al., [ESM contacts](https://openreview.net/forum?id=fylclEqgvgd); Candido et al., [ESMC](https://doi.org/10.64898/2026.06.03.729735). | 16 chains | 4 chains | 20,775 chains; 20,758 unique sequences | Mean precision at L; chain bootstrap; **primary selection axis** |
+| Long-range contact | Experimentally determined structures from the frozen 2024-02-28 RCSB PDB snapshot, adapted to the ESM attention-to-contact protocol and ESMC long-range definition. Sources: Berman et al., [PDB](https://doi.org/10.1093/nar/28.1.235); Rao et al., [ESM contacts](https://openreview.net/forum?id=fylclEqgvgd); Candido et al., [ESMC](https://doi.org/10.64898/2026.06.03.729735). | 16 chains | 4 chains | 20,775 chains; 20,758 unique sequences | Mean precision at L; chain bootstrap; **test/transfer metric; research diagnostic** |
 
 Source-paper headline metrics are not substituted for repository measurements.
 Every released-checkpoint P@L value is recomputed with the frozen payload,
