@@ -90,6 +90,9 @@ Run these from the repository root after cloning it as described in
 [Usage](#usage). Both settings start from the 24-layer, width-768 ESMC-171M
 AdamW baseline.
 
+See the [config index](configs/README.md) for current presets, historical
+recipes, and superseded pilots.
+
 Research setting: one hour on four L40S GPUs per seed, global batch 256.
 
 ```bash
@@ -131,8 +134,9 @@ now the default [program.md](program.md) on main.
 The benchmark has two settings:
 
 1. **Research:** a small budget for testing ideas. Each seed gets one hour of
-   synchronized training on four L40S GPUs, with at most 171M trainable
-   parameters. The starting model has 24 layers, width 768, and 12 heads.
+   synchronized training on four L40S GPUs, with trainable parameters within
+   ±5% of the original 170,671,168-parameter baseline. The starting model has
+   24 layers, width 768, and 12 heads.
    Validation uses 32 fixed held-out sequences at context length 512.
 2. **Scale-up:** longer runs to test whether each kept improvement still helps.
    The current setting trains the 171M model family for 100,000 steps on four
@@ -170,7 +174,8 @@ with no cooldown. See [program.md](program.md) for the full contract.
 
 **38-round history.** The updated run log contains the AdamW baseline and 38
 candidate rounds: 78 one-hour runs across seeds 42 and 43, with five kept
-changes. R30–R38 were all discarded, so R29 remains the best accepted recipe.
+changes. R30–R38 were all discarded, so R29 remains the best accepted recipe
+in this history, which predates the ±5% parameter rule.
 The accepted sequence is Muon → balanced ranks → square-root
 target-count loss weights → FFN width 1536 → tied embeddings. Mean validation
 loss falls from **2.63868 to 2.58057 (2.20%)**. R29's accepted configs are

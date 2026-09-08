@@ -11,7 +11,9 @@ Earlier contact-selected campaigns remain documented in
 
 Start from the original AdamW baseline: 24 layers, width 768, 12 heads, and
 170,671,168 trainable parameters. Each run starts from scratch on four L40S
-GPUs, with a synchronized 3,600-second training budget and a 171M parameter cap.
+GPUs, with a synchronized 3,600-second training budget. Candidates must stay
+within ±5% of that original parameter count, rescaling overall width or depth
+to compensate for changes such as FFN resizing.
 
 Candidates may change model architecture, optimizer, training loss, batching,
 and training implementation. The corpus, mixture, tokenizer, dependency lock,

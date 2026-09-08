@@ -15,9 +15,12 @@ with its run records.
 
 ## Hard boundaries
 
-- Train from scratch on four L40S GPUs with at most 171,000,000 trainable
-  parameters and `walltime_seconds: 3600`. Stop through the synchronized
-  wall-time guard, save the final checkpoint, and immediately evaluate it.
+- Train from scratch on four L40S GPUs with `walltime_seconds: 3600`. Stop
+  through the synchronized wall-time guard, save the final checkpoint, and
+  immediately evaluate it.
+- Keep total trainable parameters within ±5% of the original ESMC-171M baseline
+  (170,671,168); if resizing FFNs or another component breaks this limit,
+  rescale overall model width and/or depth to fit before running the candidate.
 - Warm learning rates linearly for exactly 554 optimizer steps, then hold
   every parameter group at its configured peak. No cooldown, cosine decay,
   WSD decay, or other post-warmup LR reduction.

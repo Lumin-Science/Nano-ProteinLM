@@ -11,7 +11,7 @@ data_revision="bd38448d50d8f426d7b9bd4410b53159ea001259"
 release_manifest_sha256="fe1ac0657085ab19fe6f56786006e9eb004ca66bc6c5b81dfd8e6bc3dcfda6ff"
 training_samples=5376000
 baseline_config="$repo_root/configs/esmc-171m-original.yaml"
-parameter_ceiling=171000000
+reference_parameter_count=170671168
 num_gpus=4
 walltime_seconds=3600
 contact_chains=20775
@@ -73,10 +73,10 @@ UV_CACHE_DIR="$uv_cache_dir" "$uv_bin" run --frozen python -c \
   'import sys, yaml
 config = yaml.safe_load(open(sys.argv[1]))
 observed = int(config["expected_parameter_count"])
-ceiling = int(sys.argv[2])
-if observed > ceiling:
-    raise SystemExit(f"candidate exceeds {ceiling:,}-parameter ceiling: {observed:,}")' \
-  "$config" "$parameter_ceiling"
+reference = int(sys.argv[2])
+if not 95 * reference <= 100 * observed <= 105 * reference:
+    raise SystemExit(f"candidate must stay within ±5% of {reference:,} trainable parameters: {observed:,}")' \
+  "$config" "$reference_parameter_count"
 if [[ -f "$data_root/manifest.json" && -f "$data_root/CORPUS_VERIFICATION.json" ]]; then
   :
 elif [[ -e "$data_root" ]]; then
