@@ -146,7 +146,7 @@ The benchmark has two settings:
 
 Every kept research change needs a scale-up check before we claim it transfers
 to longer training. Completed results and remaining checks are listed in the
-[scale-up leaderboard](#scale-up-leaderboard). Raw losses from the two settings
+[Test Leaderboard](#test-leaderboard). Raw losses from the two settings
 are reported separately because training budgets and validation sample sizes
 differ.
 
@@ -176,36 +176,65 @@ with no cooldown. See [program.md](program.md) for the full contract.
 candidate rounds: 78 one-hour runs across seeds 42 and 43, with five kept
 changes. R30–R38 were all discarded, so R29 remains the best accepted recipe
 in this history, which predates the ±5% parameter rule.
-The accepted sequence is Muon → balanced ranks → square-root
-target-count loss weights → FFN width 1536 → tied embeddings. Mean validation
+The five numbered changes are **1: Muon → 2: batch balance → 3: sqrt loss →
+4: FFN width 1536 → 5: tied embeddings**. Mean validation
 loss falls from **2.63868 to 2.58057 (2.20%)**. R29's accepted configs are
 available for [seed 42](configs/program2/r29_tied_seed42.yaml) and
 [seed 43](configs/program2/r29_tied_seed43.yaml).
 
 Each point below is a method's mean validation loss with thin **±1 sample SD**
-error bars. The green line follows the current best accepted recipe; lower
-means that fail the acceptance rule do not advance it. Source:
+error bars. Numbered markers **1–5** identify the accepted changes; the x-axis
+retains their original search-round numbers. The green line follows the
+current best accepted recipe; lower means that fail the acceptance rule do
+not advance it. Change **4** is marked separately because it changes model size
+and is excluded from the fixed-size tests below. Source:
 [run log through R38](reports/program2/runs-through-r38.tsv), with
 [import details and the original R29 audit](reports/program2/README.md).
 Regenerate the [SVG](reports/program2/validation-loss.svg) and PNG with
 [the plotting script](scripts/plot_autoresearch_history.py).
 
-![Validation loss over the baseline and 38 autoresearch rounds, with mean ± sample SD across two seeds. R29 remains the best accepted recipe at 2.58057 through R38.](reports/program2/validation-loss.png)
+![Validation loss across 38 search rounds. Numbered accepted changes are 1 Muon, 2 batch balance, 3 sqrt loss, 4 FFN 1536 and 5 tied embeddings. Change 4 is excluded from the fixed-size Test Leaderboard.](reports/program2/validation-loss.png)
 
-## Scale-up leaderboard
+| Research metric | Baseline | 1: + Muon | 2: + batch balance | 3: + sqrt loss | 4: + FFN 1536* | 5: + tied embeddings* |
+|---|---:|---:|---:|---:|---:|---:|
+| Validation loss ↓ | 2.63868 ± 0.01303 | 2.61807 ± 0.00945 | 2.60415 ± 0.00650 | 2.59437 ± 0.00578 | 2.59095 ± 0.00132 | **2.58057 ± 0.00544** |
+| P@L (%) ↑ | 9.648 ± 0.598 | 9.795 ± 0.189 | 9.370 ± 0.270 | **10.533 ± 0.366** | 9.829 ± 0.286 | 9.527 ± 0.720 |
 
-All six recipes completed **100,000 Stage-1 steps on four H100s**, with batch
-**1,024**, **102.4M sampled sequences**, and the same full evaluations. Settings
-1–4 add changes cumulatively; every run starts from scratch.
+Entries are **mean ± sample SD across seeds 42 and 43**, recomputed from the
+[research run log](reports/program2/runs-through-r38.tsv). P@L is in percent;
+its SD is in percentage points. Selection uses validation loss, so an accepted
+change need not improve P@L. Each research seed receives one hour on four
+L40S GPUs, batch 256, and 32 fixed MLM validation sequences.
+
+*Research change 4 reduces the model from 170.67M to 142.36M parameters;
+research change 5 inherits that narrower FFN and has 142.31M parameters.
+These historical results are preserved. The fixed-size Test Leaderboard
+**skips change 4** and tests tied embeddings directly on change 3, retaining
+FFN width 2,048.
+
+## Test Leaderboard
+
+The completed fixed-size tests follow **Baseline → 1 → 2 → 3 → 5**. Each recipe
+starts from scratch for **100,000 Stage-1 steps on four H100s**, batch **1,024**
+and **102.4M sampled sequences**, with FFN width **2,048** and the same full
+evaluations. **Setting 4 (FFN narrowing) is excluded because it changes model
+size.** The original six-recipe leaderboard, including previous RoPE20k R02,
+is preserved in the [archive](docs/archive/TEST_LEADERBOARD_20260908.md).
 
 | Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
 |---|---:|---:|---:|---:|
-| ESMC-like baseline — AdamW | 2.47436 | 26.505% | 26.295–26.719% | 12h 01m |
-| Previous R02 — RoPE20k | 2.43698 | 30.310% | 30.079–30.547% | 12h 57m |
-| 1: R02 — RoPE10k | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
+| Baseline: ESMC-like AdamW | 2.47436 | 26.505% | 26.295–26.719% | 12h 01m |
+| 1: + Muon (R02 recipe)† | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
 | 2: + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
 | **3: + sqrt loss** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
-| 4: + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
+| 5: + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
+
+†The completed Muon test uses **R02 with RoPE10k**, including parameter-free
+RMSNorm, learned residual/input routing, depth-scaled initialization and
+R02's optimizer-group multipliers. It is not a Muon-only ablation of the
+research baseline. Settings 2, 3 and 5 inherit that recipe. Setting 5 is the
+already completed `r29_tied` test, previously numbered **Setting 4** in the
+archived four-setting campaign; only its display label changes.
 
 **Setting 3 is best on both metrics:** validation loss is **2.25% lower** and
 P@L is **6.18 percentage points higher** than the AdamW baseline, with **4.71%
@@ -230,7 +259,8 @@ Training times exclude evaluation and are approximate to the minute.
 See **[best recipe versus baseline: differences, figures, and worked examples](docs/BEST_RECIPE_VS_BASELINE.md)**,
 the [complete results and adjacent comparisons](reports/fir-r02-rope10k-100k-20260906/README.md),
 and the [historical baseline/R02 records](reports/fir-171m-100k-20260906/README.md).
-The narrower-FFN change remains deferred in [TODO](TODO.md).
+The narrower-FFN change is excluded from this test track; its historical
+implementation is retained in [TODO](TODO.md).
 
 ## Usage
 

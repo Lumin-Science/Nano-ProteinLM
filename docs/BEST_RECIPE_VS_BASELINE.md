@@ -1,5 +1,11 @@
 # Best 100k-step recipe versus the ESMC-like AdamW baseline
 
+**Numbering note:** this document preserves the original six-run comparison.
+Its **Setting 4: tied embeddings** is now displayed as **Setting 5** in the
+[README Test Leaderboard](../README.md#test-leaderboard). Current change 4
+denotes FFN narrowing, which is excluded from the fixed-size tests. Measurements
+and executed configs are unchanged; the original leaderboard is [archived](archive/TEST_LEADERBOARD_20260908.md).
+
 **Setting 3 is the best completed recipe in this six-run comparison.** It
 reduces validation loss from **2.47436 to 2.41872** and increases long-range
 contact P@L from **26.505% to 32.682%**. Training takes **12h 34m 40s**, compared

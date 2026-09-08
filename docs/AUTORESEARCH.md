@@ -65,7 +65,7 @@ recipes and evaluation contract.
 
 - [Baseline commands](../README.md#baselines) for research and scale-up training.
 - [38-round curve](../README.md#autoresearch), including all means and sample SDs.
-- [Scale-up leaderboard](../README.md#scale-up-leaderboard).
+- [Test Leaderboard](../README.md#test-leaderboard).
 - [All 78 runs through R38](../reports/program2/runs-through-r38.tsv).
 - [Import details and the original R29 audit](../reports/program2/README.md).
 - [Per-method statistics through R29](../reports/program2/methods.tsv).

@@ -30,6 +30,14 @@ INK = "#233446"
 MUTED = "#64748b"
 GRAY = "#94a3b8"
 TEAL = "#087f70"
+AMBER = "#a96613"
+ACCEPTED_CHANGES = {
+    "r01_muon": (1, "Muon"),
+    "r04_batchbalance": (2, "Batch balance"),
+    "r10_sqrtloss": (3, "Sqrt loss"),
+    "r22_ffn1536": (4, "FFN 1536*"),
+    "r29_tied": (5, "Tied embeddings"),
+}
 
 
 def summarize_runs(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], list[str]]:
@@ -140,8 +148,8 @@ def plot_history(source: Path, output: Path) -> None:
             "svg.hashsalt": "nano-protein-autoresearch-history",
         }
     )
-    fig, ax = plt.subplots(figsize=(12.8, 6.5), facecolor="white")
-    fig.subplots_adjust(left=0.082, right=0.975, bottom=0.21, top=0.79)
+    fig, ax = plt.subplots(figsize=(12.8, 6.8), facecolor="white")
+    fig.subplots_adjust(left=0.082, right=0.975, bottom=0.25, top=0.79)
     fig.text(
         0.082,
         0.93,
@@ -195,14 +203,15 @@ def plot_history(source: Path, output: Path) -> None:
         label="Current best accepted",
     )
     for index in [0, *kept]:
-        color = INK if index == 0 else TEAL
+        change = ACCEPTED_CHANGES.get(rows[index]["method_id"])
+        color = INK if index == 0 else AMBER if change and change[0] == 4 else TEAL
         ax.errorbar(
             index,
             means[index],
             yerr=deviations[index],
             fmt="o",
             color=color,
-            markersize=5.2,
+            markersize=13 if change else 5.2,
             markeredgecolor="white",
             markeredgewidth=0.7,
             elinewidth=1,
@@ -210,11 +219,23 @@ def plot_history(source: Path, output: Path) -> None:
             capthick=1,
             zorder=5,
         )
+        if change:
+            ax.text(
+                index,
+                means[index],
+                str(change[0]),
+                ha="center",
+                va="center",
+                color="white",
+                weight="bold",
+                fontsize=8,
+                zorder=6,
+            )
 
     kept_marker = Line2D([], [], color=TEAL, marker="o", linestyle="none", markersize=5)
     ax.legend(
         [all_methods, best_line, kept_marker],
-        ["Each recipe: mean ± 1 SD", "Current best accepted", "Kept change"],
+        ["Each recipe: mean ± 1 SD", "Current best accepted", "Accepted changes 1–5"],
         loc="upper right",
         frameon=False,
         fontsize=9,
@@ -240,27 +261,26 @@ def plot_history(source: Path, output: Path) -> None:
         ax.spines[spine].set_visible(False)
     ax.spines["bottom"].set_color("#d8e0e7")
 
-    short_labels = {
-        "r01_muon": "Muon",
-        "r04_batchbalance": "rank balance",
-        "r10_sqrtloss": "sqrt loss",
-        "r22_ffn1536": "FFN 1536",
-        "r29_tied": "tied embeddings",
-    }
     kept_labels = [
-        f"R{index:02d} "
-        + short_labels.get(
-            rows[index]["method_id"],
-            rows[index]["method_id"].split("_", 1)[1].replace("_", " "),
-        )
+        f"[{ACCEPTED_CHANGES[rows[index]['method_id']][0]}] "
+        f"{ACCEPTED_CHANGES[rows[index]['method_id']][1]} (R{index:02d})"
         for index in kept
+        if rows[index]["method_id"] in ACCEPTED_CHANGES
     ]
     fig.text(
         0.082,
-        0.083,
-        "Kept: " + " · ".join(kept_labels),
+        0.115,
+        " · ".join(kept_labels),
         fontsize=9,
         color=TEAL,
+    )
+    fig.text(
+        0.082,
+        0.076,
+        "*Change 4 reduces model size: retained in research history, excluded from "
+        "the fixed-size Test Leaderboard.",
+        fontsize=9,
+        color=AMBER,
     )
     source_path = source.resolve()
     source_label = (
@@ -268,7 +288,7 @@ def plot_history(source: Path, output: Path) -> None:
     )
     fig.text(
         0.082,
-        0.04,
+        0.036,
         f"Source: {source_label} · {len(rows) * len(seeds)} runs · "
         f"SD across {len(seeds)} training seeds; 32 fixed validation sequences.",
         fontsize=8.5,
