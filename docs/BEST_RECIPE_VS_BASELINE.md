@@ -219,7 +219,7 @@ P@L gain is a result of these trained checkpoints, not a mathematical promise
 of the load-balancing algorithm.
 
 Implementation: [`balanced_partitions` and `rebalance_masked_batch`](../src/nanoprotein/batch_balance.py).
-[Existing DDP checks](../tests/test_batch_balance.py) exercise example/label
+[Existing DDP checks](../.dev/tests/test_batch_balance.py) exercise example/label
 preservation, equal row counts, unchanged RNG state and gradient equivalence
 to the unpartitioned reference.
 
@@ -336,7 +336,7 @@ The leaderboard improvement therefore cannot be explained merely by changing
 the definition of validation loss.
 
 Implementation: [`training_losses` and the accumulation loop](../src/nanoprotein/train.py).
-[Existing loss checks](../tests/test_training_losses.py) compare loss values
+[Existing loss checks](../.dev/tests/test_training_losses.py) compare loss values
 and gradients against an independent pooled reference, including unequal
 target counts across ranks and ranks with no targets.
 

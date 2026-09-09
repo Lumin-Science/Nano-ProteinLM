@@ -16,7 +16,7 @@ class Retained171MPresetTests(unittest.TestCase):
     @staticmethod
     def preset():
         path = (
-            Path(__file__).resolve().parents[1]
+            Path(__file__).resolve().parents[2]
             / "configs/archive/autoresearch_171m_4xl40s_1h.yaml"
         )
         return yaml.safe_load(path.read_text())
@@ -138,7 +138,7 @@ class Retained171MPresetTests(unittest.TestCase):
             )
 
     def test_retained_presets_keep_their_distinct_schedules(self):
-        root = Path(__file__).resolve().parents[1]
+        root = Path(__file__).resolve().parents[2]
         current_300m = yaml.safe_load(
             (root / "configs/archive/esmc-300m-current-best.yaml").read_text()
         )

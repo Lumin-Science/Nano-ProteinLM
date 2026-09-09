@@ -123,6 +123,7 @@ src/*.sh          # Optional parallel evaluation launchers
 runs/             # Public setup and speedrun scripts
 task/             # Autoresearch definition and measurement command
 .dev/scripts/     # Plotting, release preparation and historical analysis tools
+.dev/tests/       # Developer regression tests
 .dev/reports/     # Published experiment records and figures
 ```
 
@@ -132,3 +133,9 @@ checkout to refresh the installed package. Direct commands now use
 The old `nano_protein` namespace and thin scripts/train.py, scripts/evaluate.py
 and scripts/download_data.py wrappers have been retired. Existing tensor/state-dict
 checkpoints remain loadable; their saved recipe values and model names are unchanged.
+
+After setup, run the developer tests from the repository root:
+
+```bash
+.venv/bin/python -m unittest discover -s .dev/tests -q
+```

@@ -4,7 +4,8 @@
 
 - Runtime code and CLI utilities are consolidated under `src/nanoprotein/`.
   The public module namespace is `nanoprotein`. Plotting and release tools
-  live in `.dev/scripts/`; published reports live in `.dev/reports/`.
+  live in `.dev/scripts/`, regression tests in `.dev/tests/`, and published
+  reports in `.dev/reports/`.
   Packaging, subprocess callers and documentation use the new layout.
 
 - Two recommended recipes for small-budget 171M experiments: [current-best Setting 3](../configs/default.yaml) and

@@ -8,7 +8,7 @@ import yaml
 
 from nanoprotein.train import resolve_config_overrides
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class TrainingCLITests(unittest.TestCase):

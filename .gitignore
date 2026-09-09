@@ -4,6 +4,7 @@
 .exps/
 /.dev/*
 !/.dev/scripts/
+!/.dev/tests/
 !/.dev/reports/
 !/.dev/LOG.md
 !/.dev/report/

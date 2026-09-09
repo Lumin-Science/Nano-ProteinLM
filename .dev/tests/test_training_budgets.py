@@ -99,7 +99,7 @@ class TrainingBudgetTests(unittest.TestCase):
         self.assertEqual(training_stop_reason(**{**base, "max_steps": 2}), "max_steps")
 
     def test_public_best_alias_matches_canonical_incumbent(self) -> None:
-        root = Path(__file__).resolve().parents[1]
+        root = Path(__file__).resolve().parents[2]
         with (root / "configs/archive/esmc-300m-current-best.yaml").open() as handle:
             public_best = yaml.safe_load(handle)
         with (root / "configs/archive/autoresearch_300m_4xa100_1h.yaml").open() as handle:
