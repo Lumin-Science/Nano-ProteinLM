@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "scope": "checkpoint_at_step",
+  "full_training_complete": false,
+  "checkpoint_sha256": "a3091d656a7bf0b3d1dc3d4c9e009503cf2332fc7aa995586b4876353fa62c84",
+  "optimizer_steps": 10000,
+  "sequences_seen": 20480000,
+  "validation": {
+    "masked_residues": 139963,
+    "perplexity": 13.28863531950157,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.586909182689851,
+    "sequence_median_nll": 2.6470612287521362,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  },
+  "p_at_l": 0.13793062907963483,
+  "uncertainty": {
+    "confidence_interval_95": [
+      0.13667655664758738,
+      0.13919997625346306
+    ],
+    "replicates": 5000,
+    "unit_count": 20775
+  }
+}

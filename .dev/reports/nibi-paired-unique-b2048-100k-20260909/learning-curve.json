@@ -1,0 +1,62 @@
+{
+  "protocol": "nibi-paired-unique-learning-curve-v1",
+  "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
+  "global_batch": 2048,
+  "target_steps": 100000,
+  "prepared_training_records": 208457369,
+  "runs": {
+    "baseline": [
+      {
+        "optimizer_step": 10000,
+        "sequences_seen": 20480000,
+        "model_tokens": 4840112149,
+        "training_seconds": 7895.9238357970025,
+        "validation_loss": 2.586909182689851,
+        "p_at_l": 0.13793062907963483,
+        "confidence_interval_95": [
+          0.13667655664758738,
+          0.13919997625346306
+        ],
+        "checkpoint_sha256": "a3091d656a7bf0b3d1dc3d4c9e009503cf2332fc7aa995586b4876353fa62c84",
+        "evaluation_seconds": 224.47912407200783,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
+      }
+    ],
+    "setting3": [
+      {
+        "optimizer_step": 10000,
+        "sequences_seen": 20480000,
+        "model_tokens": 4840112149,
+        "training_seconds": 8163.340214345837,
+        "validation_loss": 2.535755034658905,
+        "p_at_l": 0.22211714092459311,
+        "confidence_interval_95": [
+          0.22024937164944433,
+          0.22401240071365308
+        ],
+        "checkpoint_sha256": "569d45f8c5989699bfd2b6111461b46c96ef1e36d828370373b17056190621a9",
+        "evaluation_seconds": 313.5001317311544,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
+      }
+    ]
+  },
+  "comparisons": [
+    {
+      "optimizer_step": 10000,
+      "validation_loss_difference_setting3_minus_baseline": -0.05115414803094609,
+      "p_at_l_difference_percentage_points": 8.418651184495829,
+      "paired_95_ci_percentage_points": [
+        8.321747909219662,
+        8.513453075947504
+      ],
+      "unit": "same contact chain",
+      "chains": 20775,
+      "bootstrap_replicates": 5000,
+      "bootstrap_seed": 20260820,
+      "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
+    }
+  ],
+  "last_audited_utc": "2026-09-09T06:07:16.785772+00:00"
+}

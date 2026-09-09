@@ -1,0 +1,28 @@
+{
+  "observed_utc": "2026-09-09T06:02:15.623234+00:00",
+  "allocation": "12162637",
+  "slurm_step": "12162637.24",
+  "allocation_state": "RUNNING",
+  "remaining": "5-05:21:47",
+  "all_metrics_finite": true,
+  "all_source_epochs_zero": true,
+  "matched_draws_and_tokens_at_common_steps": true,
+  "fatal_oom_exceptions": 0,
+  "runs": {
+    "baseline": {
+      "optimizer_step": 13410,
+      "training_loss": 2.5574419498443604,
+      "seconds_per_step": 0.7905856173369102,
+      "estimated_finish_utc": "2026-09-10T01:36:52.743956+00:00",
+      "last_audited_evaluation_step": 10000
+    },
+    "setting3": {
+      "optimizer_step": 12870,
+      "training_loss": 2.5162163376808167,
+      "seconds_per_step": 0.8121349797816947,
+      "estimated_finish_utc": "2026-09-10T02:28:38.445208+00:00",
+      "last_audited_evaluation_step": 10000
+    }
+  },
+  "publication": "local_only_pending_explicit_permission"
+}
