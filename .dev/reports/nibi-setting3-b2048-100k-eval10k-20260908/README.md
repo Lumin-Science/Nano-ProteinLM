@@ -7,10 +7,10 @@ periodic-evaluation qualification and **eight-to-four-GPU Muon/AdamW checkpoint
 continuation test both passed**. See [launch verification](LAUNCH_VERIFIED.json),
 [qualification](QUALIFICATION_PASSED.json), and [baseline hash checks](BASELINE_READY.json).
 
-At **18:04 Toronto**, production had reached **10,080 / 100,000 steps** on eight
+At **20:00 Toronto on September 8**, production had reached **25,160 / 100,000 steps** on eight
 H100s, batch **2,048**, with finite loss/objective/gradients and pinned FA3.
-Its first full 10k evaluation passed and training continued. The current ETA,
-including remaining evaluations, is **about 05:45 Toronto on September 9**.
+Both full evaluations at 10k and 20k passed, and training continued. The current ETA,
+including remaining evaluations, is **about 05:41 Toronto on September 9**.
 The training source remains **`c76a07998987a4746d4bffc89d878a758cd735cb`**.
 Two-hour monitoring continues through final evaluation and checkpoint preservation.
 
@@ -25,12 +25,21 @@ recovery](QUEUE_RECOVERY.json) remain archived below.
 | Optimizer step | Sequences seen | Validation MLM loss | Perplexity | P@L | 95% chain-bootstrap CI | Evaluation pause |
 | --- | --- | --- | --- | --- | --- | --- |
 | 10,000 | 20,480,000 | 2.536788 | 12.63900 | 22.31377% | [22.12376%, 22.50470%] | 211.61 seconds |
+| 20,000 | 40,960,000 | 2.485602 | 12.00834 | 26.56299% | [26.35130%, 26.77835%] | 209.70 seconds |
 
-The [independent 10k audit](full/evaluations/step-010000/LOCAL_AUDIT.json) checks
+The independent [10k](full/evaluations/step-010000/LOCAL_AUDIT.json) and
+[20k](full/evaluations/step-020000/LOCAL_AUDIT.json) audits check
 all 16 shard hashes, checkpoint bindings, the fixed 4,096 MLM sequences and exact
 20,775-chain population, probe protocol, and a recomputed 5,000-replicate bootstrap
 CI. These are production results; qualification scores are separate.
 See the [machine-readable learning curve](learning-curve.json).
+
+At the matched **20k-step / batch-2,048** checkpoint, Setting 3 has validation
+loss **2.485602** versus the AdamW baseline's **2.536814**, and P@L **26.56299%**
+versus **18.84834%**. The difference is **+7.71465 percentage points**; a paired
+chain-bootstrap 95% CI for that difference is **[7.62296, 7.80763] pp**
+(5,000 replicates, same 20,775 chains). This is an intermediate comparison from
+one training seed per recipe. See the [matched comparison receipt](full/evaluations/step-020000/BASELINE_COMPARISON.json).
 
 ## Production configuration
 

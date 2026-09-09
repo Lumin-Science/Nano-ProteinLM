@@ -1,0 +1,22 @@
+{
+  "optimizer_steps": 20000,
+  "global_batch_size": 2048,
+  "sequences_seen": 40960000,
+  "same_contact_chains": true,
+  "chain_count": 20775,
+  "validation_loss_setting3": 2.4856017313218217,
+  "validation_loss_baseline": 2.5368135089429416,
+  "validation_loss_delta": -0.051211777621119836,
+  "p_at_l_setting3": 0.26562990453717217,
+  "p_at_l_baseline": 0.18848336876311478,
+  "p_at_l_delta_percentage_points": 7.714653577405736,
+  "paired_chain_bootstrap_95_delta_percentage_points": [
+    7.622955806287276,
+    7.807627407370248
+  ],
+  "replicates": 5000,
+  "seed": 20260820,
+  "chain_order": "sorted_chain_id",
+  "setting3_checkpoint_sha256": "242c071e6212e788eb306d666f3d022d224898a0a48d0f4aa51e9b3ca23a2b78",
+  "baseline_checkpoint_sha256": "456819621bd2d9cabab7de442d9a0529ffb2ff070358ca75eb9580f701e08123"
+}

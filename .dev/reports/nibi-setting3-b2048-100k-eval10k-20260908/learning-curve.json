@@ -22,6 +22,25 @@
       "training_seconds": 4487.323877784889,
       "evaluation_seconds": 211.61125050787814,
       "audit": "full/evaluations/step-010000/LOCAL_AUDIT.json"
+    },
+    {
+      "optimizer_steps": 20000,
+      "sequences_seen": 40960000,
+      "checkpoint_sha256": "242c071e6212e788eb306d666f3d022d224898a0a48d0f4aa51e9b3ca23a2b78",
+      "validation_loss": 2.4856017313218217,
+      "perplexity": 12.008343877907647,
+      "p_at_l": 0.26562990453717217,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.2635129808453701,
+          0.26778354101098
+        ]
+      },
+      "training_seconds": 8971.715819053119,
+      "evaluation_seconds": 209.70454140519723,
+      "audit": "full/evaluations/step-020000/LOCAL_AUDIT.json"
     }
   ]
 }
