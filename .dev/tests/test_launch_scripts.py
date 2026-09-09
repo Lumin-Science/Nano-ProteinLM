@@ -197,3 +197,12 @@ class LaunchScriptTests(unittest.TestCase):
         self.env["LAUNCH_TEST_EVALUATION_FAIL"] = "1"
         self.run_script("speedrun.sh", success=False)
         self.assertFalse(any("torch.distributed.run" in row for row in self.commands()))
+
+    def test_setup_sample_budget_and_mutual_exclusion(self):
+        self.run_script("setup.sh", "--training-samples", "206848000")
+        download = next(row for row in self.commands() if "nanoprotein.sharded_data" in row)
+        self.assertEqual(download[download.index("--training-samples") + 1], "206848000")
+        self.assertNotIn("--training-shards", download)
+        self.run_script(
+            "setup.sh", "--training-shards", "7", "--training-samples", "100", success=False
+        )

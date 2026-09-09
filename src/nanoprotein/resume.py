@@ -52,6 +52,10 @@ def validate_resume(
         raise ValueError("resume requires a matching checkpoint data-manifest hash")
     old = copy.deepcopy(packet["train_config"])
     new = copy.deepcopy(config)
+    # Historical checkpoints implicitly allowed sampler wraps. They can still
+    # continue when the caller explicitly chooses that same legacy behavior.
+    old.setdefault("data_resampling", "allow")
+    new.setdefault("data_resampling", old["data_resampling"])
     old_world = int(packet["world_size"])
     if len(old["stages"]) != len(new["stages"]):
         raise ValueError("resume cannot change the stage schedule")
@@ -74,6 +78,7 @@ def validate_resume(
         "expected_world_size",
         "periodic_evaluation_interval",
         "periodic_evaluation_command",
+        "data_capacity_headroom",
     ):
         old.pop(key, None)
         new.pop(key, None)

@@ -25,6 +25,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from .batch_balance import rebalance_masked_batch
 from .data import MixtureBatcher, file_sha256
+from .data_budget import data_coverage
 from .flash_attention import prepare_attention
 from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
 from .periodic_evaluation import run_periodic_evaluation
@@ -623,12 +624,21 @@ def train(
     if int(config.get("expected_world_size", world_size)) != world_size:
         raise ValueError("configured GPU count differs from the distributed world size")
     manifest_sha = file_sha256(data_root / "manifest.json")
+    coverage = data_coverage(config, data_manifest, world_size=world_size)
+    allow_resampling = coverage["policy"] == "allow"
     resumed = None
     if resume_checkpoint is not None:
         resumed = torch.load(resume_checkpoint, map_location="cpu", weights_only=False)
         validate_resume(
             resumed, config, world_size=world_size, data_manifest_sha256=manifest_sha
         )
+        if not allow_resampling and (
+            int(resumed["world_size"]) != world_size or not resumed.get("runtime_states")
+        ):
+            raise ValueError(
+                "no-repeat continuation requires the saved GPU layout and sampler states; "
+                "a new data stream could repeat proteins already consumed"
+            )
     if not torch.cuda.is_available():
         raise RuntimeError("training requires CUDA")
     device = torch.device("cuda", local_rank)
@@ -658,6 +668,7 @@ def train(
         if resolved_path.resolve() == config_path.resolve():
             resolved_path = output_root / "config.resolved.yaml"
         resolved_path.write_text(yaml.safe_dump(config, sort_keys=False))
+        _write_json(output_root / "DATA_COVERAGE.json", coverage)
         _write_json(
             output_root / "run_contract.json",
             {
@@ -668,6 +679,7 @@ def train(
                 "resolved_config_sha256": file_sha256(resolved_path),
                 "data_manifest": str((data_root / "manifest.json").resolve()),
                 "data_manifest_sha256": file_sha256(data_root / "manifest.json"),
+                "data_coverage": coverage,
                 "homology_exclusion": data_manifest.get("decontamination", {}).get(
                     "homology_exclusion"
                 ),
@@ -782,9 +794,17 @@ def train(
             seed=data_seed,
             rank=rank,
             world_size=world_size,
+            allow_resampling=allow_resampling,
         )
         for stage in stages
     }
+    if not allow_resampling:
+        # A stage transition must continue the same per-source permutation,
+        # rather than restart at its beginning under a different mixture.
+        shared_samplers = {}
+        for batcher in batchers.values():
+            for name, sampler in batcher.row_samplers.items():
+                batcher.row_samplers[name] = shared_samplers.setdefault(name, sampler)
     if saved_runtime is not None:
         restore_runtime(saved_runtime, batchers)
     walltime_seconds = float(
@@ -981,7 +1001,23 @@ def train(
         filled_residues += global_step_filled
         sequences_seen += global_step_sequences
 
-        if rank == 0 and (optimizer_step == 1 or optimizer_step % log_interval == 0):
+        log_due = optimizer_step == 1 or optimizer_step % log_interval == 0
+        if log_due:
+            batcher = batchers[stage.name]
+            counts = torch.tensor(
+                [batcher.source_counts[name] for name in batcher.names],
+                dtype=torch.int64,
+                device=device,
+            )
+            epochs = torch.tensor(
+                [batcher.row_samplers[name].epoch for name in batcher.names],
+                dtype=torch.int64,
+                device=device,
+            )
+            if world_size > 1:
+                dist.all_reduce(counts, op=dist.ReduceOp.SUM)
+                dist.all_reduce(epochs, op=dist.ReduceOp.MAX)
+        if rank == 0 and log_due:
             tokens_per_second = global_step_tokens / compute_seconds
             peak_bf16_tflops = float(config.get("peak_bf16_tflops_per_gpu", 312.0))
             mfu_6n = (
@@ -1009,6 +1045,9 @@ def train(
                 ),
                 "estimated_training_flops": 6 * parameter_count * model_tokens,
                 "source_counts_rank0": dict(batchers[stage.name].source_counts),
+                "source_counts_global": dict(zip(batcher.names, counts.tolist(), strict=True)),
+                "source_epoch_maxima": dict(zip(batcher.names, epochs.tolist(), strict=True)),
+                "data_resampling": coverage["policy"],
                 "attention_backend": model_options["attention_backend"],
                 "optimizer": str(config.get("optimizer", "adamw")),
             }
