@@ -24,9 +24,19 @@ assert args[:4] == ['run', '--frozen', '--no-dev', 'python'], args
 args = args[4:]
 if args[:2] == ['-m', 'nanoprotein.sharded_data']:
     root = Path(args[args.index('--output-root') + 1])
+    if root.exists():
+        assert (root / 'manifest.json').is_file()
+        assert (root / 'CORPUS_VERIFICATION.json').is_file()
+        sys.exit(0)
     root.mkdir(parents=True)
     for name in ('manifest.json', 'CORPUS_VERIFICATION.json'):
         (root / name).write_text('{}')
+elif args[:2] == ['-m', 'nanoprotein.setup_evaluation']:
+    if os.environ.get('LAUNCH_TEST_EVALUATION_FAIL'):
+        sys.exit(1)
+    root = Path(args[args.index('--data-root') + 1]) / 'evaluation'
+    (root / 'contact').mkdir(parents=True, exist_ok=True)
+    (root / 'source').mkdir(exist_ok=True)
 elif args[0] == '-':
     # Receipt validation is exercised by the real trainer, not this shell-flow test.
     assert Path(args[1], 'CORPUS_VERIFICATION.json').is_file()
@@ -119,8 +129,12 @@ class LaunchScriptTests(unittest.TestCase):
         self.run_script("setup_env_and_data.sh")
         self.run_script("setup_env_and_data.sh")
         commands = self.commands()
-        self.assertEqual(sum("nanoprotein.sharded_data" in row for row in commands), 1)
+        self.assertEqual(sum("nanoprotein.sharded_data" in row for row in commands), 2)
         self.assertFalse(any("torch.distributed.run" in row for row in commands))
+        self.assertEqual(sum("nanoprotein.setup_evaluation" in row for row in commands), 2)
+        download = next(row for row in commands if "nanoprotein.sharded_data" in row)
+        self.assertEqual(download[download.index("--training-shards") + 1], "7")
+        self.assertTrue((self.data / "evaluation/contact").is_dir())
 
     def test_incomplete_data_and_failed_qualification_block_training(self):
         (self.data / "training").mkdir(parents=True)
@@ -153,3 +167,33 @@ class LaunchScriptTests(unittest.TestCase):
         self.assertEqual(config["walltime_seconds"], 3600)
         check = next(row for row in self.commands() if "nanoprotein.check_environment" in row)
         self.assertEqual(check[check.index("--attention-backend") + 1], "flash")
+
+    def test_setup_custom_shard_count_and_usage(self):
+        self.run_script("setup_env_and_data.sh", "--training-shards", "30")
+        download = next(row for row in self.commands() if "nanoprotein.sharded_data" in row)
+        self.assertEqual(download[download.index("--training-shards") + 1], "30")
+        self.run_script("setup_env_and_data.sh", "--training-shards", success=False)
+        help_result = self.run_script("setup_env_and_data.sh", "--help")
+        self.assertIn("565", help_result.stdout)
+
+    def test_speedrun_reuses_saved_custom_shard_count(self):
+        self.run_script("setup_env_and_data.sh", "--training-shards", "30")
+        (self.data / "training/download-plan.json").write_text(
+            json.dumps(
+                {
+                    "sources": {
+                        "uniref90": {"train": [0] * 13},
+                        "mgnify": {"train": [0] * 3},
+                        "omg_img": {"train": [0] * 14},
+                    }
+                }
+            )
+        )
+        self.run_script("speedrun.sh")
+        downloads = [row for row in self.commands() if "nanoprotein.sharded_data" in row]
+        self.assertEqual(downloads[-1][downloads[-1].index("--training-shards") + 1], "30")
+
+    def test_incomplete_evaluation_blocks_training(self):
+        self.env["LAUNCH_TEST_EVALUATION_FAIL"] = "1"
+        self.run_script("speedrun.sh", success=False)
+        self.assertFalse(any("torch.distributed.run" in row for row in self.commands()))

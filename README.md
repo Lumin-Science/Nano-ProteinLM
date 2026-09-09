@@ -1,18 +1,50 @@
-# LuminBench Nano-ESMC
+# NanoProtein
 
-- [Data](#data)
-- [Usage](#usage)
-- [AutoResearch](#autoresearch)
-- [Test Leaderboard](#test-leaderboard)
-- [Citation](#citation)
+Inspired by [nanoGPT](https://github.com/karpathy/nanoGPT) and
+[nanochat](https://github.com/karpathy/nanochat), NanoProtein makes protein
+language-model training accessible, inspectable and easy to experiment with.
+Our goal is to help researchers train better protein embeddings for downstream
+biology tasks, through a small, open implementation and reproducible experiments.
 
-Nano-ESMC provides ESMC-style protein language-model training with public,
-decontaminated data and fixed evaluations. Use it to reproduce and modify
-protein LM pretraining, or benchmark agentic autoresearch under controlled
-training budgets. Contributions of training recipes, evaluation tasks and
-hardware reproductions are welcome.
+**For protein researchers**, this repository provides a minimal reproduction of
+ESMC-style model training: public data, readable PyTorch code, training recipes
+and evaluations in one place. We aim to contribute an open-source foundation
+that researchers can understand, reproduce and extend in support of open science.
 
-## Data
+**For agentic researchers**, it provides a controlled environment for iterative
+autoresearch on the same scientific objective. Deterministic data selection, fixed seeds, explicit
+compute budgets and frozen evaluation protocols make recipe changes measurable.
+An agent can modify the training recipe, train, evaluate and improve it; the
+choice of agent and search strategy remains yours.
+
+<p align="center">
+  <a href="#setting-up-data--environments">Setup</a> ·
+  <a href="#training-and-evaluating">Training &amp; Evaluation</a> ·
+  <a href="#autoresearch">AutoResearch</a> ·
+  <a href="#test-leaderboard">Test Leaderboard</a> ·
+  <a href="#citation">Citation</a>
+</p>
+
+## Setting up data & environments
+
+Prepare the environment and data once, then reuse them for training and evaluation.
+The same setup supports ordinary research and the fixed autoresearch task.
+
+### Requirements
+
+- **Environment:** Linux, a compatible NVIDIA driver and
+  `uv >=0.11.31,<0.12`. Setup installs Python and dependencies from the repository lock.
+- **Training:** the default speedrun uses **four H100 GPUs with FA3**.
+  The one-hour autoresearch profile uses **four L40S GPUs with FA2**.
+  [Direct training commands](docs/USAGE.md#training) support other configurations.
+- **Data preparation:** no GPU required; allow space for both downloaded Parquet
+  files and their prepared token stores—**at least 5 GB** for the default data
+  setup, plus separate space for training checkpoints.
+
+### Data preparation
+
+We curate a public protein corpus following the ESMC data recipe, with explicit
+filtering and evaluation decontamination before training.
 
 ```mermaid
 flowchart LR
@@ -65,8 +97,9 @@ After the storage-length filter, we reserve **4,096 validation proteins per
 source** and write the remaining **666.0M training proteins** to deterministic
 Parquet shards. An independent verifier checks sequence and shard hashes,
 duplicate removal, evaluation exclusions and train/validation separation before
-publication. The setup script downloads a fixed shard subset of this release
-for the benchmark, together with all three validation shards.
+publication. The release contains **565 training Parquet shards**—92 UniRef90,
+229 MGnify and 244 OMG/IMG—plus **3 validation shards** containing all 12,288
+held-out proteins.
 
 > [!NOTE]
 > **Gap from ESMC:** public OMG/IMG substitutes for the paper's July 2023 JGI
@@ -75,35 +108,46 @@ for the benchmark, together with all three validation shards.
 
 [Data preparation](docs/DATA.md) · [🤗 Processed data](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259) · [🤗 Raw dataset](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
 
-## Usage
-
-### Requirements
-
-- Linux, a compatible NVIDIA driver and `uv >=0.11.31,<0.12`; Python and
-  dependencies are installed from the repository lock.
-- Recommended Minimal Setting: Four L40S-class GPUs for the one-hour research profile;
+### Install the environment and data
 
 ```bash
 git clone https://github.com/Lumin-Science/Nano-Protein-LM.git
 cd Nano-Protein-LM
-```
-
-### Setup
-
-Use `data/` and `outputs/` inside the repository by default. To choose different
-locations, copy `.env.example` to `.env` and edit only `DATA_ROOT` and `OUTPUT_ROOT`.
-
-```bash
 bash runs/setup_env_and_data.sh
 ```
 
-This installs the locked Python environment, downloads and verifies the benchmark
-training subset, and prepares `$DATA_ROOT/training/`. It reuses verified data on
-later runs; downloaded shards stay in `$DATA_ROOT/cache/`. Setup does not require
-GPUs. Contact evaluation additionally needs the frozen dataset and evaluator source
-under `$DATA_ROOT/evaluation/`; see [evaluation setup](docs/USAGE.md#evaluation).
+The default downloads **7 training shards (7.11M proteins; 1.32 GB compressed,
+including MLM validation)**, all **12,288 MLM validation proteins**, and the
+frozen [**P@L dataset and evaluator**](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/cc548944b9caaf8b4f40ba49b316cc6f477a6031/evaluation) (~168 MB compressed): 16 probe-fit chains, 4 probe-validation
+chains and all 20,775 evaluation chains. It does not install the experimental
+P-CORE tasks. Downloaded assets are checked against their frozen hashes and reused
+on subsequent runs.
 
-### Training a 170M Model
+This is more than enough data for a **100-step trial at global batch 1,024**
+(102,400 sampled proteins). Longer training repeatedly samples the prepared
+subset; setup does not download the entire 666.0M-protein corpus.
+
+Data and outputs default to `data/` and `outputs/`. To use another disk, copy
+[`.env.example`](.env.example) to `.env` and set only `DATA_ROOT` and `OUTPUT_ROOT`.
+For a larger corpus, choose a fresh `DATA_ROOT` and request more whole shards:
+
+```bash
+bash runs/setup_env_and_data.sh --training-shards 30  # 30 of 565 training shards
+# --training-shards 565 downloads the complete training release (~109.66 GB compressed).
+```
+
+Shard selection extends deterministic prefixes of the three sources according to
+the training mixture. MLM validation and P@L remain complete at every shard count.
+The benchmark task keeps the default **7-shard** selection for comparable scores.
+[Storage layout and direct data API](docs/USAGE.md#setup)
+
+## Training and evaluating
+
+Start with a short training trial, scale up a recipe, then measure both language
+modeling and structural information in its checkpoint. The scripts call standard
+Python APIs so you can adapt the commands to your own research.
+
+### Train a 171M model
 
 > [!NOTE]
 > **Our 171M variant is designed for small-budget training experiments.** Its
@@ -117,7 +161,13 @@ under `$DATA_ROOT/evaluation/`; see [evaluation setup](docs/USAGE.md#evaluation)
 > These are local training presets; [reference details](configs/reference/README.md)
 > explain how their training settings differ from the released models.
 
-Run the current-best **Setting 3** recipe with one command; it calls setup automatically:
+Try the current-best **Setting 3** recipe for 100 steps; setup runs automatically:
+
+```bash
+bash runs/speedrun.sh configs/default.yaml setting3-trial --max-steps 100
+```
+
+For the full 100k-step run:
 
 ```bash
 bash runs/speedrun.sh
@@ -135,18 +185,39 @@ For 171M training, choose [current best](configs/default.yaml) or
 training API; [custom training commands](docs/USAGE.md#training) remain available
 for other budgets, hardware and recipe changes.
 
-### Evaluation
+### Evaluate a checkpoint
 
 - **MLM validation loss ↓:** mean per-protein masked-token loss on held-out data;
   the autoresearch selection metric.
 - **Contact P@L ↑:** precision among the top L predicted long-range contacts,
   where L is chain length, averaged over 20,775 chains; tests structural information.
 
-To score a saved checkpoint, use the [evaluation commands and protocol](docs/EVALUATION.md#evaluation-execution).
-The same document contains the [released ESMC comparison](docs/EVALUATION.md#released-esmc-checkpoint-pl),
+After setup, both metrics are ready to run. Load your paths and score a checkpoint:
+
+```bash
+set -a
+if [ -f .env ]; then source .env; fi
+source .env.example
+set +a
+uv run --frozen python -m nanoprotein.evaluate \
+  --checkpoint "$OUTPUT_ROOT/setting3-trial/checkpoint-final.pt" \
+  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/setting3-trial/evaluation" \
+  --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
+  --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
+  --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
+```
+
+This reports MLM loss on 4,096 held-out sequences and P@L over the full contact
+population. Evaluation is a separate run; a 100-step training trial does not
+shorten the evaluation protocol. See [evaluation commands and protocol](docs/EVALUATION.md#evaluation-execution).
+That document also contains the [released ESMC comparison](docs/EVALUATION.md#released-esmc-checkpoint-pl),
 probe definitions, confidence intervals and additional downstream tasks.
 
 ## AutoResearch
+
+Use NanoProtein as a research environment for improving training recipes under
+controlled budgets. Task definitions describe what is measured and held fixed;
+your agent decides how to search.
 
 ### Protocol
 
@@ -160,6 +231,9 @@ on four H100s**, comparing mean MLM loss and P@L. Full rules and research comman
 are in [task/171m-validation-loss.md](task/171m-validation-loss.md).
 
 ### Experiments
+
+A completed 38-round search found the cumulative recipe changes below. The
+figure shows their effect on the fixed-budget validation objective.
 
 ![Autoresearch progress across 38 rounds: five cumulative improvements reduce validation loss by 2.20%; changes 4–5 use smaller models.](.dev/reports/program2/validation-loss.png)
 
@@ -203,15 +277,15 @@ See [recipe differences with figures and examples](docs/BEST_RECIPE_VS_BASELINE.
 
 ## Citation
 
-If you use Nano-ESMC, please cite this repository and the original
+If you use NanoProtein, please cite this repository and the original
 [ESMC paper](https://doi.org/10.64898/2026.06.03.729735):
 
 ```bibtex
 @software{lumin_science_nano_esmc_2026,
   author = {Muchen Li},
-  title = {Nano-Protein-LM: A Minimal Reproduction of ESMC Language-Model Training},
+  title = {NanoProtein: Minimal ESMC-Style Protein Language-Model Training},
   year = {2026},
-  url = {https://github.com/Lumin-Science/LuminBench-Nano-ESMC}
+  url = {https://github.com/Lumin-Science/Nano-Protein-LM}
 }
 
 @article{candido2026language,

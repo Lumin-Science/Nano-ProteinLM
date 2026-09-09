@@ -1,0 +1,17 @@
+{
+  "archive": "contact-evaluation-v1.tar.gz",
+  "sha256": "0a9f19e60643114ee98db1b89d3b9611a9e55f6c876a18b1d951e6f16e389eb6",
+  "bytes": 167958183,
+  "files": 20807,
+  "uncompressed_bytes": 663149992,
+  "manifest_sha256": "c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3",
+  "inventory_sha256": "1b73f5f466420c8d0c74be452ebabe46af837482cee357674cad01d99e6f4b70",
+  "source_manifest_sha256": "2fad51df6f4f2586b6648b9e4f575058f1999eba60175cba9fd7834f36951e55",
+  "probe_fit_chains": 16,
+  "probe_validation_chains": 4,
+  "evaluation_chains": 20775,
+  "repo_id": "LuminScience/LuminBench-Nano-ESMC",
+  "revision": "cc548944b9caaf8b4f40ba49b316cc6f477a6031",
+  "parent_revision": "bd38448d50d8f426d7b9bd4410b53159ea001259",
+  "path": "evaluation/contact-evaluation-v1.tar.gz"
+}

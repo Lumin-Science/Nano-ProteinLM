@@ -17,9 +17,13 @@ whose independently verified manifest contains 665,970,495 training proteins:
 
 Each source also has one 4,096-protein validation shard, for 12,288 validation
 proteins in total. The complete artifact contains 568 train/validation shards
-and occupies 109,661,312,410 compressed bytes. A run downloads only the
-smallest checksum-bound whole-shard prefix that covers its declared training
-budget, plus all validation shards.
+and occupies 109,661,312,410 compressed bytes. Setup downloads 7 training shards
+by default (7,109,469 proteins), plus all
+validation shards. `bash runs/setup_env_and_data.sh --training-shards N` selects
+3–565 whole training shards; choose a fresh `DATA_ROOT` for another selection.
+The direct data API also supports a requested sample budget. Both routes use
+checksum-bound source prefixes and always include complete MLM validation.
+The setup command separately installs the [frozen P@L bundle](CONTACT_DATA.md).
 
 The companion [raw clustering release](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
 preserves the source-specific 70%-identity representative FASTAs and cluster

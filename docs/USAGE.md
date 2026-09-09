@@ -2,28 +2,59 @@
 
 ## Setup
 
-The [README](../README.md#setup) contains the supported setup and training
+The [README](../README.md#setting-up-data--environments) contains the supported setup and training
 quickstart. Run `bash runs/setup_env_and_data.sh` to prepare the environment and
-training data, or `bash runs/speedrun.sh` to perform setup and train the default
+training data and both MLM/P@L evaluation assets, or `bash runs/speedrun.sh` to perform setup and train the default
 recipe in one call. The only local settings are `DATA_ROOT` and `OUTPUT_ROOT`
 in an optional `.env`; defaults are the repository's `data/` and `outputs/`.
 
 ```text
 $DATA_ROOT/
   training/             # Verified training subset and MLM validation data
-  cache/                # Downloaded corpus shards
-  evaluation/contact/   # Frozen contact dataset, installed separately
+  cache/                # Downloaded corpus shards and contact archive
+  evaluation/contact/   # Frozen 20-chain probe + 20,775-chain P@L dataset
   evaluation/source/    # Pinned source containing autoresearch_esm
 $OUTPUT_ROOT/
   <run-name>/           # Checkpoints, effective config, logs and evaluation records
 ```
 
-The setup script pins the release revision and downloads the same whole-shard
-prefix used by the benchmark: 7,109,469 training proteins, plus all 12,288
-validation proteins. Training repeatedly samples this subset; it does not
-consume the full 666.0M release. To prepare a different corpus size for independent
-research, call `python -m nanoprotein.sharded_data` directly with `--training-samples`,
-`--revision`, `--cache-root` and `--output-root`.
+The default pins the release revision and downloads **7 of 565 training Parquet
+shards**: 3 UniRef90, 1 MGnify and 3 OMG/IMG, containing 7,109,469 training
+proteins. All three MLM validation shards (12,288 proteins) and the frozen
+[contact evaluation bundle](CONTACT_DATA.md) are always prepared. No P-CORE data
+are downloaded. This subset comfortably covers a 100-step trial at batch 1,024;
+longer training repeatedly samples it.
+
+For a different training corpus size, choose a fresh `DATA_ROOT` in `.env` and run:
+
+```bash
+bash runs/setup_env_and_data.sh --training-shards 30
+```
+
+The range is **3–565 total training shards**, with at least one per source.
+Selection extends the source with the least coverage of the 36:11:54 sampling
+mixture; all selections are deterministic source prefixes. `565` selects the
+entire training release. Setup without this option reuses the stored shard count
+on later calls, including calls from speedrun. An explicit different count refuses
+to overwrite existing prepared data; use another root for that experiment.
+The autoresearch task requires the original 7-shard selection.
+
+For full control, the ordinary data API accepts either `--training-shards` or
+`--training-samples`; it always includes all MLM validation shards. Inspect a
+selection without downloading training shards:
+
+```bash
+uv run --frozen python -m nanoprotein.sharded_data \
+  --revision bd38448d50d8f426d7b9bd4410b53159ea001259 --training-shards 30 \
+  --cache-root data/cache --output-root data/training --plan-only
+```
+
+The contact installer can also use an already downloaded bundle offline:
+
+```bash
+uv run --frozen python -m nanoprotein.setup_evaluation \
+  --data-root data --archive /path/to/contact-evaluation-v1.tar.gz
+```
 
 ## Training
 
@@ -92,11 +123,10 @@ contact P@L as a diagnostic. Search and acceptance decisions belong to the agent
 
 ## Evaluation
 
-Training and MLM validation are ready after setup. For contact P@L, install the
-frozen contact payload under `$DATA_ROOT/evaluation/contact/` and the pinned
-evaluator source under `$DATA_ROOT/evaluation/source/`; existing verified
-directories can be linked there. These are not downloaded by the setup script.
-Public packaging remains [release work](CONFIG_CLEANUP_PLAN.md); see
+Setup installs all MLM validation data plus the frozen contact payload and
+evaluator under `$DATA_ROOT/evaluation/{contact,source}`. The installer checks
+all frozen hashes before reporting success and verifies existing installations
+on reuse. See [contact data provenance](CONTACT_DATA.md) and
 [evaluation provenance](EVALUATION.md#dataset-provenance-and-split-contract).
 
 With the two roots loaded in your shell, evaluate a saved checkpoint:

@@ -5,7 +5,8 @@
 Improve protein-embedding training recipes under a small compute budget.
 The 171M baseline follows the paper's 170M scaling model: 24 layers, width 768,
 and 170.7M parameters ([Appendix A.1.4.1, Table S4, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-Runtime code lives in [src/nanoprotein](../src/nanoprotein/), with public\ndecontaminated data and frozen evaluations.
+Runtime code lives in [src/nanoprotein](../src/nanoprotein/), with public
+decontaminated data and frozen evaluations.
 
 [Setting 3](../configs/default.yaml) is the starting recipe;
 [171M AdamW](../configs/esmc-171m-original.yaml) is the reference.
@@ -30,7 +31,9 @@ fixed-size models on the same data and hardware.
   are protected. Search strategy and acceptance decisions belong to the agent.
 
 Configure the two local roots in [`.env`](../.env.example) using the
-[setup instructions](../README.md#setup). Then run:
+[setup instructions](../README.md#setting-up-data--environments). Use the default
+7 training shards; setup also prepares all MLM validation and contact P@L assets.
+Then run:
 
 ```bash
 bash task/171m-validation-loss_ar.sh configs/default.yaml experiment-001

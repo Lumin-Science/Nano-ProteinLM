@@ -1,0 +1,90 @@
+{
+  "date": "2026-09-08",
+  "base_commit": "164d041",
+  "checks": {
+    "unit_tests_passed": 67,
+    "ruff_check": "passed",
+    "ruff_format": "passed",
+    "shell_syntax": "passed",
+    "active_markdown_links": "passed",
+    "published_results_unchanged": true
+  },
+  "training_data": {
+    "release_revision": "bd38448d50d8f426d7b9bd4410b53159ea001259",
+    "training_shards": 7,
+    "total_available_training_shards": 565,
+    "training_records": 7109469,
+    "validation_records": 12288,
+    "prepared_store_hashes_verified": true,
+    "sources": {
+      "mgnify": {
+        "train": {
+          "index_sha256": "89f2655f34a1b5dd3a255ad0eb79fd9c7a14f54923d827620bedb3577e4082ca",
+          "records": 1437829,
+          "residues": 268435254,
+          "tokens_sha256": "a5bfd3c83c34b9385e8e7cf7d745821f68eb5ff2b5d5dfa84b006e1226cbbafc"
+        },
+        "validation": {
+          "index_sha256": "e43082f94731d1985d143ba3098550f57d9c9db76a31a68aea45714c0884d6ee",
+          "records": 4096,
+          "residues": 761606,
+          "tokens_sha256": "24da14086130f9d9435fcce9b9846a76a55629e4fe2c031d4eb893a39291ed7b"
+        }
+      },
+      "omg_img": {
+        "train": {
+          "index_sha256": "02d79cf3bc2fb2a8ddce05b3e8ca5aa941e3cc05023af47268428b4b27cdfd70",
+          "records": 3240726,
+          "residues": 805306036,
+          "tokens_sha256": "542d58d5eeb31c3eb876bbdc7f4898141bb94da22d9aee0e4f7d8030f5b96e8a"
+        },
+        "validation": {
+          "index_sha256": "dd16559a914f4061fe32677af0c321bec0709e9cafcde35ed8188da0aeef3288",
+          "records": 4096,
+          "residues": 1027103,
+          "tokens_sha256": "67fa854b5ee850a4fc93842975e1dfdb2b30ec3606c3eafcbdcf1c2593626e14"
+        }
+      },
+      "uniref90": {
+        "train": {
+          "index_sha256": "19426f1708d55b8e3a6f372d54ef00fa01a87f49d64d788a1ddeb59007984276",
+          "records": 2430914,
+          "residues": 805304516,
+          "tokens_sha256": "a2bc7afdeed5f18911a5d9fa34cbeab404d568c4a5054bda2e6e77a9b43b9dd5"
+        },
+        "validation": {
+          "index_sha256": "f5362104fd2cde9682487f9cba1420434e22aff479284b9f52865306e776f643",
+          "records": 4096,
+          "residues": 1393942,
+          "tokens_sha256": "97514528c52589e4cf60fec0eb58b2665ceefc6a72c19323e494acb4ab3031bf"
+        }
+      }
+    }
+  },
+  "data_feed_check": {
+    "steps": 100,
+    "global_batch": 1024,
+    "ranks": 4,
+    "context": 512,
+    "sampled_training_records": 102400,
+    "source_exhaustion": false,
+    "sampled_validation_records": 4096,
+    "gpu_training_executed": false
+  },
+  "contact": {
+    "offline_install": "passed",
+    "existing_install_reuse": "passed",
+    "public_download_install": "passed",
+    "verification": {
+      "status": "verified",
+      "manifest_sha256": "c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3",
+      "source_manifest_sha256": "2fad51df6f4f2586b6648b9e4f575058f1999eba60175cba9fd7834f36951e55",
+      "probe_fit_chains": 16,
+      "probe_validation_chains": 4,
+      "evaluation_chains": 20775
+    }
+  },
+  "limitations": [
+    "GPU training and installation of the Linux GPU environment were not run on this macOS host."
+  ]
+}

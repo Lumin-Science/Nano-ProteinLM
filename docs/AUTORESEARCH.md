@@ -21,7 +21,7 @@ Muon-only ablation. See [executed configurations](PROGRAM2_SCALEUP.md) and
 
 ## Commands and results
 
-- [Recommended training command](../README.md#training-a-170m-model) for the 100k-step Setting 3 run.
+- [Recommended training command](../README.md#train-a-171m-model) for the 100k-step Setting 3 run.
 - [Research and progress commands](../task/171m-validation-loss.md) for paired-seed comparisons.
 - [38-round curve](../README.md#autoresearch), including all means and sample SDs.
 - [Test Leaderboard](../README.md#test-leaderboard).

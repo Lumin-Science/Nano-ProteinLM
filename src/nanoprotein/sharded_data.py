@@ -237,13 +237,16 @@ def validate_release_manifest(manifest: Mapping[str, Any]) -> None:
 def plan_shards(
     manifest: Mapping[str, Any],
     *,
-    total_training_samples: int,
+    total_training_samples: int | None = None,
+    total_training_shards: int | None = None,
     weights: Mapping[str, float],
 ) -> dict[str, Any]:
     """Choose the smallest per-source train-shard prefixes for one run budget."""
 
     validate_release_manifest(manifest)
-    if total_training_samples <= 0:
+    if (total_training_samples is None) == (total_training_shards is None):
+        raise ValueError("choose exactly one training sample budget or shard count")
+    if total_training_samples is not None and total_training_samples <= 0:
         raise ValueError("total_training_samples must be positive")
     if set(weights) != set(SOURCES) or any(float(value) <= 0 for value in weights.values()):
         raise ValueError(f"weights must provide positive values for exactly {SOURCES}")
@@ -251,17 +254,41 @@ def plan_shards(
     if denominator <= 0:
         raise ValueError("at least one source weight must be positive")
 
+    shard_counts = dict.fromkeys(SOURCES, 0)
+    if total_training_shards is not None:
+        maximum = sum(len(manifest["sources"][source]["train"]) for source in SOURCES)
+        if not len(SOURCES) <= total_training_shards <= maximum:
+            raise ValueError(f"training-shards must be between {len(SOURCES)} and {maximum}")
+        records = dict.fromkeys(SOURCES, 0)
+        for _ in range(total_training_shards):
+            # Extend the source with the least coverage of the requested mixture.
+            source = min(
+                (s for s in SOURCES if shard_counts[s] < len(manifest["sources"][s]["train"])),
+                key=lambda s: records[s] / float(weights[s]),
+            )
+            shard = manifest["sources"][source]["train"][shard_counts[source]]
+            records[source] += int(shard["records"])
+            shard_counts[source] += 1
+
     selected: dict[str, Any] = {}
     all_paths: list[str] = []
     selected_records = selected_residues = selected_bytes = 0
     for source in SOURCES:
-        required = math.ceil(total_training_samples * float(weights[source]) / denominator)
+        required = (
+            math.ceil(total_training_samples * float(weights[source]) / denominator)
+            if total_training_samples is not None
+            else 0
+        )
         available = 0
         residues = 0
         compressed_bytes = 0
         train: list[Mapping[str, Any]] = []
         for shard in manifest["sources"][source]["train"]:
-            if available >= required:
+            if (
+                len(train) >= shard_counts[source]
+                if total_training_shards is not None
+                else available >= required
+            ):
                 break
             train.append(shard)
             available += int(shard["records"])
@@ -291,7 +318,7 @@ def plan_shards(
             "train": train,
             "validation": validation,
         }
-    return {
+    plan = {
         "schema_version": 1,
         "protocol": "protein-corpus-budget-plan-v1",
         "release_id": manifest.get("release_id"),
@@ -305,6 +332,9 @@ def plan_shards(
         "sources": selected,
         "paths": all_paths,
     }
+    if total_training_shards is not None:
+        plan["total_training_shards"] = total_training_shards
+    return plan
 
 
 def fetch_release_plan(
@@ -312,9 +342,11 @@ def fetch_release_plan(
     repo_id: str,
     revision: str,
     cache_root: Path,
-    total_training_samples: int,
+    total_training_samples: int | None = None,
+    total_training_shards: int | None = None,
     weights: Mapping[str, float],
     download_workers: int = 8,
+    plan_only: bool = False,
 ) -> tuple[dict[str, Any], Path]:
     """Download the manifest, plan locally, then fetch only selected whole shards."""
 
@@ -337,7 +369,18 @@ def fetch_release_plan(
         )
     )
     manifest = json.loads(manifest_path.read_text())
-    plan = plan_shards(manifest, total_training_samples=total_training_samples, weights=weights)
+    plan = plan_shards(
+        manifest,
+        total_training_samples=total_training_samples,
+        total_training_shards=total_training_shards,
+        weights=weights,
+    )
+    plan["repo_id"] = repo_id
+    plan["requested_revision"] = revision
+    plan["revision"] = resolved_revision
+    plan["release_manifest_sha256"] = file_sha256(manifest_path)
+    if plan_only:
+        return plan, manifest_path
     snapshot_download(
         repo_id=repo_id,
         repo_type="dataset",
@@ -359,10 +402,6 @@ def fetch_release_plan(
         )
         if file_sha256(local) != expected:
             raise ValueError(f"downloaded shard checksum mismatch: {relative}")
-    plan["repo_id"] = repo_id
-    plan["requested_revision"] = revision
-    plan["revision"] = resolved_revision
-    plan["release_manifest_sha256"] = file_sha256(manifest_path)
     output = cache_root / "download-plan.json"
     output.write_text(_canonical_json(plan))
     return plan, manifest_path
@@ -446,6 +485,7 @@ def materialize_plan(
     }
     manifest_path = output_root / "manifest.json"
     manifest_path.write_text(_canonical_json(manifest))
+    (output_root / "download-plan.json").write_text(_canonical_json(plan))
     verification = {
         "schema_version": 2,
         "status": "verified",
@@ -473,6 +513,38 @@ def materialize_plan(
     return verification
 
 
+def validate_prepared_plan(plan: Mapping[str, Any], output_root: Path) -> None:
+    """Reuse only the same verified release and exact requested whole-shard prefix."""
+    from .data import TokenStore
+    from .train import validate_data_manifest
+
+    manifest = validate_data_manifest(output_root)
+    if manifest["release_manifest_sha256"] != plan["release_manifest_sha256"]:
+        raise ValueError("existing corpus uses a different release; choose a fresh DATA_ROOT")
+    for source in SOURCES:
+        for split in ("train", "validation"):
+            selected = plan["sources"][source][split]
+            expected = sum(int(row["records"]) for row in selected)
+            observed = manifest["sources"][source][split]
+            if observed["records"] != expected or observed["residues"] != sum(
+                int(row["residues"]) for row in selected
+            ):
+                raise ValueError(
+                    "existing corpus differs from requested shard count; "
+                    "choose a fresh DATA_ROOT for another selection"
+                )
+            for filename, key in (
+                ("tokens.bin", "tokens_sha256"),
+                ("index.npy", "index_sha256"),
+            ):
+                if file_sha256(output_root / source / split / filename) != observed[key]:
+                    raise ValueError(
+                        f"prepared store checksum mismatch: {source}/{split}/{filename}"
+                    )
+            if TokenStore.open(output_root / source / split).index.size != expected:
+                raise ValueError(f"incomplete prepared store: {source}/{split}")
+
+
 def _weights(value: str) -> dict[str, float]:
     parsed = json.loads(value)
     if not isinstance(parsed, dict):
@@ -486,7 +558,19 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--revision", default="main")
     parser.add_argument("--cache-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--training-samples", type=int, required=True)
+    budget = parser.add_mutually_exclusive_group(required=True)
+    budget.add_argument("--training-samples", type=int)
+    budget.add_argument(
+        "--training-shards",
+        type=int,
+        help="total train Parquet shards across all sources; validation is always complete",
+    )
+    parser.add_argument(
+        "--plan-only", action="store_true", help="show counts without fetching shards"
+    )
+    parser.add_argument(
+        "--reuse", action="store_true", help="reuse an identical prepared corpus"
+    )
     parser.add_argument("--download-workers", type=int, default=8)
     parser.add_argument(
         "--weights",
@@ -499,9 +583,20 @@ def main(argv: Sequence[str] | None = None) -> None:
         revision=args.revision,
         cache_root=args.cache_root,
         total_training_samples=args.training_samples,
+        total_training_shards=args.training_shards,
         weights=args.weights,
         download_workers=args.download_workers,
+        plan_only=args.plan_only or args.output_root.exists(),
     )
+    if args.plan_only:
+        print(json.dumps(plan, sort_keys=True))
+        return
+    if args.output_root.exists():
+        if not args.reuse:
+            raise FileExistsError(f"refusing to overwrite prepared corpus: {args.output_root}")
+        validate_prepared_plan(plan, args.output_root)
+        print(f"Reusing verified training and MLM validation data: {args.output_root}")
+        return
     release_manifest = json.loads(manifest_path.read_text())
     receipt = materialize_plan(plan, release_manifest, args.cache_root, args.output_root)
     print(json.dumps(receipt, sort_keys=True))

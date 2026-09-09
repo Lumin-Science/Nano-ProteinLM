@@ -12,6 +12,8 @@ analysis. Training and autoresearch runtime commands live in
   audited checkpoints from the eight-H100 baseline.
 - [Evaluation bundle](build_evaluation_bundle.py): prepares frozen split ledgers
   for release construction.
+- [Contact setup bundle](package_contact_evaluation.py): packages the frozen P@L
+  payload and evaluator with checksums for installation.
 - [Historical round summary](summarize_autoresearch_round.py): reads the older
   campaign's output layout.
 
