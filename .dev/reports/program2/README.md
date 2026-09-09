@@ -26,7 +26,7 @@ Program 2 selects on frozen held-out MLM loss. Contact P@L and training loss are
 All 38 rounds are shown; points and bars are two-seed means ± sample SD.
 The line follows the retained recipe. Changes 4–5 use roughly 142M parameters
 and predate the current fixed-size task. See the [source TSV](runs-through-r38.tsv)
-and [current task definition](../../../task/171m-validation-loss.md) for their distinct protocols.
+and [current task definition](../../../tasks/171m-validation-loss.md) for their distinct protocols.
 
 ## R29 improvement
 

@@ -2,7 +2,7 @@
 
 These completed experiments use the small-budget 171M backbone from the paper's
 170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-The current protocol is defined in the [171M task](../task/171m-validation-loss.md).
+The current protocol is defined in the [171M task](../tasks/171m-validation-loss.md).
 
 The completed comparison contains **four settings based on our H100 R02**:
 reset RoPE from 20k to 10k, then add batch balance, sqrt loss and tied embeddings

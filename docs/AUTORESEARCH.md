@@ -1,10 +1,10 @@
 # AutoResearch records
 
-The [171M validation-loss task](../task/171m-validation-loss.md) is designed for
+The [171M validation-loss task](../tasks/171m-validation-loss.md) is designed for
 small-budget training experiments. Its baseline backbone follows the paper's
 170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29));
 [300M/600M references](../configs/reference/README.md) are separate from this task.
-Its [research shell script](../task/171m-validation-loss_ar.sh) calls the standard
+Its [research shell script](../tasks/171m-validation-loss_ar.sh) calls the standard
 training/evaluation APIs directly. [program.md](../program.md) asks an agent to
 optimize the task; Test of Progress is manual. This page is a results index.
 
@@ -22,7 +22,7 @@ Muon-only ablation. See [executed configurations](PROGRAM2_SCALEUP.md) and
 ## Commands and results
 
 - [Recommended training command](../README.md#train-a-171m-model) for the 100k-step Setting 3 run.
-- [Research and progress commands](../task/171m-validation-loss.md) for paired-seed comparisons.
+- [Research and progress commands](../tasks/171m-validation-loss.md) for paired-seed comparisons.
 - [38-round curve](../README.md#autoresearch), including all means and sample SDs.
 - [Test Leaderboard](../README.md#test-leaderboard).
 - [All 78 runs through R38](../.dev/reports/program2/runs-through-r38.tsv).

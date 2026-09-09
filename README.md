@@ -228,7 +228,7 @@ preferred. Data and evaluation stay fixed, and model size must remain within
 
 The benchmark owner manually checks progress with **24.20B model tokens per seed
 on four H100s**, comparing mean MLM loss and P@L. Full rules and research commands
-are in [task/171m-validation-loss.md](task/171m-validation-loss.md).
+are in [tasks/171m-validation-loss.md](tasks/171m-validation-loss.md).
 
 ### Experiments
 

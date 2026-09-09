@@ -20,7 +20,7 @@ and ordinary training options; see [training](../docs/USAGE.md#training).
 The Python API remains available directly. Every run saves its effective
 configuration, so execution settings do not need another permanent YAML.
 
-The [171M research task](../task/171m-validation-loss.md) supplies its own
+The [171M research task](../tasks/171m-validation-loss.md) supplies its own
 fixed-time protocol and requires **162,137,610–179,204,726** trainable parameters
 (±5% of the original reference).
 

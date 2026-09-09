@@ -1,7 +1,7 @@
 # AutoResearch
 
 Read the selected task definition, defaulting to
-[171M validation loss](task/171m-validation-loss.md) for small-budget training experiments.
+[171M validation loss](tasks/171m-validation-loss.md) for small-budget training experiments.
 
 Improve its score within the task boundaries and the research budget supplied
 by the user. Choose your own search strategy and acceptance criteria. Use the

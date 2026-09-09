@@ -15,14 +15,14 @@ the frozen 2024-02-28 RCSB Protein Data Bank snapshot. This is also the PDB
 population protected during training-corpus decontamination.
 
 The small-budget 171M task uses the paper's 170M scaling backbone
-([architecture and scope](../task/171m-validation-loss.md#background)).
+([architecture and scope](../tasks/171m-validation-loss.md#background)).
 Its AutoResearch score is held-out sequence-mean MLM loss averaged
 across two matched training seeds, with sample SD reported separately. The
 agent chooses its acceptance strategy. Training loss and full long-range
 contact P@L are required diagnostics; P-CORE provides additional representation
 measurements. These diagnostics do not affect research selection. See
-[task/171m-validation-loss.md](../task/171m-validation-loss.md) for the scoring rule and executable protocol,
-and [Test of Progress](../task/171m-validation-loss.md#test-of-progress)
+[tasks/171m-validation-loss.md](../tasks/171m-validation-loss.md) for the scoring rule and executable protocol,
+and [Test of Progress](../tasks/171m-validation-loss.md#test-of-progress)
 for token-budget confirmation. [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md)
 records the executed historical 100k-step comparison. The current token-budget verification
 protocol does not relabel those single-seed results.

@@ -36,7 +36,7 @@ Configure the two local roots in [`.env`](../.env.example) using the
 Then run:
 
 ```bash
-bash task/171m-validation-loss_ar.sh configs/default.yaml experiment-001
+bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001
 ```
 
 The [research script](171m-validation-loss_ar.sh) contains the direct

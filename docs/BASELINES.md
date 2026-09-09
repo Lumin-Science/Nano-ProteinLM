@@ -2,7 +2,7 @@
 
 This page preserves historical baseline workflows. The current starting recipe
 is [Setting 3](../configs/default.yaml), with direct commands in
-[Usage](USAGE.md) and the current [task definition](../task/171m-validation-loss.md).
+[Usage](USAGE.md) and the current [task definition](../tasks/171m-validation-loss.md).
 
 The 171M recipes target small-budget experiments using the paper's 170M
 scaling backbone ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).

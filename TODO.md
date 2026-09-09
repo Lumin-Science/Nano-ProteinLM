@@ -12,7 +12,7 @@
 - [x] **Support the Test of Progress token budget.** Training now accepts
   `max_model_tokens`, stops at a synchronized optimizer boundary, records the
   target/actual tokens and overrun, and can resume to a larger token endpoint.
-  The complete train-and-evaluate command is in [task/171m-validation-loss.md](task/171m-validation-loss.md#test-of-progress).
+  The complete train-and-evaluate command is in [tasks/171m-validation-loss.md](tasks/171m-validation-loss.md#test-of-progress).
   Historical time/step-based runs keep their existing behavior.
 
 - [x] **Consolidate maintained recipes and launchers.** Keep Setting 3 and the

@@ -24,7 +24,7 @@
 - `.env` contains only `DATA_ROOT` and `OUTPUT_ROOT`. Setup and training are
   documented in the [README](../README.md#training-and-evaluating); the direct APIs remain
   available for independent research.
-- [program.md](../program.md) selects a [task definition](../task/171m-validation-loss.md).
+- [program.md](../program.md) selects a [task definition](../tasks/171m-validation-loss.md).
   The task's shell script declares research measurements. Test of Progress stays
   manual, using the [documented commands](EVALUATION.md#manual-test-of-progress).
   The obsolete root `program2.md` is [archived](archive/program2.md).

@@ -5,7 +5,7 @@ records. Their paths and environment interfaces belong to that checkout; use
 that revision to reproduce the old launch workflow. Current entry points are
 [setup](../../../runs/setup_env_and_data.sh),
 [speedrun](../../../runs/speedrun.sh) and the
-[research task](../../../task/171m-validation-loss_ar.sh).
+[research task](../../../tasks/171m-validation-loss_ar.sh).
 
 Parallel evaluation helpers remain maintained under
 [`src/`](../../../src). Training recipes are retained in the

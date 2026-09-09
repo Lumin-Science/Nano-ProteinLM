@@ -110,10 +110,10 @@ state; see [continuation](checkpoint-resume.md) for resuming on another GPU coun
 ## AutoResearch
 
 [program.md](../program.md) directs an agent to the selected
-[task definition](../task/171m-validation-loss.md). Run one research measurement:
+[task definition](../tasks/171m-validation-loss.md). Run one research measurement:
 
 ```bash
-bash task/171m-validation-loss_ar.sh configs/default.yaml experiment-001
+bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001
 ```
 
 The task script loads `.env`, checks frozen inputs and four L40S GPUs, runs seeds
@@ -151,7 +151,7 @@ There is no verification launcher.
 src/nanoprotein/   # Training, models, data, evaluation and runtime CLI modules
 src/*.sh          # Optional parallel evaluation launchers
 runs/             # Public setup and speedrun scripts
-task/             # Autoresearch definition and measurement command
+tasks/            # Autoresearch definition and measurement command
 .dev/scripts/     # Plotting, release preparation and historical analysis tools
 .dev/tests/       # Developer regression tests
 .dev/reports/     # Published experiment records and figures
