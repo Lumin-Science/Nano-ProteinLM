@@ -7,10 +7,11 @@ periodic-evaluation qualification and **eight-to-four-GPU Muon/AdamW checkpoint
 continuation test both passed**. See [launch verification](LAUNCH_VERIFIED.json),
 [qualification](QUALIFICATION_PASSED.json), and [baseline hash checks](BASELINE_READY.json).
 
-At **20:00 Toronto on September 8**, production had reached **25,160 / 100,000 steps** on eight
-H100s, batch **2,048**, with finite loss/objective/gradients and pinned FA3.
-Both full evaluations at 10k and 20k passed, and training continued. The current ETA,
-including remaining evaluations, is **about 05:41 Toronto on September 9**.
+At **22:02 Toronto on September 8**, production had reached
+**40,430 / 100,000 steps** on eight H100s, batch **2,048**,
+with finite loss/objective/gradients and pinned FA3. All 4 full evaluations
+through 40k passed, and training continued. The current ETA, including remaining
+evaluations, is **about 05:45 Toronto on September 9**.
 The training source remains **`c76a07998987a4746d4bffc89d878a758cd735cb`**.
 Two-hour monitoring continues through final evaluation and checkpoint preservation.
 
@@ -26,20 +27,22 @@ recovery](QUEUE_RECOVERY.json) remain archived below.
 | --- | --- | --- | --- | --- | --- | --- |
 | 10,000 | 20,480,000 | 2.536788 | 12.63900 | 22.31377% | [22.12376%, 22.50470%] | 211.61 seconds |
 | 20,000 | 40,960,000 | 2.485602 | 12.00834 | 26.56299% | [26.35130%, 26.77835%] | 209.70 seconds |
+| 30,000 | 61,440,000 | 2.456406 | 11.66282 | 28.94052% | [28.71424%, 29.16201%] | 213.61 seconds |
+| 40,000 | 81,920,000 | 2.437614 | 11.44570 | 30.81502% | [30.58703%, 31.04627%] | 209.68 seconds |
 
-The independent [10k](full/evaluations/step-010000/LOCAL_AUDIT.json) and
-[20k](full/evaluations/step-020000/LOCAL_AUDIT.json) audits check
-all 16 shard hashes, checkpoint bindings, the fixed 4,096 MLM sequences and exact
-20,775-chain population, probe protocol, and a recomputed 5,000-replicate bootstrap
-CI. These are production results; qualification scores are separate.
+Independent audits: [10k](full/evaluations/step-010000/LOCAL_AUDIT.json), [20k](full/evaluations/step-020000/LOCAL_AUDIT.json), [30k](full/evaluations/step-030000/LOCAL_AUDIT.json), [40k](full/evaluations/step-040000/LOCAL_AUDIT.json).
+Each checks all 16 shard hashes, checkpoint bindings, the fixed 4,096 MLM sequences
+and exact 20,775-chain population, probe protocol, and a recomputed 5,000-replicate
+bootstrap CI. These are production results; qualification scores are separate.
 See the [machine-readable learning curve](learning-curve.json).
 
-At the matched **20k-step / batch-2,048** checkpoint, Setting 3 has validation
-loss **2.485602** versus the AdamW baseline's **2.536814**, and P@L **26.56299%**
-versus **18.84834%**. The difference is **+7.71465 percentage points**; a paired
-chain-bootstrap 95% CI for that difference is **[7.62296, 7.80763] pp**
+At the matched **40k-step / batch-2,048** checkpoint, Setting 3 has validation
+loss **2.437614** versus the AdamW baseline's **2.486745**,
+and P@L **30.81502%** versus **20.72337%**.
+The difference is **+10.09165 percentage points**;
+a paired chain-bootstrap 95% CI for that difference is **[9.98079, 10.20287] pp**
 (5,000 replicates, same 20,775 chains). This is an intermediate comparison from
-one training seed per recipe. See the [matched comparison receipt](full/evaluations/step-020000/BASELINE_COMPARISON.json).
+one training seed per recipe. See the [matched comparison receipt](full/evaluations/step-040000/BASELINE_COMPARISON.json).
 
 ## Production configuration
 
