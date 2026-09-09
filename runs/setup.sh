@@ -26,7 +26,7 @@ while [[ $# -gt 0 ]]; do
     --) shift; break ;;
     -h|--help)
       echo "Usage: bash runs/setup.sh [--training-shards N]"
-      echo "Default: 7 of 565 training Parquet shards; all MLM validation and contact P@L data."
+      echo "Default: 30 of 565 training Parquet shards; all MLM validation and contact P@L data."
       echo "Choose a fresh DATA_ROOT for a different training shard count."
       return 0 2>/dev/null || exit 0 ;;
     *) echo "Unknown setup argument: $1" >&2; exit 1 ;;
@@ -47,7 +47,7 @@ if [[ -z "$training_shards" ]]; then
       'import json, sys; p=json.load(open(sys.argv[1])); print(sum(len(s["train"]) for s in p["sources"].values()))' \
       "$DATA_ROOT/training/download-plan.json")"
   else
-    training_shards=7
+    training_shards=30
   fi
 fi
 

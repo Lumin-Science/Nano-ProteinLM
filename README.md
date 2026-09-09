@@ -1,7 +1,7 @@
-# NanoProtein
+# NanoProteinLM
 
 Inspired by [nanoGPT](https://github.com/karpathy/nanoGPT) and
-[nanochat](https://github.com/karpathy/nanochat), NanoProtein makes protein
+[nanochat](https://github.com/karpathy/nanochat), NanoProteinLM makes protein
 language-model training accessible, inspectable and easy to experiment with.
 Our goal is to help researchers train better protein embeddings for downstream
 biology tasks, through a small, open implementation and reproducible experiments.
@@ -36,10 +36,10 @@ The same setup supports ordinary research and the fixed autoresearch task.
   `uv >=0.11.31,<0.12`. Setup installs Python and dependencies from the repository lock.
 - **Training:** the default speedrun uses **four H100 GPUs with FA3**.
   The one-hour autoresearch profile uses **four L40S GPUs with FA2**.
-  [Direct training commands](docs/USAGE.md#training) support other configurations.
+  See [USAGE.md](docs/USAGE.md#training) for other configurations.
 - **Data preparation:** no GPU required; allow space for both downloaded Parquet
-  files and their prepared token stores—**at least 5 GB** for the default data
-  setup, plus separate space for training checkpoints.
+  files and their prepared token stores—**allow 20 GB for the default 30-shard
+  data setup**, plus separate space for the environment and training checkpoints.
 
 ### Data preparation
 
@@ -106,7 +106,7 @@ held-out proteins.
 > snapshot, leaving roughly **1.68B fewer 70%-identity representatives** in that
 > source arm; a public JGI-scale replacement remains future work.
 
-[Data preparation](docs/DATA.md) · [🤗 Processed data](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259) · [🤗 Raw dataset](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
+[DATA.md](docs/DATA.md) · [🤗 Processed data](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259) · [🤗 Raw dataset](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
 
 ### Install the environment and data
 
@@ -116,30 +116,66 @@ cd Nano-Protein-LM
 bash runs/setup.sh
 ```
 
-The default downloads **7 training shards (7.11M proteins; 1.32 GB compressed,
-including MLM validation)**, all **12,288 MLM validation proteins**, and the
-frozen [**P@L dataset and evaluator**](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/cc548944b9caaf8b4f40ba49b316cc6f477a6031/evaluation) (~168 MB compressed): 16 probe-fit chains, 4 probe-validation
-chains and all 20,775 evaluation chains. It does not install the experimental
-P-CORE tasks. Downloaded assets are checked against their frozen hashes and reused
-on subsequent runs.
-
-This is more than enough data for a **100-step trial at global batch 1,024**
-(102,400 sampled proteins). Longer training repeatedly samples the prepared
-subset; setup does not download the entire 666.0M-protein corpus.
+The default downloads **30 training shards (29.98M proteins; 5.62 GB compressed,
+including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. It also
+prepares all **12,288 MLM validation proteins** and the frozen
+[**P@L dataset and evaluator**](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/cc548944b9caaf8b4f40ba49b316cc6f477a6031/evaluation)
+(~168 MB compressed): 16 probe-fit chains, 4 probe-validation chains and all
+20,775 evaluation chains. Experimental P-CORE data are excluded. All downloaded
+assets are checked against their frozen hashes and reused on subsequent runs.
 
 Data and outputs default to `data/` and `outputs/`. To use another disk, copy
-[`.env.example`](.env.example) to `.env` and set only `DATA_ROOT` and `OUTPUT_ROOT`.
-For a larger corpus, choose a fresh `DATA_ROOT` and request more whole shards:
+[.env.example](.env.example) to `.env` and set only `DATA_ROOT` and `OUTPUT_ROOT`:
 
-```bash
-bash runs/setup.sh --training-shards 30  # 30 of 565 training shards
-# --training-shards 565 downloads the complete training release (~109.66 GB compressed).
+```text
+$DATA_ROOT/                     # Default: data/
+  cache/                       # Downloaded Parquet shards and contact archive
+  training/                    # Prepared token stores, MLM validation and receipts
+  evaluation/contact/          # Frozen P@L chains and probe splits
+  evaluation/source/           # Frozen contact evaluator
+$OUTPUT_ROOT/<run-name>/        # Default: outputs/<run-name>/
+  checkpoint-final.pt          # Final model and optimizer state for resuming
+  config.yaml, metrics.jsonl   # Resolved recipe and training log
+  evaluation/                  # MLM loss, P@L and evaluation records
 ```
 
-Shard selection extends deterministic prefixes of the three sources according to
-the training mixture. MLM validation and P@L remain complete at every shard count.
-The benchmark task keeps the default **7-shard** selection for comparable scores.
-[Storage layout and direct data API](docs/USAGE.md#setup)
+### How much training data?
+
+Thirty shards cover a 100-step trial and can also train for 100k steps. At global
+batch 1,024, 100k steps sample **102.4M proteins**, or about **3.4 passes** through
+the default subset. The loader reshuffles each source when its rows are exhausted.
+For a larger-data comparison, **105 shards** cover roughly one pass at that budget;
+use **209 shards** for 100k steps at batch 2,048.
+
+| Training selection | Proteins | Parquet download¹ | Parquet + prepared stores¹ |
+|---|---:|---:|---:|
+| **30 shards — default** | **29.98M** | **5.62 GB** | **15.00 GB** |
+| 105 shards — 100k × 1,024 | 103.87M | 19.64 GB | 52.40 GB |
+| 209 shards — 100k × 2,048 | 206.91M | 39.09 GB | 104.30 GB |
+| 565 shards — full release | 665.97M | 109.66 GB | 290.27 GB |
+
+¹ Includes all MLM validation data; decimal GB. Add about 0.9 GB for the P@L
+archive and extracted files, plus working space, the environment and checkpoints.
+Allow roughly **20 / 60 / 120 / 320 GB** for the respective data selections.
+
+Choose a fresh `DATA_ROOT` for a different selection:
+
+```bash
+bash runs/setup.sh --training-shards 105  # Larger-data 100k-step comparison
+# Use 209 for batch 2,048, or 565 for the complete training release.
+```
+
+Setup reuses an existing root's saved shard count; upgrading does not silently
+expand a seven-shard installation. Selection extends deterministic source prefixes
+in the training mixture, with complete validation and P@L at every shard count.
+
+The **24.20B-token Test of Progress** budget matches the completed 100k-step run
+at batch 1,024; its exact step count depends on sampled sequence lengths. The
+frozen autoresearch task and historical leaderboard use **7 shards**. Prepare
+that selection explicitly with `bash runs/setup.sh --training-shards 7` in a
+separate root. A larger-data comparison must train both reference and candidate
+on the same selected corpus and report it separately. See [DATA.md](docs/DATA.md)
+for capacity calculations and [USAGE.md](docs/USAGE.md#setup) for direct APIs.
 
 ## Training and evaluating
 
@@ -155,11 +191,11 @@ Python APIs so you can adapt the commands to your own research.
 > and approximately 170.7M parameters
 > ([ESMC Appendix A.1.4.1, Table S4, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
 > For the original ESMC **300M** and **600M** architectures, see the
-> [300M config](configs/reference/esmc-300m-original.yaml) and
-> [600M config](configs/reference/esmc-600m-original.yaml), following
+> [esmc-300m-original.yaml](configs/reference/esmc-300m-original.yaml) and
+> [esmc-600m-original.yaml](configs/reference/esmc-600m-original.yaml), following
 > [Appendix A.1.1, Table S1, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29).
-> These are local training presets; [reference details](configs/reference/README.md)
-> explain how their training settings differ from the released models.
+> These are local training presets; [configs/reference/README.md](configs/reference/README.md)
+> explains how their training settings differ from the released models.
 
 Try the current-best **Setting 3** recipe for 100 steps; setup runs automatically:
 
@@ -177,13 +213,13 @@ The default is **100,000 Stage-1 steps on four H100s**, global batch **1,024**,
 context **512**, **BF16/FA3**, base learning rate **5e-4**, weight decay **0.01**
 and **1,000 warmup steps**. A 16-hour training guard stops an overlong run.
 Checkpoints, the resolved recipe and training records are saved under
-`$OUTPUT_ROOT/setting3-100k/`, including the full final optimizer state for
-[continuation](docs/checkpoint-resume.md). Repeats require a fresh run name.
+`$OUTPUT_ROOT/setting3-100k/`, including the full final optimizer state. See
+[checkpoint-resume.md](docs/checkpoint-resume.md) for continuation. Repeats require a fresh run name.
 
-For 171M training, choose [current best](configs/default.yaml) or
-[original 171M AdamW](configs/esmc-171m-original.yaml). The scripts call the standard
-training API; [custom training commands](docs/USAGE.md#training) remain available
-for other budgets, hardware and recipe changes.
+For 171M training, choose [default.yaml](configs/default.yaml) or
+[esmc-171m-original.yaml](configs/esmc-171m-original.yaml). The scripts call the standard
+training API; see [USAGE.md](docs/USAGE.md#training) for other budgets, hardware
+and recipe changes.
 
 ### Evaluate a checkpoint
 
@@ -209,13 +245,13 @@ uv run --frozen python -m nanoprotein.evaluate \
 
 This reports MLM loss on 4,096 held-out sequences and P@L over the full contact
 population. Evaluation is a separate run; a 100-step training trial does not
-shorten the evaluation protocol. See [evaluation commands and protocol](docs/EVALUATION.md#evaluation-execution).
-That document also contains the [released ESMC comparison](docs/EVALUATION.md#released-esmc-checkpoint-pl),
-probe definitions, confidence intervals and additional downstream tasks.
+shorten the evaluation protocol. See [EVALUATION.md](docs/EVALUATION.md#evaluation-execution)
+for commands, released ESMC comparisons, probe definitions, confidence intervals
+and additional downstream tasks.
 
 ## AutoResearch
 
-Use NanoProtein as a research environment for improving training recipes under
+Use NanoProteinLM as a research environment for improving training recipes under
 controlled budgets. Task definitions describe what is measured and held fixed;
 your agent decides how to search.
 
@@ -228,7 +264,7 @@ preferred. Data and evaluation stay fixed, and model size must remain within
 
 The benchmark owner manually checks progress with **24.20B model tokens per seed
 on four H100s**, comparing mean MLM loss and P@L. Full rules and research commands
-are in [tasks/171m-validation-loss.md](tasks/171m-validation-loss.md).
+are in [171m-validation-loss.md](tasks/171m-validation-loss.md).
 
 ### Experiments
 
@@ -243,7 +279,7 @@ figure shows their effect on the fixed-budget validation objective.
 | P@L (%) ↑ | 9.648 ± 0.598 | 9.795 ± 0.189 | 9.370 ± 0.270 | **10.533 ± 0.366** | 9.829 ± 0.286 | 9.527 ± 0.720 |
 
 Two-seed mean ± sample SD; one hour on four L40S GPUs per seed.
-[Protocol and all 38 rounds](.dev/reports/program2/README.md) · [More experiments](docs/AUTORESEARCH.md)
+[.dev/reports/program2/README.md](.dev/reports/program2/README.md) · [AUTORESEARCH.md](docs/AUTORESEARCH.md)
 
 *Changes 4–5 use ~142M models and predate the ±5% size rule. The fixed-size
 leaderboard skips 4 and applies tied embeddings directly to 3.
@@ -271,19 +307,19 @@ exclude evaluation.
 
 **Setting 3 is best on both metrics:** validation loss is **2.25% lower** and
 P@L is **6.18 percentage points higher** than the AdamW baseline.
-See [recipe differences with figures and examples](docs/BEST_RECIPE_VS_BASELINE.md),
-[full results](.dev/reports/fir-r02-rope10k-100k-20260906/README.md) and the
-[archived leaderboard](docs/archive/TEST_LEADERBOARD_20260908.md).
+See [BEST_RECIPE_VS_BASELINE.md](docs/BEST_RECIPE_VS_BASELINE.md),
+[.dev/reports/fir-r02-rope10k-100k-20260906/README.md](.dev/reports/fir-r02-rope10k-100k-20260906/README.md) and the
+[TEST_LEADERBOARD_20260908.md](docs/archive/TEST_LEADERBOARD_20260908.md).
 
 ## Citation
 
-If you use NanoProtein, please cite this repository and the original
+If you use NanoProteinLM, please cite this repository and the original
 [ESMC paper](https://doi.org/10.64898/2026.06.03.729735):
 
 ```bibtex
 @software{lumin_science_nano_esmc_2026,
   author = {Muchen Li},
-  title = {NanoProtein: Minimal ESMC-Style Protein Language-Model Training},
+  title = {NanoProteinLM: Minimal ESMC-Style Protein Language-Model Training},
   year = {2026},
   url = {https://github.com/Lumin-Science/Nano-Protein-LM}
 }

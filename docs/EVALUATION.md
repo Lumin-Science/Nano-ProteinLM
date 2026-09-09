@@ -30,8 +30,13 @@ protocol does not relabel those single-seed results.
 ## Manual Test of Progress
 
 The benchmark owner runs this separately from the agent's research loop. After
-[setup](USAGE.md#setup), select a frozen recipe and fresh experiment name. Run
-the original AdamW reference and selected recipe with the same command/settings.
+[setup](USAGE.md#setup), select a frozen recipe and fresh experiment name. Use
+`bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` for the
+benchmark corpus used by the historical comparison. The general setup default
+of 30 shards does not change that reference. A larger-data experiment must use
+the same selected corpus for both recipes and be reported as a separate comparison;
+[DATA.md](DATA.md#sizing-a-training-download) gives capacity estimates. Run the
+original AdamW reference and selected recipe with the same command/settings.
 Use four H100s; these commands retain the recipe's optimizer-group multipliers
 while fixing batch 1,024, base LR/WD and warmup. The standard trainer saves the
 full optimizer state and checks the first completed update at the token endpoint.

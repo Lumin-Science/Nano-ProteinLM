@@ -31,9 +31,10 @@ fixed-size models on the same data and hardware.
   are protected. Search strategy and acceptance decisions belong to the agent.
 
 Configure the two local roots in [`.env`](../.env.example) using the
-[setup instructions](../README.md#setting-up-data--environments). Use the default
-7 training shards; setup also prepares all MLM validation and contact P@L assets.
-Then run:
+[setup instructions](../README.md#setting-up-data--environments). In a dedicated `DATA_ROOT`, run
+`bash runs/setup.sh --training-shards 7` to prepare the frozen benchmark corpus
+and all MLM validation and contact P@L assets. The general setup default is now
+30 shards; it does not change this task's data contract. Then run:
 
 ```bash
 bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001

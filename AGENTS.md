@@ -1,4 +1,4 @@
-# Working in NanoProtein
+# Working in NanoProteinLM
 
 - `src/nanoprotein/`: models, training, data preparation, evaluation and reusable CLI code.
 - `configs/`: research presets; `default.yaml` is Setting 3. Keep settings in code or presets.

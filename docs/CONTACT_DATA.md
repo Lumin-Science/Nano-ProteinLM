@@ -1,6 +1,6 @@
 # Frozen contact evaluation data
 
-NanoProtein's P@L setup bundle contains the exact normalized chain payloads and
+NanoProteinLM's P@L setup bundle contains the exact normalized chain payloads and
 frozen evaluator used by the [completed 100k-step comparison](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
 It includes 16 probe-fit chains, 4 probe-validation chains and 20,775 evaluation
 chains. It does not include P-CORE datasets, model weights or training outputs.

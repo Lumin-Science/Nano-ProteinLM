@@ -133,7 +133,7 @@ class LaunchScriptTests(unittest.TestCase):
         self.assertFalse(any("torch.distributed.run" in row for row in commands))
         self.assertEqual(sum("nanoprotein.setup_evaluation" in row for row in commands), 2)
         download = next(row for row in commands if "nanoprotein.sharded_data" in row)
-        self.assertEqual(download[download.index("--training-shards") + 1], "7")
+        self.assertEqual(download[download.index("--training-shards") + 1], "30")
         self.assertTrue((self.data / "evaluation/contact").is_dir())
 
     def test_incomplete_data_and_failed_qualification_block_training(self):
@@ -169,29 +169,29 @@ class LaunchScriptTests(unittest.TestCase):
         self.assertEqual(check[check.index("--attention-backend") + 1], "flash")
 
     def test_setup_custom_shard_count_and_usage(self):
-        self.run_script("setup.sh", "--training-shards", "30")
+        self.run_script("setup.sh", "--training-shards", "105")
         download = next(row for row in self.commands() if "nanoprotein.sharded_data" in row)
-        self.assertEqual(download[download.index("--training-shards") + 1], "30")
+        self.assertEqual(download[download.index("--training-shards") + 1], "105")
         self.run_script("setup.sh", "--training-shards", success=False)
         help_result = self.run_script("setup.sh", "--help")
         self.assertIn("565", help_result.stdout)
 
-    def test_speedrun_reuses_saved_custom_shard_count(self):
-        self.run_script("setup.sh", "--training-shards", "30")
+    def test_speedrun_preserves_existing_seven_shard_selection(self):
+        self.run_script("setup.sh", "--training-shards", "7")
         (self.data / "training/download-plan.json").write_text(
             json.dumps(
                 {
                     "sources": {
-                        "uniref90": {"train": [0] * 13},
-                        "mgnify": {"train": [0] * 3},
-                        "omg_img": {"train": [0] * 14},
+                        "uniref90": {"train": [0] * 3},
+                        "mgnify": {"train": [0]},
+                        "omg_img": {"train": [0] * 3},
                     }
                 }
             )
         )
         self.run_script("speedrun.sh")
         downloads = [row for row in self.commands() if "nanoprotein.sharded_data" in row]
-        self.assertEqual(downloads[-1][downloads[-1].index("--training-shards") + 1], "30")
+        self.assertEqual(downloads[-1][downloads[-1].index("--training-shards") + 1], "7")
 
     def test_incomplete_evaluation_blocks_training(self):
         self.env["LAUNCH_TEST_EVALUATION_FAIL"] = "1"

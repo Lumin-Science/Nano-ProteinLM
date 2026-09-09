@@ -18,17 +18,19 @@ $OUTPUT_ROOT/
   <run-name>/           # Checkpoints, effective config, logs and evaluation records
 ```
 
-The default pins the release revision and downloads **7 of 565 training Parquet
-shards**: 3 UniRef90, 1 MGnify and 3 OMG/IMG, containing 7,109,469 training
-proteins. All three MLM validation shards (12,288 proteins) and the frozen
-[contact evaluation bundle](CONTACT_DATA.md) are always prepared. No P-CORE data
-are downloaded. This subset comfortably covers a 100-step trial at batch 1,024;
-longer training repeatedly samples it.
+The default pins the release revision and downloads **30 of 565 training Parquet
+shards**: 13 UniRef90, 3 MGnify and 14 OMG/IMG, containing 29,979,351 training
+proteins. Downloads including MLM validation occupy 5.62 GB; prepared token stores
+add 9.38 GB. Allow 20 GB for the complete data setup, excluding the environment
+and checkpoints. All three MLM validation shards (12,288 proteins) and the frozen
+[CONTACT_DATA.md](CONTACT_DATA.md) bundle are always prepared; no P-CORE data
+are downloaded. At 100k steps and batch 1,024, the default corpus is sampled for
+about 3.4 passes. See [DATA.md](DATA.md#sizing-a-training-download) for larger selections.
 
 For a different training corpus size, choose a fresh `DATA_ROOT` in `.env` and run:
 
 ```bash
-bash runs/setup.sh --training-shards 30
+bash runs/setup.sh --training-shards 105
 ```
 
 The range is **3–565 total training shards**, with at least one per source.
@@ -37,7 +39,10 @@ mixture; all selections are deterministic source prefixes. `565` selects the
 entire training release. Setup without this option reuses the stored shard count
 on later calls, including calls from speedrun. An explicit different count refuses
 to overwrite existing prepared data; use another root for that experiment.
-The autoresearch task requires the original 7-shard selection.
+The autoresearch task and historical leaderboard retain the original 7-shard
+selection. In a separate `DATA_ROOT`, prepare it explicitly with
+`bash runs/setup.sh --training-shards 7`; changing the general setup default does
+not change the frozen benchmark corpus.
 
 For full control, the ordinary data API accepts either `--training-shards` or
 `--training-samples`; it always includes all MLM validation shards. Inspect a

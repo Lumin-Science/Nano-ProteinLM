@@ -17,10 +17,10 @@ whose independently verified manifest contains 665,970,495 training proteins:
 
 Each source also has one 4,096-protein validation shard, for 12,288 validation
 proteins in total. The complete artifact contains 568 train/validation shards
-and occupies 109,661,312,410 compressed bytes. Setup downloads 7 training shards
-by default (7,109,469 proteins), plus all
-validation shards. `bash runs/setup.sh --training-shards N` selects
-3–565 whole training shards; choose a fresh `DATA_ROOT` for another selection.
+and occupies 109,661,312,410 compressed bytes. Setup downloads 30 training shards
+by default (29,979,351 proteins), plus all validation shards.
+`bash runs/setup.sh --training-shards N` selects 3–565 whole training shards;
+choose a fresh `DATA_ROOT` for another selection.
 The direct data API also supports a requested sample budget. Both routes use
 checksum-bound source prefixes and always include complete MLM validation.
 The setup command separately installs the [frozen P@L bundle](CONTACT_DATA.md).
@@ -30,6 +30,49 @@ preserves the source-specific 70%-identity representative FASTAs and cluster
 membership maps before evaluation decontamination and final packing. Use the
 processed release above for training; the raw release supports inspection of
 the preceding clustering stage.
+
+## Sizing a training download
+
+Counts below come from the pinned manifest and the ordinary `plan_shards` API.
+The three source counts are ordered UniRef90 / MGnify / OMG-IMG; every selection
+also includes all three MLM validation shards.
+
+| Training shards | Source allocation | Training proteins | Stored training residues | Parquet GB | Parquet + prepared stores GB |
+|---|---|---:|---:|---:|---:|
+| 7 — frozen benchmark | 3 / 1 / 3 | 7,109,469 | 1,879,045,806 | 1.32 | 3.51 |
+| 30 — setup default | 13 / 3 / 14 | 29,979,351 | 8,053,052,338 | 5.62 | 15.00 |
+| 105 — 100k × 1,024 | 46 / 8 / 51 | 103,867,089 | 28,185,691,687 | 19.64 | 52.40 |
+| 209 — 100k × 2,048 | 91 / 16 / 102 | 206,909,262 | 56,102,947,191 | 39.09 | 104.30 |
+| 565 — full release | 92 / 229 / 244 | 665,970,495 | 151,304,238,405 | 109.66 | 290.27 |
+
+Storage estimates use decimal GB and include MLM validation: the cache holds
+compressed Parquet, and prepared stores use one byte per residue plus a 44-byte
+index entry per protein (offset, length and digest). Array headers and receipts
+add a small amount. The P@L archive is 167,958,183 bytes and expands to
+663,149,992 bytes; reserve about 0.9 GB with filesystem overhead. Allow roughly
+20 GB for 30 shards, 60 GB for 105, 120 GB for 209 or 320 GB for the full release,
+with separate space for dependencies, checkpoints and evaluation outputs.
+
+At 100k steps, global batches 1,024 and 2,048 sample 102.4M and 204.8M proteins
+respectively. Applying the normalized 36:11:54 source mixture and rounding each
+source up to whole shards gives 105 and 209 shards. Each source then has enough
+rows for its expected sample count, approximately one pass. The loader uses
+rank-disjoint shuffled passes and reshuffles an exhausted source. Thirty shards
+still support either run; at batch 1,024 they receive 3.42 passes overall,
+with different pass counts by source.
+
+**Stored residues are not the training token budget.** Stage 1 crops proteins
+to at most 510 residues and adds BOS/EOS; padding is excluded from model tokens.
+The completed 100k-step, batch-1,024 Setting 3 run sampled 102.4M proteins and
+processed 24,200,224,761 model tokens. This defines the 24.20B-token Test of
+Progress endpoint; actual steps can differ with another sequence-length mix.
+Data can be reused across seeds and recipes without downloading it again.
+
+The research task and historical leaderboard retain their seven-shard corpus.
+Use `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` for that
+contract. A larger-corpus comparison must use the same selected data for both
+reference and candidate, and must be reported separately. Existing prepared
+roots retain their saved shard count; select a fresh root to change it.
 
 ## Nano-ESMC production funnel
 
