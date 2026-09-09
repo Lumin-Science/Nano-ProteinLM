@@ -63,7 +63,7 @@ with different pass counts by source.
 
 **Stored residues are not the training token budget.** Stage 1 crops proteins
 to at most 510 residues and adds BOS/EOS; padding is excluded from model tokens.
-The completed 100k-step, batch-1,024 Setting 3 run sampled 102.4M proteins and
+The completed 100k-step, batch-1,024 default-recipe run sampled 102.4M proteins and
 processed 24,200,224,761 model tokens. This defines the 24.20B-token Test of
 Progress endpoint; actual steps can differ with another sequence-length mix.
 Data can be reused across seeds and recipes without downloading it again.

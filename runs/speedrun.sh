@@ -5,7 +5,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 recipe="${1:-configs/default.yaml}"
-run_name="${2:-setting3-100k}"
+run_name="${2:-default-100k}"
 if [[ $# -gt 0 ]]; then shift; fi
 if [[ $# -gt 0 ]]; then shift; fi
 if [[ ! -f "$recipe" || ! "$run_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then

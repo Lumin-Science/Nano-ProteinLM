@@ -3,7 +3,7 @@
 The [171M validation-loss task](../tasks/171m-validation-loss.md) is designed for
 small-budget training experiments. Its baseline backbone follows the paper's
 170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29));
-[300M/600M references](../configs/reference/README.md) are separate from this task.
+[300M/600M references](../configs/esmc/README.md) are separate from this task.
 Its [research shell script](../tasks/171m-validation-loss_ar.sh) calls the standard
 training/evaluation APIs directly. [program.md](../program.md) asks an agent to
 optimize the task; Test of Progress is manual. This page is a results index.
@@ -15,13 +15,14 @@ The [completed Test Leaderboard](../README.md#test-leaderboard)
 used 100k steps, batch 1,024 and one training seed (20260824); every run consumed
 24,200,224,761 model tokens. Those records are not two-seed token-stopped tests.
 
-The displayed Settings 1 → 2 → 3 → 5 use the full R02 base; Setting 1 is not a
-Muon-only ablation. See [executed configurations](PROGRAM2_SCALEUP.md) and
+The cumulative Muon, batch-balance, sqrt-loss and tied-embedding rows share
+RMSNorm, residual routing and depth-scaled initialization. The first row adds
+that full recipe, so it is not a Muon-only ablation. See [executed configurations](AUTORESEARCH_SCALEUP.md) and
 [best versus baseline](BEST_RECIPE_VS_BASELINE.md) for details.
 
 ## Commands and results
 
-- [Recommended training command](../README.md#train-a-171m-model) for the 100k-step Setting 3 run.
+- [Recommended training command](../README.md#train-the-esmc-style-protein-language-model) for the 100k-step default run.
 - [Research and progress commands](../tasks/171m-validation-loss.md) for paired-seed comparisons.
 - [38-round curve](../README.md#autoresearch), including all means and sample SDs.
 - [Test Leaderboard](../README.md#test-leaderboard).
@@ -30,7 +31,7 @@ Muon-only ablation. See [executed configurations](PROGRAM2_SCALEUP.md) and
 - [Per-method statistics through R29](../.dev/reports/program2/methods.tsv).
 - [Evaluation setup and execution](EVALUATION.md).
 - Batch-2,048 / eight-H100 scale-up records: [AdamW baseline](../.dev/reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md)
-  and [Setting 3](../.dev/reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md),
+  and [improved default](../.dev/reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md),
   both configured for 100k steps, evaluation every 10k steps and full final
   optimizer checkpoints for continuation.
 

@@ -13,7 +13,7 @@
       "training_seconds": 43242.339614387136
     },
     {
-      "recipe": "Previous R02 \u00b7 RoPE20k",
+      "recipe": "Muon recipe \u00b7 RoPE20k",
       "validation_loss": 2.4369829401821335,
       "p_at_l": 0.30310360974221223,
       "p_at_l_ci95": [
@@ -23,7 +23,7 @@
       "training_seconds": 46589.85665138019
     },
     {
-      "recipe": "1 \u00b7 R02 RoPE10k",
+      "recipe": "Muon recipe \u00b7 RoPE10k",
       "validation_loss": 2.4378074121061672,
       "p_at_l": 0.3016459311838414,
       "p_at_l_ci95": [
@@ -33,7 +33,7 @@
       "training_seconds": 46674.2525427104
     },
     {
-      "recipe": "2 \u00b7 + batch balance",
+      "recipe": "+ batch balance",
       "validation_loss": 2.438718624480771,
       "p_at_l": 0.3071519389793172,
       "p_at_l_ci95": [
@@ -43,7 +43,7 @@
       "training_seconds": 45221.8470741841
     },
     {
-      "recipe": "3 \u00b7 + sqrt loss",
+      "recipe": "+ sqrt loss (default)",
       "validation_loss": 2.418719872849124,
       "p_at_l": 0.32682479636194167,
       "p_at_l_ci95": [
@@ -53,7 +53,7 @@
       "training_seconds": 45279.50012921309
     },
     {
-      "recipe": "4 \u00b7 + tied embeddings",
+      "recipe": "+ tied embeddings",
       "validation_loss": 2.423042602400983,
       "p_at_l": 0.3188404612806216,
       "p_at_l_ci95": [

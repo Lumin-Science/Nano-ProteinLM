@@ -2,7 +2,7 @@
 
 These completed experiments use the small-budget 171M backbone from the paper's
 170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-The current protocol is defined in the [171M task](../tasks/171m-validation-loss.md).
+The current protocol is defined in the [171M task](../../../tasks/171m-validation-loss.md).
 
 Status: **all four settings completed their 100k runs and full evaluations**.
 Setting 4 finished at **September 8, 9:58:59 AM Toronto**. All four H100 technical trials
@@ -11,7 +11,7 @@ passed. Setting 1 ran as `58303658.14`; the completed sequential settings 2–4 
 settings **2 → 3 → 4 sequentially on fc10212** after qualification, and a
 September 7, 2026 **4:00 AM Toronto** check to launch setting 1 on fc10111 if
 its GPUs are free. This supersedes the earlier proposed two-node/two-wave plan.
-The [launch record](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md) holds
+The [launch record](../fir-r02-rope10k-100k-20260906/README.md) holds
 trial receipts, actual launch identities, and timestamped production state.
 
 ## Four independent runs
@@ -22,15 +22,15 @@ All use our completed R02 architecture with RoPE reset from 20k to **10k**.
 
 | Setting | Config | Added change | Parameters |
 |---|---|---|---:|
-| 1. R02-RoPE10k | [r02_rope10k.yaml](../configs/archive/program2_h100_100k/r02_rope10k.yaml) | Completed R02 recipe, RoPE 10k | 170,559,856 |
-| 2. + batch balance | [r04_batchbalance.yaml](../configs/archive/program2_h100_100k/r04_batchbalance.yaml) | Balance the same masked examples across ranks | 170,559,856 |
-| 3. + sqrt loss | [r10_sqrtloss.yaml](../configs/archive/program2_h100_100k/r10_sqrtloss.yaml) | Square-root masked-target weighting | 170,559,856 |
-| 4. + tied embeddings | [r29_tied.yaml](../configs/archive/program2_h100_100k/r29_tied.yaml) | Share input/output vocabulary weights | 170,510,704 |
+| 1. R02-RoPE10k | [r02_rope10k.yaml](../../configs/archive/program2_h100_100k/r02_rope10k.yaml) | Completed R02 recipe, RoPE 10k | 170,559,856 |
+| 2. + batch balance | [r04_batchbalance.yaml](../../configs/archive/program2_h100_100k/r04_batchbalance.yaml) | Balance the same masked examples across ranks | 170,559,856 |
+| 3. + sqrt loss | [r10_sqrtloss.yaml](../../configs/archive/program2_h100_100k/r10_sqrtloss.yaml) | Square-root masked-target weighting | 170,559,856 |
+| 4. + tied embeddings | [r29_tied.yaml](../../configs/archive/program2_h100_100k/r29_tied.yaml) | Share input/output vocabulary weights | 170,510,704 |
 
 Shared architecture: **24 layers, width 768, 12 heads, SwiGLU FFN width 2048,
 parameter-free RMSNorm, learned residual/input routing, depth-scaled residual
 projection initialization**. The prediction-head LayerNorm remains. R22
-narrower FFNs are excluded from these fixed-size runs ([decision](../TODO.md)).
+narrower FFNs are excluded from these fixed-size runs ([decision](../../../TODO.md)).
 
 ## Common training contract
 
@@ -58,7 +58,7 @@ narrower FFNs are excluded from these fixed-size runs ([decision](../TODO.md)).
 Configured Muon LRs precede its internal matrix-shape adjustment. Sqrt loss
 retains the imported implementation: normalize over the four ranks of each
 256-example microstep, then average four gradients per update. Evaluation uses
-the original sequence-mean loss. See [full recipe semantics](PROGRAM2_SCALEUP.md).
+the original sequence-mean loss. See [full recipe semantics](../../../docs/AUTORESEARCH_SCALEUP.md).
 
 Use the same verified corpus as the completed runs, with manifest SHA-256
 `43675d51421066ce8c5f68427886d57980e808c53c5bb1641de90cb74dda39ab`.
@@ -86,7 +86,7 @@ also enforces that timestamp. A busy node at 4 AM defers launch to a later hourl
 check. Setting 1 starts from scratch and can run independently of the fc10212
 queue. No additional allocation was requested for these Fir runs. All four are
 now complete; the heartbeat continues every **two hours** for the separate
-[Nibi baseline](../.dev/reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md).
+[Nibi baseline](../nibi-baseline-b2048-100k-eval10k-20260908/README.md).
 
 ## Qualification and production queue
 
@@ -144,4 +144,4 @@ planning estimates, not fixed finish times.
 
 Total training usage is roughly **208–224 H100 GPU-hours** for all four full
 runs, plus trials/setup/evaluation. New trial timings and live ETAs are recorded
-in the [launch record](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
+in the [launch record](../fir-r02-rope10k-100k-20260906/README.md).

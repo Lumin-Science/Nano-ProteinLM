@@ -33,7 +33,7 @@ class TrainingCLITests(unittest.TestCase):
     def test_default_retains_winner_without_its_old_stopping_budget(self):
         default = yaml.safe_load((ROOT / "configs/default.yaml").read_text())
         historical = yaml.safe_load(
-            (ROOT / "configs/archive/program2_h100_100k/r10_sqrtloss.yaml").read_text()
+            (ROOT / ".dev/configs/archive/program2_h100_100k/r10_sqrtloss.yaml").read_text()
         )
         for key in ("max_steps", "schedule_steps", "walltime_seconds"):
             historical.pop(key)
@@ -41,7 +41,7 @@ class TrainingCLITests(unittest.TestCase):
         self.assertEqual(default, historical)
 
     def test_research_clears_old_caps_and_records_explicit_seed_and_backend(self):
-        path = ROOT / "configs/archive/program2_h100_100k/r10_sqrtloss.yaml"
+        path = ROOT / ".dev/configs/archive/program2_h100_100k/r10_sqrtloss.yaml"
         source = path.read_bytes()
         config = self.print_config(
             path,
@@ -98,7 +98,7 @@ class TrainingCLITests(unittest.TestCase):
             "--gradient-accumulation",
             "4",
         )
-        baseline = self.print_config(ROOT / "configs/esmc-171m-original.yaml", *flags)
+        baseline = self.print_config(ROOT / "configs/esmc/esmc-171m.yaml", *flags)
         candidate = self.print_config(ROOT / "configs/default.yaml", *flags)
         for key in (
             "seed",
@@ -118,7 +118,7 @@ class TrainingCLITests(unittest.TestCase):
         self.assertEqual(candidate["muon_weight_decay_scale"], 0.75)
 
     def test_omitted_cli_arguments_preserve_legacy_recipe(self):
-        path = ROOT / "configs/esmc-171m-original.yaml"
+        path = ROOT / "configs/esmc/esmc-171m.yaml"
         self.assertEqual(self.print_config(path), yaml.safe_load(path.read_text()))
 
     def test_batch_override_rejects_ambiguous_multistage_target(self):

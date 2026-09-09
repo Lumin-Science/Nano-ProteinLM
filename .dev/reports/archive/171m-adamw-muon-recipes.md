@@ -1,25 +1,25 @@
 # ESMC-171M recipe comparison
 
 This page records the September 6, 2026 comparison. The current default is
-[Setting 3](../configs/default.yaml); the AdamW preset below is historical.
+[Setting 3](../../../configs/default.yaml); the AdamW preset below is historical.
 
 The 171M model targets small-budget training experiments and follows the paper's
 170M scaling backbone: 24 layers, width 768 and 12 heads
 ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
 “175M” is a legacy project name for this same backbone. Original-size
-[300M/600M presets](../configs/reference/README.md) are available separately.
+[300M/600M presets](../../../configs/esmc/README.md) are available separately.
 
 The historical AdamW baseline is recorded in
-[`esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml`](../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml).
+[`esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml`](../../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml).
 Its peak LR of **5e-4**, base weight decay of **0.01**, and **1,000-step warmup**
 are explicit user settings.
 The matched R02 variant is recorded in
-[`esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml`](../configs/archive/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml).
+[`esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml`](../../configs/archive/esmc-171m-r02-h100-fa3-b1024-stage1-100k.yaml).
 The table compares these two historical aligned presets with the paper reference.
 Both aligned variants completed training and evaluation on September 6, 2026.
 R02 reached validation loss **2.43698** and P@L **30.31%**, compared with
 **2.47436** and **26.50%** for default. See the
-[verified 100k results and receipts](../.dev/reports/fir-171m-100k-20260906/README.md).
+[verified 100k results and receipts](../fir-171m-100k-20260906/README.md).
 The original one-hour R02 record remains unchanged.
 
 | Setting | Aligned 171M R02 recipe | Historical AdamW baseline | ESMC paper reference |
@@ -53,9 +53,9 @@ A.1.1–A.1.4.1 and Tables S3–S4 of
 ### Superseded 10k-step pilot
 
 The initial paired pilot used
-[`esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml`](../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml)
+[`esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml`](../../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-10k.yaml)
 on Fir `fc10111` and
-[`esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml`](../configs/archive/esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml)
+[`esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml`](../../configs/archive/esmc-171m-r02-h100-fa3-b1024-stage1-10k.yaml)
 on Fir `fc10212`. The user corrected the intended budget to 100,000 steps
 and explicitly requested cancellation and fresh relaunches. Both pilot
 training steps were cancelled on September 6, 2026, while preserving the
@@ -117,7 +117,7 @@ with assumed proxy LR/WD values transferred by `mup_hyperparameters`; those
 numbers are not disclosed paper values. Its residual scaling follows the
 released implementation, `sqrt(n_layers / 36)`, while the paper text writes
 `sqrt(n_layers)`. Our corpus reconstruction also substitutes OMG IMG/M for
-the unavailable exact JGI source; see [DATA.md](DATA.md).
+the unavailable exact JGI source; see [DATA.md](../../../docs/DATA.md).
 
 The historical `autoresearch_171m_4xl40s_1h.yaml` keeps base LR 0.000326599,
 base WD 0.0183712, warmup 554, global batch 256, and the one-hour L40S budget.
@@ -125,7 +125,7 @@ The saved R02 recipe's three-seed contact P@L is **0.1077 ± 0.0017**. Its
 reported +8.06% improvement is relative to a starting recipe that already
 contained Muon and the retained architecture, not the new AdamW default.
 Validation-loss mean/SD is not reported in the saved campaign record.
-See [BASELINES.md](BASELINES.md#validated-esmc-171m-preset).
+See [BASELINES.md](../../../docs/BASELINES.md#validated-esmc-171m-preset).
 
 The historical one-hour score cannot serve as the measured outcome of the
 aligned 100k-step comparison. The exact paper run remains a literature

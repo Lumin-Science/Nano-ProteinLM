@@ -169,31 +169,31 @@ L 401.918078 81.648
     <g id="ytick_2">
      <g id="line2d_16"/>
      <g id="text_10">
-      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="136.098057" transform="rotate(-0 143.242188 136.098057)">Previous R02 · RoPE20k</text>
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="136.098057" transform="rotate(-0 143.242188 136.098057)">Muon recipe · RoPE20k</text>
      </g>
     </g>
     <g id="ytick_3">
      <g id="line2d_17"/>
      <g id="text_11">
-      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="167.754832" transform="rotate(-0 143.242188 167.754832)">1 · R02 RoPE10k</text>
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="167.754832" transform="rotate(-0 143.242188 167.754832)">Muon recipe · RoPE10k</text>
      </g>
     </g>
     <g id="ytick_4">
      <g id="line2d_18"/>
      <g id="text_12">
-      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="199.411606" transform="rotate(-0 143.242188 199.411606)">2 · + batch balance</text>
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="199.411606" transform="rotate(-0 143.242188 199.411606)">+ batch balance</text>
      </g>
     </g>
     <g id="ytick_5">
      <g id="line2d_19"/>
      <g id="text_13">
-      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="231.06838" transform="rotate(-0 143.242188 231.06838)">3 · + sqrt loss</text>
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="231.06838" transform="rotate(-0 143.242188 231.06838)">+ sqrt loss (default)</text>
      </g>
     </g>
     <g id="ytick_6">
      <g id="line2d_20"/>
      <g id="text_14">
-      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="262.725154" transform="rotate(-0 143.242188 262.725154)">4 · + tied embeddings</text>
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #223247" x="143.242188" y="262.725154" transform="rotate(-0 143.242188 262.725154)">+ tied embeddings</text>
      </g>
     </g>
    </g>
@@ -643,7 +643,7 @@ L 701.075899 258.925935
    </g>
   </g>
   <g id="text_39">
-   <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #223247" x="362.742188" y="19.3575" transform="rotate(-0 362.742188 19.3575)">Setting 3 leads the completed 100k-step comparison</text>
+   <text style="font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #223247" x="362.742188" y="19.3575" transform="rotate(-0 362.742188 19.3575)">Default recipe leads the completed 100k-step comparison</text>
   </g>
   <g id="text_40">
    <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #63758a" x="146.742188" y="46.116" transform="rotate(-0 146.742188 46.116)">4 H100s · batch 1,024 · 102.4M sequences · one training seed per recipe</text>

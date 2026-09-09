@@ -8,28 +8,28 @@
   reports in `.dev/reports/`.
   Packaging, subprocess callers and documentation use the new layout.
 
-- Two recommended recipes for small-budget 171M experiments: [current-best Setting 3](../configs/default.yaml) and
-  [original 171M AdamW](../configs/esmc-171m-original.yaml). All 27 other YAMLs
-  and the scale-up manifest are in the [config archive](../configs/archive/README.md),
+- Two recommended recipes for small-budget 171M experiments: [current-best Setting 3](../../../configs/default.yaml) and
+  [original 171M AdamW](../../../configs/esmc/esmc-171m.yaml). All 27 other YAMLs
+  and the scale-up manifest are in the [config archive](../../configs/archive/README.md),
   preserving their bytes and recorded hashes. This replaces the earlier plan
   to maintain four public presets for now.
-- [300M/600M reference presets](../configs/reference/README.md) expose the paper's
+- [300M/600M reference presets](../../../configs/esmc/README.md) expose the paper's
   original-size architectures separately, with documented local training assumptions.
-- Two entry points in `runs/`: [setup](../runs/setup.sh) installs the
+- Two entry points in `runs/`: [setup](../../../runs/setup.sh) installs the
   locked environment, prepares/reuses training shards and all MLM/P@L data;
-  [speedrun](../runs/speedrun.sh) calls setup and trains Setting 3 by default.
+  [speedrun](../../../runs/speedrun.sh) calls setup and trains Setting 3 by default.
   It accepts a recipe, run name and normal training CLI options.
-- Old training launchers are [archived](archive/runs/README.md). Parallel
+- Old training launchers are [archived](../../../docs/archive/runs/README.md). Parallel
   evaluation helpers now live under `src/` without changing scoring behavior.
 - `.env` contains only `DATA_ROOT` and `OUTPUT_ROOT`. Setup and training are
-  documented in the [README](../README.md#training-and-evaluating); the direct APIs remain
+  documented in the [README](../../../README.md#training-and-evaluating); the direct APIs remain
   available for independent research.
-- [program.md](../program.md) selects a [task definition](../tasks/171m-validation-loss.md).
+- [program.md](../../../program.md) selects a [task definition](../../../tasks/171m-validation-loss.md).
   The task's shell script declares research measurements. Test of Progress stays
-  manual, using the [documented commands](EVALUATION.md#manual-test-of-progress).
-  The obsolete root `program2.md` is [archived](archive/program2.md).
+  manual, using the [documented commands](../../../docs/EVALUATION.md#manual-test-of-progress).
+  The obsolete root `program2.md` is [archived](../../../docs/archive/program2.md).
 
-- The [frozen P@L setup bundle](CONTACT_DATA.md) is published alongside training
+- The [frozen P@L setup bundle](../../../docs/CONTACT_DATA.md) is published alongside training
   data. Setup installs all MLM validation data, contact payloads and evaluator
   source, and checks their hashes. `--training-shards` supports larger corpora
   for independent research; the task retains its fixed 7-shard subset.

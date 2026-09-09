@@ -57,11 +57,11 @@ def measured_results():
     packet = json.loads(SOURCE.read_text())
     labels = [
         "ESMC-like AdamW baseline",
-        "Previous R02 · RoPE20k",
-        "1 · R02 RoPE10k",
-        "2 · + batch balance",
-        "3 · + sqrt loss",
-        "4 · + tied embeddings",
+        "Muon recipe · RoPE20k",
+        "Muon recipe · RoPE10k",
+        "+ batch balance",
+        "+ sqrt loss (default)",
+        "+ tied embeddings",
     ]
     records = [
         packet["historical_references"]["default"],
@@ -73,7 +73,7 @@ def measured_results():
     ]
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.7), sharey=True)
     fig.subplots_adjust(left=0.25, right=0.985, top=0.76, bottom=0.18, wspace=0.19)
-    fig.suptitle("Setting 3 leads the completed 100k-step comparison", y=0.98, fontsize=16)
+    fig.suptitle("Default recipe leads the completed 100k-step comparison", y=0.98, fontsize=16)
     fig.text(
         0.25,
         0.865,
@@ -241,7 +241,7 @@ def loss_example():
     colors = [BLUE, TEAL, "#adb6c1"]
     labels = [
         "Equal proteins (baseline)",
-        "√target count (setting 3)",
+        "√target count (default)",
         "Equal targets (reference only)",
     ]
     fig, axes = plt.subplots(1, 2, figsize=(12, 5.1), gridspec_kw={"width_ratios": [1.3, 1]})

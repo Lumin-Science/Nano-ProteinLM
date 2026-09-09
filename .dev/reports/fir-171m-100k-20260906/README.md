@@ -51,7 +51,7 @@ comparison; it does not isolate the optimizer.
 
 Muon LR values precede its internal `match_rms_adamw` matrix-shape adjustment.
 The project default is not an exact reproduction of the paper's undisclosed
-numerical calibration. [Full recipe comparison](../../../docs/171M_RECIPES.md).
+numerical calibration. [Full recipe comparison](../archive/171m-adamw-muon-recipes.md).
 
 ## Reproduction and evidence
 

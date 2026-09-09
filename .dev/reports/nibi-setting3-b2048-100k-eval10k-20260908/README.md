@@ -46,9 +46,9 @@ one training seed per recipe. See the [matched comparison receipt](full/evaluati
 
 ## Production configuration
 
-The [config](../../../configs/archive/esmc-171m-setting3-nibi-fa3-b2048-stage1-100k.yaml)
+The [config](../../configs/archive/esmc-171m-setting3-nibi-fa3-b2048-stage1-100k.yaml)
 retains every scientific setting from
-[`r10_sqrtloss.yaml`](../../../configs/archive/program2_h100_100k/r10_sqrtloss.yaml).
+[`r10_sqrtloss.yaml`](../../configs/archive/program2_h100_100k/r10_sqrtloss.yaml).
 The changes are eight-GPU execution, checkpoint/evaluation cadence, and a 24-hour
 training guard. The larger global batch comes from the larger GPU count.
 

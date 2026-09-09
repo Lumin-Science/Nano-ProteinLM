@@ -15,7 +15,7 @@ Training source/configs remain frozen at `253c3ea`.
 
 All full runs initialize from scratch for 100,000 steps, batch 1,024, warmup
 1,000, base LR 5e-4 and base WD 0.01, with preserved R02 Muon groups, RoPE10k,
-FFN2048, BF16 and FA3. [Full recipes and semantics](../../../docs/PROGRAM2_SCALEUP.md).
+FFN2048, BF16 and FA3. [Full recipes and semantics](../../../docs/AUTORESEARCH_SCALEUP.md).
 R22 narrowing remains deferred in [TODO](../../../TODO.md).
 
 ## Completed production results (four of four)
@@ -187,7 +187,7 @@ Each Fir full launch required at least 16h 15m of allocation time.
 
 - [Launch plan and script digests](LAUNCH_PLAN.json).
 - [Exact launch/verification scripts and evaluator snapshot](launch).
-- [GPU schedule](../../../docs/PROGRAM2_GPU_PLAN.md).
+- [GPU schedule](../archive/h100-100k-training-plan.md).
 - Historical [default and RoPE20k R02 results](../fir-171m-100k-20260906/README.md).
 - Remote artifacts: `/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906`.
   Source checkout: the same path with `-run` appended. Local working receipts:

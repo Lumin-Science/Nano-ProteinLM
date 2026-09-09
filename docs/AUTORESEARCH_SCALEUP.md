@@ -1,4 +1,4 @@
-# Program 2 versus the completed H100 R02, and matched 100k presets
+# One-hour recipe search and matched H100 scale-up
 
 These completed experiments use the small-budget 171M backbone from the paper's
 170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
@@ -12,13 +12,13 @@ groups and 100k training contract as the completed R02. Each run starts from
 scratch; cumulative refers to recipe changes, not checkpoint continuation.
 
 **R22 FFN narrowing is excluded from the fixed-size comparison** ([decision](../TODO.md)). The earlier unlaunched
-five-setting proposal with Program 2's LayerNorm architecture is superseded.
-Historical Program 2 results below remain unchanged. All four full-size H100
+five-setting proposal with one-hour search's LayerNorm architecture is superseded.
+Historical one-hour search results below remain unchanged. All four full-size H100
 technical trials and all four 100k-step runs with full evaluations passed; see the
-[GPU training plan](PROGRAM2_GPU_PLAN.md) and
+[GPU training plan](../.dev/reports/archive/h100-100k-training-plan.md) and
 [results](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
 
-## Published Program 2 results
+## Published one-hour search results
 
 Source: `autoresearch-171m-val-loss`, snapshot commit
 `1a194f4` (September 6, 2026, 22:34:54 UTC / 6:34:54 PM Toronto).
@@ -41,14 +41,14 @@ seed rows. All five accepted changes pass the campaign's stated rule: mean
 improvement over the incumbent exceeds the candidate's sample SD. This is a
 selection heuristic, not a significance test.
 
-R29 improves validation loss **2.20%** relative to Program 2's original AdamW
+R29 improves validation loss **2.20%** relative to one-hour search's original AdamW
 baseline. Its contact P@L is slightly below that baseline; R10 has the highest
 contact P@L among the accepted recipes. Selection on MLM loss does not establish
 an improvement in contact quality.
 
 ### Comparison with our completed 100k runs
 
-| Protocol | Program 2 | Completed Fir H100 comparison |
+| Protocol | one-hour search | Completed Fir H100 comparison |
 |---|---|---|
 | Hardware and training budget | 4 L40S, 1 hour per seed | 4 H100, 100,000 steps (12.01h default / 12.94h R02) |
 | Runtime | Torch 2.13.0+cu126, FA2 | Torch 2.13.0+cu130, FA3 |
@@ -60,29 +60,29 @@ an improvement in contact quality.
 | Contact evaluation | Full 20,775 chains | Full 20,775 chains |
 | Reported uncertainty | Sample SD over two training seeds | Contact bootstrap CI over chains; no seed SD |
 
-All 60 archived Program 2 run contracts have the same training corpus manifest
+All 60 archived one-hour search run contracts have the same training corpus manifest
 and corpus-verification digests as our H100 comparison. The source data match;
 exposure and evaluation sample size differ.
 
 Our default reached **2.47436 validation loss / 26.50% P@L**; our R02 reached
-**2.43698 / 30.31%**. Program 2's raw losses cannot be used to rank its recipes
+**2.43698 / 30.31%**. one-hour search's raw losses cannot be used to rank its recipes
 against these endpoints: training exposure is roughly 36–42 times smaller for
 its accepted recipes, and the MLM sample size differs. Equal contact protocols
 also do not remove the training-budget confound.
 
 [Completed H100 results](../.dev/reports/fir-171m-100k-20260906/README.md) ·
-[Published Program 2 report](../.dev/reports/program2/README.md) ·
+[Published one-hour search report](../.dev/reports/program2/README.md) ·
 [Per-method statistics](../.dev/reports/program2/methods.tsv) ·
 [Import provenance and archive verification](../.dev/reports/program2/IMPORT_PROVENANCE.json).
 
-## Program 2 R01 is not our R02
+## one-hour search R01 is not our R02
 
 Both use native Muon on the 96 transformer matrices and AdamW on the other
 parameters. Both use momentum 0.95, Nesterov updates, five Newton–Schulz steps,
 `match_rms_adamw`, Adam betas (0.9, 0.95), epsilon 1e-8 and clipping at 1.0.
 Both have 24 layers, model width 768, 12 heads, and FFN width 2048 at this stage.
 
-| Setting | Historical Program 2 R01 | Completed H100 R02 |
+| Setting | Historical one-hour search R01 | Completed H100 R02 |
 |---|---|---|
 | Base LR | 0.000326599 | 0.0005 |
 | Muon attention LR multiplier → configured peak | 1.0 → 0.000326599 | 0.9 → 0.00045 |
@@ -104,7 +104,7 @@ Both have 24 layers, model width 768, 12 heads, and FFN width 2048 at this stage
 
 Configured Muon group LRs are shown before internal matrix-shape adjustment.
 R02's generic `muon_lr_scale: 0.8` is overridden by its explicit 0.9/0.75 groups.
-The prediction-head LayerNorm remains in both models. Program 2 also tested
+The prediction-head LayerNorm remains in both models. one-hour search also tested
 RMSNorm, depth-scaled initialization and learned routing individually, but did
 not accept them under its one-hour MLM selection rule. Those outcomes do not
 establish how the combined changes behave after 100k steps.
@@ -113,10 +113,10 @@ establish how the combined changes behave after 100k steps.
 
 | Prepared config | Increment over preceding row | Balanced ranks | Training loss | FFN hidden width | Tied embeddings | Parameters |
 |---|---|---|---|---:|---|---:|
-| [1. R02 RoPE10k](../configs/archive/program2_h100_100k/r02_rope10k.yaml) | Completed R02 recipe, `rotary_base: 10000.0` | No | Sequence mean | 2048 | No | 170,559,856 |
-| [2. + R04 batch balance](../configs/archive/program2_h100_100k/r04_batchbalance.yaml) | `balance_batches_across_ranks: true` | Yes | Sequence mean | 2048 | No | 170,559,856 |
-| [3. + R10 sqrt loss](../configs/archive/program2_h100_100k/r10_sqrtloss.yaml) | `training_loss_reduction: sqrt_mask_count` | Yes | Square-root target weights | 2048 | No | 170,559,856 |
-| [4. + R29 tied](../configs/archive/program2_h100_100k/r29_tied.yaml) | `tie_word_embeddings: true` | Yes | Square-root target weights | 2048 | Yes | 170,510,704 |
+| [1. R02 RoPE10k](../.dev/configs/archive/program2_h100_100k/r02_rope10k.yaml) | Completed R02 recipe, `rotary_base: 10000.0` | No | Sequence mean | 2048 | No | 170,559,856 |
+| [2. + R04 batch balance](../.dev/configs/archive/program2_h100_100k/r04_batchbalance.yaml) | `balance_batches_across_ranks: true` | Yes | Sequence mean | 2048 | No | 170,559,856 |
+| [3. + R10 sqrt loss](../.dev/configs/archive/program2_h100_100k/r10_sqrtloss.yaml) | `training_loss_reduction: sqrt_mask_count` | Yes | Square-root target weights | 2048 | No | 170,559,856 |
+| [4. + R29 tied](../.dev/configs/archive/program2_h100_100k/r29_tied.yaml) | `tie_word_embeddings: true` | Yes | Square-root target weights | 2048 | Yes | 170,510,704 |
 
 The first row changes only the completed R02's effective RoPE setting; explicit
 default fields in the YAML clarify the unchanged FFN/loss/embedding settings.
@@ -138,7 +138,7 @@ target sets more influence than equal sequence weighting, but less than full
 token weighting. Zero-target sequences have zero weight. Held-out MLM evaluation
 remains sequence-mean NLL; only the training objective changes.
 
-**R22 is deferred.** Its historical Program 2 result narrows the SwiGLU
+**R22 is deferred.** Its historical one-hour search result narrows the SwiGLU
 intermediate dimension by 25%, removing 28,311,552 parameters. That separate
 capacity/compute experiment is not included in the active four settings.
 
@@ -146,7 +146,7 @@ capacity/compute experiment is not included in the active four settings.
 preserving the separate output bias. Both roles contribute gradients to one
 AdamW-owned parameter with one optimizer state. It removes another **49,152**
 parameters. In the new four-setting plan it retains both data/loss changes and
-the full-width FFNs; this differs from historical Program 2 R29, which inherited
+the full-width FFNs; this differs from historical one-hour search R29, which inherited
 R22's narrower FFNs.
 
 ## Matched scale-up contract and controls
@@ -157,16 +157,16 @@ mixture, **100,000 optimizer and schedule steps**, BF16/FA3 and 16-hour guard.
 All Muon variants additionally match our R02's **actual configured group LRs
 and WDs**: attention 0.00045/0.0075, FFN 0.000375/0.0075, decayed AdamW
 0.0005/0.01, non-decayed AdamW 0.0005/0. This intentionally replaces historical
-Program 2's uniform multipliers of 1.0; the new plan retains our completed
+one-hour search's uniform multipliers of 1.0; the new plan retains our completed
 R02's configured optimizer settings. All four FFNs remain width 2048, and no
 additional LR or WD rescaling is applied.
 
 The architecture starts from our completed R02's **parameter-free RMSNorm,
 learned residual/input routing and depth-scaled initialization**, with RoPE
-reset to **10k**. The original Program 2 R01 is no longer an active setting.
+reset to **10k**. The original one-hour search R01 is no longer an active setting.
 R02-RoPE10k → R04 → R10 → R29 defines the four cumulative recipes. The completed
 default and RoPE20k R02 remain measured historical references. All four new
-results are complete: setting 3 (+ batch balance + sqrt loss) has the best
+results are complete: the batch-balance + sqrt-loss recipe has the best
 validation loss **2.41871987** and contact P@L **0.32682480**. Adding tied
 embeddings gives loss **2.42304260** and P@L **0.31884046** in this matched-seed
 comparison; full results and paired chain intervals are in the
@@ -176,7 +176,7 @@ Batch 1,024 uses 64 examples/GPU × 4 GPUs × 4 accumulation microsteps. The
 imported R10 implementation normalizes weights **across ranks within each
 256-example microstep**, then averages four microstep gradients. It does not
 normalize once jointly across all 1,024 examples. That retained accumulation
-behavior is explicit in the [machine-readable manifest](../configs/archive/program2_h100_100k/manifest.json).
+behavior is explicit in the [machine-readable manifest](../.dev/configs/archive/program2_h100_100k/manifest.json).
 
 Use the same verified training data and evaluate each final checkpoint with
 `--validation-batches 256 --validation-batch-size 16 --validation-context 512`

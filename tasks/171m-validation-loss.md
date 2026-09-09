@@ -5,12 +5,12 @@
 Improve protein-embedding training recipes under a small compute budget.
 The 171M baseline follows the paper's 170M scaling model: 24 layers, width 768,
 and 170.7M parameters ([Appendix A.1.4.1, Table S4, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-Runtime code lives in [src/nanoprotein](../src/nanoprotein/), with public
+Runtime code lives in [src/nanoprotein](../src/nanoprotein), with public
 decontaminated data and frozen evaluations.
 
-[Setting 3](../configs/default.yaml) is the starting recipe;
-[171M AdamW](../configs/esmc-171m-original.yaml) is the reference.
-The [300M/600M reference configs](../configs/reference/README.md) support separate,
+[default.yaml](../configs/default.yaml) is the starting recipe;
+[esmc-171m.yaml](../configs/esmc/esmc-171m.yaml) is the reference.
+The [configs/esmc/README.md](../configs/esmc/README.md) support separate,
 larger-model experiments and are outside this task's size bound.
 
 ## Autoresearch protocol

@@ -40,7 +40,7 @@ and P@L uses the same 20,775 chains. Intervals are 5,000-resample chain-bootstra
 95% CIs, not training-seed uncertainty; each recipe has one training seed.
 Training times exclude evaluation and are approximate to the minute.
 
-See **[best recipe versus baseline: differences, figures, and worked examples](../../docs/BEST_RECIPE_VS_BASELINE.md)**,
+See **[best recipe versus baseline: differences, figures, and worked examples](../BEST_RECIPE_VS_BASELINE.md)**,
 the [complete results and adjacent comparisons](../../.dev/reports/fir-r02-rope10k-100k-20260906/README.md),
 and the [historical baseline/R02 records](../../.dev/reports/fir-171m-100k-20260906/README.md).
 The narrower-FFN change remains deferred in [TODO](../../TODO.md).

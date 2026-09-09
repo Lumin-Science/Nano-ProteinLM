@@ -23,7 +23,7 @@ contact P@L are required diagnostics; P-CORE provides additional representation
 measurements. These diagnostics do not affect research selection. See
 [tasks/171m-validation-loss.md](../tasks/171m-validation-loss.md) for the scoring rule and executable protocol,
 and [Test of Progress](../tasks/171m-validation-loss.md#test-of-progress)
-for token-budget confirmation. [PROGRAM2_SCALEUP.md](PROGRAM2_SCALEUP.md)
+for token-budget confirmation. [AUTORESEARCH_SCALEUP.md](AUTORESEARCH_SCALEUP.md)
 records the executed historical 100k-step comparison. The current token-budget verification
 protocol does not relabel those single-seed results.
 

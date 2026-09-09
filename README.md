@@ -115,17 +115,16 @@ git clone https://github.com/Lumin-Science/Nano-Protein-LM.git
 cd Nano-Protein-LM
 bash runs/setup.sh
 ```
+The default downloads **30/565 training shards (29.98M proteins; 5.62 GB compressed, including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. For a larger training set:
 
-The default downloads **30 training shards (29.98M proteins; 5.62 GB compressed,
-including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. It also
-prepares all **12,288 MLM validation proteins** and the frozen
-[**P@L dataset and evaluator**](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/cc548944b9caaf8b4f40ba49b316cc6f477a6031/evaluation)
-(~168 MB compressed): 16 probe-fit chains, 4 probe-validation chains and all
-20,775 evaluation chains. Experimental P-CORE data are excluded. All downloaded
-assets are checked against their frozen hashes and reused on subsequent runs.
+```bash
+bash runs/setup.sh --training-shards $number_of_shards
+# Use 30 for one-hour research trials, 209 for larger-data scale-up tests.
+```
+The frozen benchmark's data selection is defined in [171m-validation-loss.md](tasks/171m-validation-loss.md).
 
-Data and outputs default to `data/` and `outputs/`. To use another disk, copy
-[.env.example](.env.example) to `.env` and set only `DATA_ROOT` and `OUTPUT_ROOT`:
+Data and outputs default to `data/` and `outputs/`. To use another path, copy
+[.env.example](.env.example) to `.env` and set `DATA_ROOT` and `OUTPUT_ROOT`:
 
 ```text
 $DATA_ROOT/                     # Default: data/
@@ -139,85 +138,30 @@ $OUTPUT_ROOT/<run-name>/        # Default: outputs/<run-name>/
   evaluation/                  # MLM loss, P@L and evaluation records
 ```
 
-### How much training data?
-
-Thirty shards cover a 100-step trial and can also train for 100k steps. At global
-batch 1,024, 100k steps sample **102.4M proteins**, or about **3.4 passes** through
-the default subset. The loader reshuffles each source when its rows are exhausted.
-For a larger-data comparison, **105 shards** cover roughly one pass at that budget;
-use **209 shards** for 100k steps at batch 2,048.
-
-| Training selection | Proteins | Parquet download¹ | Parquet + prepared stores¹ |
-|---|---:|---:|---:|
-| **30 shards — default** | **29.98M** | **5.62 GB** | **15.00 GB** |
-| 105 shards — 100k × 1,024 | 103.87M | 19.64 GB | 52.40 GB |
-| 209 shards — 100k × 2,048 | 206.91M | 39.09 GB | 104.30 GB |
-| 565 shards — full release | 665.97M | 109.66 GB | 290.27 GB |
-
-¹ Includes all MLM validation data; decimal GB. Add about 0.9 GB for the P@L
-archive and extracted files, plus working space, the environment and checkpoints.
-Allow roughly **20 / 60 / 120 / 320 GB** for the respective data selections.
-
-Choose a fresh `DATA_ROOT` for a different selection:
-
-```bash
-bash runs/setup.sh --training-shards 105  # Larger-data 100k-step comparison
-# Use 209 for batch 2,048, or 565 for the complete training release.
-```
-
-Setup reuses an existing root's saved shard count; upgrading does not silently
-expand a seven-shard installation. Selection extends deterministic source prefixes
-in the training mixture, with complete validation and P@L at every shard count.
-
-The **24.20B-token Test of Progress** budget matches the completed 100k-step run
-at batch 1,024; its exact step count depends on sampled sequence lengths. The
-frozen autoresearch task and historical leaderboard use **7 shards**. Prepare
-that selection explicitly with `bash runs/setup.sh --training-shards 7` in a
-separate root. A larger-data comparison must train both reference and candidate
-on the same selected corpus and report it separately. See [DATA.md](docs/DATA.md)
-for capacity calculations and [USAGE.md](docs/USAGE.md#setup) for direct APIs.
-
 ## Training and evaluating
 
 Start with a short training trial, scale up a recipe, then measure both language
 modeling and structural information in its checkpoint. The scripts call standard
 Python APIs so you can adapt the commands to your own research.
 
-### Train a 171M model
+### Train the ESMC-Style Protein Language Model
 
 > [!NOTE]
-> **Our 171M variant is designed for small-budget training experiments.** Its
-> baseline backbone follows the paper's 170M scaling model: 24 layers, width 768,
-> and approximately 170.7M parameters
-> ([ESMC Appendix A.1.4.1, Table S4, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-> For the original ESMC **300M** and **600M** architectures, see the
-> [esmc-300m-original.yaml](configs/reference/esmc-300m-original.yaml) and
-> [esmc-600m-original.yaml](configs/reference/esmc-600m-original.yaml), following
-> [Appendix A.1.1, Table S1, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29).
-> These are local training presets; [configs/reference/README.md](configs/reference/README.md)
-> explains how their training settings differ from the released models.
-
-Try the current-best **Setting 3** recipe for 100 steps; setup runs automatically:
-
-```bash
-bash runs/speedrun.sh configs/default.yaml setting3-trial --max-steps 100
-```
-
-For the full 100k-step run:
+> **Our default setting is a 171M variant, designed for small-budget training experiments.** Its baseline backbone follows the paper's 170M scaling model: 24 layers, width 768, and approximately 170.7M parameters ([ESMC Appendix A.1.4.1](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
+> For the original ESMC **300M** and **600M** architectures, see the [esmc-300m.yaml](configs/esmc/esmc-300m.yaml) and [esmc-600m.yaml](configs/esmc/esmc-600m.yaml)
 
 ```bash
 bash runs/speedrun.sh
 ```
-
-The default is **100,000 Stage-1 steps on four H100s**, global batch **1,024**,
+This launches **100,000 Stage-1 steps on four GPUs**, global batch **1,024**,
 context **512**, **BF16/FA3**, base learning rate **5e-4**, weight decay **0.01**
 and **1,000 warmup steps**. A 16-hour training guard stops an overlong run.
 Checkpoints, the resolved recipe and training records are saved under
-`$OUTPUT_ROOT/setting3-100k/`, including the full final optimizer state. See
+`$OUTPUT_ROOT/default-100k/`, including the full final optimizer state. See
 [checkpoint-resume.md](docs/checkpoint-resume.md) for continuation. Repeats require a fresh run name.
 
 For 171M training, choose [default.yaml](configs/default.yaml) or
-[esmc-171m-original.yaml](configs/esmc-171m-original.yaml). The scripts call the standard
+[esmc-171m.yaml](configs/esmc/esmc-171m.yaml). The scripts call the standard
 training API; see [USAGE.md](docs/USAGE.md#training) for other budgets, hardware
 and recipe changes.
 
@@ -236,8 +180,8 @@ if [ -f .env ]; then source .env; fi
 source .env.example
 set +a
 uv run --frozen python -m nanoprotein.evaluate \
-  --checkpoint "$OUTPUT_ROOT/setting3-trial/checkpoint-final.pt" \
-  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/setting3-trial/evaluation" \
+  --checkpoint "$OUTPUT_ROOT/default-100k/checkpoint-final.pt" \
+  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-100k/evaluation" \
   --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
   --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
   --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
@@ -295,17 +239,17 @@ Test of Progress protocol above.
 | Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
 |---|---:|---:|---:|---:|
 | Baseline: ESMC-like AdamW | 2.47436 | 26.505% | 26.295–26.719% | 12h 01m |
-| 1: + Muon (R02 recipe)† | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
+| 1: + Muon recipe† | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
 | 2: + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
-| **3: + sqrt loss** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
+| **3: + sqrt loss (default)** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
 | 5: + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
 
-†Setting 1 uses the full R02 recipe: Muon plus RMSNorm, residual routing and
-depth-scaled initialization, with RoPE 10k. Settings 2, 3 and 5 inherit it.
+†The Muon row includes the full optimizer recipe: Muon plus RMSNorm, residual routing and
+depth-scaled initialization, with RoPE 10k. The subsequent rows inherit these changes.
 Intervals are 95% chain-bootstrap CIs, not training-seed uncertainty; times
 exclude evaluation.
 
-**Setting 3 is best on both metrics:** validation loss is **2.25% lower** and
+**The default recipe is best on both metrics in this comparison:** validation loss is **2.25% lower** and
 P@L is **6.18 percentage points higher** than the AdamW baseline.
 See [BEST_RECIPE_VS_BASELINE.md](docs/BEST_RECIPE_VS_BASELINE.md),
 [.dev/reports/fir-r02-rope10k-100k-20260906/README.md](.dev/reports/fir-r02-rope10k-100k-20260906/README.md) and the

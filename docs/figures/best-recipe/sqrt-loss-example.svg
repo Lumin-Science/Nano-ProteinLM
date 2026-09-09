@@ -533,37 +533,37 @@ L 823.707344 286.272
   </g>
   <g id="legend_1">
    <g id="patch_20">
-    <path d="M 200.080469 336.597891 
-L 218.080469 336.597891 
-L 218.080469 330.297891 
-L 200.080469 330.297891 
+    <path d="M 204.140313 336.597891 
+L 222.140313 336.597891 
+L 222.140313 330.297891 
+L 204.140313 330.297891 
 z
 " style="fill: #4676b8; stroke: #4676b8; stroke-linejoin: miter"/>
    </g>
    <g id="text_44">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #223247" x="225.280469" y="336.597891" transform="rotate(-0 225.280469 336.597891)">Equal proteins (baseline)</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #223247" x="229.340313" y="336.597891" transform="rotate(-0 229.340313 336.597891)">Equal proteins (baseline)</text>
    </g>
    <g id="patch_21">
-    <path d="M 355.521719 336.597891 
-L 373.521719 336.597891 
-L 373.521719 330.297891 
-L 355.521719 330.297891 
+    <path d="M 359.581563 336.597891 
+L 377.581563 336.597891 
+L 377.581563 330.297891 
+L 359.581563 330.297891 
 z
 " style="fill: #007f70; stroke: #007f70; stroke-linejoin: miter"/>
    </g>
    <g id="text_45">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #223247" x="380.721719" y="336.597891" transform="rotate(-0 380.721719 336.597891)">√target count (setting 3)</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #223247" x="384.781563" y="336.597891" transform="rotate(-0 384.781563 336.597891)">√target count (default)</text>
    </g>
    <g id="patch_22">
-    <path d="M 509.74375 336.597891 
-L 527.74375 336.597891 
-L 527.74375 330.297891 
-L 509.74375 330.297891 
+    <path d="M 505.683906 336.597891 
+L 523.683906 336.597891 
+L 523.683906 330.297891 
+L 505.683906 330.297891 
 z
 " style="fill: #adb6c1; stroke: #adb6c1; stroke-linejoin: miter"/>
    </g>
    <g id="text_46">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #223247" x="534.94375" y="336.597891" transform="rotate(-0 534.94375 336.597891)">Equal targets (reference only)</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #223247" x="530.883906" y="336.597891" transform="rotate(-0 530.883906 336.597891)">Equal targets (reference only)</text>
    </g>
   </g>
  </g>

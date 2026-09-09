@@ -1,12 +1,6 @@
 # Best 100k-step recipe versus the ESMC-like AdamW baseline
 
-**Numbering note:** this document preserves the original six-run comparison.
-Its **Setting 4: tied embeddings** is now displayed as **Setting 5** in the
-[README Test Leaderboard](../README.md#test-leaderboard). Current change 4
-denotes FFN narrowing, which is excluded from the fixed-size tests. Measurements
-and executed configs are unchanged; the original leaderboard is [archived](archive/TEST_LEADERBOARD_20260908.md).
-
-**Setting 3 is the best completed recipe in this six-run comparison.** It
+**The default recipe is best in this completed six-run comparison.** It
 reduces validation loss from **2.47436 to 2.41872** and increases long-range
 contact P@L from **26.505% to 32.682%**. Training takes **12h 34m 40s**, compared
 with **12h 00m 42s** for the baseline: 2.25% lower loss, 6.18 percentage points
@@ -14,7 +8,7 @@ higher P@L, and 4.71% longer training.
 
 The complete change is **hybrid Muon/AdamW + parameter-free transformer
 RMSNorm + learned residual/input routing + depth-scaled initialization + batch
-balancing + sqrt-mask-count loss**. The optimizer also retains R02's per-group
+balancing + sqrt-mask-count loss**. The optimizer also retains the Muon recipe's per-group
 learning-rate and weight-decay multipliers. Muon, RMSNorm, balancing and sqrt
 loss are therefore most of the story, but routing, initialization and the
 optimizer-group settings also matter to reproducing this result.
@@ -24,7 +18,7 @@ exact reproduction of all paper settings. The models have approximately 171M
 parameters and target small-budget training, using the backbone from
 [ESMC Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29).
 For the original-size architectures, see the
-[300M/600M reference configs](../configs/reference/README.md). The eight-H100 batch-2,048 Nibi run is a separate experiment; the
+[300M/600M reference configs](../configs/esmc/README.md). The eight-H100 batch-2,048 Nibi run is a separate experiment; the
 results below all use batch 1,024.
 
 ## 1. The complete comparison
@@ -32,13 +26,13 @@ results below all use batch 1,024.
 | Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
 |---|---:|---:|---:|---:|
 | ESMC-like baseline — AdamW | 2.47436 | 26.505% | 26.295–26.719% | 12h 01m |
-| Previous R02 — RoPE20k | 2.43698 | 30.310% | 30.079–30.547% | 12h 57m |
-| 1: R02 — RoPE10k | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
-| 2: + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
-| **3: + sqrt loss** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
-| 4: + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
+| Muon recipe — RoPE20k | 2.43698 | 30.310% | 30.079–30.547% | 12h 57m |
+| Muon recipe — RoPE10k | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
+| + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
+| **+ sqrt loss (default)** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
+| + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
 
-![Six completed recipes, comparing held-out MLM loss and contact P@L with chain-bootstrap intervals. Setting 3 is best on both metrics.](figures/best-recipe/scaleup-results.png)
+![Six completed recipes, comparing held-out MLM loss and contact P@L with chain-bootstrap intervals. The default recipe is best on both metrics.](figures/best-recipe/scaleup-results.png)
 
 *Figure 1. Measured results, with zoomed axes. Contact error bars are 95%
 intervals from 5,000 bootstrap resamples of the same 20,775 chains. There is
@@ -67,7 +61,7 @@ Source: [audited full results](../.dev/reports/fir-r02-rope10k-100k-20260906/res
 
 ## 2. Exactly what differs from the baseline
 
-| Component | AdamW baseline | Best recipe: Setting 3 |
+| Component | AdamW baseline | Default recipe |
 |---|---|---|
 | Transformer matrix optimizer | AdamW | Muon for attention and FFN matrices |
 | Embedding / MLM-head optimizer | AdamW | AdamW retained |
@@ -83,10 +77,10 @@ Source: [audited full results](../.dev/reports/fir-r02-rope10k-100k-20260906/res
 | Input/output embeddings | Untied | Untied |
 | Trainable parameters | 170,671,168 | 170,559,856 |
 
-The previous R02 used RoPE20k. Setting 1 resets it to 10k; settings 2–4 retain
-10k. **RoPE is therefore not a best-versus-baseline difference.** R22's
-FFN-narrowing change was deferred, and setting 4's tied embeddings did not
-improve on setting 3. Neither belongs in the best recipe.
+The earlier Muon recipe used RoPE20k. The four cumulative variants reset it
+to 10k. **RoPE is therefore not a best-versus-baseline difference.** R22's
+FFN-narrowing change was deferred, and tied embeddings did not improve on
+the default recipe. Neither belongs in the best recipe.
 
 ### Hybrid optimizer and its actual LR/WD settings
 
@@ -95,7 +89,7 @@ attention-output matrices, and the FFN gate/up and down matrices. AdamW owns
 the remaining parameters, including the embeddings and MLM head. One-dimensional
 parameters and biases, including the learned routing scalars, have zero WD.
 
-| Parameter group | Baseline peak LR / WD | Setting 3 configured peak LR / WD |
+| Parameter group | Baseline peak LR / WD | Default configured peak LR / WD |
 |---|---|---|
 | Attention matrices | AdamW: `5e-4 / 0.01` | Muon: `4.5e-4 / 0.0075` |
 | FFN matrices | AdamW: `5e-4 / 0.01` | Muon: `3.75e-4 / 0.0075` |
@@ -137,7 +131,7 @@ The original embedding stream is available at every depth; the baseline
 simply passes its current stream into the next block. The existing within-block
 residual scaling is retained in both recipes.
 
-Setting 3 also reinitializes only the attention-output and FFN-down projection
+The default recipe also reinitializes only the attention-output and FFN-down projection
 weights with `std = 0.02 / sqrt(48)`. Other linear and embedding weights retain
 the normal 0.02 initialization. This changes the initial size of those residual
 branch outputs. The present runs do not isolate its individual contribution
@@ -201,10 +195,10 @@ constructed example; **that is not a measured training-speed improvement**.
 All-gather communication, CPU partitioning, and imperfect cost prediction
 limit real gains.
 
-For an actual example, setting 2's logged final microstep at optimizer step
+For an actual example, the batch-balanced variant's logged final microstep at optimizer step
 100,000 had loads `[15716, 14180, 16416, 16199]`, redistributed to
-`[15627, 15629, 15629, 15626]`. Both sum to 62,511 tokens. The full setting-2
-run took **3.11% less training time** than setting 1 (12h 33m 42s versus
+`[15627, 15629, 15629, 15626]`. Both sum to 62,511 tokens. The full batch-balanced
+run took **3.11% less training time** than the preceding Muon variant (12h 33m 42s versus
 12h 57m 54s), including the balancing overhead.
 
 ### What this does and does not change mathematically
@@ -239,7 +233,7 @@ L_{\mathrm{sequence}}=\frac{1}{B}\sum_{i=1}^{B}\ell_i.
 $$
 
 Every protein receives equal total weight, even if one supplies many more
-supervised targets. Setting 3 instead uses
+supervised targets. The default recipe instead uses
 
 $$
 L_{\mathrm{sqrt}}=
@@ -344,9 +338,9 @@ target counts across ranks and ranks with no targets.
 
 | Change | Validation-loss change | P@L change | Training-time change |
 |---|---:|---:|---:|
-| Setting 1 → 2: batch balancing | +0.000911 | +0.5506 pp | −3.11% |
-| Setting 2 → 3: sqrt loss | −0.019999 | +1.9673 pp | +0.13% |
-| Setting 3 → 4: tied embeddings | +0.004323 | −0.7984 pp | −0.19% |
+| Add batch balancing | +0.000911 | +0.5506 pp | −3.11% |
+| Add sqrt loss | −0.019999 | +1.9673 pp | +0.13% |
+| Add tied embeddings | +0.004323 | −0.7984 pp | −0.19% |
 
 Batch balancing improved time and P@L here, while its validation loss was
 slightly higher. Sqrt weighting then improved both evaluation metrics with
@@ -365,16 +359,16 @@ recipe on its assigned node.
 
 ## 6. Reproduction and figure sources
 
-Use the [baseline preset](../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml)
-and [setting-3 preset](../configs/archive/program2_h100_100k/r10_sqrtloss.yaml).
+Use the [baseline preset](../.dev/configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml)
+and [default-recipe snapshot](../.dev/configs/archive/program2_h100_100k/r10_sqrtloss.yaml).
 The exact executed configs are archived alongside their results:
 [baseline](../.dev/reports/fir-171m-100k-20260906/default/config.yaml) and
-[setting 3](../.dev/reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml).
+[default-recipe snapshot](../.dev/reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml).
 For the same frozen corpus and evaluation, follow the
-[GPU plan](PROGRAM2_GPU_PLAN.md) and [evaluation instructions](EVALUATION.md).
+[GPU plan](../.dev/reports/archive/h100-100k-training-plan.md) and [evaluation instructions](EVALUATION.md).
 
 Baseline/previous-R02 training source was `68f8cdc2cd8db6a0edacaea0cad687127632aa3f`;
-settings 1–4 used `253c3ea442f2a1657eeb0f3ce2127ac0b1adfb25`. The best checkpoint
+the four cumulative Muon variants used `253c3ea442f2a1657eeb0f3ce2127ac0b1adfb25`. The best checkpoint
 SHA-256 is `f28021f4c8069c344279172da5fe25c1afd36d07eddee111e5e17ce1eba0e29d`;
 the baseline SHA-256 is `96783380e4ecebab468e429e76a2ffcbb2bcfb4d11d7ab960a86791e6e7bc477`.
 Full checkpoints and raw evaluation shards remain outside Git; verified

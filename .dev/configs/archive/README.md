@@ -2,7 +2,7 @@
 
 These 27 YAMLs and the scale-up manifest preserve completed and retired
 experiments. They are retained for provenance and checkpoint compatibility;
-new runs start with the [two maintained recipes](../README.md). Files were
+new runs start with the [maintained recipes](../../../configs/README.md). Files were
 moved without changing their contents. Paths inside receipts refer to their
 original locations before the September 8, 2026 cleanup.
 
@@ -14,7 +14,7 @@ differ only in training seed.
 
 | Recipe | Configs | Parameters | Role |
 |---|---|---:|---|
-| Original AdamW | [original](../esmc-171m-original.yaml) | 170,671,168 | Scientific baseline; seed 20260824 |
+| Original AdamW | [original](../../../configs/esmc/esmc-171m.yaml) | 170,671,168 | Scientific baseline; seed 20260824 |
 | Paired AdamW baseline | [42](program2/baseline_seed42.yaml), [43](program2/baseline_seed43.yaml) | 170,671,168 | Baseline for the published research history |
 | R01 Muon | [42](program2/r01_muon_seed42.yaml), [43](program2/r01_muon_seed43.yaml) | 170,671,168 | Historical recipe; within the size bound |
 | R04 + rank balance | [42](program2/r04_batchbalance_seed42.yaml), [43](program2/r04_batchbalance_seed43.yaml) | 170,671,168 | Historical recipe; within the size bound |
@@ -39,8 +39,8 @@ parameters; their R29 differs from the narrower one-hour R29 above.
 | + tied embeddings | [setting 4](program2_h100_100k/r29_tied.yaml) | Cumulative change |
 
 The [manifest](program2_h100_100k/manifest.json) records settings and config
-hashes. See the [recipe differences](../../docs/PROGRAM2_SCALEUP.md) and
-[results](../../.dev/reports/fir-r02-rope10k-100k-20260906/README.md) for the comparison.
+hashes. See the [recipe differences](../../../docs/AUTORESEARCH_SCALEUP.md) and
+[results](../../reports/fir-r02-rope10k-100k-20260906/README.md) for the comparison.
 
 ## Nibi eight-H100 comparisons: 2 presets
 
@@ -49,8 +49,8 @@ keeps the four-GPU baseline's 100,000 steps, LR 5e-4, WD 0.01, and warmup 1,000.
 It uses 64 sequences/GPU and four accumulation steps on eight H100s, with a
 24-hour training guard and checkpoint evaluation every 10,000 steps (full
 validation MLM and contact P@L, with evaluation time recorded separately). See the
-[launch record](../../.dev/reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md) and
-[four-GPU continuation instructions](../../docs/checkpoint-resume.md).
+[launch record](../../reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md) and
+[four-GPU continuation instructions](../../../docs/checkpoint-resume.md).
 
 The [batch-2,048 Setting 3](esmc-171m-setting3-nibi-fa3-b2048-stage1-100k.yaml)
 uses the same budget, batch, base LR/WD, warmup and evaluation cadence. It retains

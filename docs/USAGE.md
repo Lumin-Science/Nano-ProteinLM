@@ -65,17 +65,17 @@ uv run --frozen python -m nanoprotein.setup_evaluation \
 
 The default 171M model targets small-budget experiments and follows the paper's
 170M scaling backbone ([Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-For larger models, select a [300M or 600M reference config](../configs/reference/README.md);
+For larger models, select a [300M or 600M reference config](../configs/esmc/README.md);
 their local training assumptions are documented alongside the presets.
 
 The speedrun is a readable shell script that calls the ordinary Python API:
 
 ```bash
 # Same best recipe, fresh output directory, different seed.
-bash runs/speedrun.sh configs/default.yaml setting3-seed42 --seed 42
+bash runs/speedrun.sh configs/default.yaml default-seed42 --seed 42
 
 # Original AdamW recipe with its original one-hour budget and no step cap.
-bash runs/speedrun.sh configs/esmc-171m-original.yaml adamw-1h \
+bash runs/speedrun.sh configs/esmc-171m.yaml adamw-1h \
   --max-steps none --walltime-seconds 3600
 ```
 
@@ -95,7 +95,7 @@ set +a
 uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
   -m nanoprotein.train --config configs/default.yaml \
   --max-steps 100000 --walltime-seconds 57600 \
-  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/setting3-direct"
+  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-direct"
 ```
 
 The recipe owns model and optimizer settings. CLI options select the execution
@@ -138,8 +138,8 @@ With the two roots loaded in your shell, evaluate a saved checkpoint:
 
 ```bash
 uv run --frozen python -m nanoprotein.evaluate \
-  --checkpoint "$OUTPUT_ROOT/setting3-100k/checkpoint-final.pt" \
-  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/setting3-100k/evaluation" \
+  --checkpoint "$OUTPUT_ROOT/default-100k/checkpoint-final.pt" \
+  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-100k/evaluation" \
   --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
   --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
   --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
@@ -167,9 +167,7 @@ tasks/            # Autoresearch definition and measurement command
 The package uses a standard src layout. Run setup after updating an existing
 checkout to refresh the installed package. Direct commands now use
 `python -m nanoprotein.train` and `python -m nanoprotein.evaluate`.
-The old `nano_protein` namespace and thin scripts/train.py, scripts/evaluate.py
-and scripts/download_data.py wrappers have been retired. Existing tensor/state-dict
-checkpoints remain loadable; their saved recipe values and model names are unchanged.
+Existing checkpoints remain loadable; saved recipe values and model names are unchanged.
 
 After setup, run the developer tests from the repository root:
 

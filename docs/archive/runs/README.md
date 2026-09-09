@@ -9,4 +9,4 @@ that revision to reproduce the old launch workflow. Current entry points are
 
 Parallel evaluation helpers remain maintained under
 [`src/`](../../../src). Training recipes are retained in the
-[config archive](../../../configs/archive/README.md).
+[config archive](../../../.dev/configs/archive/README.md).

@@ -5,7 +5,7 @@
   because it changes model size (170.67M → 142.36M). The test sequence is
   Baseline → 1 (Muon/R02) → 2 (batch balance) → 3 (sqrt loss) → 5 (tied
   embeddings), with FFN width 2048 throughout. No narrower-FFN test is planned.
-  Its accepted research result and [historical implementation](configs/archive/program2/r22_ffn1536_seed42.yaml)
+  Its accepted research result and [historical implementation](.dev/configs/archive/program2/r22_ffn1536_seed42.yaml)
   remain available. See the [current Test Leaderboard](README.md#test-leaderboard)
   and [archived six-recipe comparison](docs/archive/TEST_LEADERBOARD_20260908.md).
 
@@ -15,10 +15,14 @@
   The complete train-and-evaluate command is in [tasks/171m-validation-loss.md](tasks/171m-validation-loss.md#test-of-progress).
   Historical time/step-based runs keep their existing behavior.
 
-- [x] **Consolidate maintained recipes and launchers.** Keep Setting 3 and the
-  original 171M baseline, with setup and speedrun scripts; preserve old recipes
-  and launchers in archives. See the [cleanup status](docs/CONFIG_CLEANUP_PLAN.md).
+- [x] **Consolidate maintained recipes and launchers.** Keep `configs/default.yaml`
+  and the 171M/300M/600M references in `configs/esmc/`, with setup and speedrun
+  scripts. Historical presets live in `.dev/configs/archive/`; old plans live
+  in `.dev/reports/archive/`. See [configs/README.md](configs/README.md).
 
-- [ ] **Finish release packaging and the unused-code audit.** Package contact
-  data/source, review historical naming and unused settings, and preserve
-  evaluation and checkpoint compatibility.
+- [x] **Publish evaluation data and remove campaign names from current usage.**
+  Setup installs the frozen contact data/evaluator. Current commands use descriptive
+  recipe names; historical reports preserve their recorded identities.
+
+- [ ] **Complete the unused-code audit.** Review unused optimizer helpers without
+  removing compatibility aliases needed by saved recipes and checkpoints.

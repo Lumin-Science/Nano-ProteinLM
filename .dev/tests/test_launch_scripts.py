@@ -111,7 +111,7 @@ class LaunchScriptTests(unittest.TestCase):
         import yaml
 
         self.run_script("speedrun.sh")
-        output = self.output / "setting3-100k"
+        output = self.output / "default-100k"
         config = yaml.safe_load((output / "resolved-test.yaml").read_text())
         self.assertEqual(config["optimizer"], "muon")
         self.assertEqual(config["max_steps"], 100000)

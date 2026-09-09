@@ -3,6 +3,9 @@
 .env
 .exps/
 /.dev/*
+!/.dev/configs/
+/.dev/configs/*
+!/.dev/configs/archive/
 !/.dev/scripts/
 !/.dev/tests/
 !/.dev/reports/
