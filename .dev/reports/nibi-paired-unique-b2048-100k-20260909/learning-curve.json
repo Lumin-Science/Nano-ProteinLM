@@ -101,6 +101,38 @@
         "evaluation_seconds": 227.46037775510922,
         "source_epoch_maximum": 0,
         "independently_audited": true
+      },
+      {
+        "optimizer_step": 70000,
+        "sequences_seen": 143360000,
+        "model_tokens": 33873475573,
+        "training_seconds": 55228.561062057735,
+        "validation_loss": 2.4374819905383447,
+        "p_at_l": 0.2570779190207223,
+        "confidence_interval_95": [
+          0.25486475207930476,
+          0.2594373014864954
+        ],
+        "checkpoint_sha256": "e3999030492af4d5d4266afdda2f7e23816fc2f8bd564ab350438277cc0cfe66",
+        "evaluation_seconds": 217.43110774597153,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
+      },
+      {
+        "optimizer_step": 80000,
+        "sequences_seen": 163840000,
+        "model_tokens": 38711834542,
+        "training_seconds": 63128.55358299683,
+        "validation_loss": 2.4283257307752137,
+        "p_at_l": 0.25254502843903687,
+        "confidence_interval_95": [
+          0.2502769241024939,
+          0.25497496673067416
+        ],
+        "checkpoint_sha256": "7ca75a9f9d97797d1d3364b51e1bb351bbef849554a3f073699a3635f9d48ca0",
+        "evaluation_seconds": 215.4173573181033,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
       }
     ],
     "setting3": [
@@ -199,6 +231,38 @@
         "evaluation_seconds": 301.8663608278148,
         "source_epoch_maximum": 0,
         "independently_audited": true
+      },
+      {
+        "optimizer_step": 70000,
+        "sequences_seen": 143360000,
+        "model_tokens": 33873475573,
+        "training_seconds": 57103.26470798766,
+        "validation_loss": 2.3953140500293557,
+        "p_at_l": 0.34416752051584865,
+        "confidence_interval_95": [
+          0.34174636623196497,
+          0.34658329123737946
+        ],
+        "checkpoint_sha256": "2e42ed5563419783d540814bca69e3dc79160405ff9ba81b3ebc0b25f29cf651",
+        "evaluation_seconds": 301.4737084850203,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
+      },
+      {
+        "optimizer_step": 80000,
+        "sequences_seen": 163840000,
+        "model_tokens": 38711834542,
+        "training_seconds": 65261.97325058165,
+        "validation_loss": 2.3885364076058977,
+        "p_at_l": 0.35240140617235266,
+        "confidence_interval_95": [
+          0.35003169430655473,
+          0.354829658431455
+        ],
+        "checkpoint_sha256": "e714e0b3615da42e3bb0f103d56084e877d7e3d63cc68f587491e15fbb3c58ff",
+        "evaluation_seconds": 295.4569792470429,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
       }
     ]
   },
@@ -286,7 +350,35 @@
       "bootstrap_replicates": 5000,
       "bootstrap_seed": 20260820,
       "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
+    },
+    {
+      "optimizer_step": 70000,
+      "validation_loss_difference_setting3_minus_baseline": -0.04216794050898898,
+      "p_at_l_difference_percentage_points": 8.708960149512631,
+      "paired_95_ci_percentage_points": [
+        8.611340255907187,
+        8.808925420139918
+      ],
+      "unit": "same contact chain",
+      "chains": 20775,
+      "bootstrap_replicates": 5000,
+      "bootstrap_seed": 20260820,
+      "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
+    },
+    {
+      "optimizer_step": 80000,
+      "validation_loss_difference_setting3_minus_baseline": -0.03978932316931605,
+      "p_at_l_difference_percentage_points": 9.985637773331584,
+      "paired_95_ci_percentage_points": [
+        9.871915013466667,
+        10.101961293125434
+      ],
+      "unit": "same contact chain",
+      "chains": 20775,
+      "bootstrap_replicates": 5000,
+      "bootstrap_seed": 20260820,
+      "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
     }
   ],
-  "last_audited_utc": "2026-09-09T18:01:34.705710+00:00"
+  "last_audited_utc": "2026-09-09T22:34:05.440850+00:00"
 }

@@ -35,7 +35,7 @@ The 48-hour walltime guard allows both fixed 100k-step budgets to finish.
 
 Evaluate 4,096 MLM sequences and all 20,775 contact chains at each 10k endpoint;
 report P@L with a 5,000-replicate chain-bootstrap confidence interval. Production
-evaluations at each 10k endpoint through 60k are independently audited below.
+evaluations at each 10k endpoint through 80k are independently audited below.
 Trial scores remain qualification evidence, separate from production results. Full final model, optimizer and
 sampler checkpoints will be copied and hash-verified on project storage.
 
@@ -45,8 +45,8 @@ These are early estimates. The existing two-hour monitor remains active.
 
 ## Audited learning curve
 
-At 60k, both models consumed **122,880,000 distinct training records** and
-**29,034,167,942 model tokens**, with matching source draws and zero source wraps.
+At 80k, both models consumed **163,840,000 distinct training records** and
+**38,711,834,542 model tokens**, with matching source draws and zero source wraps.
 All 16 contact shards, 20,775 chain IDs, checkpoint bindings, fixed probe settings
 and the 5,000-replicate bootstrap intervals were independently checked at each
 endpoint.
@@ -65,11 +65,15 @@ endpoint.
 | 50,000 | Setting 3 | 2.416991 | 32.568% | 32.335–32.803% | 11h 19m 41s |
 | 60,000 | ESMC-like AdamW | 2.448553 | 22.800% | 22.576–23.034% | 13h 08m 54s |
 | 60,000 | Setting 3 | 2.405183 | 33.543% | 33.305–33.787% | 13h 35m 38s |
+| 70,000 | ESMC-like AdamW | 2.437482 | 25.708% | 25.486–25.944% | 15h 20m 29s |
+| 70,000 | Setting 3 | 2.395314 | 34.417% | 34.175–34.658% | 15h 51m 43s |
+| 80,000 | ESMC-like AdamW | 2.428326 | 25.255% | 25.028–25.497% | 17h 32m 09s |
+| 80,000 | Setting 3 | 2.388536 | 35.240% | 35.003–35.483% | 18h 07m 42s |
 
-Setting 3 improves validation loss by **0.043369** and P@L by **10.742 percentage
-points** at the matched 60k endpoint; the paired chain-bootstrap interval for the
-P@L gain is **10.627–10.856 points**. At 10k, 20k, 30k, 40k and 50k, the
-corresponding P@L gains were 8.419, 9.288, 9.570, 10.020 and 9.385 points.
+Setting 3 improves validation loss by **0.039789** and P@L by **9.986 percentage
+points** at the matched 80k endpoint; the paired chain-bootstrap interval for the
+P@L gain is **9.872–10.102 points**. The corresponding 70k P@L gain was
+**8.709 points**, with a paired interval of **8.611–8.809 points**.
 Both runs continue to 100k. AdamW's P@L decreased by 0.383 percentage points
 between 50k and 60k despite improving validation loss. Both endpoints passed
 the same contact-protocol audit, used the same chain set and selected probe
@@ -80,12 +84,14 @@ checkpoint hashes and the paired difference interval are in
 [learning-curve.json](learning-curve.json). Full training-metric snapshots are
 stored as `full/RECIPE/metrics.jsonl.gz`; raw downloaded artifacts stay in local `.exps`.
 
-At the September 9, 2:00 p.m. Toronto check, AdamW was at **66,620 steps** and
-Setting 3 at **63,880**. Both had fresh finite metrics, zero sampler wraps and no
+At the September 9, 6:32 p.m. Toronto check, AdamW was at **86,750 steps** and
+Setting 3 at **83,170**. Both had fresh finite metrics, zero sampler wraps and no
 fatal OOM exceptions or tracebacks. Downloaded source draws and token counts
-matched at all 6,395 common logged steps, through step 63,940. Training continued
+matched at all 8,326 common logged steps, through step 83,250. Training continued
 after both evaluations. Approximate finish times, including evaluation pauses, are
-**9:35 p.m.** and **10:35 p.m. Toronto on September 9**, respectively.
+**9:35 p.m.** and **10:30 p.m. Toronto on September 9**, respectively.
+SSH access was restored at this check after the earlier MFA access interruption;
+the two-hour monitor has resumed normal checks.
 
 ## Data coverage
 

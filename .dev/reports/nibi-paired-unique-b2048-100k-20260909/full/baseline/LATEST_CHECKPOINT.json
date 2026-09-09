@@ -1,9 +1,9 @@
 {
-  "filled_residues": 28788407942,
-  "model_tokens": 29034167942,
-  "optimizer_step": 60000,
+  "filled_residues": 38384154542,
+  "model_tokens": 38711834542,
+  "optimizer_step": 80000,
   "path": "/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/full/baseline/checkpoint-latest.pt",
-  "sequences_seen": 122880000,
-  "sha256": "aaa99ca37f601e5b3b686c83d27a020c5084fe7d3c65fb4b5004d7588d9d1709",
-  "training_seconds": 47334.33794118883
+  "sequences_seen": 163840000,
+  "sha256": "7ca75a9f9d97797d1d3364b51e1bb351bbef849554a3f073699a3635f9d48ca0",
+  "training_seconds": 63128.55358299683
 }
