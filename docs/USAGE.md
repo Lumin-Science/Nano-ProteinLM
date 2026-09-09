@@ -147,7 +147,7 @@ There is no verification launcher.
 
 ## Repository layout
 
-See the shared [repository layout standard](REPOSITORY_LAYOUT.md).
+See [AGENTS.md](../AGENTS.md) for concise layout and modification guidance.
 
 ```text
 src/nanoprotein/   # Training, models, data, evaluation and runtime CLI modules
