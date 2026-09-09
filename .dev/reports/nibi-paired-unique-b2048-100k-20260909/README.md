@@ -35,7 +35,7 @@ The 48-hour walltime guard allows both fixed 100k-step budgets to finish.
 
 Evaluate 4,096 MLM sequences and all 20,775 contact chains at each 10k endpoint;
 report P@L with a 5,000-replicate chain-bootstrap confidence interval. Production
-evaluations at 10k and 20k steps are independently audited below.
+evaluations at 10k, 20k and 30k steps are independently audited below.
 Trial scores remain qualification evidence, separate from production results. Full final model, optimizer and
 sampler checkpoints will be copied and hash-verified on project storage.
 
@@ -45,8 +45,8 @@ These are early estimates. The existing two-hour monitor remains active.
 
 ## Audited learning curve
 
-At 20k, both models consumed **40,960,000 distinct training records** and
-**9,678,374,178 model tokens**, with matching source draws and zero source wraps.
+At 30k, both models consumed **61,440,000 distinct training records** and
+**14,517,319,274 model tokens**, with matching source draws and zero source wraps.
 All 16 contact shards, 20,775 chain IDs, checkpoint bindings, fixed probe settings
 and the 5,000-replicate bootstrap intervals were independently checked at each
 endpoint.
@@ -57,22 +57,24 @@ endpoint.
 | 10,000 | Setting 3 | 2.535755 | 22.212% | 22.025–22.401% | 2h 16m 03s |
 | 20,000 | ESMC-like AdamW | 2.533118 | 17.571% | 17.408–17.737% | 4h 23m 08s |
 | 20,000 | Setting 3 | 2.483718 | 26.859% | 26.646–27.073% | 4h 31m 56s |
+| 30,000 | ESMC-like AdamW | 2.501133 | 19.864% | 19.674–20.060% | 6h 34m 34s |
+| 30,000 | Setting 3 | 2.453497 | 29.434% | 29.204–29.663% | 6h 47m 53s |
 
-Setting 3 improves validation loss by **0.049399** and P@L by **9.288 percentage
-points** at the matched 20k endpoint; the paired chain-bootstrap interval for the
-P@L gain is **9.191–9.386 points**. At 10k, the corresponding improvements were
-0.051154 and 8.419 points. These are early results; both runs continue to 100k.
+Setting 3 improves validation loss by **0.047635** and P@L by **9.570 percentage
+points** at the matched 30k endpoint; the paired chain-bootstrap interval for the
+P@L gain is **9.470–9.673 points**. At 10k and 20k, the corresponding P@L gains
+were 8.419 and 9.288 points. These are early results; both runs continue to 100k.
 Training time excludes evaluation pauses. The contact confidence
 interval describes variation across chains, not training seeds. Exact values,
 checkpoint hashes and the paired difference interval are in
 [learning-curve.json](learning-curve.json). Full training-metric snapshots are
 stored as `full/RECIPE/metrics.jsonl.gz`; raw downloaded artifacts stay in local `.exps`.
 
-At the September 9, 4:05 a.m. Toronto check, AdamW was at **22,490 steps** and
-Setting 3 at **21,550**. Both had fresh finite metrics and zero sampler wraps;
-source draws and token counts matched at all 2,156 common logged steps. The
-4:01 a.m. runtime check found no fatal OOM exceptions. Training continued after
-both evaluations. Approximate finish times, including evaluation pauses, are
+At the September 9, 6:06 a.m. Toronto check, AdamW was at **31,380 steps** and
+Setting 3 at **30,060**. Both had fresh finite metrics, zero sampler wraps and no
+fatal OOM exceptions or tracebacks. Downloaded source draws and token counts
+matched at all 3,011 common logged steps, through step 30,100. Training continued
+after both evaluations. Approximate finish times, including evaluation pauses, are
 **9:30 p.m.** and **10:35 p.m. Toronto on September 9**, respectively.
 
 ## Data coverage
