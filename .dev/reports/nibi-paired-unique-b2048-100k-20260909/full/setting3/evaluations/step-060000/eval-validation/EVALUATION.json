@@ -1,0 +1,25 @@
+{
+  "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/full/setting3/checkpoint-latest.pt",
+  "checkpoint_sha256": "e58121b55026dde48c10eda804b98b96ef6ec31a47b201b6ede9203fbb876d8b",
+  "checkpoint_training_seconds": 48938.03549291636,
+  "peak_cuda_memory_bytes": 913949696,
+  "resumed_components": [],
+  "schema_version": 1,
+  "timing_seconds": {
+    "total": 13.21102513698861,
+    "validation_mlm": 10.214489989215508
+  },
+  "validation_mlm": {
+    "masked_residues": 139963,
+    "perplexity": 11.080460644330435,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.405183254853,
+    "sequence_median_nll": 2.48046875,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  }
+}

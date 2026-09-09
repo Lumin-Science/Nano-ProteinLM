@@ -85,6 +85,22 @@
         "evaluation_seconds": 224.39321980113164,
         "source_epoch_maximum": 0,
         "independently_audited": true
+      },
+      {
+        "optimizer_step": 60000,
+        "sequences_seen": 122880000,
+        "model_tokens": 29034167942,
+        "training_seconds": 47334.33794118883,
+        "validation_loss": 2.4485525204177065,
+        "p_at_l": 0.22800449688456512,
+        "confidence_interval_95": [
+          0.2257639067719527,
+          0.2303374172748746
+        ],
+        "checkpoint_sha256": "aaa99ca37f601e5b3b686c83d27a020c5084fe7d3c65fb4b5004d7588d9d1709",
+        "evaluation_seconds": 227.46037775510922,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
       }
     ],
     "setting3": [
@@ -167,6 +183,22 @@
         "evaluation_seconds": 288.48397537507117,
         "source_epoch_maximum": 0,
         "independently_audited": true
+      },
+      {
+        "optimizer_step": 60000,
+        "sequences_seen": 122880000,
+        "model_tokens": 29034167942,
+        "training_seconds": 48938.03549291636,
+        "validation_loss": 2.405183254853,
+        "p_at_l": 0.33542783813087257,
+        "confidence_interval_95": [
+          0.33304839271958525,
+          0.33787014165303886
+        ],
+        "checkpoint_sha256": "e58121b55026dde48c10eda804b98b96ef6ec31a47b201b6ede9203fbb876d8b",
+        "evaluation_seconds": 301.8663608278148,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
       }
     ]
   },
@@ -240,7 +272,21 @@
       "bootstrap_replicates": 5000,
       "bootstrap_seed": 20260820,
       "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
+    },
+    {
+      "optimizer_step": 60000,
+      "validation_loss_difference_setting3_minus_baseline": -0.04336926556470644,
+      "p_at_l_difference_percentage_points": 10.742334124630744,
+      "paired_95_ci_percentage_points": [
+        10.6270027956885,
+        10.856382505415183
+      ],
+      "unit": "same contact chain",
+      "chains": 20775,
+      "bootstrap_replicates": 5000,
+      "bootstrap_seed": 20260820,
+      "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
     }
   ],
-  "last_audited_utc": "2026-09-09T16:02:46.884308+00:00"
+  "last_audited_utc": "2026-09-09T18:01:34.705710+00:00"
 }
