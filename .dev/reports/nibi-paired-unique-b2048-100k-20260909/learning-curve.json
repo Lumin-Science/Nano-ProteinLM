@@ -21,6 +21,22 @@
         "evaluation_seconds": 224.47912407200783,
         "source_epoch_maximum": 0,
         "independently_audited": true
+      },
+      {
+        "optimizer_step": 20000,
+        "sequences_seen": 40960000,
+        "model_tokens": 9678374178,
+        "training_seconds": 15788.311313936021,
+        "validation_loss": 2.533117522880275,
+        "p_at_l": 0.17571136342896548,
+        "confidence_interval_95": [
+          0.17408046915930953,
+          0.1773738574465801
+        ],
+        "checkpoint_sha256": "630355bd0b2f93e25cd77a054b3c85e5bafc503cedef62bf74f935d062ae2a0e",
+        "evaluation_seconds": 228.31382376304828,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
       }
     ],
     "setting3": [
@@ -37,6 +53,22 @@
         ],
         "checkpoint_sha256": "569d45f8c5989699bfd2b6111461b46c96ef1e36d828370373b17056190621a9",
         "evaluation_seconds": 313.5001317311544,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
+      },
+      {
+        "optimizer_step": 20000,
+        "sequences_seen": 40960000,
+        "model_tokens": 9678374178,
+        "training_seconds": 16316.141465837834,
+        "validation_loss": 2.483718195499023,
+        "p_at_l": 0.26858990207383016,
+        "confidence_interval_95": [
+          0.2664621916493445,
+          0.2707347878825053
+        ],
+        "checkpoint_sha256": "08a705d985712dfa8ae92fc10ba0ff79c893db698e7c1a9e298bef58438ccb37",
+        "evaluation_seconds": 316.4810929610394,
         "source_epoch_maximum": 0,
         "independently_audited": true
       }
@@ -56,7 +88,21 @@
       "bootstrap_replicates": 5000,
       "bootstrap_seed": 20260820,
       "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
+    },
+    {
+      "optimizer_step": 20000,
+      "validation_loss_difference_setting3_minus_baseline": -0.04939932738125208,
+      "p_at_l_difference_percentage_points": 9.287853864486467,
+      "paired_95_ci_percentage_points": [
+        9.191492145341993,
+        9.385824406940902
+      ],
+      "unit": "same contact chain",
+      "chains": 20775,
+      "bootstrap_replicates": 5000,
+      "bootstrap_seed": 20260820,
+      "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
     }
   ],
-  "last_audited_utc": "2026-09-09T06:07:16.785772+00:00"
+  "last_audited_utc": "2026-09-09T08:07:03.280121+00:00"
 }

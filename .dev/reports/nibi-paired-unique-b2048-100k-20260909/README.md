@@ -34,7 +34,8 @@ loss. Its attention/FFN Muon LRs remain 4.5e-4/3.75e-4 and Muon WD remains 0.007
 The 48-hour walltime guard allows both fixed 100k-step budgets to finish.
 
 Evaluate 4,096 MLM sequences and all 20,775 contact chains at each 10k endpoint;
-report P@L with a 5,000-replicate chain-bootstrap confidence interval. The first production evaluation at 10k steps is independently audited below.
+report P@L with a 5,000-replicate chain-bootstrap confidence interval. Production
+evaluations at 10k and 20k steps are independently audited below.
 Trial scores remain qualification evidence, separate from production results. Full final model, optimizer and
 sampler checkpoints will be copied and hash-verified on project storage.
 
@@ -42,30 +43,37 @@ Initial finish estimates, including evaluation pauses, are approximately
 **9:45 p.m. for AdamW and 10:30 p.m. for Setting 3 on September 9, Toronto time**.
 These are early estimates. The existing two-hour monitor remains active.
 
-## Audited 10k-step comparison
+## Audited learning curve
 
-Both models consumed **20,480,000 distinct training records** and **4,840,112,149
-model tokens** at this checkpoint, with matching source draws and zero source
-wraps. All 16 contact shards, 20,775 chain IDs, checkpoint bindings, fixed probe
-settings and the 5,000-replicate bootstrap intervals were independently checked.
+At 20k, both models consumed **40,960,000 distinct training records** and
+**9,678,374,178 model tokens**, with matching source draws and zero source wraps.
+All 16 contact shards, 20,775 chain IDs, checkpoint bindings, fixed probe settings
+and the 5,000-replicate bootstrap intervals were independently checked at each
+endpoint.
 
-| Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time to 10k |
-|---|---:|---:|---:|---:|
-| ESMC-like AdamW | 2.586909 | 13.793% | 13.668–13.920% | 2h 11m 36s |
-| Setting 3 | 2.535755 | 22.212% | 22.025–22.401% | 2h 16m 03s |
+| Step | Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
+|---:|---|---:|---:|---:|---:|
+| 10,000 | ESMC-like AdamW | 2.586909 | 13.793% | 13.668–13.920% | 2h 11m 36s |
+| 10,000 | Setting 3 | 2.535755 | 22.212% | 22.025–22.401% | 2h 16m 03s |
+| 20,000 | ESMC-like AdamW | 2.533118 | 17.571% | 17.408–17.737% | 4h 23m 08s |
+| 20,000 | Setting 3 | 2.483718 | 26.859% | 26.646–27.073% | 4h 31m 56s |
 
-Setting 3 improves validation loss by **0.051154** and P@L by **8.419 percentage
-points** at the matched 10k endpoint. These are early results; both runs continue
-to 100k. Training time excludes the evaluation pause. The contact confidence
+Setting 3 improves validation loss by **0.049399** and P@L by **9.288 percentage
+points** at the matched 20k endpoint; the paired chain-bootstrap interval for the
+P@L gain is **9.191–9.386 points**. At 10k, the corresponding improvements were
+0.051154 and 8.419 points. These are early results; both runs continue to 100k.
+Training time excludes evaluation pauses. The contact confidence
 interval describes variation across chains, not training seeds. Exact values,
 checkpoint hashes and the paired difference interval are in
 [learning-curve.json](learning-curve.json). Full training-metric snapshots are
 stored as `full/RECIPE/metrics.jsonl.gz`; raw downloaded artifacts stay in local `.exps`.
 
-At the September 9, 2:02 a.m. Toronto check, AdamW was at 13,410 steps and
-Setting 3 at 12,870. Both had fresh finite metrics, zero sampler wraps and no
-fatal OOM exceptions. Training continued after both evaluations. Approximate
-finish times remain **9:40 p.m.** and **10:30 p.m. Toronto on September 9**.
+At the September 9, 4:05 a.m. Toronto check, AdamW was at **22,490 steps** and
+Setting 3 at **21,550**. Both had fresh finite metrics and zero sampler wraps;
+source draws and token counts matched at all 2,156 common logged steps. The
+4:01 a.m. runtime check found no fatal OOM exceptions. Training continued after
+both evaluations. Approximate finish times, including evaluation pauses, are
+**9:30 p.m.** and **10:35 p.m. Toronto on September 9**, respectively.
 
 ## Data coverage
 
