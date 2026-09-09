@@ -1,0 +1,14 @@
+{
+  "optimizer_step": 40000,
+  "validation_loss_difference_setting3_minus_baseline": -0.0473861087386922,
+  "p_at_l_difference_percentage_points": 10.019933079843204,
+  "paired_95_ci_percentage_points": [
+    9.91617001709356,
+    10.123562240093978
+  ],
+  "unit": "same contact chain",
+  "chains": 20775,
+  "bootstrap_replicates": 5000,
+  "bootstrap_seed": 20260820,
+  "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
+}

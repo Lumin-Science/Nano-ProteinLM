@@ -1,0 +1,76 @@
+{
+  "status": "passed",
+  "recipe": "setting3",
+  "world_size": 4,
+  "data_manifest_sha256": "c30da4a52028cb63bf4f764ff039009d965144db5a6fbf1069f4eebf97c7d3fa",
+  "no_sampler_wraps_in_verified_metrics": true,
+  "data_coverage_passed": true,
+  "training_seconds_at_checkpoint": 32630.1668260016,
+  "model_tokens_at_checkpoint": 19357946029,
+  "source_counts_at_checkpoint": {
+    "mgnify": 8921170,
+    "omg_img": 43796482,
+    "uniref90": 29202348
+  },
+  "verified_utc": "2026-09-09T14:02:20.862684+00:00",
+  "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
+  "optimizer_steps": 40000,
+  "sequences_seen": 81920000,
+  "checkpoint_sha256": "9b0382383d1d2fe82b56a8ae2afaa4f02974aea2399f2ec63ca3f8e50ffdcb28",
+  "validation": {
+    "masked_residues": 139963,
+    "perplexity": 11.39664878495869,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.4333193459522136,
+    "sequence_median_nll": 2.5078125,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  },
+  "p_at_l": 0.31426252488087547,
+  "uncertainty": {
+    "replicates": 5000,
+    "unit_count": 20775,
+    "confidence_interval_95": [
+      0.31195409325547674,
+      0.3166333577399679
+    ]
+  },
+  "complete_shards": 16,
+  "component_sha256": {
+    "eval-p-at-l/components/contact-shard-0/EVALUATION.json": "9ecbe5f1f8e00d94abbe40e1e55eea26c85d69baace1517941d91e73c1fb584d",
+    "eval-p-at-l/components/contact-shard-1/EVALUATION.json": "dfc5c346ffcd2688894a452b07c8e66feb4c8f26e29c05e87ce6467386e977d1",
+    "eval-p-at-l/components/contact-shard-2/EVALUATION.json": "a53610b82754d7dedd6eb20a842cc64e9290ec37ea3b85cac9ab77f0f89cfba9",
+    "eval-p-at-l/components/contact-shard-3/EVALUATION.json": "f2d3a38e8fc6a55c0467583182cbac460447b2ada0aff054eeacee10b0f5b080",
+    "eval-p-at-l/components/contact-shard-4/EVALUATION.json": "d98042d1d64de468cc6e5d654fe6666712286840b83311cf2c20bc721736b84a",
+    "eval-p-at-l/components/contact-shard-5/EVALUATION.json": "f53e1d322a9828a0054943945047097cbcf59a109a2ffa8a104eddff4f612167",
+    "eval-p-at-l/components/contact-shard-6/EVALUATION.json": "915166260bb09204ba531557db24929392191bc17f964b10756f97fe10b9b730",
+    "eval-p-at-l/components/contact-shard-7/EVALUATION.json": "554c2477e93b61af1b48081a0eda13b4a05e67b1584d9d7ccca21d5934d93e21",
+    "eval-p-at-l/components/contact-shard-8/EVALUATION.json": "a66820dfde53103eca4d2a5094a81ebd0f21fafd008bbe33d9cbd90b393445e8",
+    "eval-p-at-l/components/contact-shard-9/EVALUATION.json": "6da7c7b6f5d5a752e2b84a049de633f09a6c0cdef64f3e9c501809ceb212dabc",
+    "eval-p-at-l/components/contact-shard-10/EVALUATION.json": "044422fc310ddea79fa6c6dcbc0e10ceaef0ad5489799bfd7ef56b16d0070332",
+    "eval-p-at-l/components/contact-shard-11/EVALUATION.json": "11e2c0a9489cfe29e61be03d8b9947f8cbe2959cd8217981bcfec122c17fe766",
+    "eval-p-at-l/components/contact-shard-12/EVALUATION.json": "0a272679720ff83b2aaa1d7d4b0b4532bc8fdb4bada4aa82a2c52e7272231343",
+    "eval-p-at-l/components/contact-shard-13/EVALUATION.json": "bf32fd99ebefd835c2533a0b2f1a5a3db2e5a55a7d05b054502ef56ad00fb636",
+    "eval-p-at-l/components/contact-shard-14/EVALUATION.json": "a6747d0516d41d4853b1aa37d352d1baf6576b456fb7ef01888c28329c28420f",
+    "eval-p-at-l/components/contact-shard-15/EVALUATION.json": "f7510d2773b6efe9d79aa96c3ca709d3ceb12121709b22e9c5decc468c1c3a02"
+  },
+  "bootstrap_independently_recomputed": true,
+  "same_contact_chain_set_as_historical_comparison": true,
+  "same_probe_split_and_fit_protocol_as_historical_comparison": true,
+  "checkpoint_receipt_bindings_verified": true,
+  "latest_verified_training_step": 47080,
+  "training_continued_after_evaluation": true,
+  "per_chain_table_sha256": "1ab87c2013f3f7a24ec122fd1cfe29e6befe093a3441e3c0a1cb8d9e8363aa62",
+  "evaluation_run": {
+    "status": "passed",
+    "optimizer_step": 40000,
+    "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/full/setting3/checkpoint-latest.pt",
+    "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/full/setting3/evaluations/step-040000",
+    "started_utc": "2026-09-09T12:21:11.946486+00:00",
+    "wall_seconds": 280.4382241431158
+  }
+}
