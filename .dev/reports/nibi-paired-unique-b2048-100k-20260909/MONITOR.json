@@ -1,0 +1,9 @@
+{
+  "id": "launch-r02-rope10k-on-fir-at-4-am",
+  "name": "Monitor Nibi paired no-repeat training every 2 hours",
+  "status": "ACTIVE",
+  "interval_hours": 2,
+  "publication_status": "awaiting_explicit_user_approval",
+  "current_step": "12162637.24",
+  "source_commit": "bc54124abe193623abf64b44e65b881cded65f48"
+}

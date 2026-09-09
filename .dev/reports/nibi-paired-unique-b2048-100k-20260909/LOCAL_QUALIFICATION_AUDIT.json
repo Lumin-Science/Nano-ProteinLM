@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
+  "checked_utc": "2026-09-09T02:58:39.965712+00:00",
+  "trials": {
+    "baseline": {
+      "trial_passed": true,
+      "full_evaluation_then_continued_to_step20": true,
+      "configuration_matches_frozen_source": true,
+      "finite_metrics": true,
+      "matching_global_batch": true,
+      "no_sampler_wrap": true,
+      "full_optimizer_roundtrip_verified_on_compute_node": true,
+      "peak_memory_bytes": 40620250624
+    },
+    "setting3": {
+      "trial_passed": true,
+      "full_evaluation_then_continued_to_step20": true,
+      "configuration_matches_frozen_source": true,
+      "finite_metrics": true,
+      "matching_global_batch": true,
+      "no_sampler_wrap": true,
+      "full_optimizer_roundtrip_verified_on_compute_node": true,
+      "peak_memory_bytes": 38603202048
+    }
+  }
+}
