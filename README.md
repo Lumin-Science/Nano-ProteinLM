@@ -113,7 +113,7 @@ held-out proteins.
 ```bash
 git clone https://github.com/Lumin-Science/Nano-Protein-LM.git
 cd Nano-Protein-LM
-bash runs/setup_env_and_data.sh
+bash runs/setup.sh
 ```
 
 The default downloads **7 training shards (7.11M proteins; 1.32 GB compressed,
@@ -132,7 +132,7 @@ Data and outputs default to `data/` and `outputs/`. To use another disk, copy
 For a larger corpus, choose a fresh `DATA_ROOT` and request more whole shards:
 
 ```bash
-bash runs/setup_env_and_data.sh --training-shards 30  # 30 of 565 training shards
+bash runs/setup.sh --training-shards 30  # 30 of 565 training shards
 # --training-shards 565 downloads the complete training release (~109.66 GB compressed).
 ```
 

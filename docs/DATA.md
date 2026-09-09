@@ -19,7 +19,7 @@ Each source also has one 4,096-protein validation shard, for 12,288 validation
 proteins in total. The complete artifact contains 568 train/validation shards
 and occupies 109,661,312,410 compressed bytes. Setup downloads 7 training shards
 by default (7,109,469 proteins), plus all
-validation shards. `bash runs/setup_env_and_data.sh --training-shards N` selects
+validation shards. `bash runs/setup.sh --training-shards N` selects
 3–565 whole training shards; choose a fresh `DATA_ROOT` for another selection.
 The direct data API also supports a requested sample budget. Both routes use
 checksum-bound source prefixes and always include complete MLM validation.

@@ -66,7 +66,7 @@ class LaunchScriptTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "runs").mkdir()
         (self.root / "configs").mkdir()
-        for name in ("setup_env_and_data.sh", "speedrun.sh"):
+        for name in ("setup.sh", "speedrun.sh"):
             shutil.copy(ROOT / "runs" / name, self.root / "runs" / name)
         shutil.copy(ROOT / ".env.example", self.root / ".env.example")
         shutil.copy(ROOT / "configs/default.yaml", self.root / "configs/default.yaml")
@@ -126,8 +126,8 @@ class LaunchScriptTests(unittest.TestCase):
         )
 
     def test_setup_reuses_data_and_does_not_launch_training(self):
-        self.run_script("setup_env_and_data.sh")
-        self.run_script("setup_env_and_data.sh")
+        self.run_script("setup.sh")
+        self.run_script("setup.sh")
         commands = self.commands()
         self.assertEqual(sum("nanoprotein.sharded_data" in row for row in commands), 2)
         self.assertFalse(any("torch.distributed.run" in row for row in commands))
@@ -169,15 +169,15 @@ class LaunchScriptTests(unittest.TestCase):
         self.assertEqual(check[check.index("--attention-backend") + 1], "flash")
 
     def test_setup_custom_shard_count_and_usage(self):
-        self.run_script("setup_env_and_data.sh", "--training-shards", "30")
+        self.run_script("setup.sh", "--training-shards", "30")
         download = next(row for row in self.commands() if "nanoprotein.sharded_data" in row)
         self.assertEqual(download[download.index("--training-shards") + 1], "30")
-        self.run_script("setup_env_and_data.sh", "--training-shards", success=False)
-        help_result = self.run_script("setup_env_and_data.sh", "--help")
+        self.run_script("setup.sh", "--training-shards", success=False)
+        help_result = self.run_script("setup.sh", "--help")
         self.assertIn("565", help_result.stdout)
 
     def test_speedrun_reuses_saved_custom_shard_count(self):
-        self.run_script("setup_env_and_data.sh", "--training-shards", "30")
+        self.run_script("setup.sh", "--training-shards", "30")
         (self.data / "training/download-plan.json").write_text(
             json.dumps(
                 {

@@ -3,7 +3,7 @@
 ## Setup
 
 The [README](../README.md#setting-up-data--environments) contains the supported setup and training
-quickstart. Run `bash runs/setup_env_and_data.sh` to prepare the environment and
+quickstart. Run `bash runs/setup.sh` to prepare the environment and
 training data and both MLM/P@L evaluation assets, or `bash runs/speedrun.sh` to perform setup and train the default
 recipe in one call. The only local settings are `DATA_ROOT` and `OUTPUT_ROOT`
 in an optional `.env`; defaults are the repository's `data/` and `outputs/`.
@@ -28,7 +28,7 @@ longer training repeatedly samples it.
 For a different training corpus size, choose a fresh `DATA_ROOT` in `.env` and run:
 
 ```bash
-bash runs/setup_env_and_data.sh --training-shards 30
+bash runs/setup.sh --training-shards 30
 ```
 
 The range is **3–565 total training shards**, with at least one per source.
@@ -146,6 +146,8 @@ Test of Progress is owner-run using the [manual commands](EVALUATION.md#manual-t
 There is no verification launcher.
 
 ## Repository layout
+
+See the shared [repository layout standard](REPOSITORY_LAYOUT.md).
 
 ```text
 src/nanoprotein/   # Training, models, data, evaluation and runtime CLI modules

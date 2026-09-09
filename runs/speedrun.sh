@@ -13,7 +13,7 @@ if [[ ! -f "$recipe" || ! "$run_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
   exit 1
 fi
 
-source "$repo_root/runs/setup_env_and_data.sh" --
+source "$repo_root/runs/setup.sh" --
 run_dir="$OUTPUT_ROOT/$run_name"
 mkdir "$run_dir" # Refuse to overwrite a previous run.
 cp "$recipe" "$run_dir/recipe.yaml"

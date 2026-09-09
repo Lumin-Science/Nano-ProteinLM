@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: bash runs/setup_env_and_data.sh [--training-shards N]
+# Usage: bash runs/setup.sh [--training-shards N]
 # Run alone to prepare data, or source from speedrun.sh to share the roots.
 set -euo pipefail
 
@@ -25,7 +25,7 @@ while [[ $# -gt 0 ]]; do
       shift 2 ;;
     --) shift; break ;;
     -h|--help)
-      echo "Usage: bash runs/setup_env_and_data.sh [--training-shards N]"
+      echo "Usage: bash runs/setup.sh [--training-shards N]"
       echo "Default: 7 of 565 training Parquet shards; all MLM validation and contact P@L data."
       echo "Choose a fresh DATA_ROOT for a different training shard count."
       return 0 2>/dev/null || exit 0 ;;

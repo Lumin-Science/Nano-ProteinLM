@@ -15,7 +15,7 @@
   to maintain four public presets for now.
 - [300M/600M reference presets](../configs/reference/README.md) expose the paper's
   original-size architectures separately, with documented local training assumptions.
-- Two entry points in `runs/`: [setup](../runs/setup_env_and_data.sh) installs the
+- Two entry points in `runs/`: [setup](../runs/setup.sh) installs the
   locked environment, prepares/reuses training shards and all MLM/P@L data;
   [speedrun](../runs/speedrun.sh) calls setup and trains Setting 3 by default.
   It accepts a recipe, run name and normal training CLI options.
