@@ -6,8 +6,8 @@ from pathlib import Path
 
 import torch
 
-from nano_protein.evaluate import load_checkpoint
-from nano_protein.model import (
+from nanoprotein.evaluate import load_checkpoint
+from nanoprotein.model import (
     ESMCConfig,
     ESMCForMaskedLM,
     count_parameters,

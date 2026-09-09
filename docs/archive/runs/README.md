@@ -8,5 +8,5 @@ that revision to reproduce the old launch workflow. Current entry points are
 [research task](../../../task/171m-validation-loss_ar.sh).
 
 Parallel evaluation helpers remain maintained under
-[`scripts/`](../../../scripts/). Training recipes are retained in the
+[`src/`](../../../src). Training recipes are retained in the
 [config archive](../../../configs/archive/README.md).

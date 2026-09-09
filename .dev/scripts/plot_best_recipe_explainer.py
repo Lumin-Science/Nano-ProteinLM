@@ -2,7 +2,7 @@
 """Generate the measured comparison and two worked recipe illustrations.
 
 Run from an isolated plotting environment with matplotlib >= 3.9, < 4:
-    python scripts/plot_best_recipe_explainer.py
+    python .dev/scripts/plot_best_recipe_explainer.py
 
 No training dependencies or remote jobs are used or changed.
 """
@@ -23,9 +23,9 @@ import numpy as np
 from matplotlib.patches import Patch
 from matplotlib.ticker import PercentFormatter
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "docs/figures/best-recipe"
-SOURCE = ROOT / "reports/fir-r02-rope10k-100k-20260906/results.json"
+SOURCE = ROOT / ".dev/reports/fir-r02-rope10k-100k-20260906/results.json"
 INK, MUTED, TEAL, BLUE = "#223247", "#63758a", "#007f70", "#4676b8"
 plt.rcParams.update(
     {
@@ -136,7 +136,7 @@ def measured_results():
 def balancing_example():
     # Execute the actual pure-Python partitioner without importing Torch into
     # this plotting-only environment. This is repository code, not a copy.
-    source = (ROOT / "nano_protein/batch_balance.py").read_text()
+    source = (ROOT / "src/nanoprotein/batch_balance.py").read_text()
     tree = ast.parse(source)
     node = next(
         n

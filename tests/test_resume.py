@@ -9,11 +9,11 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from nano_protein.data import MixtureBatcher, _StoreWriter
-from nano_protein.model import build_model
-from nano_protein.resume import validate_resume
-from nano_protein.tokenizer import ProteinTokenizer
-from nano_protein.train import _OptimizerBundle, build_optimizer
+from nanoprotein.data import MixtureBatcher, _StoreWriter
+from nanoprotein.model import build_model
+from nanoprotein.resume import validate_resume
+from nanoprotein.tokenizer import ProteinTokenizer
+from nanoprotein.train import _OptimizerBundle, build_optimizer
 
 
 class ResumeTests(unittest.TestCase):

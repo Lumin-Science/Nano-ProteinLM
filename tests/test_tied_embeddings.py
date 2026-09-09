@@ -6,14 +6,14 @@ from pathlib import Path
 
 import torch
 
-from nano_protein.evaluate import load_checkpoint
-from nano_protein.model import (
+from nanoprotein.evaluate import load_checkpoint
+from nanoprotein.model import (
     ESMCConfig,
     ESMCForMaskedLM,
     count_parameters,
     expected_parameter_count,
 )
-from nano_protein.train import build_optimizer
+from nanoprotein.train import build_optimizer
 
 
 class TiedEmbeddingTests(unittest.TestCase):

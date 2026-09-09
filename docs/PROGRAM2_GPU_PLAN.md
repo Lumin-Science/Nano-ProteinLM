@@ -11,7 +11,7 @@ passed. Setting 1 ran as `58303658.14`; the completed sequential settings 2–4 
 settings **2 → 3 → 4 sequentially on fc10212** after qualification, and a
 September 7, 2026 **4:00 AM Toronto** check to launch setting 1 on fc10111 if
 its GPUs are free. This supersedes the earlier proposed two-node/two-wave plan.
-The [launch record](../reports/fir-r02-rope10k-100k-20260906/README.md) holds
+The [launch record](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md) holds
 trial receipts, actual launch identities, and timestamped production state.
 
 ## Four independent runs
@@ -86,7 +86,7 @@ also enforces that timestamp. A busy node at 4 AM defers launch to a later hourl
 check. Setting 1 starts from scratch and can run independently of the fc10212
 queue. No additional allocation was requested for these Fir runs. All four are
 now complete; the heartbeat continues every **two hours** for the separate
-[Nibi baseline](../reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md).
+[Nibi baseline](../.dev/reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md).
 
 ## Qualification and production queue
 
@@ -144,4 +144,4 @@ planning estimates, not fixed finish times.
 
 Total training usage is roughly **208–224 H100 GPU-hours** for all four full
 runs, plus trials/setup/evaluation. New trial timings and live ETAs are recorded
-in the [launch record](../reports/fir-r02-rope10k-100k-20260906/README.md).
+in the [launch record](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md).

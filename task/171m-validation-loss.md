@@ -5,7 +5,7 @@
 Improve protein-embedding training recipes under a small compute budget.
 The 171M baseline follows the paper's 170M scaling model: 24 layers, width 768,
 and 170.7M parameters ([Appendix A.1.4.1, Table S4, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-The codebase provides the training stack, public decontaminated data and frozen evaluations.
+Runtime code lives in [src/nanoprotein](../src/nanoprotein/), with public\ndecontaminated data and frozen evaluations.
 
 [Setting 3](../configs/default.yaml) is the starting recipe;
 [171M AdamW](../configs/esmc-171m-original.yaml) is the reference.
@@ -37,7 +37,7 @@ bash task/171m-validation-loss_ar.sh configs/default.yaml experiment-001
 ```
 
 The [research script](171m-validation-loss_ar.sh) contains the direct
-`nano_protein.train` and `nano_protein.evaluate` calls, their fixed arguments,
+`nanoprotein.train` and `nanoprotein.evaluate` calls, their fixed arguments,
 and the seed loop. Change the recipe argument and use a fresh experiment name
 for each candidate. Results are written to `$OUTPUT_ROOT/experiment-001/summary.json`;
 incomplete runs cannot supply a benchmark score.

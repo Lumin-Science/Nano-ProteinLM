@@ -4,14 +4,16 @@ from pathlib import Path
 import torch
 import yaml
 
-from nano_protein.model import build_model, count_parameters
+from nanoprotein.model import build_model, count_parameters
 
 
 class FA3ConfigTests(unittest.TestCase):
     def test_h100_preset_preserves_original_recipe(self):
         root = Path(__file__).resolve().parents[1] / "configs"
         original = yaml.safe_load((root / "esmc-171m-original.yaml").read_text())
-        hopper = yaml.safe_load((root / "esmc-171m-original-h100-fa3-12h.yaml").read_text())
+        hopper = yaml.safe_load(
+            (root / "archive/esmc-171m-original-h100-fa3-12h.yaml").read_text()
+        )
         expected = dict(
             original,
             attention_backend="flash3",

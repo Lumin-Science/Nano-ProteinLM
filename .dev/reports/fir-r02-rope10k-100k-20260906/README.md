@@ -15,8 +15,8 @@ Training source/configs remain frozen at `253c3ea`.
 
 All full runs initialize from scratch for 100,000 steps, batch 1,024, warmup
 1,000, base LR 5e-4 and base WD 0.01, with preserved R02 Muon groups, RoPE10k,
-FFN2048, BF16 and FA3. [Full recipes and semantics](../../docs/PROGRAM2_SCALEUP.md).
-R22 narrowing remains deferred in [TODO](../../TODO.md).
+FFN2048, BF16 and FA3. [Full recipes and semantics](../../../docs/PROGRAM2_SCALEUP.md).
+R22 narrowing remains deferred in [TODO](../../../TODO.md).
 
 ## Completed production results (four of four)
 
@@ -113,7 +113,7 @@ Setting 2 remained healthy at 65,290 steps, with an approximately
 evaluations. Monitoring was hourly at this launch snapshot.
 
 [Setting 1 launch snapshot](SETTING1_LAUNCH_SNAPSHOT.json) ·
-[Exact executed config and startup evidence](full/r02_rope10k/) ·
+[Exact executed config and startup evidence](full/r02_rope10k) ·
 [4 AM GPU availability check](setting1-4am-gpu-preflight.txt) ·
 [Active GPU check](setting1-live-gpus.txt).
 
@@ -148,7 +148,7 @@ only after the full 100k runs and fixed full evaluation. The shortened warmup
 and 32-sequence smoke evaluation are not used in production.
 
 [Aggregate qualification gate](ALL_TRIALS_PASSED.json) · [Per-trial configs,
-metrics, environment, completion, verification and MLM receipts](trials/).
+metrics, environment, completion, verification and MLM receipts](trials).
 
 ## Initial production launch snapshot (September 6)
 
@@ -166,7 +166,7 @@ check showed all four H100s at 98% utilization.
 | 4 | September 8, 9:54 AM | Sequential queue; trial speed plus evaluation/setup margin |
 
 ETAs exclude that run's final evaluation and may move with measured throughput.
-[Timestamped launch snapshot](LAUNCH_SNAPSHOT.json) and [setting 2 launch evidence](full/r04_batchbalance/).
+[Timestamped launch snapshot](LAUNCH_SNAPSHOT.json) and [setting 2 launch evidence](full/r04_batchbalance).
 
 ## Launch and monitoring
 
@@ -186,8 +186,8 @@ complete and published. The heartbeat continues every **two hours** for the
 Each Fir full launch required at least 16h 15m of allocation time.
 
 - [Launch plan and script digests](LAUNCH_PLAN.json).
-- [Exact launch/verification scripts and evaluator snapshot](launch/).
-- [GPU schedule](../../docs/PROGRAM2_GPU_PLAN.md).
+- [Exact launch/verification scripts and evaluator snapshot](launch).
+- [GPU schedule](../../../docs/PROGRAM2_GPU_PLAN.md).
 - Historical [default and RoPE20k R02 results](../fir-171m-100k-20260906/README.md).
 - Remote artifacts: `/scratch/muchenli/Nano-Protein-LM-r02-rope10k-100k-20260906`.
   Source checkout: the same path with `-run` appended. Local working receipts:

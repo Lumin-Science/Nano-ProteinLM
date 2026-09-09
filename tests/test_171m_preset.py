@@ -6,10 +6,10 @@ import torch
 import torch.nn.functional as F
 import yaml
 
-from nano_protein.evaluate import load_checkpoint
-from nano_protein.model import build_model, count_parameters
-from nano_protein.schedule import wsd_multiplier
-from nano_protein.train import build_optimizer, muon_adamw_parameter_groups
+from nanoprotein.evaluate import load_checkpoint
+from nanoprotein.model import build_model, count_parameters
+from nanoprotein.schedule import wsd_multiplier
+from nanoprotein.train import build_optimizer, muon_adamw_parameter_groups
 
 
 class Retained171MPresetTests(unittest.TestCase):

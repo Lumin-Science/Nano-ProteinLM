@@ -8,7 +8,7 @@ Its [research shell script](../task/171m-validation-loss_ar.sh) calls the standa
 training/evaluation APIs directly. [program.md](../program.md) asks an agent to
 optimize the task; Test of Progress is manual. This page is a results index.
 
-The historical [38-round research campaign](../reports/program2/README.md)
+The historical [38-round research campaign](../.dev/reports/program2/README.md)
 predates the current ±5% parameter bound. Its 142M FFN/tied endpoints retain
 their original protocol, preserved in [the archived instructions](archive/program2.md).
 The [completed Test Leaderboard](../README.md#test-leaderboard)
@@ -25,12 +25,12 @@ Muon-only ablation. See [executed configurations](PROGRAM2_SCALEUP.md) and
 - [Research and progress commands](../task/171m-validation-loss.md) for paired-seed comparisons.
 - [38-round curve](../README.md#autoresearch), including all means and sample SDs.
 - [Test Leaderboard](../README.md#test-leaderboard).
-- [All 78 runs through R38](../reports/program2/runs-through-r38.tsv).
-- [Import details and the original R29 audit](../reports/program2/README.md).
-- [Per-method statistics through R29](../reports/program2/methods.tsv).
+- [All 78 runs through R38](../.dev/reports/program2/runs-through-r38.tsv).
+- [Import details and the original R29 audit](../.dev/reports/program2/README.md).
+- [Per-method statistics through R29](../.dev/reports/program2/methods.tsv).
 - [Evaluation setup and execution](EVALUATION.md).
-- Batch-2,048 / eight-H100 scale-up records: [AdamW baseline](../reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md)
-  and [Setting 3](../reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md),
+- Batch-2,048 / eight-H100 scale-up records: [AdamW baseline](../.dev/reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md)
+  and [Setting 3](../.dev/reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md),
   both configured for 100k steps, evaluation every 10k steps and full final
   optimizer checkpoints for continuation.
 
@@ -39,12 +39,12 @@ To regenerate the curve without changing the training environment:
 ```bash
 python3 -m venv /tmp/nano-esmc-plot
 /tmp/nano-esmc-plot/bin/python -m pip install 'matplotlib==3.11.1'
-/tmp/nano-esmc-plot/bin/python scripts/plot_autoresearch_history.py
+/tmp/nano-esmc-plot/bin/python .dev/scripts/plot_autoresearch_history.py
 ```
 
 Run these commands from the repository root. The script verifies seed means,
 sample SDs, and historical keep/discard decisions before writing PNG and SVG files to
-`reports/program2/`. It reads `reports/program2/runs-through-r38.tsv` by default;
+`.dev/reports/program2/`. It reads `.dev/reports/program2/runs-through-r38.tsv` by default;
 use `--input path/to/results.tsv` for another per-run or per-method log.
 
 The figure shows every tested recipe as a faint point with a sample-SD bar and

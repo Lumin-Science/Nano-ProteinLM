@@ -10,8 +10,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from nano_protein.data import file_sha256
-from nano_protein.evaluate import fit_contact_probe_receipt, load_checkpoint, write_json
+from .data import file_sha256
+from .evaluate import fit_contact_probe_receipt, load_checkpoint, write_json
 
 
 def main() -> None:

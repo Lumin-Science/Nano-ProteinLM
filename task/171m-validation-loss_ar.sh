@@ -45,14 +45,14 @@ from autoresearch_esm.paper_contact_runtime import ContactDataset
 if ContactDataset(root/'evaluation/contact').manifest_receipt.manifest_sha256 != 'c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3':
     raise ValueError('contact data differs from the benchmark population')
 PY
-uv run --frozen python scripts/check_environment.py \
+uv run --frozen python -m nanoprotein.check_environment \
   --require-gpus 4 --gpu-name L40S --attention-backend flash \
   --output "$run_root/environment.json"
 
 for seed in 42 43; do
   run_dir="$run_root/seed-$seed"
   uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
-    -m nano_protein.train --config "$recipe" --seed "$seed" \
+    -m nanoprotein.train --config "$recipe" --seed "$seed" \
     --data-root "$DATA_ROOT/training" --output-root "$run_dir" \
     --walltime-seconds 3600 --max-steps none --max-model-tokens none --schedule-steps none \
     --attention-backend flash --warmup-steps 554 \
@@ -68,7 +68,7 @@ if not 162137610 <= r['parameter_count'] <= 179204726:
     raise ValueError('actual model size is outside the task bound')
 PY
   # MLM supplies the score. Full P@L remains a diagnostic and does not select recipes.
-  uv run --frozen python -m nano_protein.evaluate \
+  uv run --frozen python -m nanoprotein.evaluate \
     --checkpoint "$run_dir/checkpoint-final.pt" --data-root "$DATA_ROOT/training" \
     --output-root "$run_dir/evaluation" \
     --validation-batches 8 --validation-batch-size 4 --validation-context 512 \
@@ -76,6 +76,6 @@ PY
     --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
 done
 
-uv run --frozen python scripts/summarize_training_runs.py \
+uv run --frozen python -m nanoprotein.summarize_training_runs \
   "$run_root/seed-42" "$run_root/seed-43" --validation-sequences 32 \
   --output "$run_root/summary.json"

@@ -7,7 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
-from nano_protein.contact_cache import verify_contact_scoring_cache
+from .contact_cache import verify_contact_scoring_cache
 
 
 def main() -> None:

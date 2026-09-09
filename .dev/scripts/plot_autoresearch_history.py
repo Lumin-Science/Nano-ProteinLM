@@ -2,10 +2,10 @@
 """Plot the published validation-loss history, checking its seed statistics.
 
 Run with a separate plotting environment (the training lock is unchanged):
-    python scripts/plot_autoresearch_history.py
+    python .dev/scripts/plot_autoresearch_history.py
 
 Requires matplotlib >= 3.9, < 4. Accepts per-run or per-method TSV data.
-Writes PNG and SVG to reports/program2/ by default.
+Writes PNG and SVG to .dev/reports/program2/ by default.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.ticker import MultipleLocator, StrMethodFormatter
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 INK = "#233446"
 MUTED = "#64748b"
 GRAY = "#94a3b8"
@@ -295,10 +295,10 @@ def plot_history(source: Path, output: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--input", type=Path, default=ROOT / "reports/program2/runs-through-r38.tsv"
+        "--input", type=Path, default=ROOT / ".dev/reports/program2/runs-through-r38.tsv"
     )
     parser.add_argument(
-        "--output", type=Path, default=ROOT / "reports/program2/validation-loss"
+        "--output", type=Path, default=ROOT / ".dev/reports/program2/validation-loss"
     )
     args = parser.parse_args()
     plot_history(args.input, args.output)

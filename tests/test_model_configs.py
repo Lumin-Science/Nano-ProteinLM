@@ -1,6 +1,6 @@
 import unittest
 
-from nano_protein.model import ESMCConfig, expected_parameter_count
+from nanoprotein.model import ESMCConfig, expected_parameter_count
 
 
 class ESMCScaleConfigTests(unittest.TestCase):

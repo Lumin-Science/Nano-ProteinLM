@@ -446,7 +446,7 @@ def _run_diagnostic_probe(
     command = [
         sys.executable,
         "-m",
-        "nano_protein.pcore_task",
+        "nanoprotein.pcore_task",
         "--task",
         task,
         "--external-src",

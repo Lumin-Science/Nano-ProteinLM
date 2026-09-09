@@ -652,7 +652,7 @@ def train(
     if world_size > 1:
         dist.barrier()
     if rank == 0:
-        project_root = Path(__file__).resolve().parents[1]
+        project_root = Path(__file__).resolve().parents[2]
         uv_lock = project_root / "uv.lock"
         resolved_path = output_root / "config.yaml"
         if resolved_path.resolve() == config_path.resolve():

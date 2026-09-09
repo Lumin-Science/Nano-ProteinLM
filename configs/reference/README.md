@@ -21,7 +21,7 @@ batch layout for available GPU memory. The new presets have been checked for
 configuration and model-shape consistency, without a GPU training run.
 
 Learning rate and weight decay use the repository's
-[width/depth transfer rule](../../nano_protein/schedule.py), with **assumed**
+[width/depth transfer rule](../../src/nanoprotein/schedule.py), with **assumed**
 proxy values LR=6e-4 and WD=0.01 at width 512/depth 16. The paper does not publish
 those calibrated proxy values, so these are baseline hypotheses. The resulting
 LR/WD are approximately 2.337e-4 / 0.02567 for 300M and 1.778e-4 / 0.03375 for 600M.

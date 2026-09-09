@@ -10,7 +10,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import PercentFormatter
 
-root = Path(__file__).resolve().parent
+root = (
+    Path(__file__).resolve().parents[2]
+    / ".dev/reports/nibi-baseline-b2048-100k-eval10k-20260908"
+)
 data = json.loads((root / "learning-curve.json").read_text())
 rows = data["evaluations"]
 assert [r["optimizer_steps"] for r in rows] == list(range(10000, 100001, 10000))

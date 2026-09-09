@@ -40,7 +40,7 @@ parameters; their R29 differs from the narrower one-hour R29 above.
 
 The [manifest](program2_h100_100k/manifest.json) records settings and config
 hashes. See the [recipe differences](../../docs/PROGRAM2_SCALEUP.md) and
-[results](../../reports/fir-r02-rope10k-100k-20260906/README.md) for the comparison.
+[results](../../.dev/reports/fir-r02-rope10k-100k-20260906/README.md) for the comparison.
 
 ## Nibi eight-H100 comparisons: 2 presets
 
@@ -49,14 +49,14 @@ keeps the four-GPU baseline's 100,000 steps, LR 5e-4, WD 0.01, and warmup 1,000.
 It uses 64 sequences/GPU and four accumulation steps on eight H100s, with a
 24-hour training guard and checkpoint evaluation every 10,000 steps (full
 validation MLM and contact P@L, with evaluation time recorded separately). See the
-[launch record](../../reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md) and
+[launch record](../../.dev/reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md) and
 [four-GPU continuation instructions](../../docs/checkpoint-resume.md).
 
 The [batch-2,048 Setting 3](esmc-171m-setting3-nibi-fa3-b2048-stage1-100k.yaml)
 uses the same budget, batch, base LR/WD, warmup and evaluation cadence. It retains
 the winning Fir recipe's Muon group multipliers, RMSNorm, residual routing and
 initialization, batch balance and sqrt loss. Its [queue and qualification
-record](../../reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md) places it
+record](../../.dev/reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md) places it
 after the Nibi baseline and preserves the full final Muon/AdamW checkpoint.
 
 ## Older presets and reproduction references: 7 presets

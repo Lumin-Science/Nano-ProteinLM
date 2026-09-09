@@ -43,7 +43,7 @@ protocol against the earlier AdamW baseline, and the independently recomputed
 step 100,000 are finite and demonstrate continued progress after each intermediate
 evaluation. The final evaluation runs after training has completed.
 See [machine-readable learning curve](learning-curve.json) and
-[checkpoint receipts](full/evaluations/). The CI measures uncertainty
+[checkpoint receipts](full/evaluations). The CI measures uncertainty
 across evaluation chains, not variation across independent training runs.
 
 To audit a downloaded evaluation again, run
@@ -106,7 +106,7 @@ applicable; this change does not alter checkpoint-state layout.
 
 See [`LAUNCH_VERIFIED.json`](LAUNCH_VERIFIED.json),
 [`PERIODIC_EVALUATION_TRIAL_PASSED.json`](PERIODIC_EVALUATION_TRIAL_PASSED.json),
-[`trial/`](trial/) and [`full/`](full/) for receipts and the exact executed configs.
+[`trial/`](trial) and [`full/`](full) for receipts and the exact executed configs.
 Large checkpoints and raw contact-shard dumps are retained outside Git.
 
 Artifact root: `/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-eval10k-20260908`.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: bash runs/speedrun.sh [recipe.yaml] [run-name] [nano_protein.train options...]
+# Usage: bash runs/speedrun.sh [recipe.yaml] [run-name] [nanoprotein.train options...]
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,16 +23,16 @@ train_args=(
   "$@"
 )
 # Qualify the effective backend, including any normal training-CLI override.
-attention_backend="$("$uv_bin" run --frozen --no-dev python -m nano_protein.train \
+attention_backend="$("$uv_bin" run --frozen --no-dev python -m nanoprotein.train \
   "${train_args[@]}" --print-config | "$uv_bin" run --frozen --no-dev python -c \
   'import sys, yaml; print(yaml.safe_load(sys.stdin)["attention_backend"])')"
-"$uv_bin" run --frozen --no-dev python scripts/check_environment.py \
+"$uv_bin" run --frozen --no-dev python -m nanoprotein.check_environment \
   --require-gpus 4 --attention-backend "$attention_backend" \
   --output "$run_dir/ENVIRONMENT.json"
 
 echo "Training $recipe on four GPUs; output: $run_dir"
 "$uv_bin" run --frozen --no-dev python -m torch.distributed.run \
-  --standalone --nproc-per-node=4 -m nano_protein.train \
+  --standalone --nproc-per-node=4 -m nanoprotein.train \
   "${train_args[@]}" --data-root "$DATA_ROOT/training" --output-root "$run_dir"
 
 for receipt in ENVIRONMENT.json run_contract.json TRAINING_COMPLETE.json checkpoint-final.pt; do

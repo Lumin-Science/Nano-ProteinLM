@@ -22,7 +22,7 @@ The setup script pins the release revision and downloads the same whole-shard
 prefix used by the benchmark: 7,109,469 training proteins, plus all 12,288
 validation proteins. Training repeatedly samples this subset; it does not
 consume the full 666.0M release. To prepare a different corpus size for independent
-research, call `scripts/download_data.py` directly with `--training-samples`,
+research, call `python -m nanoprotein.sharded_data` directly with `--training-samples`,
 `--revision`, `--cache-root` and `--output-root`.
 
 ## Training
@@ -44,7 +44,7 @@ bash runs/speedrun.sh configs/esmc-171m-original.yaml adamw-1h \
 ```
 
 It uses four GPUs. Arguments after the recipe and run name pass through to
-`nano_protein.train`, overriding the default 100k-step/16-hour limits. For
+`nanoprotein.train`, overriding the default 100k-step/16-hour limits. For
 example, `--attention-backend flash` selects FA2 on L40S; a long run on slower
 hardware may also need a larger `--walltime-seconds` guard. `.env` contains paths,
 not these execution settings. Each output directory must be fresh.
@@ -57,7 +57,7 @@ if [ -f .env ]; then source .env; fi
 source .env.example
 set +a
 uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
-  -m nano_protein.train --config configs/default.yaml \
+  -m nanoprotein.train --config configs/default.yaml \
   --max-steps 100000 --walltime-seconds 57600 \
   --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/setting3-direct"
 ```
@@ -68,7 +68,7 @@ records the source config hash and saves its effective `config.yaml`. To inspect
 the resolved recipe without GPUs or training:
 
 ```bash
-uv run --frozen python -m nano_protein.train --config configs/default.yaml \
+uv run --frozen python -m nanoprotein.train --config configs/default.yaml \
   --seed 42 --max-steps 100000 --walltime-seconds 57600 --print-config
 ```
 
@@ -102,7 +102,7 @@ Public packaging remains [release work](CONFIG_CLEANUP_PLAN.md); see
 With the two roots loaded in your shell, evaluate a saved checkpoint:
 
 ```bash
-uv run --frozen python -m nano_protein.evaluate \
+uv run --frozen python -m nanoprotein.evaluate \
   --checkpoint "$OUTPUT_ROOT/setting3-100k/checkpoint-final.pt" \
   --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/setting3-100k/evaluation" \
   --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
@@ -111,6 +111,24 @@ uv run --frozen python -m nano_protein.evaluate \
 ```
 
 Omit `--run-contact` and the contact arguments for MLM alone. Parallel evaluation
-helpers live in `scripts/`; [EVALUATION.md](EVALUATION.md) documents their interfaces.
+helpers live in `src/`; [EVALUATION.md](EVALUATION.md) documents their interfaces.
 Test of Progress is owner-run using the [manual commands](EVALUATION.md#manual-test-of-progress).
 There is no verification launcher.
+
+## Repository layout
+
+```text
+src/nanoprotein/   # Training, models, data, evaluation and runtime CLI modules
+src/*.sh          # Optional parallel evaluation launchers
+runs/             # Public setup and speedrun scripts
+task/             # Autoresearch definition and measurement command
+.dev/scripts/     # Plotting, release preparation and historical analysis tools
+.dev/reports/     # Published experiment records and figures
+```
+
+The package uses a standard src layout. Run setup after updating an existing
+checkout to refresh the installed package. Direct commands now use
+`python -m nanoprotein.train` and `python -m nanoprotein.evaluate`.
+The old `nano_protein` namespace and thin scripts/train.py, scripts/evaluate.py
+and scripts/download_data.py wrappers have been retired. Existing tensor/state-dict
+checkpoints remain loadable; their saved recipe values and model names are unchanged.

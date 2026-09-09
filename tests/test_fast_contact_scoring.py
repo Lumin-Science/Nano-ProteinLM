@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from nano_protein.evaluate import (
+from nanoprotein.evaluate import (
     _score_long_range_pairs_and_digest,
     _score_sparse_long_range_pairs_and_digest,
     _symmetrized_attention_planes_batched,

@@ -45,13 +45,13 @@ recipe=configs/default.yaml
 experiment="$OUTPUT_ROOT/manual-verification-001"
 mkdir -p "$OUTPUT_ROOT"
 mkdir "$experiment"
-uv run --frozen python scripts/check_environment.py \
+uv run --frozen python -m nanoprotein.check_environment \
   --require-gpus 4 --gpu-name H100 --attention-backend flash3 \
   --output "$experiment/environment.json"
 for seed in 42 43; do
   run_dir="$experiment/seed-$seed"
   uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
-    -m nano_protein.train --config "$recipe" --seed "$seed" \
+    -m nanoprotein.train --config "$recipe" --seed "$seed" \
     --data-root "$DATA_ROOT/training" --output-root "$run_dir" \
     --max-steps none --max-model-tokens 24200224761 --schedule-steps 100000 \
     --walltime-seconds 57600 --attention-backend flash3 --warmup-steps 1000 \
@@ -59,14 +59,14 @@ for seed in 42 43; do
     --micro-batch-size 64 --gradient-accumulation 4 \
     --checkpoint-interval 0 --periodic-evaluation-interval 0 \
     --peak-bf16-tflops-per-gpu 989.5
-  uv run --frozen python -m nano_protein.evaluate \
+  uv run --frozen python -m nanoprotein.evaluate \
     --checkpoint "$run_dir/checkpoint-final.pt" --data-root "$DATA_ROOT/training" \
     --output-root "$run_dir/evaluation" \
     --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
     --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
     --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
 done
-uv run --frozen python scripts/summarize_training_runs.py \
+uv run --frozen python -m nanoprotein.summarize_training_runs \
   "$experiment/seed-42" "$experiment/seed-43" --validation-sequences 4096 \
   --output "$experiment/summary.json"
 ```
@@ -140,7 +140,7 @@ ordering, metrics, and bootstrap remain fixed.
 Build and verify the optional static cache once:
 
 ```bash
-uv run --frozen python scripts/build_contact_scoring_cache.py \
+uv run --frozen python -m nanoprotein.build_contact_scoring_cache \
   --dataset-root "$CONTACT_ROOT" \
   --external-src "$EXTERNAL_SRC" \
   --output-root "$CONTACT_SCORING_CACHE_ROOT"
@@ -153,7 +153,7 @@ CONTACT_ROOT=/path/to/frozen-contact-data \
 EXTERNAL_SRC=/path/to/evaluation-source \
 CONTACT_SCORING_CACHE_ROOT=/path/to/contact-scoring-cache \
 EVAL_GPUS=0,1,2,3 \
-  bash scripts/evaluate_p_at_l_parallel.sh
+  bash src/evaluate_p_at_l_parallel.sh
 ```
 
 Omit `CONTACT_SCORING_CACHE_ROOT` to disable only the static cache. Probe reuse,

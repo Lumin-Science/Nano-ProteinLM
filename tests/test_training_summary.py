@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from scripts.summarize_training_runs import summarize
+from nanoprotein.summarize_training_runs import summarize
 
 
 class TrainingSummaryTests(unittest.TestCase):

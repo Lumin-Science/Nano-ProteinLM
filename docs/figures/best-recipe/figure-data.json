@@ -1,5 +1,5 @@
 {
-  "result_source": "reports/fir-r02-rope10k-100k-20260906/results.json",
+  "result_source": ".dev/reports/fir-r02-rope10k-100k-20260906/results.json",
   "result_source_sha256": "37ea716a834b569603b492d05fa362240ef569a947d29986e7f6d7abde3920c8",
   "measured": [
     {

@@ -61,8 +61,8 @@ uses **4,096 fixed sequences / 139,963 masked targets** for sequence-mean MLM
 NLL and the same **20,775 contact chains**. The contact probe uses the same
 16 fit chains, four regularization-selection chains and 16 inference shards.
 
-Source: [audited full results](../reports/fir-r02-rope10k-100k-20260906/results.json),
-[baseline records](../reports/fir-171m-100k-20260906/README.md), and
+Source: [audited full results](../.dev/reports/fir-r02-rope10k-100k-20260906/results.json),
+[baseline records](../.dev/reports/fir-171m-100k-20260906/README.md), and
 [evaluation protocol](EVALUATION.md).
 
 ## 2. Exactly what differs from the baseline
@@ -143,8 +143,8 @@ the normal 0.02 initialization. This changes the initial size of those residual
 branch outputs. The present runs do not isolate its individual contribution
 from Muon, RMSNorm or routing.
 
-Implementation: [`ESMCRMSNorm`, model initialization and routing](../nano_protein/model.py),
-and [`muon_adamw_parameter_groups` / `build_optimizer`](../nano_protein/train.py).
+Implementation: [`ESMCRMSNorm`, model initialization and routing](../src/nanoprotein/model.py),
+and [`muon_adamw_parameter_groups` / `build_optimizer`](../src/nanoprotein/train.py).
 
 ## 3. Batch balance: equalize work across GPUs
 
@@ -218,7 +218,7 @@ so full training trajectories need not be bitwise identical. The observed
 P@L gain is a result of these trained checkpoints, not a mathematical promise
 of the load-balancing algorithm.
 
-Implementation: [`balanced_partitions` and `rebalance_masked_batch`](../nano_protein/batch_balance.py).
+Implementation: [`balanced_partitions` and `rebalance_masked_batch`](../src/nanoprotein/batch_balance.py).
 [Existing DDP checks](../tests/test_batch_balance.py) exercise example/label
 preservation, equal row counts, unchanged RNG state and gradient equivalence
 to the unpartitioned reference.
@@ -335,7 +335,7 @@ still reports the same equal-protein `sequence_mean_nll` for every recipe**.
 The leaderboard improvement therefore cannot be explained merely by changing
 the definition of validation loss.
 
-Implementation: [`training_losses` and the accumulation loop](../nano_protein/train.py).
+Implementation: [`training_losses` and the accumulation loop](../src/nanoprotein/train.py).
 [Existing loss checks](../tests/test_training_losses.py) compare loss values
 and gradients against an independent pooled reference, including unequal
 target counts across ranks and ranks with no targets.
@@ -353,7 +353,7 @@ slightly higher. Sqrt weighting then improved both evaluation metrics with
 almost unchanged training time. Tying embeddings regressed both metrics.
 The paired-chain 95% CI for the P@L change is **+1.9056 to +2.0263 percentage
 points** for sqrt loss and **−0.8583 to −0.7368 points** for tying embeddings.
-See [all adjacent deltas and intervals](../reports/fir-r02-rope10k-100k-20260906/ADJACENT_COMPARISONS.json).
+See [all adjacent deltas and intervals](../.dev/reports/fir-r02-rope10k-100k-20260906/ADJACENT_COMPARISONS.json).
 
 These runs isolate the latter increments along this particular recipe path.
 The baseline-to-R02 change bundles optimizer, normalization, routing,
@@ -368,8 +368,8 @@ recipe on its assigned node.
 Use the [baseline preset](../configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml)
 and [setting-3 preset](../configs/archive/program2_h100_100k/r10_sqrtloss.yaml).
 The exact executed configs are archived alongside their results:
-[baseline](../reports/fir-171m-100k-20260906/default/config.yaml) and
-[setting 3](../reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml).
+[baseline](../.dev/reports/fir-171m-100k-20260906/default/config.yaml) and
+[setting 3](../.dev/reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml).
 For the same frozen corpus and evaluation, follow the
 [GPU plan](PROGRAM2_GPU_PLAN.md) and [evaluation instructions](EVALUATION.md).
 
@@ -380,14 +380,14 @@ the baseline SHA-256 is `96783380e4ecebab468e429e76a2ffcbb2bcfb4d11d7ab960a86791
 Full checkpoints and raw evaluation shards remain outside Git; verified
 receipts and per-chain scores are in the linked reports.
 
-The [figure generator](../scripts/plot_best_recipe_explainer.py) reads the
+The [figure generator](../.dev/scripts/plot_best_recipe_explainer.py) reads the
 audited result JSON and executes the repository's actual pure-Python
 partitioner for the balancing example. It generates PNG and SVG versions
 plus [numerical figure data](figures/best-recipe/figure-data.json). Run it in
 an isolated plotting environment with Matplotlib installed:
 
 ```bash
-python scripts/plot_best_recipe_explainer.py
+python .dev/scripts/plot_best_recipe_explainer.py
 ```
 
 Vector versions: [comparison](figures/best-recipe/scaleup-results.svg),

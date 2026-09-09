@@ -37,7 +37,8 @@ url = "https://download.pytorch.org/whl/cu126"
 explicit = true
 
 [tool.setuptools.packages.find]
-include = ["nano_protein*"]
+where = ["src"]
+include = ["nanoprotein*"]
 
 [tool.ruff]
 line-length = 96
@@ -47,4 +48,4 @@ target-version = "py310"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["nano_protein"]
+known-first-party = ["nanoprotein"]

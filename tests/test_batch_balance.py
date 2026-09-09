@@ -9,8 +9,8 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from nano_protein.batch_balance import balanced_partitions, rebalance_masked_batch
-from nano_protein.train import sequence_mean_loss
+from nanoprotein.batch_balance import balanced_partitions, rebalance_masked_batch
+from nanoprotein.train import sequence_mean_loss
 
 
 def _examples():

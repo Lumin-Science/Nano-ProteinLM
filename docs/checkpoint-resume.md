@@ -33,7 +33,7 @@ Run inside a four-GPU allocation with the same source/runtime and verified data:
 
 ```bash
 python -m torch.distributed.run --standalone --nproc-per-node=4 \
-  -m nano_protein.train --config continuation-4gpu.yaml \
+  -m nanoprotein.train --config continuation-4gpu.yaml \
   --resume /path/to/checkpoint-final.pt \
   --data-root /path/to/verified/data --output-root /path/to/new-output
 ```

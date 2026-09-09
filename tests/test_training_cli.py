@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from nano_protein.train import resolve_config_overrides
+from nanoprotein.train import resolve_config_overrides
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -17,7 +17,7 @@ class TrainingCLITests(unittest.TestCase):
             [
                 sys.executable,
                 "-m",
-                "nano_protein.train",
+                "nanoprotein.train",
                 "--config",
                 str(recipe),
                 "--print-config",

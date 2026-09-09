@@ -29,7 +29,7 @@ if [[ -e "$DATA_ROOT/training" ]]; then
   echo "Reusing prepared training data: $DATA_ROOT/training"
 else
   echo "Downloading and verifying the benchmark training subset"
-  "$uv_bin" run --frozen --no-dev python scripts/download_data.py \
+  "$uv_bin" run --frozen --no-dev python -m nanoprotein.sharded_data \
     --repo-id LuminScience/LuminBench-Nano-ESMC \
     --revision bd38448d50d8f426d7b9bd4410b53159ea001259 \
     --training-samples 5376000 \
@@ -40,7 +40,7 @@ fi
 "$uv_bin" run --frozen --no-dev python - "$DATA_ROOT/training" <<'PYTHON'
 from pathlib import Path
 import sys
-from nano_protein.train import validate_data_manifest
+from nanoprotein.train import validate_data_manifest
 
 manifest = validate_data_manifest(Path(sys.argv[1]))
 counts = {name: manifest['sources'][name]['train']['records'] for name in ('uniref90', 'mgnify', 'omg_img')}

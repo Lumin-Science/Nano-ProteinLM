@@ -32,7 +32,7 @@ Equal steps and data exposure do not imply equal compute or wall time.
 P@L intervals use **5,000 bootstrap resamples of chains**. Each recipe has only
 one training seed, so these intervals do **not** measure training-seed variation.
 The contact benchmark is paper-aligned; identity to the unpublished ESMC paper
-chain list cannot be established. See [evaluation protocol](../../docs/EVALUATION.md).
+chain list cannot be established. See [evaluation protocol](../../../docs/EVALUATION.md).
 
 ## Recipe differences
 
@@ -51,7 +51,7 @@ comparison; it does not isolate the optimizer.
 
 Muon LR values precede its internal `match_rms_adamw` matrix-shape adjustment.
 The project default is not an exact reproduction of the paper's undisclosed
-numerical calibration. [Full recipe comparison](../../docs/171M_RECIPES.md).
+numerical calibration. [Full recipe comparison](../../../docs/171M_RECIPES.md).
 
 ## Reproduction and evidence
 
@@ -73,7 +73,7 @@ that difference and the qualified FA3 kernel revision.
 - [Machine-readable results](results.json) and [paired per-chain contact scores](contact-per-chain.tsv).
 - Exact executed configs: [default](default/config.yaml), [R02](r02/config.yaml).
 - Completion, environment, validation, probe, and contact receipts are in
-  [default](default/) and [r02](r02/); [file digests](artifact-sha256.json)
+  [default](default) and [r02](r02); [file digests](artifact-sha256.json)
   cover the preserved numerical evidence.
 - Checkpoints and original logs remain on Fir under
   `/scratch/muchenli/Nano-Protein-LM-paired-100k-20260906/{default-fc10111,r02-fc10212}`.

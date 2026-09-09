@@ -9,7 +9,7 @@ import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from nano_protein.train import sequence_mean_loss, training_losses
+from nanoprotein.train import sequence_mean_loss, training_losses
 
 
 def _inputs():

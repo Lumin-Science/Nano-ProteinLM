@@ -2,6 +2,11 @@
 
 ## Implemented
 
+- Runtime code and CLI utilities are consolidated under `src/nanoprotein/`.
+  The public module namespace is `nanoprotein`. Plotting and release tools
+  live in `.dev/scripts/`; published reports live in `.dev/reports/`.
+  Packaging, subprocess callers and documentation use the new layout.
+
 - Two recommended recipes for small-budget 171M experiments: [current-best Setting 3](../configs/default.yaml) and
   [original 171M AdamW](../configs/esmc-171m-original.yaml). All 27 other YAMLs
   and the scale-up manifest are in the [config archive](../configs/archive/README.md),
@@ -14,7 +19,7 @@
   [speedrun](../runs/speedrun.sh) calls setup and trains Setting 3 by default.
   It accepts a recipe, run name and normal training CLI options.
 - Old training launchers are [archived](archive/runs/README.md). Parallel
-  evaluation helpers moved to `scripts/` without changing evaluation behavior.
+  evaluation helpers now live under `src/` without changing scoring behavior.
 - `.env` contains only `DATA_ROOT` and `OUTPUT_ROOT`. Setup and training are
   documented in the [README](../README.md#usage); the direct APIs remain
   available for independent research.

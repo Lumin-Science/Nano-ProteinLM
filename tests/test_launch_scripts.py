@@ -22,7 +22,7 @@ if args[0] == 'sync':
     sys.exit(0)
 assert args[:4] == ['run', '--frozen', '--no-dev', 'python'], args
 args = args[4:]
-if args[0] == 'scripts/download_data.py':
+if args[:2] == ['-m', 'nanoprotein.sharded_data']:
     root = Path(args[args.index('--output-root') + 1])
     root.mkdir(parents=True)
     for name in ('manifest.json', 'CORPUS_VERIFICATION.json'):
@@ -31,15 +31,15 @@ elif args[0] == '-':
     # Receipt validation is exercised by the real trainer, not this shell-flow test.
     assert Path(args[1], 'CORPUS_VERIFICATION.json').is_file()
     sys.stdin.read()
-elif args[0] == 'scripts/check_environment.py':
+elif args[:2] == ['-m', 'nanoprotein.check_environment']:
     if os.environ.get('LAUNCH_TEST_QUALIFY_FAIL'):
         sys.exit(1)
     Path(args[args.index('--output') + 1]).write_text('{}')
 elif args[:2] == ['-m', 'torch.distributed.run']:
-    train_args = args[args.index('nano_protein.train') + 1:]
+    train_args = args[args.index('nanoprotein.train') + 1:]
     out = Path(train_args[train_args.index('--output-root') + 1])
     resolved = subprocess.check_output(
-        [os.environ['LAUNCH_TEST_PYTHON'], '-m', 'nano_protein.train',
+        [os.environ['LAUNCH_TEST_PYTHON'], '-m', 'nanoprotein.train',
          *train_args, '--print-config'], text=True)
     (out / 'resolved-test.yaml').write_text(resolved)
     for name in ('run_contract.json', 'TRAINING_COMPLETE.json', 'checkpoint-final.pt'):
@@ -73,7 +73,7 @@ class LaunchScriptTests(unittest.TestCase):
         self.env = {
             **os.environ,
             "UV_BIN": str(uv),
-            "PYTHONPATH": str(ROOT),
+            "PYTHONPATH": str(ROOT / "src"),
             "LAUNCH_TEST_LOG": str(self.log),
             "LAUNCH_TEST_PYTHON": sys.executable,
         }
@@ -119,7 +119,7 @@ class LaunchScriptTests(unittest.TestCase):
         self.run_script("setup_env_and_data.sh")
         self.run_script("setup_env_and_data.sh")
         commands = self.commands()
-        self.assertEqual(sum("scripts/download_data.py" in row for row in commands), 1)
+        self.assertEqual(sum("nanoprotein.sharded_data" in row for row in commands), 1)
         self.assertFalse(any("torch.distributed.run" in row for row in commands))
 
     def test_incomplete_data_and_failed_qualification_block_training(self):
@@ -151,5 +151,5 @@ class LaunchScriptTests(unittest.TestCase):
         self.assertEqual((config["seed"], config["attention_backend"]), (43, "flash"))
         self.assertIsNone(config["max_steps"])
         self.assertEqual(config["walltime_seconds"], 3600)
-        check = next(row for row in self.commands() if "scripts/check_environment.py" in row)
+        check = next(row for row in self.commands() if "nanoprotein.check_environment" in row)
         self.assertEqual(check[check.index("--attention-backend") + 1], "flash")

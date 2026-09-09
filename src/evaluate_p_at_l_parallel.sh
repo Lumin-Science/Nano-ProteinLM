@@ -44,7 +44,7 @@ cache_args=()
 if [[ -n "$contact_scoring_cache_root" ]]; then
   cache_preflight="$eval_root/CONTACT_SCORING_CACHE_PREFLIGHT.json"
   UV_CACHE_DIR="$uv_cache_dir" "$uv_bin" run --frozen python \
-    scripts/verify_contact_scoring_cache.py \
+    -m nanoprotein.verify_contact_scoring_cache \
     --cache-root "$contact_scoring_cache_root" \
     --output "$cache_preflight" \
     > "$eval_root/cache-preflight.stdout" 2> "$eval_root/cache-preflight.stderr"
@@ -55,7 +55,7 @@ if [[ -n "$contact_scoring_cache_root" ]]; then
 fi
 probe_receipt="$eval_root/CONTACT_PROBE.json"
 CUDA_VISIBLE_DEVICES="${gpu_list[0]}" UV_CACHE_DIR="$uv_cache_dir" \
-  "$uv_bin" run --frozen python scripts/fit_contact_probe.py \
+  "$uv_bin" run --frozen python -m nanoprotein.fit_contact_probe \
   --checkpoint "$checkpoint" \
   --external-src "$external_src" \
   --contact-root "$contact_root" \
@@ -67,7 +67,7 @@ for ((shard = 0; shard < contact_shards; shard++)); do
   mkdir -p "$shard_root"
   gpu_slot=$((shard % 4))
   CUDA_VISIBLE_DEVICES="${gpu_list[$gpu_slot]}" UV_CACHE_DIR="$uv_cache_dir" \
-    "$uv_bin" run --frozen python -m nano_protein.evaluate \
+    "$uv_bin" run --frozen python -m nanoprotein.evaluate \
     --checkpoint "$checkpoint" \
     --data-root "$data_root" \
     --output-root "$shard_root" \
@@ -101,7 +101,7 @@ for ((shard = 0; shard < contact_shards; shard++)); do
   merge_args+=(--contact-report "$component_root/contact-shard-$shard/EVALUATION.json")
 done
 UV_CACHE_DIR="$uv_cache_dir" "$uv_bin" run --frozen python \
-  scripts/merge_contact_evaluation.py \
+  -m nanoprotein.merge_contact_evaluation \
   "${merge_args[@]}" \
   --expected-contact-chains "$contact_chains" \
   --output "$eval_root/P_AT_L.json" \

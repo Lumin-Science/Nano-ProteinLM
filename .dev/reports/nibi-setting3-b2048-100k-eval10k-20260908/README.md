@@ -15,7 +15,7 @@ The training source remains **`c76a07998987a4746d4bffc89d878a758cd735cb`**.
 Two-hour monitoring continues through final evaluation and checkpoint preservation.
 
 The recipe is the best completed Fir setting: R02 RoPE10k + batch balance + sqrt
-loss. See the [completed Fir comparison and detailed explanation](../../docs/BEST_RECIPE_VS_BASELINE.md)
+loss. See the [completed Fir comparison and detailed explanation](../../../docs/BEST_RECIPE_VS_BASELINE.md)
 for its batch-1,024 result: validation loss **2.418720**, P@L **32.682%**.
 The [original queue activation](QUEUE_RECORD.json) and [login-node controller
 recovery](QUEUE_RECOVERY.json) remain archived below.
@@ -34,9 +34,9 @@ See the [machine-readable learning curve](learning-curve.json).
 
 ## Production configuration
 
-The [config](../../configs/archive/esmc-171m-setting3-nibi-fa3-b2048-stage1-100k.yaml)
+The [config](../../../configs/archive/esmc-171m-setting3-nibi-fa3-b2048-stage1-100k.yaml)
 retains every scientific setting from
-[`r10_sqrtloss.yaml`](../../configs/archive/program2_h100_100k/r10_sqrtloss.yaml).
+[`r10_sqrtloss.yaml`](../../../configs/archive/program2_h100_100k/r10_sqrtloss.yaml).
 The changes are eight-GPU execution, checkpoint/evaluation cadence, and a 24-hour
 training guard. The larger global batch comes from the larger GPU count.
 
@@ -163,7 +163,7 @@ set `expected_world_size: 4`, keep micro-batch 64, and set accumulation **8** to
 retain batch 2,048. Extend `max_steps` and `schedule_steps` to the desired total
 endpoint (e.g. 200,000 for another 100,000 steps), increase the wall-time guard,
 and use a fresh output directory. The existing 1,000-step warmup does not restart.
-See [checkpoint continuation](../../docs/checkpoint-resume.md).
+See [checkpoint continuation](../../../docs/checkpoint-resume.md).
 
 Changing GPU count creates a new deterministic data stream instead of restoring
 eight sampler streams into four ranks. At micro-batch 64, sqrt-loss normalization

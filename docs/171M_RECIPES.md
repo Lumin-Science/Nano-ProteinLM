@@ -19,7 +19,7 @@ The table compares these two historical aligned presets with the paper reference
 Both aligned variants completed training and evaluation on September 6, 2026.
 R02 reached validation loss **2.43698** and P@L **30.31%**, compared with
 **2.47436** and **26.50%** for default. See the
-[verified 100k results and receipts](../reports/fir-171m-100k-20260906/README.md).
+[verified 100k results and receipts](../.dev/reports/fir-171m-100k-20260906/README.md).
 The original one-hour R02 record remains unchanged.
 
 | Setting | Aligned 171M R02 recipe | Historical AdamW baseline | ESMC paper reference |

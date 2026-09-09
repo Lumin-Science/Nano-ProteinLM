@@ -10,7 +10,7 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
-from nano_protein.periodic_evaluation import run_periodic_evaluation
+from nanoprotein.periodic_evaluation import run_periodic_evaluation
 
 
 def _worker(rank, directory, fail):

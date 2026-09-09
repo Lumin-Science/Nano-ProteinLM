@@ -10,8 +10,8 @@ from pathlib import Path
 
 import torch
 
-from nano_protein.flash_attention import prepare_attention
-from nano_protein.model import _varlen_flash_attention, build_model
+from .flash_attention import prepare_attention
+from .model import _varlen_flash_attention, build_model
 
 
 def main() -> None:

@@ -26,7 +26,7 @@ Program 2 selects on frozen held-out MLM loss. Contact P@L and training loss are
 All 38 rounds are shown; points and bars are two-seed means ± sample SD.
 The line follows the retained recipe. Changes 4–5 use roughly 142M parameters
 and predate the current fixed-size task. See the [source TSV](runs-through-r38.tsv)
-and [current task definition](../../task/171m-validation-loss.md) for their distinct protocols.
+and [current task definition](../../../task/171m-validation-loss.md) for their distinct protocols.
 
 ## R29 improvement
 
@@ -123,7 +123,7 @@ Two branches were stopped after preflight and have no model-quality result: batc
 - Current model: 24 layers, width 768, 12 heads, SwiGLU FFN width 1536, whole-projection Q/K LayerNorm, RoPE base 10,000, and tied vocabulary embeddings.
 - Native Muon handles 96 transformer matrices; AdamW handles embeddings, prediction head, and scalar parameters. Global batch 256, context 512, 15% masking, balanced ranks, and square-root target-count weighting remain accepted.
 
-Full contract: [program2.md](../../docs/archive/program2.md). Accepted seed configs: [seed 42](../../configs/archive/program2/r29_tied_seed42.yaml), [seed 43](../../configs/archive/program2/r29_tied_seed43.yaml). The runner requires `CONFIG` to select these explicitly; its default belongs to the separate P@L campaign.
+Full contract: [program2.md](../../../docs/archive/program2.md). Accepted seed configs: [seed 42](../../../configs/archive/program2/r29_tied_seed42.yaml), [seed 43](../../../configs/archive/program2/r29_tied_seed43.yaml). The runner requires `CONFIG` to select these explicitly; its default belongs to the separate P@L campaign.
 
 ## Evidence and research provenance
 

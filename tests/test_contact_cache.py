@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from nano_protein.contact_cache import CachedContactChain, ContactScoringCache
+from nanoprotein.contact_cache import CachedContactChain, ContactScoringCache
 
 
 class ContactCacheTests(unittest.TestCase):

@@ -1,9 +1,9 @@
 # Original ESMC architecture from Appendix A.1.1, Table S1:
 # https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29
 # Local Stage-1 training preset, not the released model's full training schedule.
-# LR/WD use nano_protein.schedule.mup_hyperparameters with the repository's
+# LR/WD use nanoprotein.schedule.mup_hyperparameters with the repository's
 # assumed proxy LR=6e-4, WD=0.01, width=512, depth=16. See README.md here.
-# Set stopping budgets explicitly through nano_protein.train.
+# Set stopping budgets explicitly through nanoprotein.train.
 schema_version: 1
 model: esmc-600m
 expected_parameter_count: 575036992

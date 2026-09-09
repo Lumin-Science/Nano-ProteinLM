@@ -3,6 +3,8 @@
 .env
 .exps/
 /.dev/*
+!/.dev/scripts/
+!/.dev/reports/
 !/.dev/LOG.md
 !/.dev/report/
 /.dev/report/*

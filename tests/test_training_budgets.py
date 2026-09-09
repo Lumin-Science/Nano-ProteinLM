@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from nano_protein.train import resolve_step_budgets, resolve_token_budget, training_stop_reason
+from nanoprotein.train import resolve_step_budgets, resolve_token_budget, training_stop_reason
 
 
 class TrainingBudgetTests(unittest.TestCase):

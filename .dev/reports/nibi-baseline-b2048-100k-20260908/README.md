@@ -35,8 +35,8 @@ of an undisclosed paper optimizer calibration.
 | Corpus | Same public, homology-filtered corpus as the Fir comparison |
 | Checkpoints | Rolling latest every 10,000 steps; final retained on project storage |
 
-Configuration: [`esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml`](../../configs/archive/esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml).
-Continuation instructions: [`checkpoint-resume.md`](../../docs/checkpoint-resume.md).
+Configuration: [`esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml`](../../../configs/archive/esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml).
+Continuation instructions: [`checkpoint-resume.md`](../../../docs/checkpoint-resume.md).
 
 Scratch root: `/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-20260908`.
 Frozen source checkout: the scratch root with `-run` appended.
@@ -61,9 +61,9 @@ and identical sampling/RNG endpoints. Final logged losses were 2.77599 and
 2.77711 respectively. These are restoration/stability checks, not production
 quality results or a training-seed uncertainty estimate.
 
-Receipts are in [`qualification/`](qualification/) and
+Receipts are in [`qualification/`](qualification) and
 [`RUNTIME_REPRODUCED.json`](RUNTIME_REPRODUCED.json). The production configuration,
-source contract and initial metrics are in [`full/`](full/). Checkpoint binaries
+source contract and initial metrics are in [`full/`](full). Checkpoint binaries
 stay on Nibi. This cancelled attempt stopped before its first production
 checkpoint; it has no final production checkpoint. The replacement launch retains
 the final-checkpoint preservation requirement.

@@ -161,7 +161,7 @@ are in [task/171m-validation-loss.md](task/171m-validation-loss.md).
 
 ### Experiments
 
-![Autoresearch progress across 38 rounds: five cumulative improvements reduce validation loss by 2.20%; changes 4–5 use smaller models.](reports/program2/validation-loss.png)
+![Autoresearch progress across 38 rounds: five cumulative improvements reduce validation loss by 2.20%; changes 4–5 use smaller models.](.dev/reports/program2/validation-loss.png)
 
 | Research metric | Baseline | 1: + Muon | 2: + batch balance | 3: + sqrt loss | 4: + FFN 1536* | 5: + tied embeddings* |
 |---|---:|---:|---:|---:|---:|---:|
@@ -169,7 +169,7 @@ are in [task/171m-validation-loss.md](task/171m-validation-loss.md).
 | P@L (%) ↑ | 9.648 ± 0.598 | 9.795 ± 0.189 | 9.370 ± 0.270 | **10.533 ± 0.366** | 9.829 ± 0.286 | 9.527 ± 0.720 |
 
 Two-seed mean ± sample SD; one hour on four L40S GPUs per seed.
-[Protocol and all 38 rounds](reports/program2/README.md) · [More experiments](docs/AUTORESEARCH.md)
+[Protocol and all 38 rounds](.dev/reports/program2/README.md) · [More experiments](docs/AUTORESEARCH.md)
 
 *Changes 4–5 use ~142M models and predate the ±5% size rule. The fixed-size
 leaderboard skips 4 and applies tied embeddings directly to 3.
@@ -198,7 +198,7 @@ exclude evaluation.
 **Setting 3 is best on both metrics:** validation loss is **2.25% lower** and
 P@L is **6.18 percentage points higher** than the AdamW baseline.
 See [recipe differences with figures and examples](docs/BEST_RECIPE_VS_BASELINE.md),
-[full results](reports/fir-r02-rope10k-100k-20260906/README.md) and the
+[full results](.dev/reports/fir-r02-rope10k-100k-20260906/README.md) and the
 [archived leaderboard](docs/archive/TEST_LEADERBOARD_20260908.md).
 
 ## Citation

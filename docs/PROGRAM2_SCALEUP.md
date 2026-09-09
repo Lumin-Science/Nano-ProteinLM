@@ -16,7 +16,7 @@ five-setting proposal with Program 2's LayerNorm architecture is superseded.
 Historical Program 2 results below remain unchanged. All four full-size H100
 technical trials and all four 100k-step runs with full evaluations passed; see the
 [GPU training plan](PROGRAM2_GPU_PLAN.md) and
-[results](../reports/fir-r02-rope10k-100k-20260906/README.md).
+[results](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
 
 ## Published Program 2 results
 
@@ -70,10 +70,10 @@ against these endpoints: training exposure is roughly 36–42 times smaller for
 its accepted recipes, and the MLM sample size differs. Equal contact protocols
 also do not remove the training-budget confound.
 
-[Completed H100 results](../reports/fir-171m-100k-20260906/README.md) ·
-[Published Program 2 report](../reports/program2/README.md) ·
-[Per-method statistics](../reports/program2/methods.tsv) ·
-[Import provenance and archive verification](../reports/program2/IMPORT_PROVENANCE.json).
+[Completed H100 results](../.dev/reports/fir-171m-100k-20260906/README.md) ·
+[Published Program 2 report](../.dev/reports/program2/README.md) ·
+[Per-method statistics](../.dev/reports/program2/methods.tsv) ·
+[Import provenance and archive verification](../.dev/reports/program2/IMPORT_PROVENANCE.json).
 
 ## Program 2 R01 is not our R02
 
@@ -170,7 +170,7 @@ results are complete: setting 3 (+ batch balance + sqrt loss) has the best
 validation loss **2.41871987** and contact P@L **0.32682480**. Adding tied
 embeddings gives loss **2.42304260** and P@L **0.31884046** in this matched-seed
 comparison; full results and paired chain intervals are in the
-[results report](../reports/fir-r02-rope10k-100k-20260906/README.md).
+[results report](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
 
 Batch 1,024 uses 64 examples/GPU × 4 GPUs × 4 accumulation microsteps. The
 imported R10 implementation normalizes weights **across ranks within each
