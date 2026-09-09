@@ -197,14 +197,21 @@ and additional downstream tasks.
 
 Use NanoProteinLM as a research environment for improving training recipes under
 controlled budgets. Task definitions describe what is measured and held fixed;
-your agent decides how to search.
+[autoresearch/program.md](autoresearch/program.md) guides the research loop.
+Tell your coding agent:
+
+> Read `autoresearch/program.md` and start autoresearch for `tasks/171m-validation-loss.md`.
+
+The program covers iteration and keep/discard decisions. The selected task holds
+the scientific protocol and commands; the agent reviews its boundaries.
 
 ### Protocol
 
 Search trains each recipe for **one hour on four L40S GPUs per seed**, using
 **two matched seeds**. Its score is mean MLM validation loss, with lower values
 preferred. Data and evaluation stay fixed, and model size must remain within
-±5% of the original 171M baseline. The agent chooses its search and acceptance strategy.
+±5% of the original 171M baseline. The task script runs one measurement; it does
+not implement the research loop.
 
 The benchmark owner manually checks progress with **24.20B model tokens per seed
 on four H100s**, comparing mean MLM loss and P@L. Full rules and research commands

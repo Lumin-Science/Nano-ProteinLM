@@ -114,17 +114,24 @@ state; see [continuation](checkpoint-resume.md) for resuming on another GPU coun
 
 ## AutoResearch
 
-[program.md](../program.md) directs an agent to the selected
-[task definition](../tasks/171m-validation-loss.md). Run one research measurement:
+[autoresearch/program.md](../autoresearch/program.md) defines the research loop;
+[171m-validation-loss.md](../tasks/171m-validation-loss.md) defines the scientific
+protocol and command. To start an agent, tell it:
+
+> Read `autoresearch/program.md` and start autoresearch for `tasks/171m-validation-loss.md`.
+
+After setup and GPU allocation, run one research measurement:
 
 ```bash
 bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001
 ```
 
-The task script loads `.env`, checks frozen inputs and four L40S GPUs, runs seeds
-42 and 43 through the standard training/evaluation APIs, and reports mean loss
-and sample SD in `$OUTPUT_ROOT/experiment-001/summary.json`. It records full
-contact P@L as a diagnostic. Search and acceptance decisions belong to the agent.
+The task script loads `.env`, saves the candidate recipe, runs seeds 42 and 43
+through the standard training/evaluation APIs, and reports mean loss and sample
+SD in `$OUTPUT_ROOT/experiment-001/summary.json`. It records full contact P@L as a
+diagnostic. The agent reviews task boundaries and run completion. Ordinary
+trainer/evaluator integrity checks and the summary utility remain in place;
+the shell script contains no separate boundary checker or keep/discard logic.
 
 ## Evaluation
 
@@ -159,6 +166,7 @@ src/nanoprotein/   # Training, models, data, evaluation and runtime CLI modules
 src/*.sh          # Optional parallel evaluation launchers
 runs/             # Public setup and speedrun scripts
 tasks/            # Autoresearch definition and measurement command
+autoresearch/     # Agent research-loop guidance
 .dev/scripts/     # Plotting, release preparation and historical analysis tools
 .dev/tests/       # Developer regression tests
 .dev/reports/     # Published experiment records and figures

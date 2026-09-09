@@ -10,28 +10,31 @@ decontaminated data and frozen evaluations.
 
 [default.yaml](../configs/default.yaml) is the starting recipe;
 [esmc-171m.yaml](../configs/esmc/esmc-171m.yaml) is the reference.
-The [configs/esmc/README.md](../configs/esmc/README.md) support separate,
-larger-model experiments and are outside this task's size bound.
+The larger presets in [configs/esmc/README.md](../configs/esmc/README.md) support
+separate experiments and are outside this task's size bound.
 
 ## Autoresearch protocol
 
 Compare mean validation loss after time-limited training of approximately
 fixed-size models on the same data and hardware.
 
-- **Score:** mean sequence-mean MLM validation loss across two fixed training
-  seeds; lower is better. Report per-seed values and sample SD. Contact P@L is
+- **Score:** mean sequence-mean MLM validation loss across training seeds
+  42 and 43; lower is better. Report per-seed values and sample SD. Contact P@L is
   recorded as a diagnostic and does not determine the research score.
 - **Compute:** one hour of training on four L40S GPUs per seed, starting from
   scratch. The clock excludes setup, final checkpoint saving and evaluation.
 - **Boundaries:** keep data, tokenizer, evaluation, hardware and budget accounting
   fixed; keep actual trainable parameters within ±5% of the original 171M model.
   No held-out training, pretrained weights, dummy parameters or altered scores.
+  Preserve Stage-1 context and source mixture; use the script's linear warmup
+  followed by constant peak LR, with no post-warmup decay.
   Recipe and training implementation changes are permitted within these limits.
   The task scripts, evaluation implementation, dependencies and input receipts
-  are protected. Search strategy and acceptance decisions belong to the agent.
+  are protected. The agent reviews these boundaries and the completed run
+  records; a successful command alone does not establish compliance.
 
-Configure the two local roots in [`.env`](../.env.example) using the
-[setup instructions](../README.md#setting-up-data--environments). In a dedicated `DATA_ROOT`, run
+Configure the two local roots using [.env.example](../.env.example) and the
+[README.md](../README.md#setting-up-data--environments). In a dedicated `DATA_ROOT`, run
 `bash runs/setup.sh --training-shards 7` to prepare the frozen benchmark corpus
 and all MLM validation and contact P@L assets. The general setup default is now
 30 shards; it does not change this task's data contract. Then run:
@@ -40,11 +43,12 @@ and all MLM validation and contact P@L assets. The general setup default is now
 bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001
 ```
 
-The [research script](171m-validation-loss_ar.sh) contains the direct
-`nanoprotein.train` and `nanoprotein.evaluate` calls, their fixed arguments,
-and the seed loop. Change the recipe argument and use a fresh experiment name
-for each candidate. Results are written to `$OUTPUT_ROOT/experiment-001/summary.json`;
-incomplete runs cannot supply a benchmark score.
+The [171m-validation-loss_ar.sh](171m-validation-loss_ar.sh) script loads local paths, snapshots the
+recipe, trains/evaluates both seeds through the standard APIs and summarizes the
+scores in `$OUTPUT_ROOT/experiment-001/summary.json`. Use a fresh experiment name
+for each candidate. Setup and GPU allocation happen before this command.
+Incomplete runs cannot supply a benchmark score. Loop policy lives in
+[autoresearch/program.md](../autoresearch/program.md).
 
 ## Test of Progress
 
@@ -52,7 +56,7 @@ The benchmark owner manually verifies a selected recipe with a fixed 24.20B-toke
 training budget on four H100s per seed, then compares full validation loss and
 P@L against the reference. This is separate from the agent's research loop.
 
-Use the [manual training/evaluation commands](../docs/EVALUATION.md#manual-test-of-progress)
+Use the manual training/evaluation commands in [EVALUATION.md](../docs/EVALUATION.md#manual-test-of-progress)
 and preserve the full final optimizer checkpoint for continuation.
 Historical results retain their original protocols; see the
-[experiment records](../docs/AUTORESEARCH.md).
+[AUTORESEARCH.md](../docs/AUTORESEARCH.md).

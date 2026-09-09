@@ -5,8 +5,10 @@ small-budget training experiments. Its baseline backbone follows the paper's
 170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29));
 [300M/600M references](../configs/esmc/README.md) are separate from this task.
 Its [research shell script](../tasks/171m-validation-loss_ar.sh) calls the standard
-training/evaluation APIs directly. [program.md](../program.md) asks an agent to
-optimize the task; Test of Progress is manual. This page is a results index.
+training/evaluation APIs directly. [autoresearch/program.md](../autoresearch/program.md)
+defines baseline measurement, iteration, comparison and recording rules; the task
+owns scientific settings, and the agent reviews compliance. Test of Progress is
+manual. This page is a results index.
 
 The historical [38-round research campaign](../.dev/reports/program2/README.md)
 predates the current ±5% parameter bound. Its 142M FFN/tied endpoints retain
