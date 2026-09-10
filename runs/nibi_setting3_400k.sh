@@ -42,7 +42,7 @@ date -u +%Y-%m-%dT%H:%M:%SZ > "$out/launch-started-utc.txt"
 nvidia-smi --query-gpu=index,uuid,pci.bus_id,name --format=csv > "$out/gpu-map.csv"
 args=()
 if [[ "$mode" == qualification ]]; then
-  args+=(--max-steps 100200 --checkpoint-interval 100 --periodic-evaluation-interval 100 --walltime-seconds 3600)
+  args+=(--max-steps 100200 --schedule-steps 100200 --checkpoint-interval 100 --periodic-evaluation-interval 100 --walltime-seconds 3600)
 else
   export PRESERVE_MILESTONES=1
   mkdir -p "$DURABLE_ROOT"
@@ -60,7 +60,7 @@ if [[ "$mode" == qualification ]]; then
   test ! -e "$resume_out"
   "$TRAIN_PYTHON" -m torch.distributed.run --standalone --nproc-per-node=8 -m nanoprotein.train \
     --config "$config" --data-root "$DATA_ROOT" --output-root "$resume_out" \
-    --resume "$out/checkpoint-final.pt" --max-steps 100210 --checkpoint-interval 0 --periodic-evaluation-interval 0 > "$PAIR_ROOT/qualification-resume.log" 2>&1
+    --resume "$out/checkpoint-final.pt" --max-steps 100210 --schedule-steps 100210 --checkpoint-interval 0 --periodic-evaluation-interval 0 > "$PAIR_ROOT/qualification-resume.log" 2>&1
   "$TRAIN_PYTHON" -m nanoprotein.checkpoint_audit --checkpoint "$resume_out/checkpoint-final.pt" \
     --data-root "$DATA_ROOT" --output "$resume_out/TRAINING_VERIFIED.json" --expected-step 100210 --restore-optimizer > "$resume_out/verify.log" 2>&1
   "$TRAIN_PYTHON" "$PAIR_REPO/.dev/reports/nibi-setting3-b2048-400k-20260910/verify_qualification.py"
