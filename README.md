@@ -242,6 +242,23 @@ leaderboard skips 4 and applies tied embeddings directly to 3.
 
 ## Test Leaderboard
 
+The latest matched Nibi comparison uses **100,000 Stage-1 steps, batch 2,048**
+and four H100s per model. Each run consumed **204.8M distinct records without
+repeats** and **48.39B non-padding model tokens**. Both full checkpoints and
+all ten evaluations per model are independently verified.
+
+| Nibi recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
+|---|---:|---:|---:|---:|
+| ESMC-like AdamW | 2.414734 | 28.173% | 27.932–28.421% | 21h 55m |
+| **Setting 3: Muon recipe + batch balance + sqrt loss** | **2.375701** | **36.567%** | **36.328–36.815%** | **22h 40m** |
+
+Setting 3 improves P@L by **8.394 percentage points** (paired chain-bootstrap
+95% CI **8.297–8.492 points**) and validation loss by **0.039033**.
+See the [full ten-point curves, checkpoint receipts and final audits](.dev/reports/nibi-paired-unique-b2048-100k-20260909/README.md).
+These are one-seed comparisons; intervals measure variation across contact
+chains. Times exclude evaluation pauses. The historical Fir comparison below
+uses a smaller batch and different prepared-data budget.
+
 Matched runs use **100,000 Stage-1 steps on four H100s**, batch **1,024**, base
 LR **5e-4**, base WD **0.01** and **1,000 warmup steps**. Each recipe has one
 training seed and uses the same 4,096 MLM validation sequences and 20,775 contact

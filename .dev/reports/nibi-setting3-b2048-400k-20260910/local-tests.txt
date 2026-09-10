@@ -1,0 +1,11 @@
+.........{"event": "shard_materialized", "source": "uniref90", "split": "train", "path": "train.parquet", "records": 4}
+{"event": "shard_materialized", "source": "uniref90", "split": "validation", "path": "validation.parquet", "records": 4}
+....................../Users/jojo/workspace/AutoResearch_ESMC/nano-protein-embedding/.venv/lib/python3.11/site-packages/torch/distributed/c10d_logger.py:83: FutureWarning: `torch.distributed.all_gather_into_tensor` is deprecated. Please use `torch.distributed.all_gather_single` instead.
+  return func(*args, **kwargs)
+/Users/jojo/workspace/AutoResearch_ESMC/nano-protein-embedding/.venv/lib/python3.11/site-packages/torch/distributed/c10d_logger.py:83: FutureWarning: `torch.distributed.all_gather_into_tensor` is deprecated. Please use `torch.distributed.all_gather_single` instead.
+  return func(*args, **kwargs)
+.............
+----------------------------------------------------------------------
+Ran 44 tests in 24.793s
+
+OK

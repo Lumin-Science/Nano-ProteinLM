@@ -16,8 +16,15 @@ def data_coverage(
     Counts refer to records within this verified, globally deduplicated release.
     """
     policy = config.get("data_resampling", "error")
-    if policy not in {"error", "allow"}:
-        raise ValueError("data_resampling must be 'error' or explicit 'allow'")
+    if policy not in {"error", "allow", "per_source"}:
+        raise ValueError("data_resampling must be error, allow, or per_source")
+    source_policies = config.get("data_source_resampling", {})
+    if policy == "per_source" and (
+        config.get("data_sampler") != "global"
+        or set(source_policies) != {s for stage in config["stages"] for s in stage["mixture"]}
+        or any(p not in {"error", "allow"} for p in source_policies.values())
+    ):
+        raise ValueError("per_source policy requires a global sampler and every source policy")
     headroom = float(config.get("data_capacity_headroom", 0.01))
     if not math.isfinite(headroom) or headroom < 0:
         raise ValueError("data_capacity_headroom must be finite and nonnegative")
@@ -71,6 +78,7 @@ def data_coverage(
         records = int(manifest["sources"][source]["train"]["records"])
         required = math.ceil(draws * (1 + headroom) / world_size) * world_size
         enough = records >= required and records >= world_size
+        source_policy = source_policies[source] if policy == "per_source" else policy
         sources[source] = {
             "available_records": records,
             "expected_draws": draws if max_steps is not None else None,
@@ -79,8 +87,9 @@ def data_coverage(
             if max_steps is not None and records
             else None,
             "sufficient": enough if max_steps is not None else None,
+            **({"resampling": source_policy} if policy == "per_source" else {}),
         }
-        if not enough:
+        if not enough and (policy != "per_source" or source_policy == "error"):
             insufficient.append(f"{source}: {records:,} available, {required:,} required")
     receipt = {
         "protocol": "training-data-coverage-v1",
@@ -96,9 +105,9 @@ def data_coverage(
             "per-run records across all ranks and stages; "
             "draws are not unique proteins when resampling is allowed"
         ),
-        "runtime_exhaustion_guard": policy == "error",
+        "runtime_exhaustion_guard": policy in {"error", "per_source"},
     }
-    if insufficient and policy == "error":
+    if insufficient and policy in {"error", "per_source"}:
         raise ValueError(
             "training data capacity is insufficient: "
             + "; ".join(insufficient)

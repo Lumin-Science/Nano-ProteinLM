@@ -41,10 +41,65 @@ and expected exposure counts. Validation sampling retains its established
 behavior and is unaffected by training's exhaustion guard.
 
 Same-layout continuation restores the saved source cursors and random states.
-No-repeat continuation refuses a changed GPU count or missing sampler states,
-because starting a fresh stream could repeat earlier proteins. The full model
-and optimizer states remain portable; preserving unique-data history across a
-changed GPU layout requires an additional sampler redistribution mechanism.
+Legacy rank-partitioned no-repeat continuation refuses a changed GPU count or
+missing sampler states. The full model and optimizer states remain portable.
+The explicit global-sampler migration below preserves consumed-record history
+when extending the corpus and changing the GPU layout.
+
+## Global source epochs and explicit corpus migration
+
+`data_sampler: global` generates the same global microbatch source assignments
+and source record order on every rank, then assigns disjoint slices to GPUs.
+Source cursors advance globally. A source completes its entire current pass
+before a new permutation starts, including when exhaustion falls inside a batch.
+Checkpoint state contains source RNG state, epoch/cursor, the migration origin,
+and rank-local crop/RNG state. It does not store the large permutation arrays.
+
+For controlled reuse, configure every source explicitly:
+
+```yaml
+data_sampler: global
+data_resampling: per_source
+data_source_resampling:
+  uniref90: allow
+  mgnify: error
+  omg_img: allow
+```
+
+The capacity check enforces unique-data headroom for strict sources and reports
+expected exposures for reused sources. Logs include `source_exposure_global`
+with cumulative draws, unique records seen, repeated draws, and source epochs.
+These counts include the parent run. Historical counts redistributed across
+new ranks are accounting shares; they do not describe earlier physical GPU work.
+
+Ordinary resume still requires the same data manifest and scientific recipe.
+An append-only expansion from a legacy no-repeat checkpoint requires a receipt:
+
+```bash
+python -m nanoprotein.data_migration \
+  --checkpoint /path/to/checkpoint-final.pt \
+  --old-data-root /path/to/parent/data --data-root /path/to/expanded/data \
+  --output /path/to/migration.json --seed 20260910
+```
+
+The verifier binds the parent checkpoint and both manifests, verifies the same
+decontaminated release and unchanged validation, and compares every old index
+entry and encoded residue with the expanded source prefix. It reconstructs
+previously consumed identities from all old rank cursors and permutations.
+Training uses the remaining old and newly added records before permitting reuse.
+Pass `--resume-data-migration /path/to/migration.json` alongside `--resume` only
+for that first conversion. Wrapped legacy histories and incompatible data are
+rejected; validation/evaluation data are never added to training.
+
+Subsequent global checkpoints resume directly on a different GPU count while
+preserving global batch and global microbatch grouping. For example, 64×8×4
+becomes 128×4×4. The next global record sequence is conserved; floating-point
+reduction order and rank-local crops/masks can change, so cross-layout resume is
+not bitwise identical. Same-layout resume restores rank RNG states exactly.
+The supported global mode currently covers a single training stage.
+
+See [the 400k Setting 3 recipe](../configs/setting3-nibi-b2048-400k.yaml) and
+[the run record](../.dev/reports/nibi-setting3-b2048-400k-20260910/README.md).
 
 ## Nibi correction, September 8, 2026
 

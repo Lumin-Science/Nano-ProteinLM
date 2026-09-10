@@ -1,7 +1,7 @@
 # Setting 3: continuation from 100k to 400k Stage-1 steps
 
-Status: **planning only; no training-data download, production code change, or
-continuation launch performed.** The user selected **Setting 3 only on all eight
+Status: **approved for implementation and training on September 10, 2026.**
+See the [execution record](../nibi-setting3-b2048-400k-20260910/README.md). The user selected **Setting 3 only on all eight
 Nibi GPUs**. This is a continuation of the completed 100k model, adding 300k
 optimizer updates with the same global batch of 2,048.
 
@@ -61,7 +61,7 @@ record. Setting 3's 40k row is its last audited evaluation, not a 100k result.
 Full earlier curves: [AdamW](../nibi-baseline-b2048-100k-eval10k-20260908/README.md)
 and [Setting 3](../nibi-setting3-b2048-100k-eval10k-20260908/README.md).
 The earlier short-budget AutoResearch search is separately documented in
-[AutoResearch scale-up](../../../docs/PROGRAM2_SCALEUP.md) and
+[AutoResearch scale-up](../../../docs/AUTORESEARCH_SCALEUP.md) and
 [all Program 2 search records](../program2/README.md); those are not 100k runs.
 
 ## Feasibility and required data

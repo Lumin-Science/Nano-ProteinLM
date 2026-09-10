@@ -27,6 +27,7 @@ from .batch_balance import rebalance_masked_batch
 from .data import MixtureBatcher, file_sha256
 from .data_budget import data_coverage
 from .flash_attention import prepare_attention
+from .global_sampling import GlobalMixtureBatcher, portable_batcher_states
 from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
 from .periodic_evaluation import run_periodic_evaluation
 from .resume import capture_runtime, restore_runtime, validate_resume
@@ -604,6 +605,7 @@ def train(
     output_root: Path,
     walltime_override: int | None = None,
     resume_checkpoint: Path | None = None,
+    resume_data_migration: Path | None = None,
     config_overrides: dict[str, Any] | None = None,
 ) -> None:
     overrides = dict(config_overrides or {})
@@ -626,14 +628,39 @@ def train(
     manifest_sha = file_sha256(data_root / "manifest.json")
     coverage = data_coverage(config, data_manifest, world_size=world_size)
     allow_resampling = coverage["policy"] == "allow"
+    global_sampling = config.get("data_sampler", "rank") == "global"
+    if config.get("data_sampler", "rank") not in {"rank", "global"}:
+        raise ValueError("unknown data sampler")
+    if global_sampling and len(config["stages"]) != 1:
+        raise ValueError("global source epochs currently require a single training stage")
+    migration = None
+    global_saved = None
+    if resume_data_migration is not None:
+        if resume_checkpoint is None:
+            raise ValueError("data migration requires a parent checkpoint")
+        migration = json.loads(resume_data_migration.read_text())
     resumed = None
     if resume_checkpoint is not None:
         resumed = torch.load(resume_checkpoint, map_location="cpu", weights_only=False)
         validate_resume(
-            resumed, config, world_size=world_size, data_manifest_sha256=manifest_sha
+            resumed,
+            config,
+            world_size=world_size,
+            data_manifest_sha256=manifest_sha,
+            migration=migration,
         )
-        if not allow_resampling and (
-            int(resumed["world_size"]) != world_size or not resumed.get("runtime_states")
+        if migration is not None:
+            if file_sha256(resume_checkpoint) != migration["parent_checkpoint_sha256"]:
+                raise ValueError("migration parent checkpoint checksum differs")
+            for name, proof in migration["prefix_verification"].items():
+                if proof["new_records"] != data_manifest["sources"][name]["train"]["records"]:
+                    raise ValueError("migration source size differs from expanded corpus")
+        elif global_sampling:
+            global_saved = portable_batcher_states(resumed)
+        if (
+            not global_sampling
+            and not allow_resampling
+            and (int(resumed["world_size"]) != world_size or not resumed.get("runtime_states"))
         ):
             raise ValueError(
                 "no-repeat continuation requires the saved GPU layout and sampler states; "
@@ -708,6 +735,7 @@ def train(
                 else None,
                 "resume_optimizer_step": int(resumed["optimizer_step"]) if resumed else 0,
                 "resume_source_world_size": int(resumed["world_size"]) if resumed else None,
+                "data_migration": migration,
                 "python": platform.python_version(),
                 "cuda": torch.version.cuda,
                 "torch": torch.__version__,
@@ -772,7 +800,16 @@ def train(
     saved_runtime = None
     data_seed = seed
     resume_data_mode = "fresh"
-    if resumed is not None:
+    if migration is not None:
+        data_seed = int(migration["global_data_seed"])
+        resume_data_mode = "verified_append_only_global_sampler_migration"
+    elif global_saved is not None:
+        data_seed = int(next(iter(global_saved.values()))["seed"])
+        resume_data_mode = "restore_global_sampler_and_repartition"
+        if int(resumed["world_size"]) == world_size:
+            saved_runtime = resumed["runtime_states"][rank]
+            resume_data_mode = "restore_rank_rng_and_global_sampler"
+    elif resumed is not None:
         if int(resumed["world_size"]) == world_size and resumed.get("runtime_states"):
             saved_runtime = resumed["runtime_states"][rank]
             data_seed = int(saved_runtime["data_seed"])
@@ -786,19 +823,55 @@ def train(
             torch.manual_seed(data_seed + rank)
             torch.cuda.manual_seed_all(data_seed + rank)
             resume_data_mode = "new_deterministic_stream_for_changed_gpu_layout"
-    batchers = {
-        stage.name: MixtureBatcher(
-            data_root,
-            "train",
-            stage.mixture,
-            seed=data_seed,
-            rank=rank,
-            world_size=world_size,
-            allow_resampling=allow_resampling,
-        )
-        for stage in stages
-    }
-    if not allow_resampling:
+    batchers = (
+        {}
+        if global_sampling
+        else {
+            stage.name: MixtureBatcher(
+                data_root,
+                "train",
+                stage.mixture,
+                seed=data_seed,
+                rank=rank,
+                world_size=world_size,
+                allow_resampling=allow_resampling,
+            )
+            for stage in stages
+        }
+    )
+    if global_sampling:
+        policies = config.get("data_source_resampling") or {
+            name: coverage["policy"] for name in stages[0].mixture
+        }
+        for stage in stages:
+            saved = global_saved[stage.name] if global_saved else None
+            origins = (
+                migration["origins"]
+                if migration
+                else (
+                    {name: s["origin"] for name, s in saved["samplers"].items()}
+                    if saved
+                    else None
+                )
+            )
+            batchers[stage.name] = GlobalMixtureBatcher(
+                data_root,
+                "train",
+                stage.mixture,
+                seed=data_seed,
+                rank=rank,
+                world_size=world_size,
+                policies=policies,
+                origins=origins,
+                migration=migration if migration else (saved["migration"] if saved else None),
+            )
+            if saved:
+                batchers[stage.name].load_state_dict(
+                    resumed["runtime_states"][rank]["batchers"][stage.name]
+                    if saved_runtime
+                    else saved
+                )
+    if not global_sampling and not allow_resampling:
         # A stage transition must continue the same per-source permutation,
         # rather than restart at its beginning under a different mixture.
         shared_samplers = {}
@@ -1051,6 +1124,8 @@ def train(
                 "attention_backend": model_options["attention_backend"],
                 "optimizer": str(config.get("optimizer", "adamw")),
             }
+            if global_sampling:
+                record["source_exposure_global"] = batcher.exposure()
             if balance_statistics is not None:
                 record["batch_balance"] = balance_statistics
             if loss_reduction != "sequence_mean":
@@ -1178,6 +1253,10 @@ def train(
             "stage_checkpoint": stage_checkpoint,
             "final_checkpoint": final_checkpoint,
         }
+        if global_sampling:
+            completion["source_exposure_global"] = {
+                name: batcher.exposure() for name, batcher in batchers.items()
+            }
         if max_model_tokens is not None:
             completion.update(
                 target_model_tokens=max_model_tokens,
@@ -1220,6 +1299,11 @@ def training_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Restore full model/optimizer state into a fresh output directory",
     )
+    parser.add_argument(
+        "--resume-data-migration",
+        type=Path,
+        help="Verified append-only data migration receipt for a legacy checkpoint",
+    )
     return parser
 
 
@@ -1237,6 +1321,7 @@ def main() -> None:
             "walltime_seconds",
             "print_config",
             "resume",
+            "resume_data_migration",
         }
     }
     if args.walltime_seconds is not None:
@@ -1256,6 +1341,7 @@ def main() -> None:
         output_root=args.output_root,
         walltime_override=args.walltime_seconds,
         resume_checkpoint=args.resume,
+        resume_data_migration=args.resume_data_migration,
         config_overrides=overrides,
     )
 

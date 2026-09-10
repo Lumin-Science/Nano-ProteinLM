@@ -46,9 +46,19 @@ def validate_resume(
     *,
     world_size: int,
     data_manifest_sha256: str,
+    migration: dict[str, Any] | None = None,
 ) -> None:
     """Allow extending the budget and changing GPU layout, preserving the recipe."""
-    if packet.get("data_manifest_sha256") != data_manifest_sha256:
+    if migration is not None:
+        from .data_migration import validate_migration
+
+        validate_migration(packet, migration, data_manifest_sha256)
+        if (
+            config.get("data_sampler") != "global"
+            or config.get("data_resampling") != "per_source"
+        ):
+            raise ValueError("migration requires explicit global per-source sampling")
+    elif packet.get("data_manifest_sha256") != data_manifest_sha256:
         raise ValueError("resume requires a matching checkpoint data-manifest hash")
     old = copy.deepcopy(packet["train_config"])
     new = copy.deepcopy(config)
@@ -57,9 +67,19 @@ def validate_resume(
     old.setdefault("data_resampling", "allow")
     new.setdefault("data_resampling", old["data_resampling"])
     old_world = int(packet["world_size"])
+    if migration is not None:
+        for key in ("data_sampler", "data_resampling", "data_source_resampling"):
+            old.pop(key, None)
+            new.pop(key, None)
     if len(old["stages"]) != len(new["stages"]):
         raise ValueError("resume cannot change the stage schedule")
     for previous, current in zip(old["stages"], new["stages"], strict=True):
+        if config.get("data_sampler") == "global" and (
+            previous["micro_batch_size"] * old_world != current["micro_batch_size"] * world_size
+        ):
+            raise ValueError(
+                "global sampler resume must preserve the global microbatch grouping"
+            )
         old_batch = (
             previous.pop("micro_batch_size") * previous.pop("gradient_accumulation") * old_world
         )
