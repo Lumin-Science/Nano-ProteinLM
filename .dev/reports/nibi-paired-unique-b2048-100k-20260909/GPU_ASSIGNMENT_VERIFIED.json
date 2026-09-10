@@ -1,0 +1,112 @@
+{
+  "status": "passed",
+  "checked_utc": "2026-09-09T03:05:29.480901+00:00",
+  "gpu_statistics": [
+    [
+      "0",
+      " GPU-eb5548a3-fa15-f7ba-4577-9273515daa46",
+      " 46407",
+      " 100"
+    ],
+    [
+      "1",
+      " GPU-c671f11e-3970-1af3-a79a-d96b33bdecd3",
+      " 52351",
+      " 97"
+    ],
+    [
+      "2",
+      " GPU-e87de433-b07a-5153-d421-e2d0f309e667",
+      " 76213",
+      " 97"
+    ],
+    [
+      "3",
+      " GPU-b921f194-8f47-1496-cfae-e583723a23dd",
+      " 75133",
+      " 100"
+    ],
+    [
+      "4",
+      " GPU-bd0cd25f-1813-47f1-077b-17a9a8f4e3a0",
+      " 50407",
+      " 100"
+    ],
+    [
+      "5",
+      " GPU-2eecceb2-985b-e780-eaa6-e51826ea4bdc",
+      " 50833",
+      " 97"
+    ],
+    [
+      "6",
+      " GPU-5269fbe9-b844-6114-d152-1c7b519c1106",
+      " 51363",
+      " 95"
+    ],
+    [
+      "7",
+      " GPU-3f3a27c3-c634-d58f-6f3d-333fa6b0ad18",
+      " 51365",
+      " 95"
+    ]
+  ],
+  "processes": [
+    {
+      "pid": 730568,
+      "gpu_index": 0,
+      "gpu_uuid": "GPU-eb5548a3-fa15-f7ba-4577-9273515daa46",
+      "used_MiB": 46398,
+      "recipe": "baseline"
+    },
+    {
+      "pid": 730569,
+      "gpu_index": 1,
+      "gpu_uuid": "GPU-c671f11e-3970-1af3-a79a-d96b33bdecd3",
+      "used_MiB": 52342,
+      "recipe": "baseline"
+    },
+    {
+      "pid": 730570,
+      "gpu_index": 2,
+      "gpu_uuid": "GPU-e87de433-b07a-5153-d421-e2d0f309e667",
+      "used_MiB": 76204,
+      "recipe": "baseline"
+    },
+    {
+      "pid": 730571,
+      "gpu_index": 3,
+      "gpu_uuid": "GPU-b921f194-8f47-1496-cfae-e583723a23dd",
+      "used_MiB": 75124,
+      "recipe": "baseline"
+    },
+    {
+      "pid": 730555,
+      "gpu_index": 4,
+      "gpu_uuid": "GPU-bd0cd25f-1813-47f1-077b-17a9a8f4e3a0",
+      "used_MiB": 50398,
+      "recipe": "setting3"
+    },
+    {
+      "pid": 730556,
+      "gpu_index": 5,
+      "gpu_uuid": "GPU-2eecceb2-985b-e780-eaa6-e51826ea4bdc",
+      "used_MiB": 50824,
+      "recipe": "setting3"
+    },
+    {
+      "pid": 730557,
+      "gpu_index": 6,
+      "gpu_uuid": "GPU-5269fbe9-b844-6114-d152-1c7b519c1106",
+      "used_MiB": 51354,
+      "recipe": "setting3"
+    },
+    {
+      "pid": 730558,
+      "gpu_index": 7,
+      "gpu_uuid": "GPU-3f3a27c3-c634-d58f-6f3d-333fa6b0ad18",
+      "used_MiB": 51356,
+      "recipe": "setting3"
+    }
+  ]
+}

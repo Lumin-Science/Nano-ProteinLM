@@ -407,11 +407,73 @@ def fetch_release_plan(
     return plan, manifest_path
 
 
+def _materialize_source(args: tuple[str, Mapping[str, Any], Path, Path]) -> tuple[str, dict]:
+    """Materialize one source with bounded Parquet batches and fast ASCII tokenization."""
+    import numpy as np
+
+    source, selected, cache_root, output_root = args
+    tokenizer = ProteinTokenizer.esmc()
+    translation = bytes(tokenizer.token_to_id.get(chr(i), tokenizer.unk_id) for i in range(256))
+    splits = {}
+    for split in ("train", "validation"):
+        writer = _StoreWriter(output_root / source / split)
+        try:
+            observed_previous = ""
+            for shard in selected[split]:
+                local = cache_root / str(shard["path"])
+                if file_sha256(local) != shard["sha256"]:
+                    raise ValueError(f"shard checksum mismatch: {local}")
+                records = residues = 0
+                for batch in pq.ParquetFile(local).iter_batches(
+                    columns=["sequence", "sha256", "length"], batch_size=65_536
+                ):
+                    rows = batch.to_pydict()
+                    for sequence, digest, length in zip(
+                        rows["sequence"], rows["sha256"], rows["length"], strict=True
+                    ):
+                        if len(sequence) != int(length):
+                            raise ValueError(f"length mismatch in {local}: {digest}")
+                        observed = hashlib.sha256(sequence.encode("ascii")).hexdigest()
+                        if observed != digest:
+                            raise ValueError(f"sequence digest mismatch in {local}: {digest}")
+                        if observed_previous and digest <= observed_previous:
+                            raise ValueError(f"non-increasing SHA order in {local}: {digest}")
+                        observed_previous = digest
+                        # Same strip/uppercase/unknown-token semantics as encode_residues,
+                        # without a Python generator visit for every residue in a large corpus.
+                        encoded = (
+                            sequence.strip().upper().encode("ascii").translate(translation)
+                        )
+                        writer.append(np.frombuffer(encoded, dtype=np.uint8), digest)
+                        records += 1
+                        residues += int(length)
+                if records != shard["records"] or residues != shard["residues"]:
+                    raise ValueError(f"shard record/residue count mismatch: {local}")
+                print(
+                    json.dumps(
+                        {
+                            "event": "shard_materialized",
+                            "source": source,
+                            "split": split,
+                            "path": shard["path"],
+                            "records": records,
+                        }
+                    ),
+                    flush=True,
+                )
+            splits[split] = writer.finish()
+        finally:
+            writer.handle.close()
+    return source, splits
+
+
 def materialize_plan(
     plan: Mapping[str, Any],
     release_manifest: Mapping[str, Any],
     cache_root: Path,
     output_root: Path,
+    *,
+    workers: int = 1,
 ) -> dict[str, Any]:
     """Convert a selected Parquet prefix to the existing fast mmap training layout."""
 
@@ -427,35 +489,17 @@ def materialize_plan(
                 raise ValueError(
                     f"download plan is not a release-manifest prefix: {source}/{split}"
                 )
-    tokenizer = ProteinTokenizer.esmc()
-    source_receipts: dict[str, Any] = {}
+    if workers <= 0:
+        raise ValueError("materialization workers must be positive")
     output_root.mkdir(parents=True)
-    for source in SOURCES:
-        splits: dict[str, Any] = {}
-        for split in ("train", "validation"):
-            writer = _StoreWriter(output_root / source / split)
-            observed_previous = ""
-            for shard in plan["sources"][source][split]:
-                local = cache_root / str(shard["path"])
-                parquet = pq.ParquetFile(local)
-                for batch in parquet.iter_batches(
-                    columns=["sequence", "sha256", "length"], batch_size=65_536
-                ):
-                    rows = batch.to_pydict()
-                    for sequence, digest, length in zip(
-                        rows["sequence"], rows["sha256"], rows["length"], strict=True
-                    ):
-                        if len(sequence) != int(length):
-                            raise ValueError(f"length mismatch in {local}: {digest}")
-                        observed = hashlib.sha256(sequence.encode("ascii")).hexdigest()
-                        if observed != digest:
-                            raise ValueError(f"sequence digest mismatch in {local}: {digest}")
-                        if observed_previous and digest <= observed_previous:
-                            raise ValueError(f"non-increasing SHA order in {local}: {digest}")
-                        observed_previous = digest
-                        writer.append(tokenizer.encode_residues(sequence), digest)
-            splits[split] = writer.finish()
-        source_receipts[source] = splits
+    tasks = [(source, plan["sources"][source], cache_root, output_root) for source in SOURCES]
+    if workers == 1:
+        source_receipts = dict(map(_materialize_source, tasks))
+    else:
+        from concurrent.futures import ProcessPoolExecutor
+
+        with ProcessPoolExecutor(max_workers=min(workers, len(SOURCES))) as pool:
+            source_receipts = dict(pool.map(_materialize_source, tasks))
     release_decontamination = release_manifest["decontamination"]
     manifest: dict[str, Any] = {
         "schema_version": 1,
@@ -572,6 +616,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--reuse", action="store_true", help="reuse an identical prepared corpus"
     )
     parser.add_argument("--download-workers", type=int, default=8)
+    parser.add_argument("--materialize-workers", type=int, default=1)
     parser.add_argument(
         "--weights",
         type=_weights,
@@ -598,7 +643,13 @@ def main(argv: Sequence[str] | None = None) -> None:
         print(f"Reusing verified training and MLM validation data: {args.output_root}")
         return
     release_manifest = json.loads(manifest_path.read_text())
-    receipt = materialize_plan(plan, release_manifest, args.cache_root, args.output_root)
+    receipt = materialize_plan(
+        plan,
+        release_manifest,
+        args.cache_root,
+        args.output_root,
+        workers=args.materialize_workers,
+    )
     print(json.dumps(receipt, sort_keys=True))
 
 

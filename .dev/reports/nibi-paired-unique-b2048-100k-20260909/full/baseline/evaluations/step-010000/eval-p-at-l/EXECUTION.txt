@@ -1,0 +1,7 @@
+started_at_utc=2026-09-09T05:13:57Z
+checkpoint=/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/full/baseline/checkpoint-latest.pt
+visible_gpus=0,1,2,3
+contact_chains=20775
+contact_shards=16
+finished_at_utc=2026-09-09T05:17:18Z
+evaluation_wall_seconds=201

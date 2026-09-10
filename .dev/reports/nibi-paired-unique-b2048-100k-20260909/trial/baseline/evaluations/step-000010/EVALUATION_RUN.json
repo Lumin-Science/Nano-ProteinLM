@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "optimizer_step": 10,
+  "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/trial/baseline/checkpoint-latest.pt",
+  "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/trial/baseline/evaluations/step-000010",
+  "started_utc": "2026-09-09T02:47:15.561881+00:00",
+  "wall_seconds": 318.5279194910545
+}

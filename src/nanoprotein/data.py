@@ -90,13 +90,22 @@ class TokenStore:
 class _ShuffledRows:
     """Deterministic, rank-disjoint shuffled passes through one source store."""
 
-    def __init__(self, size: int, *, seed: int, rank: int, world_size: int) -> None:
+    def __init__(
+        self,
+        size: int,
+        *,
+        seed: int,
+        rank: int,
+        world_size: int,
+        allow_resampling: bool = True,
+    ) -> None:
         if size <= 0 or world_size <= 0 or not 0 <= rank < world_size:
             raise ValueError("invalid shuffled-row contract")
         self.size = size
         self.seed = seed
         self.rank = rank
         self.world_size = world_size
+        self.allow_resampling = allow_resampling
         self.epoch = 0
         self.cursor = 0
         self.rows = self._epoch_rows()
@@ -110,6 +119,12 @@ class _ShuffledRows:
 
     def next(self) -> int:
         if self.cursor == self.rows.size:
+            if not self.allow_resampling:
+                raise RuntimeError(
+                    "training source exhausted its unique rank partition; "
+                    "resampling is disabled. "
+                    "Prepare more verified data before extending this run."
+                )
             self.epoch += 1
             self.cursor = 0
             self.rows = self._epoch_rows()
@@ -128,6 +143,7 @@ class MixtureBatcher:
         seed: int,
         rank: int = 0,
         world_size: int = 1,
+        allow_resampling: bool = True,
     ) -> None:
         missing = set(weights) - set(SOURCES)
         if missing:
@@ -146,6 +162,7 @@ class MixtureBatcher:
                 + int.from_bytes(hashlib.sha256(name.encode("ascii")).digest()[:8], "big"),
                 rank=rank,
                 world_size=world_size,
+                allow_resampling=allow_resampling,
             )
             for name in self.names
         }
@@ -179,6 +196,10 @@ class MixtureBatcher:
                 if saved[key] != getattr(sampler, key):
                     raise ValueError(f"checkpoint sampler differs at {name}/{key}")
             sampler.epoch = int(saved["epoch"])
+            if sampler.epoch and not sampler.allow_resampling:
+                raise ValueError(
+                    "checkpoint already repeated data; cannot resume as a no-repeat run"
+                )
             sampler.rows = sampler._epoch_rows()
             sampler.cursor = int(saved["cursor"])
             if not 0 <= sampler.cursor <= sampler.rows.size:

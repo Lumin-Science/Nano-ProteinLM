@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "checkpoint": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-paired-unique-b2048-100k-20260909/baseline/checkpoint-final.pt",
+  "checkpoint_sha256": "138fe1300f6f4132472ae4cf7afd6b6500b7869d22898cf181d9095f2dcd90a5",
+  "bytes": 2048443150,
+  "host": "g27.nibi.sharcnet",
+  "slurm_job_id": "12162637",
+  "slurm_step_id": "26",
+  "verified_utc": "2026-09-10T02:04:55.961818+00:00",
+  "hash_seconds": 2.893357534892857
+}

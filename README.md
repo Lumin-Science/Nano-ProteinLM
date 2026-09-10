@@ -30,6 +30,11 @@ choice of agent and search strategy remains yours.
 Prepare the environment and data once, then reuse them for training and evaluation.
 The same setup supports ordinary research and the fixed autoresearch task.
 
+**Scaling the training budget also requires scaling the prepared data.** Training
+checks each source against global batch × steps and prevents source resampling
+by default. See [data coverage and no-repeat training](docs/data-coverage.md) for
+sample-budget preparation, exposure accounting and checkpoint continuation.
+
 ### Requirements
 
 - **Environment:** Linux, a compatible NVIDIA driver and

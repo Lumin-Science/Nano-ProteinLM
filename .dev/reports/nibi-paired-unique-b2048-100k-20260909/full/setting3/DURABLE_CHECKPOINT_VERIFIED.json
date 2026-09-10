@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "checkpoint": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-paired-unique-b2048-100k-20260909/setting3/checkpoint-final.pt",
+  "checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+  "bytes": 1367402225,
+  "host": "g27.nibi.sharcnet",
+  "slurm_job_id": "12162637",
+  "slurm_step_id": "28",
+  "verified_utc": "2026-09-10T03:01:49.007686+00:00",
+  "hash_seconds": 1.2981655951589346,
+  "gpu_status": [
+    "0, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+    "1, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+    "2, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+    "3, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+    "4, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+    "5, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+    "6, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+    "7, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB"
+  ],
+  "gpu_processes": [],
+  "disk_free": [
+    "Filesystem                1B-blocks             Used       Available Use% Mounted on",
+    "10.36.8.1:/scratch 5000121486934016 4707608781914112 292512705019904  95% /scratch",
+    "10.36.8.1:/project   10000000876544     319177097216   9680823779328   4% /project",
+    "/dev/md127           12699911823360     131363635200  11928432177152   2% /local"
+  ]
+}
