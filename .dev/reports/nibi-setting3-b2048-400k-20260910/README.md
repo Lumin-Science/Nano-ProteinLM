@@ -1,6 +1,6 @@
 # Nibi Setting 3 continuation: 100k to 400k Stage-1 steps
 
-**All evaluations through 190k passed independent local verification; the 190k evaluation completed September 10 at about 12:23 p.m. Toronto.** The latest collection adds the 150k, 160k, 170k, 180k and 190k endpoints. Training continued normally; the audited metric snapshot reaches step 198080. Nibi SSH access was restored for this check after the earlier MFA interruption. The finish estimate remains September 11 around 4 p.m. Toronto.
+**All evaluations through 200k passed independent local verification; the 200k evaluation completed September 10 at about 1:42 p.m. Toronto.** The first durable continuation checkpoint is now preserved, its SHA-256 matches the evaluated checkpoint, and a separate CPU audit on the allocated node restored the full model and optimizer exactly. Training continued normally; the audited metric snapshot reaches step 202660. The finish estimate remains September 11 around 4 p.m. Toronto, before the allocation expires September 14 at 7:24 a.m.
 
 | Total steps | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
 |---|---:|---:|---:|
@@ -13,15 +13,18 @@
 | 160,000 | 2.349844 | 38.526% | 38.283–38.778% |
 | 170,000 | 2.346989 | 38.928% | 38.681–39.178% |
 | 180,000 | 2.345196 | 39.240% | 38.995–39.491% |
-| **190,000** | **2.342742** | **39.520%** | **39.274–39.771%** |
+| 190,000 | 2.342742 | 39.520% | 39.274–39.771% |
+| **200,000** | **2.342123** | **39.567%** | **39.323–39.815%** |
 
-From 180k to 190k, validation loss fell **0.002454** and P@L rose **0.279 percentage points**. Relative to the 100k parent, validation loss is **0.032959 lower** and P@L is **2.952 points higher**; the paired chain-bootstrap interval for the latter gain is **2.896–3.011 points**. These intervals measure variation across the same 20,775 contact chains, not across training seeds. All nine continuation endpoints have independently verified component hashes, chain identities, probe settings, checkpoint bindings and 5,000 bootstrap replicates.
+From 190k to 200k, validation loss fell **0.000618** and P@L rose **0.047 percentage points**. Relative to the 100k parent, validation loss is **0.033578 lower** and P@L is **2.999 points higher**; the paired chain-bootstrap interval for the latter gain is **2.941–3.061 points**. These intervals measure variation across the same 20,775 contact chains, not across training seeds. All ten continuation endpoints have independently verified component hashes, chain identities, probe settings, checkpoint bindings and 5,000 bootstrap replicates.
 
-The global training objective averaged 2.284882 over 170k–180k and 2.281030 over 180k–190k, with mean gradient norms 0.089436 and 0.090243. Both held-out metrics continue improving; these new observations do not indicate a sustained optimization failure following resume. The historical resume investigation remains unchanged.
+The global training objective averaged 2.281030 over 180k–190k and 2.278427 over 190k–200k, with mean gradient norms 0.090243 and 0.089543. The 190k–200k interval averaged 0.447 seconds per training update. Both held-out metrics improved slightly at this endpoint; the smaller gain alone does not demonstrate an optimization failure. The historical resume investigation remains unchanged.
 
-See the [110k audit](full/evaluations/step-110000/LOCAL_AUDIT.json), [120k audit](full/evaluations/step-120000/LOCAL_AUDIT.json), [130k audit](full/evaluations/step-130000/LOCAL_AUDIT.json), [140k audit](full/evaluations/step-140000/LOCAL_AUDIT.json), [150k audit](full/evaluations/step-150000/LOCAL_AUDIT.json), [160k audit](full/evaluations/step-160000/LOCAL_AUDIT.json), [170k audit](full/evaluations/step-170000/LOCAL_AUDIT.json), [180k audit](full/evaluations/step-180000/LOCAL_AUDIT.json), [190k audit](full/evaluations/step-190000/LOCAL_AUDIT.json), [machine-readable curve](learning-curve.json), and [local evaluation verifier](verify_evaluation.py). All earlier audited results are retained.
+See the [110k audit](full/evaluations/step-110000/LOCAL_AUDIT.json), [120k audit](full/evaluations/step-120000/LOCAL_AUDIT.json), [130k audit](full/evaluations/step-130000/LOCAL_AUDIT.json), [140k audit](full/evaluations/step-140000/LOCAL_AUDIT.json), [150k audit](full/evaluations/step-150000/LOCAL_AUDIT.json), [160k audit](full/evaluations/step-160000/LOCAL_AUDIT.json), [170k audit](full/evaluations/step-170000/LOCAL_AUDIT.json), [180k audit](full/evaluations/step-180000/LOCAL_AUDIT.json), [190k audit](full/evaluations/step-190000/LOCAL_AUDIT.json), [200k audit](full/evaluations/step-200000/LOCAL_AUDIT.json), [machine-readable curve](learning-curve.json), and [local evaluation verifier](verify_evaluation.py). All earlier audited results are retained.
 
-At 190k, UniRef90 is in its second pass and accounts for 64,506,651 permitted repeated draws. MGnify and OMG/IMG still have zero repeated draws. The checkpoint contains 389,120,000 total sequence draws; all source histories and counts remain consistent with the retained 100k history. The first durable continuation milestone is scheduled at 200k; this 190k report does not claim that milestone checkpoint already exists.
+At 200k, UniRef90 is in its second pass and accounts for 71,803,066 permitted repeated draws. MGnify and OMG/IMG still have zero repeated draws. The checkpoint contains 409,600,000 total sequence draws and 96,755,838,093 non-padding model tokens; all source histories and counts remain consistent with the retained 100k history.
+
+The [durable 200k preservation receipt](milestones/checkpoint-200000.json) records a 1,367,474,348-byte full checkpoint at `/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-b2048-400k-20260910/checkpoint-200000.pt` with SHA-256 `7dd4227dc8dccdd2b9f786f7c37b6a2b876a6715628b47eb6ee10d90175e9833`. An independent [full model/optimizer restoration audit](milestones/checkpoint-200000-restore-verified.json) verified the saved file hash, exact restoration, finite tensors, eight-rank global sampler state, and all exposure counts on allocated CPUs without interrupting training. The parent 100k remains separately preserved; 300k and 400k are future milestones.
 
 ## Launch and recipe
 
