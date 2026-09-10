@@ -16,6 +16,8 @@ At 120k, UniRef90 has completed its first full pass and accounts for 13,412,912 
 
 ## Launch and recipe
 
+The [resume investigation](resume-diagnostics/README.md) examines the 90k–120k performance changes and the loss curve around 100k. It found no substantial global-objective jump or optimizer reset; the raw `loss` diagnostic becomes noisier because it only logs rank 0, whose local batch was halved. The investigation includes a figure and saved-state checks, and leaves production unchanged.
+
 **Production launched successfully on September 10, 2026 at 12:36 a.m. Toronto** in Slurm step **12162637.32**, allocation **12162637**, Nibi **g27**. Setting 3 continues from its verified 100k checkpoint on all eight H100s. The initial local audit covers 660 additional updates, with finite losses/gradients and preserved source history. All eight GPUs belonged to this run and showed 97–99% utilization at the GPU audit. See [launch verification](LAUNCH_VERIFIED.json) and [GPU/preservation proof](launch/LAUNCH_GPU_AND_PRESERVATION.json).
 
 The measured speed is **0.447 seconds/update**, projecting about **39.4 hours from launch**, including 30 evaluations and an overhead allowance. The initial finish estimate is **September 11 around 4 p.m. Toronto**, with roughly two hours uncertainty. Monitoring is active every two hours. This launch snapshot predates the evaluated checkpoints above.
