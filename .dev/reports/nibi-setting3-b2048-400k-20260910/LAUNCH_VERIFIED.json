@@ -1,0 +1,22 @@
+{
+  "status": "passed",
+  "scope": "healthy production launch; no production evaluation endpoint completed yet",
+  "source_commit": "bd0b754e817363bf5f5f9d48b2c482818a79559f",
+  "production_step": "12162637.32",
+  "started_utc": "2026-09-10T04:36:12+00:00",
+  "parent_optimizer_step": 100000,
+  "target_total_optimizer_steps": 400000,
+  "global_batch": 2048,
+  "world_size": 8,
+  "latest_collected_optimizer_step": 100660,
+  "finite_metric_rows": 66,
+  "shared_trial_production_steps_with_identical_data_accounting": 20,
+  "recipe_matches_local_source_actual_run_and_durable_copy": true,
+  "qualification_optimizer_restores_exact": true,
+  "production_median_seconds_per_step_last_200_updates": 0.44670921249780804,
+  "qualification_full_evaluation_seconds": 228.50591415911913,
+  "estimate_overhead_allowance_seconds": 900,
+  "estimated_launch_to_finish_hours": 39.379983659476665,
+  "estimated_finish_toronto": "2026-09-11T15:58:59.941174-04:00",
+  "estimate_note": "Early throughput projection including 30 evaluations and 15 minutes overhead; allow roughly two hours uncertainty."
+}

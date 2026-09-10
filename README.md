@@ -256,7 +256,13 @@ Setting 3 improves P@L by **8.394 percentage points** (paired chain-bootstrap
 95% CI **8.297–8.492 points**) and validation loss by **0.039033**.
 See the [full ten-point curves, checkpoint receipts and final audits](.dev/reports/nibi-paired-unique-b2048-100k-20260909/README.md).
 These are one-seed comparisons; intervals measure variation across contact
-chains. Times exclude evaluation pauses. The historical Fir comparison below
+chains. Times exclude evaluation pauses.
+
+Setting 3 is now [continuing from 100k to 400k steps on eight Nibi H100s](.dev/reports/nibi-setting3-b2048-400k-20260910/README.md),
+with batch 2,048, evaluation every 10k and an expanded 427.5M-record corpus.
+The [frozen continuation recipe](configs/setting3-nibi-b2048-400k.yaml) and full
+optimizer/sampler checkpoints support later continuation on four GPUs.
+The historical Fir comparison below
 uses a smaller batch and different prepared-data budget.
 
 Matched runs use **100,000 Stage-1 steps on four H100s**, batch **1,024**, base

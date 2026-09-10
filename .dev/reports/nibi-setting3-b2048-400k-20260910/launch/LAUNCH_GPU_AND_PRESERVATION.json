@@ -1,0 +1,255 @@
+{
+  "status": "passed",
+  "observed_utc": "2026-09-10T04:39:20.274593+00:00",
+  "allocation": "12162637",
+  "node": "g27",
+  "source_commit": "bd0b754e817363bf5f5f9d48b2c482818a79559f",
+  "production_from_original_100k_checkpoint": true,
+  "all_eight_h100s_owned_by_this_training_run": true,
+  "gpu_columns": [
+    "index",
+    "uuid",
+    "name",
+    "utilization_percent",
+    "memory_used_mib",
+    "memory_total_mib"
+  ],
+  "gpus": [
+    [
+      "0",
+      "GPU-eb5548a3-fa15-f7ba-4577-9273515daa46",
+      "NVIDIA H100 80GB HBM3",
+      "99",
+      "35813",
+      "81559"
+    ],
+    [
+      "1",
+      "GPU-c671f11e-3970-1af3-a79a-d96b33bdecd3",
+      "NVIDIA H100 80GB HBM3",
+      "99",
+      "35651",
+      "81559"
+    ],
+    [
+      "2",
+      "GPU-e87de433-b07a-5153-d421-e2d0f309e667",
+      "NVIDIA H100 80GB HBM3",
+      "99",
+      "35651",
+      "81559"
+    ],
+    [
+      "3",
+      "GPU-b921f194-8f47-1496-cfae-e583723a23dd",
+      "NVIDIA H100 80GB HBM3",
+      "98",
+      "35651",
+      "81559"
+    ],
+    [
+      "4",
+      "GPU-bd0cd25f-1813-47f1-077b-17a9a8f4e3a0",
+      "NVIDIA H100 80GB HBM3",
+      "97",
+      "35651",
+      "81559"
+    ],
+    [
+      "5",
+      "GPU-2eecceb2-985b-e780-eaa6-e51826ea4bdc",
+      "NVIDIA H100 80GB HBM3",
+      "97",
+      "35651",
+      "81559"
+    ],
+    [
+      "6",
+      "GPU-5269fbe9-b844-6114-d152-1c7b519c1106",
+      "NVIDIA H100 80GB HBM3",
+      "98",
+      "35653",
+      "81559"
+    ],
+    [
+      "7",
+      "GPU-3f3a27c3-c634-d58f-6f3d-333fa6b0ad18",
+      "NVIDIA H100 80GB HBM3",
+      "97",
+      "35653",
+      "81559"
+    ]
+  ],
+  "process_columns": [
+    "pid",
+    "gpu_uuid",
+    "used_memory_mib"
+  ],
+  "processes": [
+    [
+      "1003786",
+      "GPU-eb5548a3-fa15-f7ba-4577-9273515daa46",
+      "35804"
+    ],
+    [
+      "1003787",
+      "GPU-c671f11e-3970-1af3-a79a-d96b33bdecd3",
+      "35642"
+    ],
+    [
+      "1003788",
+      "GPU-e87de433-b07a-5153-d421-e2d0f309e667",
+      "35642"
+    ],
+    [
+      "1003790",
+      "GPU-b921f194-8f47-1496-cfae-e583723a23dd",
+      "35642"
+    ],
+    [
+      "1003791",
+      "GPU-bd0cd25f-1813-47f1-077b-17a9a8f4e3a0",
+      "35642"
+    ],
+    [
+      "1003792",
+      "GPU-2eecceb2-985b-e780-eaa6-e51826ea4bdc",
+      "35642"
+    ],
+    [
+      "1003793",
+      "GPU-5269fbe9-b844-6114-d152-1c7b519c1106",
+      "35644"
+    ],
+    [
+      "1003794",
+      "GPU-3f3a27c3-c634-d58f-6f3d-333fa6b0ad18",
+      "35644"
+    ]
+  ],
+  "preserved_files": {
+    "recipe.yaml": {
+      "status": "passed",
+      "source": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/configs/setting3-nibi-b2048-400k.yaml",
+      "preserved": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-b2048-400k-20260910/recipe.yaml",
+      "sha256": "afdeaad2f3810a2ad6fb0e86e1c57ba100a402c12e6157e8f406a7c7936bb43f",
+      "bytes": 1398
+    },
+    "DATA_PLAN.json": {
+      "status": "passed",
+      "source": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910/DATA_PLAN.json",
+      "preserved": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-b2048-400k-20260910/DATA_PLAN.json",
+      "sha256": "caf32ef1b37026bc25226cbb8c582e9b4d6d35f0da2eed9dba1d6590693ac7a6",
+      "bytes": 18745
+    },
+    "DATA_MIGRATION.json": {
+      "status": "passed",
+      "source": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910/DATA_MIGRATION.json",
+      "preserved": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-b2048-400k-20260910/DATA_MIGRATION.json",
+      "sha256": "1993c4af5ee78f404195b483130c8cf2edc43c1d81c5396f528a858e74417450",
+      "bytes": 1721
+    },
+    "SOURCE_COMMIT.txt": {
+      "status": "passed",
+      "source": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910/SOURCE_COMMIT.txt",
+      "preserved": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-b2048-400k-20260910/SOURCE_COMMIT.txt",
+      "sha256": "debf159cad8ba14a0222010fb08a4ff322078bb151da7cdf1f71ae697747d0cc",
+      "bytes": 41
+    },
+    "source.bundle": {
+      "status": "passed",
+      "source": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910/source.bundle",
+      "preserved": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-b2048-400k-20260910/source.bundle",
+      "sha256": "a8005f43f3c64541beae05a7dbdd2d96524af39cce111c74c207db6f43504646",
+      "bytes": 8271914
+    }
+  },
+  "finite_production_metric_rows": 32,
+  "latest": {
+    "attention_backend": "flash3",
+    "batch_balance": {
+      "rank_tokens_after": [
+        15600,
+        15599,
+        15599,
+        15599,
+        15599,
+        15599,
+        15599,
+        15599
+      ],
+      "rank_tokens_before": [
+        16485,
+        15668,
+        14346,
+        16712,
+        14030,
+        16153,
+        14760,
+        16639
+      ]
+    },
+    "data_resampling": "per_source",
+    "estimated_training_flops": 49680183585304368960,
+    "event": "train",
+    "filled_residues": 48135275890,
+    "gradient_norm": 0.08897978812456131,
+    "learning_rate": 0.00045000000000000004,
+    "loss": 2.4077218770980835,
+    "mfu_6n": 0.13951652485498134,
+    "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+    "model_tokens": 48546186610,
+    "objective_loss": 2.325307548046112,
+    "optimizer": "muon",
+    "optimizer_step": 100320,
+    "sequences_seen": 205455360,
+    "source_counts_global": {
+      "mgnify": 22379478,
+      "omg_img": 109850566,
+      "uniref90": 73225316
+    },
+    "source_counts_rank0": {
+      "mgnify": 2797484,
+      "omg_img": 13731166,
+      "uniref90": 9153271
+    },
+    "source_epoch_maxima": {
+      "mgnify": 0,
+      "omg_img": 0,
+      "uniref90": 0
+    },
+    "source_exposure_global": {
+      "mgnify": {
+        "available_records": 90495061,
+        "draws": 22379478,
+        "epoch": 0,
+        "epoch_cursor": 71615,
+        "repeated_draws": 0,
+        "unique_records_seen": 22379478
+      },
+      "omg_img": {
+        "available_records": 262845186,
+        "draws": 109850566,
+        "epoch": 0,
+        "epoch_cursor": 350510,
+        "repeated_draws": 0,
+        "unique_records_seen": 109850566
+      },
+      "uniref90": {
+        "available_records": 74175974,
+        "draws": 73225316,
+        "epoch": 0,
+        "epoch_cursor": 233235,
+        "repeated_draws": 0,
+        "unique_records_seen": 73225316
+      }
+    },
+    "stage": "stage1",
+    "stage_progress": 0.2507975,
+    "step_compute_seconds": 0.4465802588965744,
+    "step_model_tokens": 481951,
+    "tokens_per_second": 1079203.5482957102,
+    "training_loss_reduction": "sqrt_mask_count",
+    "training_seconds": 144.54121767287143
+  }
+}

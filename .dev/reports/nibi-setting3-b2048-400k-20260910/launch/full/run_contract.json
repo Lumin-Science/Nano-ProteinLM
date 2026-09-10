@@ -1,0 +1,150 @@
+{
+  "attention_implementation": "whole-transformer-packed-_flash_attn3_cuda_477ab85",
+  "attention_kernel": {
+    "build": "build/torch-stable-abi210-cu130-x86_64-linux",
+    "implementation": "FlashAttention-3",
+    "operator": "_flash_attn3_cuda_477ab85",
+    "repository": "kernels-community/flash-attn3",
+    "revision": "e29f138fc363b396e5d2706c8a5f6fa7d36f41e0"
+  },
+  "config_overrides": {},
+  "config_path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/configs/setting3-nibi-b2048-400k.yaml",
+  "config_sha256": "afdeaad2f3810a2ad6fb0e86e1c57ba100a402c12e6157e8f406a7c7936bb43f",
+  "corpus_verification_sha256": "9db495ca2216e6eac217e7cf68c25631987a21fd5b13029e13b2677a69df7460",
+  "cuda": "13.0",
+  "data_coverage": {
+    "headroom_fraction": 0.01,
+    "policy": "per_source",
+    "protocol": "training-data-coverage-v1",
+    "runtime_exhaustion_guard": true,
+    "scope": "per-run records across all ranks and stages; draws are not unique proteins when resampling is allowed",
+    "sources": {
+      "mgnify": {
+        "available_records": 90495061,
+        "expected_draws": 89219801.98019803,
+        "expected_exposures": 0.9859079710460444,
+        "required_records_with_headroom": 90112000,
+        "resampling": "error",
+        "sufficient": true
+      },
+      "omg_img": {
+        "available_records": 262845186,
+        "expected_draws": 437988118.8118812,
+        "expected_exposures": 1.6663349459703674,
+        "required_records_with_headroom": 442368000,
+        "resampling": "allow",
+        "sufficient": false
+      },
+      "uniref90": {
+        "available_records": 74175974,
+        "expected_draws": 291992079.2079208,
+        "expected_exposures": 3.936477857478768,
+        "required_records_with_headroom": 294912000,
+        "resampling": "allow",
+        "sufficient": false
+      }
+    },
+    "stages": [
+      {
+        "draws": 819200000,
+        "global_batch": 2048,
+        "name": "stage1",
+        "steps": 400000
+      }
+    ],
+    "status": "passed",
+    "world_size": 8
+  },
+  "data_manifest": "/local/scratch/muchenli.12162637.0/nano-nibi-setting3-400k-20260910/manifest.json",
+  "data_manifest_sha256": "52399ee87da1d4d6d019ebc9b232cbf48bfe038c9ee5f9ea65814b9c3b70a2f6",
+  "data_migration": {
+    "global_data_seed": 20260910,
+    "new_manifest_sha256": "52399ee87da1d4d6d019ebc9b232cbf48bfe038c9ee5f9ea65814b9c3b70a2f6",
+    "old_manifest_sha256": "c30da4a52028cb63bf4f764ff039009d965144db5a6fbf1069f4eebf97c7d3fa",
+    "origins": {
+      "mgnify": {
+        "cursors": [
+          5574480,
+          5580429,
+          5576202,
+          5576752
+        ],
+        "seed": 4103710697950298778,
+        "size": 22984503,
+        "world_size": 4
+      },
+      "omg_img": {
+        "cursors": [
+          27371114,
+          27376922,
+          27374443,
+          27377577
+        ],
+        "seed": 10774739657003171143,
+        "size": 111296892,
+        "world_size": 4
+      },
+      "uniref90": {
+        "cursors": [
+          18254406,
+          18242649,
+          18249355,
+          18245671
+        ],
+        "seed": 11975045329124865783,
+        "size": 74175974,
+        "world_size": 4
+      }
+    },
+    "parent_checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+    "parent_sequences_seen": 204800000,
+    "parent_step": 100000,
+    "prefix_verification": {
+      "mgnify": {
+        "existing_indices_and_tokens_identical": true,
+        "new_records": 90495061,
+        "old_records": 22984503
+      },
+      "omg_img": {
+        "existing_indices_and_tokens_identical": true,
+        "new_records": 262845186,
+        "old_records": 111296892
+      },
+      "uniref90": {
+        "existing_indices_and_tokens_identical": true,
+        "new_records": 74175974,
+        "old_records": 74175974
+      }
+    },
+    "protocol": "append-only-global-sampler-migration-v1",
+    "release_manifest_sha256": "fe1ac0657085ab19fe6f56786006e9eb004ca66bc6c5b81dfd8e6bc3dcfda6ff",
+    "status": "passed",
+    "validation_unchanged": true,
+    "verified_utc": "2026-09-10T04:24:35.137718+00:00"
+  },
+  "git_commit": "bd0b754e817363bf5f5f9d48b2c482818a79559f",
+  "git_dirty": false,
+  "homology_exclusion": true,
+  "homology_exclusion_receipt_sha256": "bb94365a46c0d4d5f5fef16a9fc9b1c393d7ad9b7d2d004caba252002930248b",
+  "python": "3.11.4",
+  "python_executable": "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/bin/python3.11",
+  "resolved_config_path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910/full/config.yaml",
+  "resolved_config_sha256": "37a9f07d2f3fe04ff8c1579aaf71c0ce0b48638f5194dff210fc4bd3bde4ad70",
+  "resume_checkpoint": "/project/6010929/muchenli/Nano-Protein-LM/checkpoints/nibi-paired-unique-b2048-100k-20260909/setting3/checkpoint-final.pt",
+  "resume_checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+  "resume_optimizer_step": 100000,
+  "resume_source_world_size": 4,
+  "runtime_packages": {
+    "PyYAML": "6.0.3",
+    "huggingface-hub": "1.27.0",
+    "numpy": "2.4.6",
+    "pyarrow": "25.0.0",
+    "torch": "2.13.0"
+  },
+  "torch": "2.13.0+cu130",
+  "training_budget_semantics": "true synchronized training-loop wall time; setup, final checkpoint, and evaluation are outside the training clock",
+  "uv_lock": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/uv.lock",
+  "uv_lock_sha256": "3dcddbfce190a8b2dabc1841ddcd08c67f06e8a727f52fab86c72b4da0b75f15",
+  "visible_gpu": "NVIDIA H100 80GB HBM3",
+  "world_size": 8
+}

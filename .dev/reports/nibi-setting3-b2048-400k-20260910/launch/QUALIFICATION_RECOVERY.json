@@ -1,0 +1,24 @@
+{
+  "pid": 4097920,
+  "host": "l1.nibi.sharcnet",
+  "command": [
+    "/opt/software/slurm/25.11.7p/bin/srun",
+    "--jobid=12162637",
+    "--overlap",
+    "--nodes=1",
+    "--ntasks=1",
+    "--cpus-per-task=32",
+    "--mem=256G",
+    "--gres=gpu:8",
+    "--time=03:00:00",
+    "bash",
+    "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/runs/nibi_setting3_400k.sh",
+    "qualification"
+  ],
+  "started_utc": "2026-09-10T04:28:19.795737+00:00",
+  "source_commit": "bd0b754e817363bf5f5f9d48b2c482818a79559f",
+  "previous_attempt_archive": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910/qualification-attempts/schedule-limit-before-training",
+  "fix": "Align trial schedule_steps with each trial max_steps; production recipe unchanged",
+  "prior_attempt_optimizer_updates": 0,
+  "migration_reused_after_full_prefix_verification": true
+}

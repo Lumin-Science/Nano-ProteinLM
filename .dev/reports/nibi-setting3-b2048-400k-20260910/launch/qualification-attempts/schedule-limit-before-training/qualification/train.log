@@ -1,0 +1,202 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1350, in <module>
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+Traceback (most recent call last):
+  File "<frozen runpy>", line 88, in _run_code
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1350, in <module>
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1350, in <module>
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1350, in <module>
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1350, in <module>
+  File "<frozen runpy>", line 88, in _run_code
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1350, in <module>
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1350, in <module>
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1350, in <module>
+                main()main()main()main()
+
+
+
+        main()main()
+
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1338, in main
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1338, in main
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1338, in main
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1338, in main
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1338, in main
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1338, in main
+    main()
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1338, in main
+    train(    
+    train(train(
+
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 614, in train
+      File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 614, in train
+train(  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 614, in train
+    
+train(
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 614, in train
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 614, in train
+    train(
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 614, in train
+    train(
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 614, in train
+    main()
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 1338, in main
+    config = resolve_config_overrides(load_config(config_path), overrides)
+    config = resolve_config_overrides(load_config(config_path), overrides)    
+config = resolve_config_overrides(load_config(config_path), overrides)
+    config = resolve_config_overrides(load_config(config_path), overrides)
+                    ^   ^   ^   ^   ^   ^   ^   ^   ^   ^  ^^^ ^^^ ^^^ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 60, in resolve_config_overrides
+^^^^^^^^^^^^^^^^^^^^
+^^
+^  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 60, in resolve_config_overrides
+^  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 60, in resolve_config_overrides
+^
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 60, in resolve_config_overrides
+    config = resolve_config_overrides(load_config(config_path), overrides)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^    ^train(^
+^^^^  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 614, in train
+^^^^^^^
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 60, in resolve_config_overrides
+        resolve_step_budgets(resolved)resolve_step_budgets(resolved)
+
+    resolve_step_budgets(resolved)
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 106, in resolve_step_budgets
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 106, in resolve_step_budgets
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 106, in resolve_step_budgets
+    config = resolve_config_overrides(load_config(config_path), overrides)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 60, in resolve_config_overrides
+    resolve_step_budgets(resolved)    
+resolve_step_budgets(resolved)
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 106, in resolve_step_budgets
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 106, in resolve_step_budgets
+    config = resolve_config_overrides(load_config(config_path), overrides)
+    config = resolve_config_overrides(load_config(config_path), overrides)
+               ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 60, in resolve_config_overrides
+^^^^^^^^^
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 60, in resolve_config_overrides
+    raise ValueError("schedule_steps cannot exceed max_steps")    
+resolve_step_budgets(resolved)
+    raise ValueError("schedule_steps cannot exceed max_steps")
+ValueError:   File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 106, in resolve_step_budgets
+schedule_steps cannot exceed max_steps
+ValueError: schedule_steps cannot exceed max_steps
+    resolve_step_budgets(resolved)    
+        raise ValueError("schedule_steps cannot exceed max_steps")    resolve_step_budgets(resolved)raise ValueError("schedule_steps cannot exceed max_steps")
+raise ValueError("schedule_steps cannot exceed max_steps")
+
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 106, in resolve_step_budgets
+
+ValueError: schedule_steps cannot exceed max_steps
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/src/nanoprotein/train.py", line 106, in resolve_step_budgets
+ValueError: ValueErrorschedule_steps cannot exceed max_steps: 
+schedule_steps cannot exceed max_steps
+    raise ValueError("schedule_steps cannot exceed max_steps")
+ValueError: schedule_steps cannot exceed max_steps
+    raise ValueError("schedule_steps cannot exceed max_steps")
+    raise ValueError("schedule_steps cannot exceed max_steps")
+ValueError: schedule_steps cannot exceed max_steps
+ValueError: schedule_steps cannot exceed max_steps
+E0910 00:24:47.210000 1000925 /scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-20260908/runtime-online/.venv/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/api.py:1002] failed (exitcode: 1) local_rank: 0 (pid: 1000988) of binary: /scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/runtime/.venv/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/runtime/.venv/lib/python3.11/site-packages/torch/distributed/run.py", line 1032, in <module>
+    main()
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/runtime/.venv/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 367, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/runtime/.venv/lib/python3.11/site-packages/torch/distributed/run.py", line 1028, in main
+    run(args)
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/runtime/.venv/lib/python3.11/site-packages/torch/distributed/run.py", line 1019, in run
+    elastic_launch(
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/runtime/.venv/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 194, in __call__
+    return launch_agent(
+           ^^^^^^^^^^^^^
+  File "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-100k-eval10k-20260908/runtime/.venv/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 383, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+nanoprotein.train FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-09-10_00:24:47
+  host      : g27
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 1000989) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[2]:
+  time      : 2026-09-10_00:24:47
+  host      : g27
+  rank      : 2 (local_rank: 2)
+  exitcode  : 1 (pid: 1000990) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[3]:
+  time      : 2026-09-10_00:24:47
+  host      : g27
+  rank      : 3 (local_rank: 3)
+  exitcode  : 1 (pid: 1000991) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[4]:
+  time      : 2026-09-10_00:24:47
+  host      : g27
+  rank      : 4 (local_rank: 4)
+  exitcode  : 1 (pid: 1000992) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[5]:
+  time      : 2026-09-10_00:24:47
+  host      : g27
+  rank      : 5 (local_rank: 5)
+  exitcode  : 1 (pid: 1000993) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[6]:
+  time      : 2026-09-10_00:24:47
+  host      : g27
+  rank      : 6 (local_rank: 6)
+  exitcode  : 1 (pid: 1000994) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[7]:
+  time      : 2026-09-10_00:24:47
+  host      : g27
+  rank      : 7 (local_rank: 7)
+  exitcode  : 1 (pid: 1000995) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-09-10_00:24:47
+  host      : g27
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 1000988) 
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

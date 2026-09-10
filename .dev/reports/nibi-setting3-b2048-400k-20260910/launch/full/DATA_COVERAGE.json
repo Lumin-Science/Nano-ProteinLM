@@ -1,0 +1,43 @@
+{
+  "headroom_fraction": 0.01,
+  "policy": "per_source",
+  "protocol": "training-data-coverage-v1",
+  "runtime_exhaustion_guard": true,
+  "scope": "per-run records across all ranks and stages; draws are not unique proteins when resampling is allowed",
+  "sources": {
+    "mgnify": {
+      "available_records": 90495061,
+      "expected_draws": 89219801.98019803,
+      "expected_exposures": 0.9859079710460444,
+      "required_records_with_headroom": 90112000,
+      "resampling": "error",
+      "sufficient": true
+    },
+    "omg_img": {
+      "available_records": 262845186,
+      "expected_draws": 437988118.8118812,
+      "expected_exposures": 1.6663349459703674,
+      "required_records_with_headroom": 442368000,
+      "resampling": "allow",
+      "sufficient": false
+    },
+    "uniref90": {
+      "available_records": 74175974,
+      "expected_draws": 291992079.2079208,
+      "expected_exposures": 3.936477857478768,
+      "required_records_with_headroom": 294912000,
+      "resampling": "allow",
+      "sufficient": false
+    }
+  },
+  "stages": [
+    {
+      "draws": 819200000,
+      "global_batch": 2048,
+      "name": "stage1",
+      "steps": 400000
+    }
+  ],
+  "status": "passed",
+  "world_size": 8
+}

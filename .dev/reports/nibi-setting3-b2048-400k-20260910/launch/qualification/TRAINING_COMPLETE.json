@@ -1,0 +1,71 @@
+{
+  "compute_seconds": 91.05135753378272,
+  "cumulative_training_seconds": 81672.44627591223,
+  "event": "training_complete",
+  "filled_residues": 48077690704,
+  "final_checkpoint": {
+    "filled_residues": 48077690704,
+    "model_tokens": 48488109904,
+    "optimizer_step": 100200,
+    "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910/qualification/checkpoint-final.pt",
+    "sequences_seen": 205209600,
+    "sha256": "7d50cfeb4aae8fcd8f997056a2f09235062c98d99699d38c683a5b8c3476b92c",
+    "training_seconds": 81672.44627591223
+  },
+  "model_tokens": 48488109904,
+  "optimizer_steps": 100200,
+  "parameter_count": 170559856,
+  "peak_cuda_memory_bytes": 21095126016,
+  "periodic_evaluation_seconds": 228.50591415911913,
+  "resume_data_mode": "verified_append_only_global_sampler_migration",
+  "schedule_optimizer_steps": 100200,
+  "sequences_seen": 205209600,
+  "source_counts": {
+    "stage1": {
+      "mgnify": 22352636,
+      "omg_img": 109718768,
+      "uniref90": 73138196
+    }
+  },
+  "source_counts_scope": "current_sampler_stream_including_restored_history",
+  "source_epoch_maxima": {
+    "stage1": {
+      "mgnify": 0,
+      "omg_img": 0,
+      "uniref90": 0
+    }
+  },
+  "source_exposure_global": {
+    "stage1": {
+      "mgnify": {
+        "available_records": 90495061,
+        "draws": 22352636,
+        "epoch": 0,
+        "epoch_cursor": 44773,
+        "repeated_draws": 0,
+        "unique_records_seen": 22352636
+      },
+      "omg_img": {
+        "available_records": 262845186,
+        "draws": 109718768,
+        "epoch": 0,
+        "epoch_cursor": 218712,
+        "repeated_draws": 0,
+        "unique_records_seen": 109718768
+      },
+      "uniref90": {
+        "available_records": 74175974,
+        "draws": 73138196,
+        "epoch": 0,
+        "epoch_cursor": 146115,
+        "repeated_draws": 0,
+        "unique_records_seen": 73138196
+      }
+    }
+  },
+  "stage_checkpoint": null,
+  "stop_reason": "max_steps",
+  "target_optimizer_steps": 100200,
+  "training_seconds": 96.30484254774638,
+  "walltime_budget_seconds": 3600.0
+}

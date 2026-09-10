@@ -9,10 +9,12 @@ restored by the frozen verifier.
 The runs launched on September 8 at about 11:01 p.m. Toronto in step
 **12162637.24**, allocation **12162637**, Nibi **g27**. Source commit:
 `bc54124abe193623abf64b44e65b881cded65f48`. The allocation remains intact;
-all eight H100s were idle at the final inspection. The two-hour completion
-monitor is paused because both runs and their artifacts are verified complete.
+all eight H100s were idle at the final inspection. The paired completion
+monitor was paused once both runs and their artifacts were verified complete.
 The frozen recipes, learning curves and verification receipts are recorded in
-this repository. Publication to main was explicitly authorized on September 10.
+this repository and were published to main at `1c13852` on September 10.
+Setting 3 subsequently [resumed toward 400k steps on all eight GPUs](../nibi-setting3-b2048-400k-20260910/README.md),
+with the two-hour monitor reassigned to that continuation.
 
 ## Final comparison
 

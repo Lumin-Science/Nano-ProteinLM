@@ -1,6 +1,6 @@
 # Setting 3: continuation from 100k to 400k Stage-1 steps
 
-Status: **approved for implementation and training on September 10, 2026.**
+Status: **implemented; production launched September 10, 2026 at 12:36 a.m. Toronto.**
 See the [execution record](../nibi-setting3-b2048-400k-20260910/README.md). The user selected **Setting 3 only on all eight
 Nibi GPUs**. This is a continuation of the completed 100k model, adding 300k
 optimizer updates with the same global batch of 2,048.

@@ -1,9 +1,18 @@
 # Nibi Setting 3 continuation: 100k to 400k Stage-1 steps
 
-The user authorized implementation and training on September 10, 2026, choosing
-Setting 3 alone on all eight Nibi H100s. Data preparation is underway; production
-must pass the recorded qualification gate before launch. This report will be
-updated with the verified launch and finish estimate.
+**Production launched successfully on September 10, 2026 at 12:36 a.m. Toronto**
+in Slurm step **12162637.32**, allocation **12162637**, Nibi **g27**. Setting 3
+continues from its verified 100k checkpoint on all eight H100s. The initial
+local audit covers 660 additional updates, with finite losses/gradients and
+preserved source history. All eight GPUs belonged to this run and showed
+97–99% utilization at the GPU audit. See [launch verification](LAUNCH_VERIFIED.json)
+and [GPU/preservation proof](launch/LAUNCH_GPU_AND_PRESERVATION.json).
+
+The measured speed is **0.447 seconds/update**, projecting about **39.4 hours
+from launch**, including 30 evaluations and an overhead allowance. The initial
+finish estimate is **September 11 around 4 p.m. Toronto**, with roughly two hours
+uncertainty. Monitoring is active every two hours. No production evaluation
+endpoint has completed in this launch snapshot.
 
 The [recipe](../../../configs/setting3-nibi-b2048-400k.yaml) continues the verified
 100k checkpoint with 300k additional optimizer steps. It preserves global batch
@@ -38,10 +47,13 @@ compressed downloads. Preparation uses the same immutable release
 | MGnify | 90,495,061 | 89,219,802 | 0.986 | Stop on exhaustion |
 | OMG/IMG | 262,845,186 | 437,988,119 | 1.666 | Reuse after completing a global pass |
 
-The migration verifies every existing record index and encoded residue against
+The [completed migration](launch/DATA_MIGRATION.json) verified every existing record index and encoded residue against
 the expanded prefix. It reconstructs the consumed 100k history from the four
 saved rank samplers, excludes those records from the rest of each first pass,
-and partitions the global stream across eight GPUs. Source RNG/cursors and
+and partitions the global stream across eight GPUs. The prepared manifest SHA is
+`52399ee87da1d4d6d019ebc9b232cbf48bfe038c9ee5f9ea65814b9c3b70a2f6`.
+[Full 400k capacity verification](PRODUCTION_CAPACITY_VERIFIED.json) passed against
+the actual prepared corpus. Source RNG/cursors and
 origin metadata are retained in subsequent checkpoints, including for future
 eight-to-four-GPU continuation. The sampler reports unique and repeated counts
 explicitly. See [data coverage and migration](../../../docs/data-coverage.md).
@@ -58,6 +70,21 @@ The [launch script](../../../runs/nibi_setting3_400k.sh) has three explicit mode
 performs the full evaluation at 100100, then reloads the new checkpoint and
 continues to 100210. Production starts again from the untouched 100k parent.
 The [qualification verifier](verify_qualification.py) gates the production run.
+[Qualification passed](launch/QUALIFICATION_PASSED.json): both full model/optimizer
+restoration audits were exact, the new checkpoint continued correctly, and no
+source repeated prematurely. Its full evaluation at step 100100 measured validation
+loss **2.375535**, P@L **36.387%**, and 95% chain-bootstrap CI **36.147–36.632%**.
+That is a trial result; production starts again from the original 100k checkpoint.
+The first 20 common logged trial/production steps have identical source counts,
+exposure histories and token counts.
+
+The initial trial attempt exited before model training because its shortened
+max-step limit retained the 400k schedule limit. Both trial limits were corrected;
+the production recipe was unchanged. The failed startup is preserved under
+`launch/qualification-attempts/schedule-limit-before-training/`; see the
+[recovery receipt](launch/QUALIFICATION_RECOVERY.json). The passed trial and
+production use clean frozen source commit
+`bd0b754e817363bf5f5f9d48b2c482818a79559f`.
 
 Production evaluates every 10k steps from 110k through 400k using the same
 4,096 MLM validation sequences and 20,775 contact chains, 16 contact shards and
@@ -75,6 +102,14 @@ sampler state. Monitoring runs every two hours once production is healthy.
 | Production output | Remote root plus `/full` |
 | Durable checkpoints/recipe/source bundle | `/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-b2048-400k-20260910` |
 
-The earlier eight-GPU run suggests 40–45 hours after production launch, including
-evaluation pauses. Replace this planning estimate with the expanded-data
-qualification measurement and actual launch time.
+The source recipe, actual production config, project-storage recipe and source
+bundle were hash-verified. The [local launch verifier](verify_launch.py) binds
+the receipts to the recipe and the untouched parent checkpoint. The durable
+recipe SHA-256 is
+`afdeaad2f3810a2ad6fb0e86e1c57ba100a402c12e6157e8f406a7c7936bb43f`.
+The parent 100k checkpoint remains preserved separately; the 200k/300k/400k
+milestones are scheduled outputs, not checkpoints claimed to exist at launch.
+
+The existing [100k comparison](../nibi-paired-unique-b2048-100k-20260909/README.md)
+was published to main at `1c13852`. Later report commits record this launch;
+they do not mutate the frozen running checkout.

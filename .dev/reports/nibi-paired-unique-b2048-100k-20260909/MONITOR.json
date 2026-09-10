@@ -3,7 +3,7 @@
   "name": "Monitor Nibi paired no-repeat training every 2 hours",
   "status": "PAUSED",
   "interval_hours": 2,
-  "publication_status": "authorized_for_main",
+  "publication_status": "published_to_main",
   "current_step": "12162637.24",
   "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
   "last_audited_optimizer_steps": {
@@ -28,5 +28,8 @@
   },
   "training_finished": true,
   "completion_audit_utc": "2026-09-10T03:04:51.529492+00:00",
-  "completion_reason": "Both 100k runs, all twenty evaluations, durable full checkpoints and final local reports are independently verified."
+  "completion_reason": "Both 100k runs, all twenty evaluations, durable full checkpoints and final local reports are independently verified.",
+  "publication_commit": "1c13852af69ed39ee51112c767f08324ceaab0a5",
+  "record_scope": "completed pair snapshot; automation ID subsequently reused for Setting 3 continuation",
+  "superseded_by": "../nibi-setting3-b2048-400k-20260910/MONITOR.json"
 }

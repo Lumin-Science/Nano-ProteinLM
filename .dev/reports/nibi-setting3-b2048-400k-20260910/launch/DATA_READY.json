@@ -1,0 +1,168 @@
+{
+  "status": "passed",
+  "node_local_root": "/localscratch/muchenli.12162637.0/nano-nibi-setting3-400k-20260910",
+  "durable_scratch_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910/data",
+  "manifest": {
+    "decontamination": {
+      "homology_contract": {
+        "blocked_benchmark_candidates_are_protected": true,
+        "evaluation_protocols": [
+          "contact-p-at-l",
+          "pcore-v0.2",
+          "pcore-v0.5-alpha-q9"
+        ],
+        "protocol": "mmseqs2-evaluation-homology-exclusion-v2",
+        "scope_used_for_training": "all evaluation splits",
+        "search_contracts": {
+          "legacy_parent": {
+            "all_emitted_hit_counts_below_cap": true,
+            "command_receipt_sha256": "309d43502d43e411ef8ca6e989dea8863f06c12d75a71e6349153b0a7550c8c8",
+            "commands_sha256": "3dbb4439699894c90046b3a6d726b8929858395bf69268c35ae31051cb2d7662",
+            "configured_candidate_cap": 1000000,
+            "maximum_emitted_hits_for_one_evaluation_query": 441788,
+            "maximum_evalue": 0.001,
+            "mmseqs_version": "b804fbe384e6f6c9fe96322ec0e92d48bccd0a42",
+            "normalized_hit_table_schema": "evaluation_sha256,training_sha256,pident,alnlen,evaluation_coverage,training_coverage,evalue,bits",
+            "query_scope": "p-at-l-and-pcore-v0.2-all-splits",
+            "search_orientation": "evaluation-query-vs-training-representative-target",
+            "sensitivity": 7.5
+          },
+          "q9_delta": {
+            "all_emitted_hit_counts_below_cap": true,
+            "configured_candidate_cap": 1000000,
+            "maximum_emitted_hits_for_one_evaluation_query": 397615,
+            "maximum_evalue": 0.001,
+            "normalized_hit_table_schema": "evaluation_sha256,training_sha256,pident,alnlen,evaluation_coverage,training_coverage,evalue,bits",
+            "query_scope": "q9-delta",
+            "search_orientation": "evaluation-query-vs-training-representative-target",
+            "sensitivity": 7.5
+          }
+        },
+        "status": "verified",
+        "thresholds": {
+          "coverage_mode": 0,
+          "maximum_evalue": 0.001,
+          "maximum_sequences_per_query": 1000000,
+          "minimum_query_coverage": 0.8,
+          "minimum_sequence_identity": 0.3,
+          "minimum_target_coverage": 0.8
+        }
+      },
+      "homology_exclusion": true,
+      "homology_exclusion_receipt_sha256": "bb94365a46c0d4d5f5fef16a9fc9b1c393d7ad9b7d2d004caba252002930248b"
+    },
+    "download_plan_sha256": "75514014e3f094c6f0cd628b430e596699c7546bec1de2a6fe2fd96bbc2c1c9d",
+    "protocol": "parquet-prefix-to-mmap-v1",
+    "release_id": "full-open-cluster-representatives-v2",
+    "release_manifest_sha256": "fe1ac0657085ab19fe6f56786006e9eb004ca66bc6c5b81dfd8e6bc3dcfda6ff",
+    "sampling_unit": "one_representative_per_source_specific_70pct_identity_cluster",
+    "schema_version": 1,
+    "sources": {
+      "mgnify": {
+        "train": {
+          "index_sha256": "3f006c6c90b6f5162b37f333f818ce4fcdeda4939823ba31212296a1d9d0ac64",
+          "records": 90495061,
+          "residues": 16911424675,
+          "tokens_sha256": "e42d7e01babf3b1faab35ecb30aed1d2d4bf9755be84f3e384093c125c621e18"
+        },
+        "validation": {
+          "index_sha256": "e43082f94731d1985d143ba3098550f57d9c9db76a31a68aea45714c0884d6ee",
+          "records": 4096,
+          "residues": 761606,
+          "tokens_sha256": "24da14086130f9d9435fcce9b9846a76a55629e4fe2c031d4eb893a39291ed7b"
+        }
+      },
+      "omg_img": {
+        "train": {
+          "index_sha256": "e5c10fedacc7542fb07d5915bbb5da65ab43817c558c8d705788652a5d2a3afe",
+          "records": 262845186,
+          "residues": 65256646612,
+          "tokens_sha256": "124778275f05a5e5d363f094e09ae8a7eee48e54dd2b110c58280a4b63016a56"
+        },
+        "validation": {
+          "index_sha256": "dd16559a914f4061fe32677af0c321bec0709e9cafcde35ed8188da0aeef3288",
+          "records": 4096,
+          "residues": 1027103,
+          "tokens_sha256": "67fa854b5ee850a4fc93842975e1dfdb2b30ec3606c3eafcbdcf1c2593626e14"
+        }
+      },
+      "uniref90": {
+        "train": {
+          "index_sha256": "c5f0a8234f97655388cb627cd8fc401033772511ba6d533923f0d8e63654cc16",
+          "records": 74175974,
+          "residues": 24582966441,
+          "tokens_sha256": "a441d217ead7393aa90b9c07d4b72c1765e20c51d75eb0798807c64f9fa45e15"
+        },
+        "validation": {
+          "index_sha256": "f5362104fd2cde9682487f9cba1420434e22aff479284b9f52865306e776f643",
+          "records": 4096,
+          "residues": 1393942,
+          "tokens_sha256": "97514528c52589e4cf60fec0eb58b2665ceefc6a72c19323e494acb4ab3031bf"
+        }
+      }
+    }
+  },
+  "verification": {
+    "schema_version": 2,
+    "status": "verified",
+    "protocol": "prepared-corpus-decontamination-verification-v2",
+    "manifest_sha256": "52399ee87da1d4d6d019ebc9b232cbf48bfe038c9ee5f9ea65814b9c3b70a2f6",
+    "release_manifest_sha256": "fe1ac0657085ab19fe6f56786006e9eb004ca66bc6c5b81dfd8e6bc3dcfda6ff",
+    "homology_exclusion_receipt_sha256": "bb94365a46c0d4d5f5fef16a9fc9b1c393d7ad9b7d2d004caba252002930248b",
+    "proof": "every local row was rehashed from a checksum-verified shard in a fully verified release with zero exact/homology and train/validation intersections",
+    "sources": {
+      "uniref90": {
+        "train_excluded_intersection": 0,
+        "validation_excluded_intersection": 0,
+        "train_validation_intersection": 0,
+        "train": {
+          "records": 74175974,
+          "residues": 24582966441,
+          "tokens_sha256": "a441d217ead7393aa90b9c07d4b72c1765e20c51d75eb0798807c64f9fa45e15",
+          "index_sha256": "c5f0a8234f97655388cb627cd8fc401033772511ba6d533923f0d8e63654cc16"
+        },
+        "validation": {
+          "records": 4096,
+          "residues": 1393942,
+          "tokens_sha256": "97514528c52589e4cf60fec0eb58b2665ceefc6a72c19323e494acb4ab3031bf",
+          "index_sha256": "f5362104fd2cde9682487f9cba1420434e22aff479284b9f52865306e776f643"
+        }
+      },
+      "mgnify": {
+        "train_excluded_intersection": 0,
+        "validation_excluded_intersection": 0,
+        "train_validation_intersection": 0,
+        "train": {
+          "records": 90495061,
+          "residues": 16911424675,
+          "tokens_sha256": "e42d7e01babf3b1faab35ecb30aed1d2d4bf9755be84f3e384093c125c621e18",
+          "index_sha256": "3f006c6c90b6f5162b37f333f818ce4fcdeda4939823ba31212296a1d9d0ac64"
+        },
+        "validation": {
+          "records": 4096,
+          "residues": 761606,
+          "tokens_sha256": "24da14086130f9d9435fcce9b9846a76a55629e4fe2c031d4eb893a39291ed7b",
+          "index_sha256": "e43082f94731d1985d143ba3098550f57d9c9db76a31a68aea45714c0884d6ee"
+        }
+      },
+      "omg_img": {
+        "train_excluded_intersection": 0,
+        "validation_excluded_intersection": 0,
+        "train_validation_intersection": 0,
+        "train": {
+          "records": 262845186,
+          "residues": 65256646612,
+          "tokens_sha256": "124778275f05a5e5d363f094e09ae8a7eee48e54dd2b110c58280a4b63016a56",
+          "index_sha256": "e5c10fedacc7542fb07d5915bbb5da65ab43817c558c8d705788652a5d2a3afe"
+        },
+        "validation": {
+          "records": 4096,
+          "residues": 1027103,
+          "tokens_sha256": "67fa854b5ee850a4fc93842975e1dfdb2b30ec3606c3eafcbdcf1c2593626e14",
+          "index_sha256": "dd16559a914f4061fe32677af0c321bec0709e9cafcde35ed8188da0aeef3288"
+        }
+      }
+    }
+  },
+  "validation_identical_to_parent": true
+}

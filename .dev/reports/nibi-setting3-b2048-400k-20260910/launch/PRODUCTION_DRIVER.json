@@ -1,0 +1,20 @@
+{
+  "controller_pid": 4138178,
+  "controller_host": "l1.nibi.sharcnet",
+  "dispatched_utc": "2026-09-10T04:36:10.341935+00:00",
+  "command": [
+    "/opt/software/slurm/25.11.7p/bin/srun",
+    "--jobid=12162637",
+    "--overlap",
+    "--nodes=1",
+    "--ntasks=1",
+    "--cpus-per-task=32",
+    "--mem=256G",
+    "--gres=gpu:8",
+    "--time=72:00:00",
+    "bash",
+    "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910-run/runs/nibi_setting3_400k.sh",
+    "production"
+  ],
+  "allocation_at_dispatch": "12162637|RUNNING|4-06:47:53|g27"
+}
