@@ -176,5 +176,5 @@ sequence presentations**, compared with 2.5% for our completed 100k run. It does
 not mean 10% of ESMC GPU time/FLOPs. Repeated source passes will be reported
 explicitly; the 100k parent remains a completed no-repeat experiment.
 
-This plan and final results are stored locally. Publication to GitHub remains
-separate from preparing or launching training and has not been retried.
+The user approved this plan, continuation launch, recipe preservation and
+publication of the recent 100k comparison to main on September 10.

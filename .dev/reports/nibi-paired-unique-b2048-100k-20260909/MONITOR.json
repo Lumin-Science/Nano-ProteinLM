@@ -3,7 +3,7 @@
   "name": "Monitor Nibi paired no-repeat training every 2 hours",
   "status": "PAUSED",
   "interval_hours": 2,
-  "publication_status": "awaiting_explicit_user_approval",
+  "publication_status": "authorized_for_main",
   "current_step": "12162637.24",
   "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
   "last_audited_optimizer_steps": {

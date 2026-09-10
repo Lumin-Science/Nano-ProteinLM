@@ -11,9 +11,8 @@ The runs launched on September 8 at about 11:01 p.m. Toronto in step
 `bc54124abe193623abf64b44e65b881cded65f48`. The allocation remains intact;
 all eight H100s were idle at the final inspection. The two-hour completion
 monitor is paused because both runs and their artifacts are verified complete.
-Code/results are committed
-locally; GitHub publication remains pending after automatic approval review
-rejected the earlier pushes.
+The frozen recipes, learning curves and verification receipts are recorded in
+this repository. Publication to main was explicitly authorized on September 10.
 
 ## Final comparison
 
