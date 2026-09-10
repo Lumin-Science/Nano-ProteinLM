@@ -1,0 +1,70 @@
+{
+  "status": "passed",
+  "recipe": "setting3",
+  "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
+  "optimizer_steps": 100000,
+  "sequences_seen": 204800000,
+  "model_tokens": 48391423362,
+  "stop_reason": "max_steps",
+  "source_counts": {
+    "stage1": {
+      "mgnify": 22307863,
+      "omg_img": 109500056,
+      "uniref90": 72992081
+    }
+  },
+  "no_sampler_wraps": true,
+  "checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+  "checkpoint_bytes": 1367402225,
+  "durable_checkpoint": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-paired-unique-b2048-100k-20260909/setting3/checkpoint-final.pt",
+  "independent_durable_hash": {
+    "status": "passed",
+    "checkpoint": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-paired-unique-b2048-100k-20260909/setting3/checkpoint-final.pt",
+    "checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+    "bytes": 1367402225,
+    "host": "g27.nibi.sharcnet",
+    "slurm_job_id": "12162637",
+    "slurm_step_id": "28",
+    "verified_utc": "2026-09-10T03:01:49.007686+00:00",
+    "hash_seconds": 1.2981655951589346,
+    "gpu_status": [
+      "0, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+      "1, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+      "2, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+      "3, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+      "4, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+      "5, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+      "6, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB",
+      "7, NVIDIA H100 80GB HBM3, 0 %, 0 MiB, 81559 MiB"
+    ],
+    "gpu_processes": [],
+    "disk_free": [
+      "Filesystem                1B-blocks             Used       Available Use% Mounted on",
+      "10.36.8.1:/scratch 5000121486934016 4707608781914112 292512705019904  95% /scratch",
+      "10.36.8.1:/project   10000000876544     319177097216   9680823779328   4% /project",
+      "/dev/md127           12699911823360     131363635200  11928432177152   2% /local"
+    ]
+  },
+  "full_model_and_optimizer_roundtrip_exact": true,
+  "four_rank_sampler_states_verified_by_frozen_training_verifier": true,
+  "all_ten_evaluations_independently_audited": true,
+  "all_ten_durable_result_receipts_identical": true,
+  "evaluation_receipt_sha256": {
+    "10000": "55c9c7484e122b26985084207286be2e6739531df515521cf35560529f225bd3",
+    "20000": "a01ebcbd6775335ae0fc799789fa94bd5b61cac498a6456d2798dc80caefe540",
+    "30000": "f31491ad24d4263ede4d7e22c2ba6cc394a19241b316be30ade01076ebfcbf3a",
+    "40000": "c2aeaab4d146ac3a89c32bc5c5ad46cf56a379eb4bb77d06fca108d0cf0a94c3",
+    "50000": "e06fe6e02430895fb9acf586ef4eeecb674dd0b7f7dcb43142c94d8ec0a1dfb5",
+    "60000": "c3facbc84cf4075f4cbde5164a4e79b9bc6795b2e4791f1844ad1d04453ed0c0",
+    "70000": "3139fba6757f64df0f5d883cf381e41bcb0c38174f13ee62fb5f4094a5191fa6",
+    "80000": "7be7387c45f3034f417a578b6fa4efb5f05679d8bc18b2b520882c3f2b80700c",
+    "90000": "4cd21a46fa94117e0be100a09d28e69686a76ff28323593ee8937cb822f2c665",
+    "100000": "94e8708efeea52ee505441eb4738a1dc30bd832748b050cb56f7d2c5cdb66567"
+  },
+  "training_seconds": 81576.14143336448,
+  "periodic_evaluation_seconds": 2700.5777134883683,
+  "launch_to_completion_wall_seconds": 84528.0,
+  "completed_utc": "2026-09-10T02:30:16Z",
+  "verified_utc": "2026-09-10T03:04:51.529492+00:00",
+  "final_evaluation_timing_note": "No separate final evaluation wall-time receipt; launch-to-completion includes final evaluation and checkpoint verification/preservation."
+}

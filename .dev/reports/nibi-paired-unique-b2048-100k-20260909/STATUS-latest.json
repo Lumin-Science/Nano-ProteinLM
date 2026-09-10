@@ -1,5 +1,5 @@
 {
-  "observed_utc": "2026-09-10T02:02:23.706475+00:00",
+  "observed_utc": "2026-09-10T02:58:42.897499+00:00",
   "root": "/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909",
   "data_ready": true,
   "qualification_passed": true,
@@ -57,9 +57,9 @@
         "tokens_per_second": 609124.95797022,
         "training_seconds": 78912.5484066396
       },
-      "metrics_age_seconds": 1922.2064476013184,
+      "metrics_age_seconds": 5301.397471666336,
       "estimated_seconds_per_step": 0.7856432666885667,
-      "estimated_finish_utc": "2026-09-10T02:02:23.706475+00:00",
+      "estimated_finish_utc": "2026-09-10T02:58:42.897499+00:00",
       "evaluation": {
         "status": "passed",
         "optimizer_step": 90000,
@@ -252,47 +252,47 @@
         6,
         7
       ],
-      "status": "training",
+      "status": "complete",
       "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/full/setting3",
       "latest": {
         "attention_backend": "flash3",
         "batch_balance": {
           "rank_tokens_after": [
-            30205,
-            30205,
-            30204,
-            30204
+            30534,
+            30534,
+            30534,
+            30533
           ],
           "rank_tokens_before": [
-            30926,
-            31192,
-            31200,
-            27500
+            30965,
+            29156,
+            29929,
+            32085
           ]
         },
         "data_resampling": "error",
-        "estimated_training_flops": 48640520783785361376,
+        "estimated_training_flops": 49521805201546535232,
         "event": "train",
-        "filled_residues": 47127945971,
-        "gradient_norm": 0.08650044351816177,
+        "filled_residues": 47981823362,
+        "gradient_norm": 0.09014583379030228,
         "learning_rate": 0.00045000000000000004,
-        "loss": 2.3496435284614563,
-        "mfu_6n": 0.15379548696377682,
+        "loss": 2.3477038741111755,
+        "mfu_6n": 0.15375356549329403,
         "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 4 GPUs)",
-        "model_tokens": 47530255091,
-        "objective_loss": 2.31774240732193,
+        "model_tokens": 48391423362,
+        "objective_loss": 2.3095016479492188,
         "optimizer": "muon",
-        "optimizer_step": 98220,
-        "sequences_seen": 201154560,
+        "optimizer_step": 100000,
+        "sequences_seen": 204800000,
         "source_counts_global": {
-          "mgnify": 21911190,
-          "omg_img": 107551131,
-          "uniref90": 71692239
+          "mgnify": 22307863,
+          "omg_img": 109500056,
+          "uniref90": 72992081
         },
         "source_counts_rank0": {
-          "mgnify": 5476019,
-          "omg_img": 26883718,
-          "uniref90": 17928903
+          "mgnify": 5574480,
+          "omg_img": 27371114,
+          "uniref90": 18254406
         },
         "source_epoch_maxima": {
           "mgnify": 0,
@@ -300,16 +300,16 @@
           "uniref90": 0
         },
         "stage": "stage1",
-        "stage_progress": 0.98219,
-        "step_compute_seconds": 0.8177071430254728,
-        "step_model_tokens": 486395,
-        "tokens_per_second": 594827.8722384208,
+        "stage_progress": 0.99999,
+        "step_compute_seconds": 0.8251391858793795,
+        "step_model_tokens": 490682,
+        "tokens_per_second": 594665.7344567428,
         "training_loss_reduction": "sqrt_mask_count",
-        "training_seconds": 80125.25306107453
+        "training_seconds": 81576.13523349445
       },
-      "metrics_age_seconds": 3.6659936904907227,
-      "estimated_seconds_per_step": 0.8145602712989785,
-      "estimated_finish_utc": "2026-09-10T02:31:33.687948+00:00",
+      "metrics_age_seconds": 1931.9732296466827,
+      "estimated_seconds_per_step": 0.8142074670060537,
+      "estimated_finish_utc": "2026-09-10T02:58:42.897499+00:00",
       "evaluation": {
         "status": "passed",
         "optimizer_step": 90000,
@@ -318,7 +318,31 @@
         "started_utc": "2026-09-10T00:05:27.213687+00:00",
         "wall_seconds": 309.43468487705104
       },
-      "checkpoint_preserved": false,
+      "completion": {
+        "status": "passed",
+        "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
+        "checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+        "optimizer_steps": 100000,
+        "sequences_seen": 204800000,
+        "parameter_count": 170559856,
+        "world_size": 4,
+        "finite_model_and_optimizer": true,
+        "model_and_optimizer_roundtrip_exact": true,
+        "optimizer_layout": "replicated_ddp_full_state",
+        "flash3_verified": true,
+        "source_epoch_maxima": {
+          "stage1": {
+            "mgnify": 0,
+            "omg_img": 0,
+            "uniref90": 0
+          }
+        },
+        "no_resampling_verified": true,
+        "data_manifest_sha256": "c30da4a52028cb63bf4f764ff039009d965144db5a6fbf1069f4eebf97c7d3fa",
+        "training_seconds": 81576.14143336448,
+        "peak_cuda_memory_bytes": 40928861184
+      },
+      "checkpoint_preserved": true,
       "audit": {
         "finite": true,
         "counts_valid": true,
@@ -449,6 +473,20 @@
               "replicates": 5000,
               "unit_count": 20775
             }
+          },
+          {
+            "step": 100000,
+            "status": "passed",
+            "validation_loss": 2.3757011540546955,
+            "p_at_l": 0.3656744679486884,
+            "uncertainty": {
+              "confidence_interval_95": [
+                0.3632816520828425,
+                0.3681475533317598
+              ],
+              "replicates": 5000,
+              "unit_count": 20775
+            }
           }
         ],
         "failed_markers": [],
@@ -458,23 +496,10 @@
       }
     }
   },
-  "allocation": "12162637|RUNNING|4-09:21:40|g27",
+  "allocation": "12162637|RUNNING|4-08:25:20|g27",
   "steps": [
     "12162637.extern|g27",
-    "12162637.batch|g27",
-    "12162637.24|g27"
+    "12162637.batch|g27"
   ],
-  "matched_draws_and_tokens": true,
-  "local_audit": {
-    "verified_utc": "2026-09-10T02:06:34.867753+00:00",
-    "matched_source_draws_and_model_tokens_at_all_common_logged_steps": true,
-    "last_common_logged_step": 98360,
-    "no_sampler_wraps_in_verified_metrics": true,
-    "all_verified_metrics_finite": true,
-    "last_audited_optimizer_steps": {
-      "baseline": 100000,
-      "setting3": 90000
-    },
-    "baseline_final_preservation_verified": true
-  }
+  "matched_draws_and_tokens": true
 }

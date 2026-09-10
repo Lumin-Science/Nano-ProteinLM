@@ -1,29 +1,32 @@
 {
   "id": "launch-r02-rope10k-on-fir-at-4-am",
   "name": "Monitor Nibi paired no-repeat training every 2 hours",
-  "status": "ACTIVE",
+  "status": "PAUSED",
   "interval_hours": 2,
   "publication_status": "awaiting_explicit_user_approval",
   "current_step": "12162637.24",
   "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
   "last_audited_optimizer_steps": {
     "baseline": 100000,
-    "setting3": 90000
+    "setting3": 100000
   },
   "next_evaluation_steps": {
     "baseline": null,
-    "setting3": 100000
+    "setting3": null
   },
-  "last_check_utc": "2026-09-10T02:02:23.706475+00:00",
+  "last_check_utc": "2026-09-10T02:58:42.897499+00:00",
   "last_observed_training_steps": {
     "baseline": 100000,
-    "setting3": 98220
+    "setting3": 100000
   },
   "no_sampler_wraps": true,
   "access_status": "connected",
   "access_restored_utc": "2026-09-09T22:32:38.848539+00:00",
   "verified_complete": {
     "baseline": true,
-    "setting3": false
-  }
+    "setting3": true
+  },
+  "training_finished": true,
+  "completion_audit_utc": "2026-09-10T03:04:51.529492+00:00",
+  "completion_reason": "Both 100k runs, all twenty evaluations, durable full checkpoints and final local reports are independently verified."
 }
