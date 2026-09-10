@@ -6,17 +6,17 @@
   "root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910",
   "production_step": "12162637.32",
   "source_commit": "bd0b754e817363bf5f5f9d48b2c482818a79559f",
-  "latest_collected_optimizer_step": 141530,
-  "next_evaluation_step": 150000,
+  "latest_collected_optimizer_step": 198080,
+  "next_evaluation_step": 200000,
   "target_total_optimizer_steps": 400000,
   "publication_status": "authorized_main_update",
   "initial_estimated_finish_toronto": "2026-09-11T16:00:00-04:00",
-  "last_check_utc": "2026-09-10T10:02:28.331201+00:00",
-  "last_audited_evaluation_step": 140000,
-  "last_validation_loss": 2.357367824339235,
-  "last_p_at_l": 0.38093801241135805,
+  "last_check_utc": "2026-09-10T17:23:58.919203+00:00",
+  "last_audited_evaluation_step": 190000,
+  "last_validation_loss": 2.3427417698658246,
+  "last_p_at_l": 0.39519607058071765,
   "last_p_at_l_ci": [
-    0.37845697342519125,
-    0.3834316014169729
+    0.3927426112907389,
+    0.3977121138053223
   ]
 }

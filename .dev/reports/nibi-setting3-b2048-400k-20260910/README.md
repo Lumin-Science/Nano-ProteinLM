@@ -1,6 +1,6 @@
 # Nibi Setting 3 continuation: 100k to 400k Stage-1 steps
 
-**The 130k and 140k evaluations completed September 10 at about 4:32 a.m. and 5:51 a.m. Toronto and passed independent local verification.** Training continued normally; the audited metric snapshot reaches step 141530. The finish estimate remains September 11 around 4 p.m. Toronto.
+**All evaluations through 190k passed independent local verification; the 190k evaluation completed September 10 at about 12:23 p.m. Toronto.** The latest collection adds the 150k, 160k, 170k, 180k and 190k endpoints. Training continued normally; the audited metric snapshot reaches step 198080. Nibi SSH access was restored for this check after the earlier MFA interruption. The finish estimate remains September 11 around 4 p.m. Toronto.
 
 | Total steps | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
 |---|---:|---:|---:|
@@ -8,15 +8,20 @@
 | 110,000 | 2.368833 | 36.711% | 36.469–36.960% |
 | 120,000 | 2.366121 | 37.247% | 37.008–37.493% |
 | 130,000 | 2.360556 | 37.724% | 37.478–37.971% |
-| **140,000** | **2.357368** | **38.094%** | **37.846–38.343%** |
+| 140,000 | 2.357368 | 38.094% | 37.846–38.343% |
+| 150,000 | 2.353549 | 38.385% | 38.143–38.635% |
+| 160,000 | 2.349844 | 38.526% | 38.283–38.778% |
+| 170,000 | 2.346989 | 38.928% | 38.681–39.178% |
+| 180,000 | 2.345196 | 39.240% | 38.995–39.491% |
+| **190,000** | **2.342742** | **39.520%** | **39.274–39.771%** |
 
-From 130k to 140k, validation loss fell **0.003188** and P@L rose **0.370 percentage points**. Relative to the 100k parent, validation loss is **0.018333 lower** and P@L is **1.526 points higher**; the paired chain-bootstrap interval for the latter gain is **1.477–1.576 points**. These intervals measure variation across the same 20,775 contact chains, not across training seeds. All four continuation endpoints have independently verified component hashes, chain identities, probe settings, checkpoint bindings and 5,000 bootstrap replicates.
+From 180k to 190k, validation loss fell **0.002454** and P@L rose **0.279 percentage points**. Relative to the 100k parent, validation loss is **0.032959 lower** and P@L is **2.952 points higher**; the paired chain-bootstrap interval for the latter gain is **2.896–3.011 points**. These intervals measure variation across the same 20,775 contact chains, not across training seeds. All nine continuation endpoints have independently verified component hashes, chain identities, probe settings, checkpoint bindings and 5,000 bootstrap replicates.
 
-The global training objective averaged 2.303137 over 120k–130k and 2.299322 over 130k–140k, with mean gradient norms 0.089042 and 0.089653. Both held-out metrics continue improving; these new observations do not indicate a sustained optimization failure following resume. The historical resume investigation remains unchanged.
+The global training objective averaged 2.284882 over 170k–180k and 2.281030 over 180k–190k, with mean gradient norms 0.089436 and 0.090243. Both held-out metrics continue improving; these new observations do not indicate a sustained optimization failure following resume. The historical resume investigation remains unchanged.
 
-See the [110k audit](full/evaluations/step-110000/LOCAL_AUDIT.json), [120k audit](full/evaluations/step-120000/LOCAL_AUDIT.json), [130k audit](full/evaluations/step-130000/LOCAL_AUDIT.json), [140k audit](full/evaluations/step-140000/LOCAL_AUDIT.json), [machine-readable curve](learning-curve.json), and [local evaluation verifier](verify_evaluation.py). All earlier audited results are retained.
+See the [110k audit](full/evaluations/step-110000/LOCAL_AUDIT.json), [120k audit](full/evaluations/step-120000/LOCAL_AUDIT.json), [130k audit](full/evaluations/step-130000/LOCAL_AUDIT.json), [140k audit](full/evaluations/step-140000/LOCAL_AUDIT.json), [150k audit](full/evaluations/step-150000/LOCAL_AUDIT.json), [160k audit](full/evaluations/step-160000/LOCAL_AUDIT.json), [170k audit](full/evaluations/step-170000/LOCAL_AUDIT.json), [180k audit](full/evaluations/step-180000/LOCAL_AUDIT.json), [190k audit](full/evaluations/step-190000/LOCAL_AUDIT.json), [machine-readable curve](learning-curve.json), and [local evaluation verifier](verify_evaluation.py). All earlier audited results are retained.
 
-At 140k, UniRef90 has completed its first full pass and accounts for 28,011,047 permitted repeated draws. MGnify and OMG/IMG still have zero repeated draws. The checkpoint contains 286,720,000 total sequence draws; all source histories and counts remain consistent with the retained 100k history.
+At 190k, UniRef90 is in its second pass and accounts for 64,506,651 permitted repeated draws. MGnify and OMG/IMG still have zero repeated draws. The checkpoint contains 389,120,000 total sequence draws; all source histories and counts remain consistent with the retained 100k history. The first durable continuation milestone is scheduled at 200k; this 190k report does not claim that milestone checkpoint already exists.
 
 ## Launch and recipe
 
