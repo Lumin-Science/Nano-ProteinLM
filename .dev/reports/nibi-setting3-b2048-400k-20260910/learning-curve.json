@@ -79,6 +79,56 @@
       },
       "training_seconds_including_parent": 86059.16973898653,
       "evaluation_wall_seconds": 215.67010812694207
+    },
+    {
+      "optimizer_steps": 120000,
+      "world_size": 8,
+      "checkpoint_sha256": "41ebfd4d0a38664889f8e97ad11c59c02c9f270e4e6bc9ee35f56e99d67969dc",
+      "sequences_seen": 245760000,
+      "validation": {
+        "masked_residues": 139963,
+        "perplexity": 10.655981930004947,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.3661214180388015,
+        "sequence_median_nll": 2.441055655479431,
+        "sequences": 4096,
+        "source_counts": {
+          "mgnify": 1393,
+          "omg_img": 1387,
+          "uniref90": 1316
+        }
+      },
+      "p_at_l": 0.37247015784193727,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.37008146518986756,
+          0.3749303510722332
+        ]
+      },
+      "training_seconds_at_checkpoint": 8964.123439996969,
+      "model_tokens_at_checkpoint": 58065094214,
+      "comparison_to_100k": {
+        "reference_optimizer_steps": 100000,
+        "reference_checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+        "validation_loss_difference": -0.009579736015894014,
+        "p_at_l_difference_percentage_points": 0.6795689893248832,
+        "paired_chain_bootstrap_95_ci_percentage_points": [
+          0.6345559955146939,
+          0.7257046703786469
+        ],
+        "replicates": 5000,
+        "unit_count": 20775,
+        "note": "Across the same contact chains; this is not training-seed uncertainty."
+      },
+      "training_seconds_including_parent": 90540.25867349142,
+      "evaluation_wall_seconds": 229.6876956310589,
+      "comparison_to_previous_checkpoint": {
+        "reference_optimizer_steps": 110000,
+        "validation_loss_difference": -0.0027115289753965044,
+        "p_at_l_difference_percentage_points": 0.5357412160916342
+      }
     }
   ]
 }
