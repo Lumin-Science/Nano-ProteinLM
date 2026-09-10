@@ -1,0 +1,84 @@
+{
+  "recipe": "setting3",
+  "global_batch": 2048,
+  "reference_step": 100000,
+  "total_target_steps": 400000,
+  "note": "100k is the verified four-GPU parent; later points continue on eight GPUs with expanded data and controlled source reuse.",
+  "points": [
+    {
+      "optimizer_steps": 100000,
+      "world_size": 4,
+      "checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+      "sequences_seen": 204800000,
+      "validation": {
+        "masked_residues": 139963,
+        "perplexity": 10.75855394587208,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.3757011540546955,
+        "sequence_median_nll": 2.4574217796325684,
+        "sequences": 4096,
+        "source_counts": {
+          "mgnify": 1393,
+          "omg_img": 1387,
+          "uniref90": 1316
+        }
+      },
+      "p_at_l": 0.3656744679486884,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.3632816520828425,
+          0.3681475533317598
+        ]
+      },
+      "training_seconds_at_checkpoint": 81576.13523349445,
+      "model_tokens_at_checkpoint": 48391423362
+    },
+    {
+      "optimizer_steps": 110000,
+      "world_size": 8,
+      "checkpoint_sha256": "6b130d20b31a550e1b19e54ed889fa65ad264728c87d4102cca148afda5cba78",
+      "sequences_seen": 225280000,
+      "validation": {
+        "masked_residues": 139963,
+        "perplexity": 10.684915142664345,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.368832947014198,
+        "sequence_median_nll": 2.4403939247131348,
+        "sequences": 4096,
+        "source_counts": {
+          "mgnify": 1393,
+          "omg_img": 1387,
+          "uniref90": 1316
+        }
+      },
+      "p_at_l": 0.3671127456810209,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.3646916095630359,
+          0.36959878268791896
+        ]
+      },
+      "training_seconds_at_checkpoint": 4483.034505492076,
+      "model_tokens_at_checkpoint": 53228093511,
+      "comparison_to_100k": {
+        "reference_optimizer_steps": 100000,
+        "reference_checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+        "validation_loss_difference": -0.006868207040497509,
+        "p_at_l_difference_percentage_points": 0.1438277732332539,
+        "paired_chain_bootstrap_95_ci_percentage_points": [
+          0.09909945321211157,
+          0.18913616536105898
+        ],
+        "replicates": 5000,
+        "unit_count": 20775,
+        "note": "Across the same contact chains; this is not training-seed uncertainty."
+      },
+      "training_seconds_including_parent": 86059.16973898653,
+      "evaluation_wall_seconds": 215.67010812694207
+    }
+  ]
+}

@@ -262,6 +262,10 @@ Setting 3 is now [continuing from 100k to 400k steps on eight Nibi H100s](.dev/r
 with batch 2,048, evaluation every 10k and an expanded 427.5M-record corpus.
 The [frozen continuation recipe](configs/setting3-nibi-b2048-400k.yaml) and full
 optimizer/sampler checkpoints support later continuation on four GPUs.
+Its latest audited checkpoint at **110k** has validation loss **2.368833** and
+P@L **36.711%** (95% CI **36.469–36.960%**), a **0.144-point** P@L gain over its
+100k parent. These continuation results use a larger training budget than the
+matched 100k comparison above.
 The historical Fir comparison below
 uses a smaller batch and different prepared-data budget.
 

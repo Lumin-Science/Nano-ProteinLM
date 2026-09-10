@@ -1,5 +1,31 @@
 # Nibi Setting 3 continuation: 100k to 400k Stage-1 steps
 
+**The 110k evaluation completed September 10 at about 1:55 a.m. Toronto and
+passed independent local verification.** Training continued normally; the audited
+metric snapshot reaches step 110810. The finish estimate remains September 11
+around 4 p.m. Toronto.
+
+| Total steps | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
+|---|---:|---:|---:|
+| 100,000, parent checkpoint | 2.375701 | 36.567% | 36.328–36.815% |
+| **110,000** | **2.368833** | **36.711%** | **36.469–36.960%** |
+
+After 10k additional updates, validation loss is **0.006868 lower** and P@L is
+**0.144 percentage points higher**. The paired chain-bootstrap interval for the
+P@L gain is **0.099–0.189 points**. This interval measures variation across the
+same 20,775 contact chains, not across training seeds. All 16 contact component
+hashes, chain identities, probe settings, checkpoint bindings and 5,000 bootstrap
+replicates were independently verified.
+
+See [the 110k audit](full/evaluations/step-110000/LOCAL_AUDIT.json),
+[machine-readable curve](learning-curve.json), and [local evaluation verifier](verify_evaluation.py).
+At 110k, UniRef90 has completed its first full pass and accounts for 6,115,433
+permitted repeated draws. MGnify and OMG/IMG still have zero repeated draws.
+The checkpoint contains 225,280,000 total sequence draws; all source histories
+and counts remain consistent with the retained 100k history.
+
+## Launch and recipe
+
 **Production launched successfully on September 10, 2026 at 12:36 a.m. Toronto**
 in Slurm step **12162637.32**, allocation **12162637**, Nibi **g27**. Setting 3
 continues from its verified 100k checkpoint on all eight H100s. The initial
@@ -11,8 +37,8 @@ and [GPU/preservation proof](launch/LAUNCH_GPU_AND_PRESERVATION.json).
 The measured speed is **0.447 seconds/update**, projecting about **39.4 hours
 from launch**, including 30 evaluations and an overhead allowance. The initial
 finish estimate is **September 11 around 4 p.m. Toronto**, with roughly two hours
-uncertainty. Monitoring is active every two hours. No production evaluation
-endpoint has completed in this launch snapshot.
+uncertainty. Monitoring is active every two hours. This launch snapshot predates
+the evaluated checkpoints above.
 
 The [recipe](../../../configs/setting3-nibi-b2048-400k.yaml) continues the verified
 100k checkpoint with 300k additional optimizer steps. It preserves global batch
