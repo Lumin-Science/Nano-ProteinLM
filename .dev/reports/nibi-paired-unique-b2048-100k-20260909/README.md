@@ -35,7 +35,8 @@ The 48-hour walltime guard allows both fixed 100k-step budgets to finish.
 
 Evaluate 4,096 MLM sequences and all 20,775 contact chains at each 10k endpoint;
 report P@L with a 5,000-replicate chain-bootstrap confidence interval. Production
-evaluations at each 10k endpoint through 80k are independently audited below.
+evaluations at each 10k endpoint through 80k are independently audited for both
+models; AdamW's 90k endpoint is also audited below.
 Trial scores remain qualification evidence, separate from production results. Full final model, optimizer and
 sampler checkpoints will be copied and hash-verified on project storage.
 
@@ -69,6 +70,11 @@ endpoint.
 | 70,000 | Setting 3 | 2.395314 | 34.417% | 34.175–34.658% | 15h 51m 43s |
 | 80,000 | ESMC-like AdamW | 2.428326 | 25.255% | 25.028–25.497% | 17h 32m 09s |
 | 80,000 | Setting 3 | 2.388536 | 35.240% | 35.003–35.483% | 18h 07m 42s |
+| 90,000 | ESMC-like AdamW | 2.420469 | 27.183% | 26.953–27.426% | 19h 43m 41s |
+
+AdamW's 90k checkpoint consumed **184,320,000 distinct records** and
+**43,551,513,351 model tokens**. Setting 3's 90k evaluation was still pending
+at the last status check, so the latest matched comparison remains at 80k.
 
 Setting 3 improves validation loss by **0.039789** and P@L by **9.986 percentage
 points** at the matched 80k endpoint; the paired chain-bootstrap interval for the
@@ -84,14 +90,14 @@ checkpoint hashes and the paired difference interval are in
 [learning-curve.json](learning-curve.json). Full training-metric snapshots are
 stored as `full/RECIPE/metrics.jsonl.gz`; raw downloaded artifacts stay in local `.exps`.
 
-At the September 9, 6:32 p.m. Toronto check, AdamW was at **86,750 steps** and
-Setting 3 at **83,170**. Both had fresh finite metrics, zero sampler wraps and no
+At the September 9, 8:02 p.m. Toronto check, AdamW was at **93,310 steps** and
+Setting 3 at **89,790**. Both had fresh finite metrics, zero sampler wraps and no
 fatal OOM exceptions or tracebacks. Downloaded source draws and token counts
-matched at all 8,326 common logged steps, through step 83,250. Training continued
-after both evaluations. Approximate finish times, including evaluation pauses, are
+matched at all 8,990 common logged steps, through step 89,890. Training continued
+after every completed evaluation. Approximate finish times, including evaluation pauses, are
 **9:35 p.m.** and **10:30 p.m. Toronto on September 9**, respectively.
-SSH access was restored at this check after the earlier MFA access interruption;
-the two-hour monitor has resumed normal checks.
+SSH access was restored at 6:32 p.m. after the earlier MFA access interruption;
+the two-hour monitor continues normal checks.
 
 ## Data coverage
 

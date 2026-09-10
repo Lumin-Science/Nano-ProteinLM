@@ -133,6 +133,22 @@
         "evaluation_seconds": 215.4173573181033,
         "source_epoch_maximum": 0,
         "independently_audited": true
+      },
+      {
+        "optimizer_step": 90000,
+        "sequences_seen": 184320000,
+        "model_tokens": 43551513351,
+        "training_seconds": 71021.05420563766,
+        "validation_loss": 2.4204693852052515,
+        "p_at_l": 0.271831559939776,
+        "confidence_interval_95": [
+          0.26953020818155765,
+          0.27425911481521936
+        ],
+        "checkpoint_sha256": "7f8f4896b27562381a58317c00f7aa93bc978995fb327b8101d6a8b8894543c1",
+        "evaluation_seconds": 212.4492302739527,
+        "source_epoch_maximum": 0,
+        "independently_audited": true
       }
     ],
     "setting3": [
@@ -380,5 +396,5 @@
       "note": "Across-chain uncertainty for this matched training pair, not variation across training seeds."
     }
   ],
-  "last_audited_utc": "2026-09-09T22:34:05.440850+00:00"
+  "last_audited_utc": "2026-09-10T00:05:24.729238+00:00"
 }

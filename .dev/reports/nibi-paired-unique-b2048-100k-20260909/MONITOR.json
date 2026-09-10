@@ -7,17 +7,17 @@
   "current_step": "12162637.24",
   "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
   "last_audited_optimizer_steps": {
-    "baseline": 80000,
+    "baseline": 90000,
     "setting3": 80000
   },
   "next_evaluation_steps": {
-    "baseline": 90000,
+    "baseline": 100000,
     "setting3": 90000
   },
-  "last_check_utc": "2026-09-09T22:32:38.848539+00:00",
+  "last_check_utc": "2026-09-10T00:02:34.871703+00:00",
   "last_observed_training_steps": {
-    "baseline": 86750,
-    "setting3": 83170
+    "baseline": 93310,
+    "setting3": 89790
   },
   "no_sampler_wraps": true,
   "access_status": "connected",
