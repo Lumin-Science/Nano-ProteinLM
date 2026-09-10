@@ -1,0 +1,13 @@
+{
+  "masked_residues": 139963,
+  "perplexity": 10.349319931822638,
+  "protocol": "heldout-cluster-representative-mlm-v1",
+  "sequence_mean_nll": 2.3369208104822974,
+  "sequence_median_nll": 2.4117196798324585,
+  "sequences": 4096,
+  "source_counts": {
+    "mgnify": 1393,
+    "omg_img": 1387,
+    "uniref90": 1316
+  }
+}
