@@ -6,6 +6,10 @@ The source is frozen at `bc54124abe193623abf64b44e65b881cded65f48`.
 These results and code are committed locally; GitHub publication awaits explicit
 permission after automatic approval review rejected the pushes.
 
+**AdamW completed all 100,000 steps at 9:34 p.m. Toronto on September 9.**
+All ten evaluations and its preserved full checkpoint are independently verified.
+Setting 3 was still training at 98,220 steps at the 10:02 p.m. check.
+
 | Run | Physical GPUs | Parameters | Verified progress at launch audit | Initial speed |
 |---|---|---:|---:|---:|
 | ESMC-like AdamW baseline | 0–3 | 170,671,168 | 430 / 100,000 steps | 0.790 s/step |
@@ -35,10 +39,11 @@ The 48-hour walltime guard allows both fixed 100k-step budgets to finish.
 
 Evaluate 4,096 MLM sequences and all 20,775 contact chains at each 10k endpoint;
 report P@L with a 5,000-replicate chain-bootstrap confidence interval. Production
-evaluations at each 10k endpoint through 80k are independently audited for both
-models; AdamW's 90k endpoint is also audited below.
+evaluations at each 10k endpoint through 90k are independently audited for both
+models; AdamW's final 100k endpoint is also audited below.
 Trial scores remain qualification evidence, separate from production results. Full final model, optimizer and
-sampler checkpoints will be copied and hash-verified on project storage.
+sampler checkpoints are copied and hash-verified on project storage as each run
+finishes; AdamW's completed preservation is verified below.
 
 Initial finish estimates, including evaluation pauses, are approximately
 **9:45 p.m. for AdamW and 10:30 p.m. for Setting 3 on September 9, Toronto time**.
@@ -46,8 +51,8 @@ These are early estimates. The existing two-hour monitor remains active.
 
 ## Audited learning curve
 
-At 80k, both models consumed **163,840,000 distinct training records** and
-**38,711,834,542 model tokens**, with matching source draws and zero source wraps.
+At 90k, both models consumed **184,320,000 distinct training records** and
+**43,551,513,351 model tokens**, with matching source draws and zero source wraps.
 All 16 contact shards, 20,775 chain IDs, checkpoint bindings, fixed probe settings
 and the 5,000-replicate bootstrap intervals were independently checked at each
 endpoint.
@@ -71,16 +76,17 @@ endpoint.
 | 80,000 | ESMC-like AdamW | 2.428326 | 25.255% | 25.028–25.497% | 17h 32m 09s |
 | 80,000 | Setting 3 | 2.388536 | 35.240% | 35.003–35.483% | 18h 07m 42s |
 | 90,000 | ESMC-like AdamW | 2.420469 | 27.183% | 26.953–27.426% | 19h 43m 41s |
+| 90,000 | Setting 3 | 2.379697 | 35.932% | 35.690–36.177% | 20h 23m 37s |
+| 100,000 | ESMC-like AdamW | 2.414734 | 28.173% | 27.932–28.421% | 21h 55m 13s |
 
-AdamW's 90k checkpoint consumed **184,320,000 distinct records** and
-**43,551,513,351 model tokens**. Setting 3's 90k evaluation was still pending
-at the last status check, so the latest matched comparison remains at 80k.
+AdamW's final checkpoint consumed **204,800,000 distinct records** and
+**48,391,423,362 model tokens**. Setting 3's 100k endpoint is still pending,
+so the latest matched comparison is at 90k.
 
-Setting 3 improves validation loss by **0.039789** and P@L by **9.986 percentage
-points** at the matched 80k endpoint; the paired chain-bootstrap interval for the
-P@L gain is **9.872–10.102 points**. The corresponding 70k P@L gain was
-**8.709 points**, with a paired interval of **8.611–8.809 points**.
-Both runs continue to 100k. AdamW's P@L decreased by 0.383 percentage points
+Setting 3 improves validation loss by **0.040773** and P@L by **8.749 percentage
+points** at the matched 90k endpoint; the paired chain-bootstrap interval for the
+P@L gain is **8.645–8.853 points**. Setting 3 continues to 100k.
+AdamW's P@L decreased by 0.383 percentage points
 between 50k and 60k despite improving validation loss. Both endpoints passed
 the same contact-protocol audit, used the same chain set and selected probe
 regularization `C=1.0`; no evaluation-protocol change was found.
@@ -90,14 +96,31 @@ checkpoint hashes and the paired difference interval are in
 [learning-curve.json](learning-curve.json). Full training-metric snapshots are
 stored as `full/RECIPE/metrics.jsonl.gz`; raw downloaded artifacts stay in local `.exps`.
 
-At the September 9, 8:02 p.m. Toronto check, AdamW was at **93,310 steps** and
-Setting 3 at **89,790**. Both had fresh finite metrics, zero sampler wraps and no
-fatal OOM exceptions or tracebacks. Downloaded source draws and token counts
-matched at all 8,990 common logged steps, through step 89,890. Training continued
-after every completed evaluation. Approximate finish times, including evaluation pauses, are
-**9:35 p.m.** and **10:30 p.m. Toronto on September 9**, respectively.
+At the September 9, 10:02 p.m. Toronto check, AdamW had completed **100,000 steps**
+and Setting 3 was training at **98,220**. All recorded metrics remained finite,
+with zero sampler wraps and no fatal OOM exceptions or tracebacks. Downloaded
+source draws and token counts matched at all 9,837 common logged steps, through
+step 98,360. Setting 3 continued after its 90k evaluation, with an estimated
+finish around **10:30 p.m. Toronto on September 9**.
 SSH access was restored at 6:32 p.m. after the earlier MFA access interruption;
 the two-hour monitor continues normal checks.
+
+## Verified AdamW completion
+
+AdamW stopped at its configured 100k-step budget, using 204.8 million records
+without sampler reuse. Training took **21h 55m 13s**, excluding evaluation pauses;
+launch through final evaluation and checkpoint preservation took **22h 32m 41s**.
+It completed at **9:34:09 p.m. Toronto on September 9**.
+
+The **2,048,443,150-byte** full model/optimizer checkpoint is preserved at
+`/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-paired-unique-b2048-100k-20260909/baseline/checkpoint-final.pt`.
+Its SHA-256 is `138fe1300f6f4132472ae4cf7afd6b6500b7869d22898cf181d9095f2dcd90a5`.
+The frozen verifier restored the model and AdamW state exactly and checked all
+four ranks' sampler states. A separate hash of the project-storage file on
+allocated compute matched the original checkpoint. All ten project-storage
+result receipts match the independently audited evaluation artifacts.
+See [final audit](full/baseline/FINAL_AUDIT.json) and
+[independent storage verification](full/baseline/DURABLE_CHECKPOINT_VERIFIED.json).
 
 ## Data coverage
 
