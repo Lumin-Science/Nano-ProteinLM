@@ -1,0 +1,7 @@
+started_at_utc=2026-09-10T22:53:12Z
+checkpoint=/scratch/muchenli/Nano-Protein-LM-nibi-setting3-b2048-400k-20260910/full/checkpoint-latest.pt
+visible_gpus=0,1,2,3
+contact_chains=20775
+contact_shards=16
+finished_at_utc=2026-09-10T22:56:29Z
+evaluation_wall_seconds=197
