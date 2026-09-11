@@ -1,0 +1,36 @@
+{
+  "status": "passed",
+  "scope": "checkpoint_at_step",
+  "checkpoint_sha256": "e85db8727516aa3f8ee278dcab413be527e502d619c2ecc9194dcb4e9838719f",
+  "optimizer_steps": 300000,
+  "sequences_seen": 614400000,
+  "model_tokens": 145125521984,
+  "world_size": 8,
+  "parameter_count": 170559856,
+  "full_training_complete": false,
+  "finite_model_and_optimizer": true,
+  "model_and_optimizer_roundtrip_exact": true,
+  "optimizer_layout": "replicated_ddp_full_state",
+  "source_exposure_global": {
+    "mgnify": {
+      "draws": 66923112,
+      "unique_records_seen": 66923112,
+      "repeated_draws": 0,
+      "epoch": 0
+    },
+    "omg_img": {
+      "draws": 328512691,
+      "unique_records_seen": 262845186,
+      "repeated_draws": 65667505,
+      "epoch": 1
+    },
+    "uniref90": {
+      "draws": 218964197,
+      "unique_records_seen": 74175974,
+      "repeated_draws": 144788223,
+      "epoch": 2
+    }
+  },
+  "global_sampler_state_verified": true,
+  "data_manifest_sha256": "52399ee87da1d4d6d019ebc9b232cbf48bfe038c9ee5f9ea65814b9c3b70a2f6"
+}
