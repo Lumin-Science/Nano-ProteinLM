@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "unit_tests": 50,
+  "suites": [
+    "stage_transition",
+    "global_sampling",
+    "resume",
+    "data_budget",
+    "training_budgets",
+    "training_cli",
+    "171m_preset",
+    "shard_selection",
+    "periodic_evaluation"
+  ],
+  "notes": "48 tests passed in the combined runner; the 2 multiprocessing evaluation tests passed when rerun through python -m unittest instead of stdin. Ruff checks and bash syntax validation passed. Real Nibi qualification is recorded separately."
+}

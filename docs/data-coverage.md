@@ -96,7 +96,7 @@ preserving global batch and global microbatch grouping. For example, 64×8×4
 becomes 128×4×4. The next global record sequence is conserved; floating-point
 reduction order and rank-local crops/masks can change, so cross-layout resume is
 not bitwise identical. Same-layout resume restores rank RNG states exactly.
-The supported global mode currently covers a single training stage.
+Each global-sampler run covers one training stage. An explicit [Stage 1-to-Stage 2 transition](stage2-continuation.md) preserves the model, full optimizer, RNG and per-source history while changing context, mixture and the decay clock. Strict sources can expand before their first repeat; their new queue excludes every previously consumed identity. Continuation capacity checks compare unused records with only the remaining updates.
 
 See [the 400k Setting 3 recipe](../configs/setting3-nibi-b2048-400k.yaml) and
 [the run record](../.dev/reports/nibi-setting3-b2048-400k-20260910/README.md).

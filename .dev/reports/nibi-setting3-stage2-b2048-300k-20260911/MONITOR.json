@@ -1,0 +1,7 @@
+{
+  "automation_id": "launch-r02-rope10k-on-fir-at-4-am",
+  "name": "Monitor Nibi Setting 3 Stage 2 every 2 hours",
+  "status": "ACTIVE",
+  "interval_hours": 2,
+  "target_thread_id": "01a074b8-1cc2-7c81-9b5c-49e0d5f616fc"
+}

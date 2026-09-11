@@ -1,0 +1,11 @@
+{
+  "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/transition/checkpoint-stage2-start.pt",
+  "data_mode": "restore_rank_rng_and_global_sampler",
+  "data_seed": 20260910,
+  "global_batch_preserved": true,
+  "optimizer_restored": true,
+  "optimizer_step": 400000,
+  "prior_training_seconds": 216097.00603864156,
+  "source_world_size": 8,
+  "world_size": 8
+}

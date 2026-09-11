@@ -1,0 +1,7 @@
+{
+  "snapshot_file": "metrics-through-400800.jsonl.gz",
+  "last_logged_step": 400800,
+  "record_count": 80,
+  "sha256": "adeda24846b00619cbf7a3552824a060b9d865556e440a77962451c57fb11f33",
+  "description": "Initial production launch snapshot; live metrics remain on Nibi."
+}

@@ -1,0 +1,9 @@
+{
+  "pid": 114986,
+  "host": "l1.nibi.sharcnet",
+  "started_utc": "2026-09-11T21:36:29.058923+00:00",
+  "command": [
+    "python3",
+    "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/launch.py"
+  ]
+}
