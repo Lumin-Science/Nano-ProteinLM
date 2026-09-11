@@ -14,6 +14,33 @@ import torch
 from .data import SOURCES, TokenStore
 
 
+def origin_draws(origin):
+    if origin is None:
+        return 0
+    if origin.get("protocol") == "global-unseen-origin-v1":
+        return row_state_exposure(origin["state"])["draws"]
+    return sum(origin["cursors"])
+
+
+def row_state_exposure(state):
+    """Read exposure without constructing a potentially very large permutation."""
+    size, epoch, cursor = int(state["size"]), int(state["epoch"]), int(state["cursor"])
+    prior = origin_draws(state.get("origin"))
+    if size <= 0 or epoch < 0 or cursor < 0 or cursor > size - (prior if epoch == 0 else 0):
+        raise ValueError("invalid global source history")
+    if epoch and not state["allow_resampling"]:
+        raise ValueError("strict source has repeated an epoch")
+    draws = prior + cursor if epoch == 0 else epoch * size + cursor
+    return dict(
+        draws=draws,
+        unique_records_seen=min(draws, size),
+        repeated_draws=max(0, draws - size),
+        epoch=epoch,
+        epoch_cursor=cursor,
+        available_records=size,
+    )
+
+
 class GlobalRows:
     """Every rank advances the same source cursor before selecting its local rows.
 
@@ -30,7 +57,17 @@ class GlobalRows:
         self.allow_resampling = bool(allow_resampling)
         self.origin = copy.deepcopy(origin)
         self.consumed_before = 0
-        if origin is not None:
+        if origin is not None and origin.get("protocol") == "global-unseen-origin-v1":
+            previous = origin["state"]
+            exposure = row_state_exposure(previous)
+            if (
+                previous["size"] >= self.size
+                or previous["epoch"] != 0
+                or exposure["repeated_draws"]
+            ):
+                raise ValueError("global expansion requires an un-repeated source prefix")
+            self.consumed_before = exposure["draws"]
+        elif origin is not None:
             old_size = int(origin["size"])
             world = int(origin["world_size"])
             cursors = origin["cursors"]
@@ -49,6 +86,23 @@ class GlobalRows:
     def _rows(self):
         if self.epoch == 0 and self.origin:
             o = self.origin
+            if o.get("protocol") == "global-unseen-origin-v1":
+                state = o["state"]
+                previous = GlobalRows(
+                    state["size"],
+                    seed=state["seed"],
+                    allow_resampling=state["allow_resampling"],
+                    origin=state["origin"],
+                )
+                previous.load_state_dict(state)
+                rows = np.concatenate(
+                    (
+                        previous.rows[previous.cursor :],
+                        np.arange(state["size"], self.size, dtype=np.int64),
+                    )
+                )
+                np.random.default_rng(self.seed).shuffle(rows)
+                return rows
             old = np.random.default_rng(o["seed"]).permutation(o["size"])
             unseen = np.ones(self.size, dtype=np.bool_)
             for rank, cursor in enumerate(o["cursors"]):
@@ -284,12 +338,7 @@ def portable_batcher_states(packet: dict[str, Any]):
                     raise ValueError("checkpoint global sampler states disagree across ranks")
     for stage, state in first.items():
         for source, sampler in state["samplers"].items():
-            prior = sum((sampler.get("origin") or {}).get("cursors", []))
-            draws = (
-                prior + sampler["cursor"]
-                if sampler["epoch"] == 0
-                else (sampler["epoch"] * sampler["size"] + sampler["cursor"])
-            )
+            draws = row_state_exposure(sampler)["draws"]
             counted = sum(r["batchers"][stage]["source_counts"][source] for r in runtime)
             if counted != draws:
                 raise ValueError("checkpoint source counts disagree with global cursor")

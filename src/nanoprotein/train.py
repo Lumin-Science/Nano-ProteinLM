@@ -27,11 +27,17 @@ from .batch_balance import rebalance_masked_batch
 from .data import MixtureBatcher, file_sha256
 from .data_budget import data_coverage
 from .flash_attention import prepare_attention
-from .global_sampling import GlobalMixtureBatcher, portable_batcher_states
+from .global_sampling import GlobalMixtureBatcher, portable_batcher_states, row_state_exposure
 from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
 from .periodic_evaluation import run_periodic_evaluation
 from .resume import capture_runtime, restore_runtime, validate_resume
-from .schedule import Stage, stage_for_progress, stage_for_time, wsd_multiplier
+from .schedule import (
+    Stage,
+    continuation_progress,
+    stage_for_progress,
+    stage_for_time,
+    wsd_multiplier,
+)
 from .sharded_data import validate_search_contracts
 from .tokenizer import ProteinTokenizer, mask_tokens
 
@@ -102,7 +108,21 @@ def resolve_step_budgets(config: dict[str, Any]) -> tuple[int | None, int | None
     schedule_steps = int(schedule_steps_value) if schedule_steps_value is not None else None
     if schedule_steps is not None and schedule_steps <= 0:
         raise ValueError("schedule_steps must be positive")
-    if max_steps is not None and schedule_steps is not None and schedule_steps > max_steps:
+    start_step = int(config.get("schedule_start_step", 0))
+    if start_step and (
+        start_step < 0
+        or schedule_steps is None
+        or schedule_steps <= start_step
+        or max_steps is None
+        or max_steps <= start_step
+    ):
+        raise ValueError("continuation budgets must exceed schedule_start_step")
+    if (
+        max_steps is not None
+        and schedule_steps is not None
+        and schedule_steps > max_steps
+        and not start_step
+    ):
         raise ValueError("schedule_steps cannot exceed max_steps")
     return max_steps, schedule_steps
 
@@ -627,6 +647,16 @@ def train(
         raise ValueError("configured GPU count differs from the distributed world size")
     manifest_sha = file_sha256(data_root / "manifest.json")
     coverage = data_coverage(config, data_manifest, world_size=world_size)
+    schedule_start_step = int(config.get("schedule_start_step", 0))
+    if schedule_start_step and (
+        resume_checkpoint is None
+        or len(config["stages"]) != 1
+        or config["stages"][0]["name"] != "stage2"
+        or config.get("schedule_steps", config.get("max_steps")) is None
+    ):
+        raise ValueError(
+            "a Stage 2 continuation requires a checkpoint and explicit step schedule"
+        )
     allow_resampling = coverage["policy"] == "allow"
     global_sampling = config.get("data_sampler", "rank") == "global"
     if config.get("data_sampler", "rank") not in {"rank", "global"}:
@@ -657,6 +687,16 @@ def train(
                     raise ValueError("migration source size differs from expanded corpus")
         elif global_sampling:
             global_saved = portable_batcher_states(resumed)
+            saved_stage = next(iter(global_saved.values()))
+            coverage = data_coverage(
+                config,
+                data_manifest,
+                world_size=world_size,
+                resume_step=int(resumed["optimizer_step"]),
+                source_exposure={
+                    k: row_state_exposure(s) for k, s in saved_stage["samplers"].items()
+                },
+            )
         if (
             not global_sampling
             and not allow_resampling
@@ -736,6 +776,7 @@ def train(
                 "resume_optimizer_step": int(resumed["optimizer_step"]) if resumed else 0,
                 "resume_source_world_size": int(resumed["world_size"]) if resumed else None,
                 "data_migration": migration,
+                "stage_transition": resumed.get("stage_transition") if resumed else None,
                 "python": platform.python_version(),
                 "cuda": torch.version.cuda,
                 "torch": torch.__version__,
@@ -956,7 +997,7 @@ def train(
             break
         if schedule_steps is not None:
             stage, stage_progress = stage_for_progress(
-                optimizer_step / schedule_steps,
+                continuation_progress(optimizer_step, schedule_steps, schedule_start_step),
                 stage1_fraction=stage1_fraction,
                 stages=stages,
             )

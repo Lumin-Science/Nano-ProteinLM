@@ -9,7 +9,7 @@ from pathlib import Path
 import torch
 
 from .data import file_sha256
-from .global_sampling import portable_batcher_states
+from .global_sampling import portable_batcher_states, row_state_exposure
 from .model import build_model, count_parameters
 
 
@@ -69,19 +69,11 @@ def audit_checkpoint(checkpoint: Path, data_root: Path, *, expected_step=None, r
         size = manifest["sources"][name]["train"]["records"]
         if s["size"] != size or not 0 <= s["cursor"] <= size:
             raise ValueError("source cursor/size differs from data")
-        prior = sum((s.get("origin") or {}).get("cursors", []))
-        if s["epoch"] < 0 or (s["epoch"] == 0 and s["cursor"] > size - prior):
-            raise ValueError("invalid source epoch/cursor")
+        source_exposure = row_state_exposure(s)
         policy = config["data_source_resampling"][name]
         if s["allow_resampling"] != (policy == "allow") or (policy == "error" and s["epoch"]):
             raise ValueError("source violated configured repeat policy")
-        draws = prior + s["cursor"] if s["epoch"] == 0 else s["epoch"] * size + s["cursor"]
-        exposure[name] = {
-            "draws": draws,
-            "unique_records_seen": min(draws, size),
-            "repeated_draws": max(0, draws - size),
-            "epoch": s["epoch"],
-        }
+        exposure[name] = source_exposure
     if sum(v["draws"] for v in exposure.values()) != packet["sequences_seen"]:
         raise ValueError("global source history differs from training count")
     assert_finite(packet["model"])

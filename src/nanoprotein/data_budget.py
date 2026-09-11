@@ -7,7 +7,12 @@ from typing import Any
 
 
 def data_coverage(
-    config: dict[str, Any], manifest: dict[str, Any], *, world_size: int
+    config: dict[str, Any],
+    manifest: dict[str, Any],
+    *,
+    world_size: int,
+    resume_step: int | None = None,
+    source_exposure: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Expected per-source draws, with staging headroom and a runtime exhaustion guard.
 
@@ -31,6 +36,12 @@ def data_coverage(
     if world_size <= 0:
         raise ValueError("world_size must be positive")
     stages = config["stages"]
+    start_step = int(config.get("schedule_start_step", 0))
+    if start_step < 0 or (start_step and len(stages) != 1):
+        raise ValueError("schedule_start_step requires one continuation stage")
+    consumed_steps = start_step if resume_step is None else int(resume_step)
+    if consumed_steps < start_step:
+        raise ValueError("resume precedes continuation stage")
     if not 1 <= len(stages) <= 2 or len({s["name"] for s in stages}) != len(stages):
         raise ValueError("expected one or two uniquely named stages")
     max_steps = config.get("max_steps")
@@ -40,7 +51,9 @@ def data_coverage(
         if max_steps <= 0:
             raise ValueError("max_steps must be positive")
         if len(stages) == 1:
-            stage_steps = [max_steps]
+            stage_steps = [max_steps - consumed_steps]
+            if stage_steps[0] < 0:
+                raise ValueError("resume exceeds training endpoint")
         else:
             schedule = int(config.get("schedule_steps", max_steps))
             fraction = float(config.get("stage1_fraction", 2 / 3))
@@ -48,6 +61,11 @@ def data_coverage(
                 raise ValueError("invalid two-stage step schedule")
             first = min(max_steps, math.ceil(schedule * fraction))
             stage_steps = [first, max_steps - first]
+            if consumed_steps:
+                stage_steps = [
+                    max(0, first - consumed_steps),
+                    max(0, max_steps - max(first, consumed_steps)),
+                ]
     expected: dict[str, float] = {}
     stage_budgets = []
     for stage, steps in zip(stages, stage_steps, strict=True):
@@ -76,11 +94,17 @@ def data_coverage(
     insufficient = []
     for source, draws in expected.items():
         records = int(manifest["sources"][source]["train"]["records"])
+        consumed = int((source_exposure or {}).get(source, {}).get("unique_records_seen", 0))
+        if not 0 <= consumed <= records:
+            raise ValueError("source exposure exceeds available corpus")
+        unused = records - consumed
         required = math.ceil(draws * (1 + headroom) / world_size) * world_size
-        enough = records >= required and records >= world_size
+        enough = unused >= required and records >= world_size
         source_policy = source_policies[source] if policy == "per_source" else policy
         sources[source] = {
             "available_records": records,
+            "previously_seen_unique_records": consumed,
+            "unused_records": unused,
             "expected_draws": draws if max_steps is not None else None,
             "required_records_with_headroom": required if max_steps is not None else None,
             "expected_exposures": draws / records
@@ -90,12 +114,13 @@ def data_coverage(
             **({"resampling": source_policy} if policy == "per_source" else {}),
         }
         if not enough and (policy != "per_source" or source_policy == "error"):
-            insufficient.append(f"{source}: {records:,} available, {required:,} required")
+            insufficient.append(f"{source}: {unused:,} unused, {required:,} required")
     receipt = {
         "protocol": "training-data-coverage-v1",
         "policy": policy,
         "headroom_fraction": headroom,
         "world_size": world_size,
+        "resume_step": consumed_steps,
         "stages": stage_budgets,
         "sources": sources,
         "status": "insufficient"

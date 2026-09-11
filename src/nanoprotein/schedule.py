@@ -18,6 +18,15 @@ PAPER_STAGE_1_MIXTURE = {"uniref90": 0.36, "mgnify": 0.11, "omg_img": 0.54}
 PAPER_STAGE_2_MIXTURE = {"uniref90": 0.63, "mgnify": 0.06, "omg_img": 0.31}
 
 
+def continuation_progress(
+    optimizer_step: int, schedule_steps: int, start_step: int = 0
+) -> float:
+    """Keep global counters while starting a new stage's decay at its own boundary."""
+    if start_step < 0 or schedule_steps <= start_step or optimizer_step < start_step:
+        raise ValueError("invalid continuation schedule boundary")
+    return (optimizer_step - start_step) / (schedule_steps - start_step)
+
+
 def stage_for_time(
     training_seconds: float,
     *,

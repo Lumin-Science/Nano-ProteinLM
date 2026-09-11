@@ -474,6 +474,7 @@ def materialize_plan(
     output_root: Path,
     *,
     workers: int = 1,
+    reuse_root: Path | None = None,
 ) -> dict[str, Any]:
     """Convert a selected Parquet prefix to the existing fast mmap training layout."""
 
@@ -492,14 +493,37 @@ def materialize_plan(
     if workers <= 0:
         raise ValueError("materialization workers must be positive")
     output_root.mkdir(parents=True)
-    tasks = [(source, plan["sources"][source], cache_root, output_root) for source in SOURCES]
+    source_receipts = {}
+    if reuse_root is not None:
+        import os
+        import shutil
+
+        previous_plan = json.loads((reuse_root / "download-plan.json").read_text())
+        previous = json.loads((reuse_root / "manifest.json").read_text())
+        if previous["release_manifest_sha256"] != plan["release_manifest_sha256"]:
+            raise ValueError("reused sources must belong to the same immutable release")
+        validate_prepared_plan(previous_plan, reuse_root)
+        for source in SOURCES:
+            if all(
+                previous_plan["sources"][source][split] == plan["sources"][source][split]
+                for split in ("train", "validation")
+            ):
+                shutil.copytree(
+                    reuse_root / source, output_root / source, copy_function=os.link
+                )
+                source_receipts[source] = previous["sources"][source]
+    tasks = [
+        (source, plan["sources"][source], cache_root, output_root)
+        for source in SOURCES
+        if source not in source_receipts
+    ]
     if workers == 1:
-        source_receipts = dict(map(_materialize_source, tasks))
+        source_receipts.update(map(_materialize_source, tasks))
     else:
         from concurrent.futures import ProcessPoolExecutor
 
         with ProcessPoolExecutor(max_workers=min(workers, len(SOURCES))) as pool:
-            source_receipts = dict(pool.map(_materialize_source, tasks))
+            source_receipts.update(pool.map(_materialize_source, tasks))
     release_decontamination = release_manifest["decontamination"]
     manifest: dict[str, Any] = {
         "schema_version": 1,
