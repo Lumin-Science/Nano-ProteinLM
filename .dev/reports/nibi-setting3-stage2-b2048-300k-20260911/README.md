@@ -2,6 +2,12 @@
 
 Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step **12162637.44**, using all eight H100 80GB GPUs. The [live launch audit](LAUNCH_VERIFIED.json) passed at global step **400,530** at 17:58 Toronto: all logged losses and gradients were finite, optimizer and source history were restored, the intended decay clock was active, and the recipe/source bundle matched their project-storage copies. The observed training-loop rate was **0.556 seconds per update**. Including 30 evaluations at the measured qualification cost, the initial finish estimate was **September 13 at 18:00 Toronto**, or **22:38** with a 10% training slowdown. This is a launch-time estimate, not a completion result. The current allocation ends September 14 at 07:24:03 Toronto.
 
+## Latest monitoring check
+
+At **September 11, 19:00 Toronto**, the [monitoring receipt](monitoring/20260911T2300Z.json) recorded **407,270 global steps**, or **7,270 / 300,000 Stage 2 updates (2.42%)**. Production step 12162637.44 remained active on g27, the source checkout was unchanged, and finite loss/gradient, decay schedule and source accounting checks passed. No production validation or P@L endpoint was due yet; the first 410k evaluation was estimated to finish around **19:29 Toronto**.
+
+Training averaged **0.555 seconds per update** since the launch audit. Including the qualification-measured evaluation overhead, the revised finish estimate was **September 13 at 17:56 Toronto**, or **22:27** with a 10% training slowdown. The allocation had **60.39 hours remaining**, leaving **13.46 hours** of headroom at the central estimate. MGnify had **40,603,251 unused records**, **zero repeats**, and approximately **12.88% headroom** over its remaining expected draws. UniRef90 was in zero-indexed epoch 4 and OMG in epoch 1, consistent with their permitted complete global passes.
+
 ## Frozen recipe
 
 The [recipe](../../../configs/setting3-nibi-stage2-b2048-300k.yaml), [transition methods](../../../docs/stage2-continuation.md), and [launcher](../../../runs/nibi_setting3_stage2.sh) are preserved on main. The production source is pinned separately at **f4b672d0a3a70e15740ee3876c202e535f727d3c**, so later report updates do not change running code.

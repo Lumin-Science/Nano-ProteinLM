@@ -1,0 +1,590 @@
+{
+  "assessment": {
+    "checked_utc": "2026-09-11T23:00:31.972517+00:00",
+    "global_step": 407270,
+    "stage2_updates": 7270,
+    "stage2_percent": 2.4233333333333333,
+    "seconds_per_update_since_launch_audit": 0.5552635023195589,
+    "remaining_training_hours": 45.150634731667914,
+    "remaining_evaluation_hours_estimated": 1.7818072736922963,
+    "finish_toronto": "2026-09-13T17:56:28.763736-04:00",
+    "finish_10pct_slower_toronto": "2026-09-13T22:27:22.992240-04:00",
+    "allocation_hours_left": 60.39195207861111,
+    "finish_headroom_hours": 13.459510073333334,
+    "first_evaluation_toronto": "2026-09-11T19:29:21.658751-04:00",
+    "production_evaluations": [],
+    "recent_finite_metrics_and_schedule_verified": true,
+    "mgnify_unused": 40603251,
+    "mgnify_expected_remaining_draws": 35970662.4,
+    "mgnify_headroom_fraction": 0.1287879702765775,
+    "mgnify_repeats": 0,
+    "latest_train_loss": 2.2793012261390686,
+    "latest_objective_loss": 2.21120023727417,
+    "gradient_norm": 0.09106633067131042,
+    "base_lr": 0.0004890965,
+    "reported_attention_lr": 0.00044018685000000004,
+    "source_exposure": {
+      "mgnify": {
+        "available_records": 130716775,
+        "draws": 90113524,
+        "epoch": 0,
+        "epoch_cursor": 893449,
+        "repeated_draws": 0,
+        "unique_records_seen": 90113524
+      },
+      "omg_img": {
+        "available_records": 262845186,
+        "draws": 442629557,
+        "epoch": 1,
+        "epoch_cursor": 179784371,
+        "repeated_draws": 179784371,
+        "unique_records_seen": 262845186
+      },
+      "uniref90": {
+        "available_records": 74175974,
+        "draws": 301345879,
+        "epoch": 4,
+        "epoch_cursor": 4641983,
+        "repeated_draws": 227169905,
+        "unique_records_seen": 74175974
+      }
+    }
+  },
+  "host": {
+    "checked_utc": "2026-09-11T23:01:33.046280+00:00",
+    "steps": "12162637.extern|extern|4-11:37:30|g27\n12162637.batch|batch|4-11:37:30|g27\n12162637.44|bash|1:09:15|g27",
+    "source_commit": "f4b672d0a3a70e15740ee3876c202e535f727d3c",
+    "source_dirty": "",
+    "metrics_updated_utc": "2026-09-11T23:01:30.740741+00:00",
+    "workflow_failed": false,
+    "production_failed": false
+  },
+  "allocation": "12162637|RUNNING|2-12:23:31|2026-09-14T07:24:03|g27\n12162638|PENDING|7-00:00:00|N/A|",
+  "recent_production_training_records": [
+    {
+      "attention_backend": "flash3",
+      "batch_balance": {
+        "rank_tokens_after": [
+          18860,
+          18860,
+          18798,
+          18798,
+          18798,
+          18798,
+          18797,
+          18798
+        ],
+        "rank_tokens_before": [
+          20847,
+          17554,
+          20337,
+          18743,
+          18787,
+          18666,
+          18206,
+          17367
+        ]
+      },
+      "data_resampling": "per_source",
+      "estimated_training_flops": 202488874067002228608,
+      "event": "train",
+      "filled_residues": 196198901708,
+      "gradient_norm": 0.0897308811545372,
+      "learning_rate": 0.00044025435,
+      "loss": 2.253483295440674,
+      "mfu_6n": 0.14103496757102427,
+      "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+      "model_tokens": 197866874828,
+      "objective_loss": 2.2179948687553406,
+      "optimizer": "muon",
+      "optimizer_step": 407220,
+      "sequences_seen": 833986560,
+      "source_counts_global": {
+        "mgnify": 90107401,
+        "omg_img": 442597725,
+        "uniref90": 301281434
+      },
+      "source_counts_rank0": {
+        "mgnify": 11266304,
+        "omg_img": 55321054,
+        "uniref90": 37660963
+      },
+      "source_epoch_maxima": {
+        "mgnify": 0,
+        "omg_img": 1,
+        "uniref90": 4
+      },
+      "source_exposure_global": {
+        "mgnify": {
+          "available_records": 130716775,
+          "draws": 90107401,
+          "epoch": 0,
+          "epoch_cursor": 887326,
+          "repeated_draws": 0,
+          "unique_records_seen": 90107401
+        },
+        "omg_img": {
+          "available_records": 262845186,
+          "draws": 442597725,
+          "epoch": 1,
+          "epoch_cursor": 179752539,
+          "repeated_draws": 179752539,
+          "unique_records_seen": 262845186
+        },
+        "uniref90": {
+          "available_records": 74175974,
+          "draws": 301281434,
+          "epoch": 4,
+          "epoch_cursor": 4577538,
+          "repeated_draws": 227105460,
+          "unique_records_seen": 74175974
+        }
+      },
+      "stage": "stage2",
+      "stage_progress": 0.024063333333333332,
+      "step_compute_seconds": 0.5394540959969163,
+      "step_model_tokens": 588517,
+      "tokens_per_second": 1090949.173186673,
+      "training_loss_reduction": "sqrt_mask_count",
+      "training_seconds": 4010.1305376221426
+    },
+    {
+      "attention_backend": "flash3",
+      "batch_balance": {
+        "rank_tokens_after": [
+          18816,
+          18758,
+          18756,
+          18758,
+          18757,
+          18756,
+          18756,
+          18757
+        ],
+        "rank_tokens_before": [
+          21833,
+          17230,
+          21867,
+          15881,
+          20081,
+          18658,
+          17458,
+          17106
+        ]
+      },
+      "data_resampling": "per_source",
+      "estimated_training_flops": 202495083106168391040,
+      "event": "train",
+      "filled_residues": 196204928060,
+      "gradient_norm": 0.0897843986749649,
+      "learning_rate": 0.00044024085,
+      "loss": 2.2438114285469055,
+      "mfu_6n": 0.1413187119848683,
+      "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+      "model_tokens": 197872942140,
+      "objective_loss": 2.1991025805473328,
+      "optimizer": "muon",
+      "optimizer_step": 407230,
+      "sequences_seen": 834007040,
+      "source_counts_global": {
+        "mgnify": 90108611,
+        "omg_img": 442604100,
+        "uniref90": 301294329
+      },
+      "source_counts_rank0": {
+        "mgnify": 11266476,
+        "omg_img": 55321869,
+        "uniref90": 37662536
+      },
+      "source_epoch_maxima": {
+        "mgnify": 0,
+        "omg_img": 1,
+        "uniref90": 4
+      },
+      "source_exposure_global": {
+        "mgnify": {
+          "available_records": 130716775,
+          "draws": 90108611,
+          "epoch": 0,
+          "epoch_cursor": 888536,
+          "repeated_draws": 0,
+          "unique_records_seen": 90108611
+        },
+        "omg_img": {
+          "available_records": 262845186,
+          "draws": 442604100,
+          "epoch": 1,
+          "epoch_cursor": 179758914,
+          "repeated_draws": 179758914,
+          "unique_records_seen": 262845186
+        },
+        "uniref90": {
+          "available_records": 74175974,
+          "draws": 301294329,
+          "epoch": 4,
+          "epoch_cursor": 4590433,
+          "repeated_draws": 227118355,
+          "unique_records_seen": 74175974
+        }
+      },
+      "stage": "stage2",
+      "stage_progress": 0.024096666666666666,
+      "step_compute_seconds": 0.5608867509290576,
+      "step_model_tokens": 613130,
+      "tokens_per_second": 1093144.0241446358,
+      "training_loss_reduction": "sqrt_mask_count",
+      "training_seconds": 4015.6952416710556
+    },
+    {
+      "attention_backend": "flash3",
+      "batch_balance": {
+        "rank_tokens_after": [
+          20137,
+          20137,
+          20137,
+          20136,
+          20136,
+          20136,
+          20136,
+          20136
+        ],
+        "rank_tokens_before": [
+          19449,
+          15828,
+          19452,
+          21863,
+          19435,
+          21603,
+          22841,
+          20620
+        ]
+      },
+      "data_resampling": "per_source",
+      "estimated_training_flops": 202501280195569922400,
+      "event": "train",
+      "filled_residues": 196210942735,
+      "gradient_norm": 0.09760169684886932,
+      "learning_rate": 0.00044022734999999997,
+      "loss": 2.2753217816352844,
+      "mfu_6n": 0.14127681887422985,
+      "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+      "model_tokens": 197878997775,
+      "objective_loss": 2.2045658826828003,
+      "optimizer": "muon",
+      "optimizer_step": 407240,
+      "sequences_seen": 834027520,
+      "source_counts_global": {
+        "mgnify": 90109885,
+        "omg_img": 442610414,
+        "uniref90": 301307221
+      },
+      "source_counts_rank0": {
+        "mgnify": 11266623,
+        "omg_img": 55322671,
+        "uniref90": 37664147
+      },
+      "source_epoch_maxima": {
+        "mgnify": 0,
+        "omg_img": 1,
+        "uniref90": 4
+      },
+      "source_exposure_global": {
+        "mgnify": {
+          "available_records": 130716775,
+          "draws": 90109885,
+          "epoch": 0,
+          "epoch_cursor": 889810,
+          "repeated_draws": 0,
+          "unique_records_seen": 90109885
+        },
+        "omg_img": {
+          "available_records": 262845186,
+          "draws": 442610414,
+          "epoch": 1,
+          "epoch_cursor": 179765228,
+          "repeated_draws": 179765228,
+          "unique_records_seen": 262845186
+        },
+        "uniref90": {
+          "available_records": 74175974,
+          "draws": 301307221,
+          "epoch": 4,
+          "epoch_cursor": 4603325,
+          "repeated_draws": 227131247,
+          "unique_records_seen": 74175974
+        }
+      },
+      "stage": "stage2",
+      "stage_progress": 0.02413,
+      "step_compute_seconds": 0.5578558389097452,
+      "step_model_tokens": 609636,
+      "tokens_per_second": 1092819.967953463,
+      "training_loss_reduction": "sqrt_mask_count",
+      "training_seconds": 4021.2487751350272
+    },
+    {
+      "attention_backend": "flash3",
+      "batch_balance": {
+        "rank_tokens_after": [
+          18390,
+          18357,
+          18357,
+          18328,
+          18328,
+          18328,
+          18327,
+          18327
+        ],
+        "rank_tokens_before": [
+          17320,
+          17946,
+          19508,
+          17935,
+          20171,
+          18693,
+          15488,
+          19681
+        ]
+      },
+      "data_resampling": "per_source",
+      "estimated_training_flops": 202507419474390501984,
+      "event": "train",
+      "filled_residues": 196216900919,
+      "gradient_norm": 0.09088708460330963,
+      "learning_rate": 0.0004402138500000001,
+      "loss": 2.2917515635490417,
+      "mfu_6n": 0.14050017315641228,
+      "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+      "model_tokens": 197884996919,
+      "objective_loss": 2.2264222502708435,
+      "optimizer": "muon",
+      "optimizer_step": 407250,
+      "sequences_seen": 834048000,
+      "source_counts_global": {
+        "mgnify": 90111072,
+        "omg_img": 442616801,
+        "uniref90": 301320127
+      },
+      "source_counts_rank0": {
+        "mgnify": 11266768,
+        "omg_img": 55323477,
+        "uniref90": 37665756
+      },
+      "source_epoch_maxima": {
+        "mgnify": 0,
+        "omg_img": 1,
+        "uniref90": 4
+      },
+      "source_exposure_global": {
+        "mgnify": {
+          "available_records": 130716775,
+          "draws": 90111072,
+          "epoch": 0,
+          "epoch_cursor": 890997,
+          "repeated_draws": 0,
+          "unique_records_seen": 90111072
+        },
+        "omg_img": {
+          "available_records": 262845186,
+          "draws": 442616801,
+          "epoch": 1,
+          "epoch_cursor": 179771615,
+          "repeated_draws": 179771615,
+          "unique_records_seen": 262845186
+        },
+        "uniref90": {
+          "available_records": 74175974,
+          "draws": 301320127,
+          "epoch": 4,
+          "epoch_cursor": 4616231,
+          "repeated_draws": 227144153,
+          "unique_records_seen": 74175974
+        }
+      },
+      "stage": "stage2",
+      "stage_progress": 0.024163333333333332,
+      "step_compute_seconds": 0.5286505881231278,
+      "step_model_tokens": 574544,
+      "tokens_per_second": 1086812.3726861023,
+      "training_loss_reduction": "sqrt_mask_count",
+      "training_seconds": 4026.7550817229785
+    },
+    {
+      "attention_backend": "flash3",
+      "batch_balance": {
+        "rank_tokens_after": [
+          18013,
+          18014,
+          18013,
+          18014,
+          18014,
+          17951,
+          17950,
+          17950
+        ],
+        "rank_tokens_before": [
+          16413,
+          18579,
+          18428,
+          17685,
+          16599,
+          17450,
+          20640,
+          18125
+        ]
+      },
+      "data_resampling": "per_source",
+      "estimated_training_flops": 202513591293984888096,
+      "event": "train",
+      "filled_residues": 196222890901,
+      "gradient_norm": 0.09055346250534058,
+      "learning_rate": 0.00044020035000000003,
+      "loss": 2.289797306060791,
+      "mfu_6n": 0.14117016637914842,
+      "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+      "model_tokens": 197891027861,
+      "objective_loss": 2.2243757843971252,
+      "optimizer": "muon",
+      "optimizer_step": 407260,
+      "sequences_seen": 834068480,
+      "source_counts_global": {
+        "mgnify": 90112337,
+        "omg_img": 442623122,
+        "uniref90": 301333021
+      },
+      "source_counts_rank0": {
+        "mgnify": 11266915,
+        "omg_img": 55324228,
+        "uniref90": 37667418
+      },
+      "source_epoch_maxima": {
+        "mgnify": 0,
+        "omg_img": 1,
+        "uniref90": 4
+      },
+      "source_exposure_global": {
+        "mgnify": {
+          "available_records": 130716775,
+          "draws": 90112337,
+          "epoch": 0,
+          "epoch_cursor": 892262,
+          "repeated_draws": 0,
+          "unique_records_seen": 90112337
+        },
+        "omg_img": {
+          "available_records": 262845186,
+          "draws": 442623122,
+          "epoch": 1,
+          "epoch_cursor": 179777936,
+          "repeated_draws": 179777936,
+          "unique_records_seen": 262845186
+        },
+        "uniref90": {
+          "available_records": 74175974,
+          "draws": 301333021,
+          "epoch": 4,
+          "epoch_cursor": 4629125,
+          "repeated_draws": 227157047,
+          "unique_records_seen": 74175974
+        }
+      },
+      "stage": "stage2",
+      "stage_progress": 0.024196666666666665,
+      "step_compute_seconds": 0.549679267918691,
+      "step_model_tokens": 600247,
+      "tokens_per_second": 1091994.9778582316,
+      "training_loss_reduction": "sqrt_mask_count",
+      "training_seconds": 4032.286540535977
+    },
+    {
+      "attention_backend": "flash3",
+      "batch_balance": {
+        "rank_tokens_after": [
+          19363,
+          19364,
+          19364,
+          19363,
+          19364,
+          19362,
+          19363,
+          19363
+        ],
+        "rank_tokens_before": [
+          19894,
+          18649,
+          19039,
+          20312,
+          18768,
+          21268,
+          19180,
+          17796
+        ]
+      },
+      "data_resampling": "per_source",
+      "estimated_training_flops": 202519743179566664064,
+      "event": "train",
+      "filled_residues": 196228861404,
+      "gradient_norm": 0.09106633067131042,
+      "learning_rate": 0.00044018685000000004,
+      "loss": 2.2793012261390686,
+      "mfu_6n": 0.14082185477114945,
+      "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+      "model_tokens": 197897039324,
+      "objective_loss": 2.21120023727417,
+      "optimizer": "muon",
+      "optimizer_step": 407270,
+      "sequences_seen": 834088960,
+      "source_counts_global": {
+        "mgnify": 90113524,
+        "omg_img": 442629557,
+        "uniref90": 301345879
+      },
+      "source_counts_rank0": {
+        "mgnify": 11267046,
+        "omg_img": 55325033,
+        "uniref90": 37669042
+      },
+      "source_epoch_maxima": {
+        "mgnify": 0,
+        "omg_img": 1,
+        "uniref90": 4
+      },
+      "source_exposure_global": {
+        "mgnify": {
+          "available_records": 130716775,
+          "draws": 90113524,
+          "epoch": 0,
+          "epoch_cursor": 893449,
+          "repeated_draws": 0,
+          "unique_records_seen": 90113524
+        },
+        "omg_img": {
+          "available_records": 262845186,
+          "draws": 442629557,
+          "epoch": 1,
+          "epoch_cursor": 179784371,
+          "repeated_draws": 179784371,
+          "unique_records_seen": 262845186
+        },
+        "uniref90": {
+          "available_records": 74175974,
+          "draws": 301345879,
+          "epoch": 4,
+          "epoch_cursor": 4641983,
+          "repeated_draws": 227169905,
+          "unique_records_seen": 74175974
+        }
+      },
+      "stage": "stage2",
+      "stage_progress": 0.02423,
+      "step_compute_seconds": 0.5560631800908595,
+      "step_model_tokens": 605720,
+      "tokens_per_second": 1089300.6796476375,
+      "training_loss_reduction": "sqrt_mask_count",
+      "training_seconds": 4037.805745074991
+    }
+  ],
+  "periodic_evaluation": null,
+  "failure": "",
+  "checks": "Recent metric finiteness, unchanged decay schedule, sequence accounting, zero MGnify repeats, advancing log, active production Slurm step and unchanged source verified. No production evaluation is due before 410000."
+}
