@@ -1,0 +1,10 @@
+{
+  "job_step": "12162637.32",
+  "state": "COMPLETED",
+  "exit_code": "0:0",
+  "started_toronto": "2026-09-10T00:36:10-04:00",
+  "completed_toronto": "2026-09-11T15:50:00-04:00",
+  "elapsed_seconds": 141230.0,
+  "elapsed_slurm": "1-15:13:50",
+  "source": "sacct -j 12162637.32 --format=JobID,State,ExitCode,Start,End,Elapsed -P -n"
+}
