@@ -1,0 +1,58 @@
+{
+  "status": "passed",
+  "scope": "checkpoint_at_step",
+  "checkpoint_sha256": "d345aa420259546cf93e772c6159bfe9d5b9d53f9f2ff0ca0d9782c5f1f1527b",
+  "optimizer_steps": 330000,
+  "sequences_seen": 675840000,
+  "model_tokens": 159639232585,
+  "world_size": 8,
+  "parameter_count": 170559856,
+  "full_training_complete": false,
+  "finite_model_and_optimizer": true,
+  "model_and_optimizer_roundtrip_exact": false,
+  "optimizer_layout": "replicated_ddp_full_state",
+  "source_exposure_global": {
+    "mgnify": {
+      "draws": 73615041,
+      "unique_records_seen": 73615041,
+      "repeated_draws": 0,
+      "epoch": 0
+    },
+    "omg_img": {
+      "draws": 361358008,
+      "unique_records_seen": 262845186,
+      "repeated_draws": 98512822,
+      "epoch": 1
+    },
+    "uniref90": {
+      "draws": 240866951,
+      "unique_records_seen": 74175974,
+      "repeated_draws": 166690977,
+      "epoch": 3
+    }
+  },
+  "global_sampler_state_verified": true,
+  "data_manifest_sha256": "52399ee87da1d4d6d019ebc9b232cbf48bfe038c9ee5f9ea65814b9c3b70a2f6",
+  "validation": {
+    "masked_residues": 139963,
+    "perplexity": 10.146291130682838,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.317108232866758,
+    "sequence_median_nll": 2.385597586631775,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  },
+  "p_at_l": 0.4171591068925966,
+  "uncertainty": {
+    "confidence_interval_95": [
+      0.4146953469746382,
+      0.4197051837556183
+    ],
+    "replicates": 5000,
+    "unit_count": 20775
+  }
+}
