@@ -1081,6 +1081,56 @@
         "validation_loss_difference": -0.0024427521245797834,
         "p_at_l_difference_percentage_points": 0.12658119046802807
       }
+    },
+    {
+      "optimizer_steps": 320000,
+      "world_size": 8,
+      "checkpoint_sha256": "5498f3d5e163cf5b4c10ddf43c6f79e463c05da7e145a433def0c454fd26740c",
+      "sequences_seen": 655360000,
+      "validation": {
+        "masked_residues": 139963,
+        "perplexity": 10.164448777151172,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.318896218079317,
+        "sequence_median_nll": 2.387927770614624,
+        "sequences": 4096,
+        "source_counts": {
+          "mgnify": 1393,
+          "omg_img": 1387,
+          "uniref90": 1316
+        }
+      },
+      "p_at_l": 0.41618268530918806,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.41373748033736674,
+          0.41873221154809404
+        ]
+      },
+      "training_seconds_at_checkpoint": 98678.26053856337,
+      "model_tokens_at_checkpoint": 154802409497,
+      "comparison_to_100k": {
+        "reference_optimizer_steps": 100000,
+        "reference_checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+        "validation_loss_difference": -0.05680493597537861,
+        "p_at_l_difference_percentage_points": 5.050821736049971,
+        "paired_chain_bootstrap_95_ci_percentage_points": [
+          4.9795303666436865,
+          5.123801037250004
+        ],
+        "replicates": 5000,
+        "unit_count": 20775,
+        "note": "Across the same contact chains; this is not training-seed uncertainty."
+      },
+      "training_seconds_including_parent": 180254.39577205782,
+      "evaluation_wall_seconds": 203.6835819541011,
+      "comparison_to_previous_checkpoint": {
+        "reference_optimizer_steps": 310000,
+        "validation_loss_difference": 3.4002586062342743e-05,
+        "p_at_l_difference_percentage_points": 0.20947852787222554
+      }
     }
   ]
 }
