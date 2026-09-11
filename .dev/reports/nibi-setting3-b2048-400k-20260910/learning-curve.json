@@ -1281,6 +1281,106 @@
         "validation_loss_difference": -0.0010452958965743164,
         "p_at_l_difference_percentage_points": 0.1076284437952102
       }
+    },
+    {
+      "optimizer_steps": 360000,
+      "world_size": 8,
+      "checkpoint_sha256": "df5badd19f85d926f55936c1c897f9db759f780ffd8d258709204a070f51ed21",
+      "sequences_seen": 737280000,
+      "validation": {
+        "masked_residues": 139963,
+        "perplexity": 10.083390800254511,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.310889594991295,
+        "sequence_median_nll": 2.385224938392639,
+        "sequences": 4096,
+        "source_counts": {
+          "mgnify": 1393,
+          "omg_img": 1387,
+          "uniref90": 1316
+        }
+      },
+      "p_at_l": 0.41892472929615876,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.41641815683079275,
+          0.4214810529991791
+        ]
+      },
+      "training_seconds_at_checkpoint": 116606.25782802003,
+      "model_tokens_at_checkpoint": 174152950193,
+      "comparison_to_100k": {
+        "reference_optimizer_steps": 100000,
+        "reference_checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+        "validation_loss_difference": -0.06481155906340064,
+        "p_at_l_difference_percentage_points": 5.325026134747041,
+        "paired_chain_bootstrap_95_ci_percentage_points": [
+          5.2512654219260675,
+          5.399801981295484
+        ],
+        "replicates": 5000,
+        "unit_count": 20775,
+        "note": "Across the same contact chains; this is not training-seed uncertainty."
+      },
+      "training_seconds_including_parent": 198182.39306151448,
+      "evaluation_wall_seconds": 211.77508229506202,
+      "comparison_to_previous_checkpoint": {
+        "reference_optimizer_steps": 350000,
+        "validation_loss_difference": -0.003521152579196496,
+        "p_at_l_difference_percentage_points": 0.06874845753375158
+      }
+    },
+    {
+      "optimizer_steps": 370000,
+      "world_size": 8,
+      "checkpoint_sha256": "d697799e8f9c1660f48588899da3e79d88b51613cba50cc96321259c53c52f7d",
+      "sequences_seen": 757760000,
+      "validation": {
+        "masked_residues": 139963,
+        "perplexity": 10.088177807365517,
+        "protocol": "heldout-cluster-representative-mlm-v1",
+        "sequence_mean_nll": 2.3113642241382877,
+        "sequence_median_nll": 2.380018711090088,
+        "sequences": 4096,
+        "source_counts": {
+          "mgnify": 1393,
+          "omg_img": 1387,
+          "uniref90": 1316
+        }
+      },
+      "p_at_l": 0.419722169916693,
+      "uncertainty": {
+        "replicates": 5000,
+        "unit_count": 20775,
+        "confidence_interval_95": [
+          0.4172447557453143,
+          0.4222432106313971
+        ]
+      },
+      "training_seconds_at_checkpoint": 121081.45960894693,
+      "model_tokens_at_checkpoint": 178989544593,
+      "comparison_to_100k": {
+        "reference_optimizer_steps": 100000,
+        "reference_checkpoint_sha256": "d0f891cfd46e5517e1ce90a29f02bc88646a80023b7cf8e86fc3008311b66412",
+        "validation_loss_difference": -0.06433692991640783,
+        "p_at_l_difference_percentage_points": 5.404770196800463,
+        "paired_chain_bootstrap_95_ci_percentage_points": [
+          5.330992141730191,
+          5.481428548943789
+        ],
+        "replicates": 5000,
+        "unit_count": 20775,
+        "note": "Across the same contact chains; this is not training-seed uncertainty."
+      },
+      "training_seconds_including_parent": 202657.59484244138,
+      "evaluation_wall_seconds": 209.65107718203217,
+      "comparison_to_previous_checkpoint": {
+        "reference_optimizer_steps": 360000,
+        "validation_loss_difference": 0.000474629146992811,
+        "p_at_l_difference_percentage_points": 0.07974406205342177
+      }
     }
   ]
 }
