@@ -1,0 +1,130 @@
+{
+  "assessment": {
+    "checked_utc": "2026-09-12T15:01:39.992843+00:00",
+    "global_step": 507170,
+    "stage2_updates": 107170,
+    "stage2_progress_percent": 35.723333333333336,
+    "recent_training_seconds_per_update": 0.5544396532318556,
+    "completed_evaluations": [
+      410000,
+      420000,
+      430000,
+      440000,
+      450000,
+      460000,
+      470000,
+      480000,
+      490000,
+      500000
+    ],
+    "remaining_evaluations": 20,
+    "evaluation_wall_seconds_estimate": 222.75430465722457,
+    "finish_toronto": "2026-09-13T17:57:47.677269-04:00",
+    "finish_10pct_slower_toronto": "2026-09-13T20:55:58.937102-04:00",
+    "allocation_hours_remaining": 44.373057543611104,
+    "finish_headroom_hours": 13.4375896475,
+    "mgnify_unused": 28328461,
+    "mgnify_expected_remaining_draws": 23694950.4,
+    "mgnify_headroom_fraction": 0.19554844056563225,
+    "latest_verified_training_step": 507250,
+    "training_continued_after_evaluation": true,
+    "evaluation_audit_passed": true
+  },
+  "allocation": "12162637|RUNNING|1-20:22:23|2026-09-14T07:24:03|g27\n12162638|PENDING|7-00:00:00|N/A|",
+  "latest_train": {
+    "attention_backend": "flash3",
+    "batch_balance": {
+      "rank_tokens_after": [
+        19702,
+        19701,
+        19701,
+        19700,
+        19700,
+        19701,
+        19701,
+        19700
+      ],
+      "rank_tokens_before": [
+        19456,
+        20181,
+        18693,
+        21491,
+        17679,
+        20381,
+        20245,
+        19480
+      ]
+    },
+    "data_resampling": "per_source",
+    "estimated_training_flops": 264338140788802163712,
+    "event": "train",
+    "filled_residues": 256227005472,
+    "gradient_norm": 0.09960439056158066,
+    "learning_rate": 0.00030532185,
+    "loss": 2.221587836742401,
+    "mfu_6n": 0.14181848862828533,
+    "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+    "model_tokens": 258304373792,
+    "objective_loss": 2.1805381178855896,
+    "optimizer": "muon",
+    "optimizer_step": 507170,
+    "sequences_seen": 1038684160,
+    "source_counts_global": {
+      "mgnify": 102388314,
+      "omg_img": 506057122,
+      "uniref90": 430238724
+    },
+    "source_counts_rank0": {
+      "mgnify": 12799169,
+      "omg_img": 63254890,
+      "uniref90": 53781462
+    },
+    "source_epoch_maxima": {
+      "mgnify": 0,
+      "omg_img": 1,
+      "uniref90": 5
+    },
+    "source_exposure_global": {
+      "mgnify": {
+        "available_records": 130716775,
+        "draws": 102388314,
+        "epoch": 0,
+        "epoch_cursor": 13168239,
+        "repeated_draws": 0,
+        "unique_records_seen": 102388314
+      },
+      "omg_img": {
+        "available_records": 262845186,
+        "draws": 506057122,
+        "epoch": 1,
+        "epoch_cursor": 243211936,
+        "repeated_draws": 243211936,
+        "unique_records_seen": 262845186
+      },
+      "uniref90": {
+        "available_records": 74175974,
+        "draws": 430238724,
+        "epoch": 5,
+        "epoch_cursor": 59358854,
+        "repeated_draws": 356062750,
+        "unique_records_seen": 74175974
+      }
+    },
+    "stage": "stage2",
+    "stage_progress": 0.35723,
+    "step_compute_seconds": 0.5545455620158464,
+    "step_model_tokens": 608342,
+    "tokens_per_second": 1097009.951334921,
+    "training_loss_reduction": "sqrt_mask_count",
+    "training_seconds": 59491.02629391546
+  },
+  "completed_evaluation": {
+    "status": "passed",
+    "optimizer_step": 500000,
+    "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/checkpoint-latest.pt",
+    "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-500000",
+    "started_utc": "2026-09-12T13:51:43.937244+00:00",
+    "wall_seconds": 222.75430465722457
+  },
+  "production_failure": ""
+}
