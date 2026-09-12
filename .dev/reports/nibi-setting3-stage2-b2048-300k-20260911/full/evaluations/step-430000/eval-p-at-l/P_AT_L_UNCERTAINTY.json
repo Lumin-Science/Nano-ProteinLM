@@ -1,0 +1,13 @@
+{
+  "checkpoint_sha256": "f28cf97b79da5571b2fef4ad52024381974d8c5068c32ea118c51cd57a6edd52",
+  "note": "Across-chain bootstrap confidence interval, not training-seed SD.",
+  "p_at_l": 0.43303195832084673,
+  "uncertainty": {
+    "confidence_interval_95": [
+      0.4305013663558001,
+      0.43560044671063886
+    ],
+    "replicates": 5000,
+    "unit_count": 20775
+  }
+}
