@@ -2,7 +2,20 @@
 
 Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step **12162637.44**, using all eight H100 80GB GPUs. The [live launch audit](LAUNCH_VERIFIED.json) passed at global step **400,530** at 17:58 Toronto: all logged losses and gradients were finite, optimizer and source history were restored, the intended decay clock was active, and the recipe/source bundle matched their project-storage copies. The observed training-loop rate was **0.556 seconds per update**. Including 30 evaluations at the measured qualification cost, the initial finish estimate was **September 13 at 18:00 Toronto**, or **22:38** with a 10% training slowdown. This is a launch-time estimate, not a completion result. The current allocation ends September 14 at 07:24:03 Toronto.
 
-## Latest monitoring check
+## Production evaluation results
+
+The first production Stage 2 evaluation completed on **September 11 at 19:29 Toronto**, after **10,000 Stage 2 updates (410k global)**. The [independent audit](full/evaluations/step-410000/LOCAL_AUDIT.json) verified the checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and an independently recomputed 5,000-replicate bootstrap. The [machine-readable curve](learning-curve.json) excludes qualification trials.
+
+| Checkpoint | Stage 2 updates | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
+|---|---:|---:|---:|---:|
+| Stage 1 parent, 400k | 0 | 2.308892 | 42.241% | 41.992–42.495% |
+| Stage 2, 410k | 10,000 | **2.306547** | **42.778%** | **42.530–43.034%** |
+
+Relative to 400k, validation loss decreased by **0.002346**, and P@L increased by **0.537 percentage points**. The paired chain-bootstrap 95% interval for the gain is **+0.493 to +0.582 points**, using the same chains and 5,000 replicates. This quantifies uncertainty across evaluation chains, not variation across training seeds.
+
+The first 10k Stage 2 updates took **1h 32m 32s** of synchronized training-loop time; evaluation took **3m 38s**. Training continued successfully, with the latest independently checked metrics at global **417,030**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct.
+
+## Earlier monitoring check
 
 At **September 11, 19:00 Toronto**, the [monitoring receipt](monitoring/20260911T2300Z.json) recorded **407,270 global steps**, or **7,270 / 300,000 Stage 2 updates (2.42%)**. Production step 12162637.44 remained active on g27, the source checkout was unchanged, and finite loss/gradient, decay schedule and source accounting checks passed. No production validation or P@L endpoint was due yet; the first 410k evaluation was estimated to finish around **19:29 Toronto**.
 

@@ -1,0 +1,6 @@
+{
+  "snapshot_file": "metrics-through-417030.jsonl.gz",
+  "last_logged_step": 417030,
+  "sha256": "3e1c8ab7967a7fbc1eee797074f878f1a016e16a23969f77e9480a2c1538eebc",
+  "description": "Production metric snapshot used in the independent 410k endpoint audit."
+}

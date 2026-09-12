@@ -1,0 +1,44 @@
+{
+  "note": "400k is the Stage 1 parent reference; later rows are verified production Stage 2 endpoints. Qualification trials are excluded.",
+  "rows": [
+    {
+      "global_step": 400000,
+      "stage2_updates": 0,
+      "stage": "stage1_parent",
+      "validation_loss": 2.3088923851373693,
+      "p_at_l": 0.42240922847284873,
+      "p_at_l_95_ci": [
+        0.4199225357585802,
+        0.42495316848138076
+      ],
+      "checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2"
+    },
+    {
+      "global_step": 410000,
+      "stage2_updates": 10000,
+      "stage": "stage2",
+      "validation_loss": 2.306546585165961,
+      "p_at_l": 0.4277841130381842,
+      "p_at_l_95_ci": [
+        0.425301886077298,
+        0.43034310640130885
+      ],
+      "checkpoint_sha256": "fd619004b8997f5e13dcc0807b3b261d65d30f192b557140db7b2189d83d9cb6"
+    }
+  ],
+  "comparisons_to_400k": {
+    "410000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.002345799971408269,
+      "p_at_l_difference_percentage_points": 0.5374884565335494,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        0.49297472030506667,
+        0.5818158713047121
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    }
+  }
+}
