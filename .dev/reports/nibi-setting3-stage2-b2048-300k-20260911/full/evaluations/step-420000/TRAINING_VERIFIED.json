@@ -1,0 +1,42 @@
+{
+  "status": "passed",
+  "scope": "checkpoint_at_step",
+  "checkpoint_sha256": "9941ac683e41f07fa10aef6822d9135a31b53d359826aa665dad51c601eff293",
+  "optimizer_steps": 420000,
+  "sequences_seen": 860160000,
+  "model_tokens": 205594796047,
+  "world_size": 8,
+  "parameter_count": 170559856,
+  "full_training_complete": false,
+  "finite_model_and_optimizer": true,
+  "model_and_optimizer_roundtrip_exact": false,
+  "optimizer_layout": "replicated_ddp_full_state",
+  "source_exposure_global": {
+    "mgnify": {
+      "draws": 91676063,
+      "unique_records_seen": 91676063,
+      "repeated_draws": 0,
+      "epoch": 0,
+      "epoch_cursor": 2455988,
+      "available_records": 130716775
+    },
+    "omg_img": {
+      "draws": 450714248,
+      "unique_records_seen": 262845186,
+      "repeated_draws": 187869062,
+      "epoch": 1,
+      "epoch_cursor": 187869062,
+      "available_records": 262845186
+    },
+    "uniref90": {
+      "draws": 317769689,
+      "unique_records_seen": 74175974,
+      "repeated_draws": 243593715,
+      "epoch": 4,
+      "epoch_cursor": 21065793,
+      "available_records": 74175974
+    }
+  },
+  "global_sampler_state_verified": true,
+  "data_manifest_sha256": "76bf671104f795af68594110010c64e047dd75d4254cb5508d02a8e0407d32b2"
+}

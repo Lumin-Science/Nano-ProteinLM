@@ -1,0 +1,134 @@
+{
+  "assessment": {
+    "checked_utc": "2026-09-12T01:02:26.925917+00:00",
+    "global_step": 420000,
+    "stage2_updates": 20000,
+    "stage2_progress_percent": 6.666666666666667,
+    "recent_training_seconds_per_update": 0.5553709267992759,
+    "completed_evaluations": [
+      410000,
+      420000
+    ],
+    "evaluation_wall_seconds_estimate": 218.47017647116445,
+    "finish_toronto": "2026-09-13T17:59:21.594323-04:00",
+    "finish_10pct_slower_toronto": "2026-09-13T22:18:31.980274-04:00",
+    "allocation_hours_remaining": 58.36002057861111,
+    "mgnify_unused": 39040712,
+    "mgnify_expected_remaining_draws": 34406400.0,
+    "mgnify_headroom_fraction": 0.1346933128720238,
+    "recent_training_checks_passed": true,
+    "evaluation_completed_during_check": true,
+    "latest_verified_training_step": 420050,
+    "training_continued_after_evaluation": true,
+    "verified_420k_result": "full/evaluations/step-420000/LOCAL_AUDIT.json"
+  },
+  "host": {
+    "checked_utc": "2026-09-12T01:03:22.005567+00:00",
+    "slurm_steps": "12162637.extern|extern|4-13:39:19|g27\n12162637.batch|batch|4-13:39:19|g27\n12162637.44|bash|3:11:04|g27",
+    "source_commit": "f4b672d0a3a70e15740ee3876c202e535f727d3c",
+    "source_dirty": "",
+    "evaluation_files": [
+      "TRAINING_VERIFIED.json",
+      "eval-validation/EVALUATION.json",
+      "eval-validation/VALIDATION_MLM.json"
+    ],
+    "production_failed": false
+  },
+  "allocation": "12162637|RUNNING|2-10:21:36|2026-09-14T07:24:03|g27\n12162638|PENDING|7-00:00:00|N/A|",
+  "initial_latest_train": {
+    "attention_backend": "flash3",
+    "batch_balance": {
+      "rank_tokens_after": [
+        18886,
+        18886,
+        18886,
+        18885,
+        18886,
+        18884,
+        18885,
+        18885
+      ],
+      "rank_tokens_before": [
+        19114,
+        20136,
+        17450,
+        17214,
+        16802,
+        20917,
+        16955,
+        22495
+      ]
+    },
+    "data_resampling": "per_source",
+    "estimated_training_flops": 210397312848754135392,
+    "event": "train",
+    "filled_residues": 203874476047,
+    "gradient_norm": 0.08922453224658966,
+    "learning_rate": 0.00042300135,
+    "loss": 2.2807273268699646,
+    "mfu_6n": 0.14138471118317714,
+    "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+    "model_tokens": 205594796047,
+    "objective_loss": 2.1932719349861145,
+    "optimizer": "muon",
+    "optimizer_step": 420000,
+    "sequences_seen": 860160000,
+    "source_counts_global": {
+      "mgnify": 91676063,
+      "omg_img": 450714248,
+      "uniref90": 317769689
+    },
+    "source_counts_rank0": {
+      "mgnify": 11462058,
+      "omg_img": 56336143,
+      "uniref90": 39721800
+    },
+    "source_epoch_maxima": {
+      "mgnify": 0,
+      "omg_img": 1,
+      "uniref90": 4
+    },
+    "source_exposure_global": {
+      "mgnify": {
+        "available_records": 130716775,
+        "draws": 91676063,
+        "epoch": 0,
+        "epoch_cursor": 2455988,
+        "repeated_draws": 0,
+        "unique_records_seen": 91676063
+      },
+      "omg_img": {
+        "available_records": 262845186,
+        "draws": 450714248,
+        "epoch": 1,
+        "epoch_cursor": 187869062,
+        "repeated_draws": 187869062,
+        "unique_records_seen": 262845186
+      },
+      "uniref90": {
+        "available_records": 74175974,
+        "draws": 317769689,
+        "epoch": 4,
+        "epoch_cursor": 21065793,
+        "repeated_draws": 243593715,
+        "unique_records_seen": 74175974
+      }
+    },
+    "stage": "stage2",
+    "stage_progress": 0.06666333333333334,
+    "step_compute_seconds": 0.5533383470028639,
+    "step_model_tokens": 605161,
+    "tokens_per_second": 1093654.5483930972,
+    "training_loss_reduction": "sqrt_mask_count",
+    "training_seconds": 11105.84231795487
+  },
+  "completed_evaluation": {
+    "status": "passed",
+    "optimizer_step": 420000,
+    "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/checkpoint-latest.pt",
+    "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-420000",
+    "started_utc": "2026-09-12T01:02:02.099702+00:00",
+    "wall_seconds": 227.1290802550502
+  },
+  "production_failure": ""
+}
