@@ -1,0 +1,6 @@
+{
+  "snapshot_file": "metrics-through-519990.jsonl.gz",
+  "last_logged_step": 519990,
+  "sha256": "097b1feb6d3ac3c5f8175d9d7b82481363416cf6fbb22f4c06e4930b62416f7d",
+  "description": "Metric snapshot used in the one-time independent 510k endpoint audit."
+}
