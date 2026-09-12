@@ -144,6 +144,30 @@
         0.449148562413825
       ],
       "checkpoint_sha256": "a900fa67cff2f9d65de0103323a844f4ef3e42c83244351c18e9a7fd42e0d249"
+    },
+    {
+      "global_step": 520000,
+      "stage2_updates": 120000,
+      "stage": "stage2",
+      "validation_loss": 2.2853225905882937,
+      "p_at_l": 0.4457975940567649,
+      "p_at_l_95_ci": [
+        0.4433235194068247,
+        0.44833556479970155
+      ],
+      "checkpoint_sha256": "c8ccdb426d6cd6c68bfd00cbaa2524fcedbe7f67a76661747ec0447ec5c43599"
+    },
+    {
+      "global_step": 530000,
+      "stage2_updates": 130000,
+      "stage": "stage2",
+      "validation_loss": 2.2815638048637084,
+      "p_at_l": 0.4463525751466669,
+      "p_at_l_95_ci": [
+        0.443867505477825,
+        0.4489153784238255
+      ],
+      "checkpoint_sha256": "0b91bcff039f8c8bbab2c34d8b1e14382edb7a3101345cb5740ceacf7f249826"
     }
   ],
   "comparisons_to_400k": {
@@ -285,6 +309,32 @@
       "paired_chain_bootstrap_95_ci_percentage_points": [
         2.36463466385351,
         2.473484495655118
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "520000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.023569794549075596,
+      "p_at_l_difference_percentage_points": 2.3388365583916113,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        2.283694139640276,
+        2.3937237240292024
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "530000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.02732858027366092,
+      "p_at_l_difference_percentage_points": 2.3943346673818127,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        2.3382928748264873,
+        2.451118460080066
       ],
       "replicates": 5000,
       "unit_count": 20775,
