@@ -4,7 +4,7 @@ Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step 
 
 ## Production evaluation results
 
-**13 of 30 production Stage 2 evaluations are verified**, through global **530k**. Each [independent audit](full/evaluations/step-530000/LOCAL_AUDIT.json) checks checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and an independently recomputed 5,000-replicate bootstrap. The [machine-readable curve](learning-curve.json) excludes qualification trials.
+**14 of 30 production Stage 2 evaluations are verified**, through global **540k**. Each [independent audit](full/evaluations/step-540000/LOCAL_AUDIT.json) checks checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and an independently recomputed 5,000-replicate bootstrap. The [machine-readable curve](learning-curve.json) excludes qualification trials.
 
 | Checkpoint | Stage 2 updates | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
 |---|---:|---:|---:|---:|
@@ -22,16 +22,17 @@ Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step 
 | Stage 2, 510k | 110,000 | 2.285692 | 44.658% | 44.409–44.915% |
 | Stage 2, 520k | 120,000 | 2.285323 | 44.580% | 44.332–44.834% |
 | Stage 2, 530k | 130,000 | 2.281564 | 44.635% | 44.387–44.892% |
+| Stage 2, 540k | 140,000 | 2.280197 | 44.732% | 44.481–44.987% |
 
-Relative to 400k, validation loss changed by **-0.027329**, and P@L changed by **+2.394 percentage points**. The paired chain-bootstrap 95% interval for this P@L change is **+2.338 to +2.451 points**, using the same chains and 5,000 replicates. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
+Relative to 400k, validation loss changed by **-0.028696**, and P@L changed by **+2.491 percentage points**. The paired chain-bootstrap 95% interval for this P@L change is **+2.433 to +2.549 points**, using the same chains and 5,000 replicates. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
 
-From 520k to 530k, validation loss changed by **-0.003759** and P@L by **+0.055 points**.
+From 530k to 540k, validation loss changed by **-0.001367** and P@L by **+0.097 points**.
 
-The latest independently checked training metrics reached global **532,080**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **218.6 seconds**.
+The latest independently checked training metrics reached global **544,700**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **210.6 seconds**.
 
 ## Latest monitoring check
 
-At **September 12, 15:01 Toronto**, the [monitoring receipt](monitoring/20260912T1901Z.json) recorded global **531,970**, or **131,970 / 300,000 Stage 2 updates (43.99%)**, with no production failure. Throughput was **0.555 seconds per update** since 520k. The allocation had **40.37 hours remaining**; estimated completion was **September 13 at 17:57 Toronto**, or **September 13 at 20:32** with a 10% training slowdown. MGnify had **25,281,895 unused records** versus **20,647,526 expected remaining draws**, with headroom of **22.45%**.
+At **September 12, 17:02 Toronto**, the [monitoring receipt](monitoring/20260912T2102Z.json) recorded global **544,610**, or **144,610 / 300,000 Stage 2 updates (48.20%)**, with no production failure. Throughput was **0.555 seconds per update** since 530k. The allocation had **38.36 hours remaining**; estimated completion was **September 13 at 17:56 Toronto**, or **September 13 at 20:20** with a 10% training slowdown. MGnify had **23,729,386 unused records** versus **19,094,323 expected remaining draws**, with headroom of **24.27%**.
 
 ## Earlier monitoring check
 
