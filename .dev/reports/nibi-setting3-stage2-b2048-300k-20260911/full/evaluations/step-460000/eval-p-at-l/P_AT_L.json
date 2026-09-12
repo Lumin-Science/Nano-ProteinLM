@@ -1,0 +1,126 @@
+{
+  "checkpoint_sha256": "c6b5f3b8768a366a7d71f62a7e05d3667905b4ef97186d84d48326809c12fdaf",
+  "components": [
+    {
+      "chains": 1299,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-0/EVALUATION.json",
+      "sha256": "37d5a304d001090465b5d84178ce0cf0c52ccbed5105296d130f784b3db79d3f",
+      "shard_index": 0
+    },
+    {
+      "chains": 1299,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-1/EVALUATION.json",
+      "sha256": "50359c8f853995b7086f6419d7bfccda400bfa44b04438feec95aa0700f2b912",
+      "shard_index": 1
+    },
+    {
+      "chains": 1299,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-2/EVALUATION.json",
+      "sha256": "2f75aff15df52564396905ff7ec7820622e18914bc844f8c23c2da3607820968",
+      "shard_index": 2
+    },
+    {
+      "chains": 1299,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-3/EVALUATION.json",
+      "sha256": "e7e50f052737ca0c67d37d1b0aaaf1589a79d17330cdf3f876727e3bf4d6bfaf",
+      "shard_index": 3
+    },
+    {
+      "chains": 1299,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-4/EVALUATION.json",
+      "sha256": "710eb84912f7752d29f062fc1ea25808de0d6489544296f27a3482d7a22d9a15",
+      "shard_index": 4
+    },
+    {
+      "chains": 1299,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-5/EVALUATION.json",
+      "sha256": "16f757767d16d66de5bc456612add69ce868bac072aa7636688f9958ad0593cf",
+      "shard_index": 5
+    },
+    {
+      "chains": 1299,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-6/EVALUATION.json",
+      "sha256": "1c6cc324b8f37a86697526c5b30d1ae75953751fe8b26b78bacc322f1f6b75d6",
+      "shard_index": 6
+    },
+    {
+      "chains": 1298,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-7/EVALUATION.json",
+      "sha256": "bbc913ea9be596ba098f36342c1e4ae3a8c9c5a058ea471aa97ac3267b9b34c7",
+      "shard_index": 7
+    },
+    {
+      "chains": 1298,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-8/EVALUATION.json",
+      "sha256": "feaea0c165d2ad43bb7637ba0cd1515c472a276290c7708a1d943df6656a3091",
+      "shard_index": 8
+    },
+    {
+      "chains": 1298,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-9/EVALUATION.json",
+      "sha256": "dff7beb64cd37702cde42d14129a89edada197b93b6933f4e8f5a184e81c51a9",
+      "shard_index": 9
+    },
+    {
+      "chains": 1298,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-10/EVALUATION.json",
+      "sha256": "65a27af74d34216932d49c278bd5618ba5e6c00f8dedcaf1c6317552b154d62b",
+      "shard_index": 10
+    },
+    {
+      "chains": 1298,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-11/EVALUATION.json",
+      "sha256": "f0bb1b50c496ddc2393cd937d0c06cb588e91e7c2b50bf4af9ada9591bc66d35",
+      "shard_index": 11
+    },
+    {
+      "chains": 1298,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-12/EVALUATION.json",
+      "sha256": "d4c5d753c5f57d5cb307748b05d63b7dbf955491f7b3d6481cb24fba2fc405b8",
+      "shard_index": 12
+    },
+    {
+      "chains": 1298,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-13/EVALUATION.json",
+      "sha256": "129c594254708d64b5aedb3be8e2e6a06b2ac2fa6be5f8b2c05df31a1d4ffb88",
+      "shard_index": 13
+    },
+    {
+      "chains": 1298,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-14/EVALUATION.json",
+      "sha256": "c6c334a53840078c898b98d9b2768df8053678aa4def8574eab94cf96c9e8b84",
+      "shard_index": 14
+    },
+    {
+      "chains": 1298,
+      "path": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-460000/eval-p-at-l/components/contact-shard-15/EVALUATION.json",
+      "sha256": "31fbb051ce731e43cadae1809f6cf185829e5771515c1b9fc7a3f7bc8e1e2e16",
+      "shard_index": 15
+    }
+  ],
+  "evaluation_chains": 20775,
+  "p_at_l": 0.4376183882479917,
+  "protocol": "autoresearch-frozen-full-contact-merge-v1",
+  "random_p_at_l": 0.016893223436056953,
+  "schema_version": 1,
+  "selected_C": 1.0,
+  "selection_seed": 20260820,
+  "validation_trace": [
+    {
+      "C": 0.01,
+      "validation_average_precision": 0.6703889088771903
+    },
+    {
+      "C": 0.1,
+      "validation_average_precision": 0.6764719407436429
+    },
+    {
+      "C": 1.0,
+      "validation_average_precision": 0.7436030557028025
+    },
+    {
+      "C": 10.0,
+      "validation_average_precision": 0.7330708358208804
+    }
+  ]
+}
