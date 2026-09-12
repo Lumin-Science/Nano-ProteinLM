@@ -1,0 +1,64 @@
+{
+  "status": "passed",
+  "scope": "checkpoint_at_step",
+  "checkpoint_sha256": "041f2fa23dd447c632876db2e7de9b981c9e61ea09581f0928f421126d45d99c",
+  "optimizer_steps": 490000,
+  "sequences_seen": 1003520000,
+  "model_tokens": 247923385486,
+  "world_size": 8,
+  "parameter_count": 170559856,
+  "full_training_complete": false,
+  "finite_model_and_optimizer": true,
+  "model_and_optimizer_roundtrip_exact": false,
+  "optimizer_layout": "replicated_ddp_full_state",
+  "source_exposure_global": {
+    "mgnify": {
+      "draws": 100277881,
+      "unique_records_seen": 100277881,
+      "repeated_draws": 0,
+      "epoch": 0,
+      "epoch_cursor": 11057806,
+      "available_records": 130716775
+    },
+    "omg_img": {
+      "draws": 495159196,
+      "unique_records_seen": 262845186,
+      "repeated_draws": 232314010,
+      "epoch": 1,
+      "epoch_cursor": 232314010,
+      "available_records": 262845186
+    },
+    "uniref90": {
+      "draws": 408082923,
+      "unique_records_seen": 74175974,
+      "repeated_draws": 333906949,
+      "epoch": 5,
+      "epoch_cursor": 37203053,
+      "available_records": 74175974
+    }
+  },
+  "global_sampler_state_verified": true,
+  "data_manifest_sha256": "76bf671104f795af68594110010c64e047dd75d4254cb5508d02a8e0407d32b2",
+  "validation": {
+    "masked_residues": 139963,
+    "perplexity": 9.879800532544525,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.2904923225422635,
+    "sequence_median_nll": 2.360034227371216,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  },
+  "p_at_l": 0.4424201074597452,
+  "uncertainty": {
+    "confidence_interval_95": [
+      0.4398959472950263,
+      0.4449693707874326
+    ],
+    "replicates": 5000,
+    "unit_count": 20775
+  }
+}
