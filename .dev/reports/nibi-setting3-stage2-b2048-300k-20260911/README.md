@@ -4,7 +4,7 @@ Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step 
 
 ## Production evaluation results
 
-The first four production Stage 2 evaluations completed at global **410k, 420k, 430k and 440k**. The latest finished on **September 12 at 00:18 Toronto**. Independent audits ([410k](full/evaluations/step-410000/LOCAL_AUDIT.json), [420k](full/evaluations/step-420000/LOCAL_AUDIT.json), [430k](full/evaluations/step-430000/LOCAL_AUDIT.json), [440k](full/evaluations/step-440000/LOCAL_AUDIT.json)) verified checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and independently recomputed 5,000-replicate bootstraps. The [machine-readable curve](learning-curve.json) excludes qualification trials.
+**5 of 30 production Stage 2 evaluations are verified**, through global **450k**. Each [independent audit](full/evaluations/step-450000/LOCAL_AUDIT.json) checks checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and an independently recomputed 5,000-replicate bootstrap. The [machine-readable curve](learning-curve.json) excludes qualification trials.
 
 | Checkpoint | Stage 2 updates | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
 |---|---:|---:|---:|---:|
@@ -13,14 +13,17 @@ The first four production Stage 2 evaluations completed at global **410k, 420k, 
 | Stage 2, 420k | 20,000 | 2.302875 | 43.023% | 42.776–43.274% |
 | Stage 2, 430k | 30,000 | 2.302230 | 43.303% | 43.050–43.560% |
 | Stage 2, 440k | 40,000 | 2.300549 | 43.587% | 43.339–43.840% |
+| Stage 2, 450k | 50,000 | 2.297940 | 43.641% | 43.389–43.894% |
 
-Relative to 400k, the 440k checkpoint lowered validation loss by **0.008344** and increased P@L by **1.346 percentage points**. The paired chain-bootstrap 95% interval for this gain is **+1.298 to +1.395 points**, using the same chains and 5,000 replicates. From 430k to 440k, validation loss decreased by **0.001682** and P@L increased by **0.284 points**. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
+Relative to 400k, validation loss changed by **-0.010952**, and P@L changed by **+1.400 percentage points**. The paired chain-bootstrap 95% interval for this P@L change is **+1.351 to +1.449 points**, using the same chains and 5,000 replicates. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
 
-Training continued successfully, with the latest independently checked metrics at global **447,310**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **3m 49s**.
+From 440k to 450k, validation loss changed by **-0.002609** and P@L by **+0.054 points**.
+
+The latest independently checked training metrics reached global **457,300**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **217.6 seconds**.
 
 ## Latest monitoring check
 
-SSH access was restored for the user-requested recheck on **September 12 at 01:25 Toronto**. The [monitoring receipt](monitoring/20260912T0525Z.json) recorded global **447,240**, or **47,240 / 300,000 Stage 2 updates (15.75%)**, with no production failure. Throughput was **0.556 seconds per update** since 430k. The allocation had **53.97 hours remaining**; estimated completion was **September 13 at 18:05 Toronto**, or **21:59** with a 10% training slowdown. MGnify had **35,692,915 unused records** versus **31,059,149 expected remaining draws**, approximately **14.92% headroom**.
+At **September 12, 03:01 Toronto**, the [monitoring receipt](monitoring/20260912T0701Z.json) recorded global **457,200**, or **57,200 / 300,000 Stage 2 updates (19.07%)**, with no production failure. Throughput was **0.555 seconds per update** since 440k. The allocation had **52.37 hours remaining**; estimated completion was **September 13 at 17:58 Toronto**, or **September 13 at 21:42** with a 10% training slowdown. MGnify had **34,470,032 unused records** versus **29,835,264 expected remaining draws**, with headroom of **15.53%**.
 
 ## Earlier monitoring check
 
