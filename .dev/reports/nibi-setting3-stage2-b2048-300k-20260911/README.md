@@ -4,22 +4,23 @@ Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step 
 
 ## Production evaluation results
 
-The first three production Stage 2 evaluations completed at global **410k, 420k and 430k**. The latest finished on **September 11 at 22:42 Toronto**. Independent audits ([410k](full/evaluations/step-410000/LOCAL_AUDIT.json), [420k](full/evaluations/step-420000/LOCAL_AUDIT.json), [430k](full/evaluations/step-430000/LOCAL_AUDIT.json)) verified checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and independently recomputed 5,000-replicate bootstraps. The [machine-readable curve](learning-curve.json) excludes qualification trials.
+The first four production Stage 2 evaluations completed at global **410k, 420k, 430k and 440k**. The latest finished on **September 12 at 00:18 Toronto**. Independent audits ([410k](full/evaluations/step-410000/LOCAL_AUDIT.json), [420k](full/evaluations/step-420000/LOCAL_AUDIT.json), [430k](full/evaluations/step-430000/LOCAL_AUDIT.json), [440k](full/evaluations/step-440000/LOCAL_AUDIT.json)) verified checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and independently recomputed 5,000-replicate bootstraps. The [machine-readable curve](learning-curve.json) excludes qualification trials.
 
 | Checkpoint | Stage 2 updates | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
 |---|---:|---:|---:|---:|
 | Stage 1 parent, 400k | 0 | 2.308892 | 42.241% | 41.992–42.495% |
 | Stage 2, 410k | 10,000 | 2.306547 | 42.778% | 42.530–43.034% |
 | Stage 2, 420k | 20,000 | 2.302875 | 43.023% | 42.776–43.274% |
-| Stage 2, 430k | 30,000 | **2.302230** | **43.303%** | **43.050–43.560%** |
+| Stage 2, 430k | 30,000 | 2.302230 | 43.303% | 43.050–43.560% |
+| Stage 2, 440k | 40,000 | 2.300549 | 43.587% | 43.339–43.840% |
 
-Relative to 400k, the 430k checkpoint lowered validation loss by **0.006662** and increased P@L by **1.062 percentage points**. The paired chain-bootstrap 95% interval for this gain is **+1.014 to +1.112 points**, using the same chains and 5,000 replicates. From 420k to 430k, validation loss decreased by **0.000645** and P@L increased by **0.280 points**. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
+Relative to 400k, the 440k checkpoint lowered validation loss by **0.008344** and increased P@L by **1.346 percentage points**. The paired chain-bootstrap 95% interval for this gain is **+1.298 to +1.395 points**, using the same chains and 5,000 replicates. From 430k to 440k, validation loss decreased by **0.001682** and P@L increased by **0.284 points**. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
 
-Training continued successfully, with the latest independently checked metrics at global **432,210**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **3m 48s**.
+Training continued successfully, with the latest independently checked metrics at global **447,310**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **3m 49s**.
 
 ## Latest monitoring check
 
-At **September 11, 23:02 Toronto**, the [scheduled monitoring check](monitoring/20260912T0301Z.json) recorded global **432,120**, or **32,120 / 300,000 Stage 2 updates (10.71%)**. Production step 12162637.44 remained active on g27, with an unchanged frozen checkout and all eight H100s at **98–100% utilization**. Throughput was **0.557 seconds per update** since 420k. The allocation had **56.37 hours remaining**; estimated completion was **September 13 at 18:10 Toronto**, or **22:19** with a 10% training slowdown, leaving **13.23 hours** of allocation headroom at the central estimate. MGnify had **37,548,899 unused records** versus **32,917,094 expected remaining draws**, approximately **14.07% headroom**.
+SSH access was restored for the user-requested recheck on **September 12 at 01:25 Toronto**. The [monitoring receipt](monitoring/20260912T0525Z.json) recorded global **447,240**, or **47,240 / 300,000 Stage 2 updates (15.75%)**, with no production failure. Throughput was **0.556 seconds per update** since 430k. The allocation had **53.97 hours remaining**; estimated completion was **September 13 at 18:05 Toronto**, or **21:59** with a 10% training slowdown. MGnify had **35,692,915 unused records** versus **31,059,149 expected remaining draws**, approximately **14.92% headroom**.
 
 ## Earlier monitoring check
 
