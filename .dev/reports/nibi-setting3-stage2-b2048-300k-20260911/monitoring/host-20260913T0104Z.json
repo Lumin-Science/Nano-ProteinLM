@@ -1,0 +1,70 @@
+{
+  "checked_utc": "2026-09-13T01:03:53.491972+00:00",
+  "slurm_steps": "12162637.extern|extern|5-13:39:50|g27\n12162637.batch|batch|5-13:39:50|g27\n12162637.44|bash|1-03:11:35|g27",
+  "source_commit": "f4b672d0a3a70e15740ee3876c202e535f727d3c",
+  "source_dirty": "",
+  "production_failed": false,
+  "gpus": [
+    {
+      "index": "0",
+      "name": "NVIDIA H100 80GB HBM3",
+      "utilization.gpu [%]": "0 %",
+      "memory.used [MiB]": "4951 MiB"
+    },
+    {
+      "index": "1",
+      "name": "NVIDIA H100 80GB HBM3",
+      "utilization.gpu [%]": "0 %",
+      "memory.used [MiB]": "4951 MiB"
+    },
+    {
+      "index": "2",
+      "name": "NVIDIA H100 80GB HBM3",
+      "utilization.gpu [%]": "0 %",
+      "memory.used [MiB]": "4951 MiB"
+    },
+    {
+      "index": "3",
+      "name": "NVIDIA H100 80GB HBM3",
+      "utilization.gpu [%]": "0 %",
+      "memory.used [MiB]": "4951 MiB"
+    },
+    {
+      "index": "4",
+      "name": "NVIDIA H100 80GB HBM3",
+      "utilization.gpu [%]": "0 %",
+      "memory.used [MiB]": "4951 MiB"
+    },
+    {
+      "index": "5",
+      "name": "NVIDIA H100 80GB HBM3",
+      "utilization.gpu [%]": "0 %",
+      "memory.used [MiB]": "4951 MiB"
+    },
+    {
+      "index": "6",
+      "name": "NVIDIA H100 80GB HBM3",
+      "utilization.gpu [%]": "0 %",
+      "memory.used [MiB]": "4951 MiB"
+    },
+    {
+      "index": "7",
+      "name": "NVIDIA H100 80GB HBM3",
+      "utilization.gpu [%]": "0 %",
+      "memory.used [MiB]": "4951 MiB"
+    }
+  ],
+  "evaluation_phase_confirmation": {
+    "checked_utc": "2026-09-13T01:04:24.919006+00:00",
+    "latest_training_step": 570000,
+    "periodic_evaluation": {
+      "status": "running",
+      "optimizer_step": 570000,
+      "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/checkpoint-latest.pt",
+      "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-570000",
+      "started_utc": "2026-09-13T01:03:46.544035+00:00"
+    },
+    "production_failure": "",
+    "note": "The GPU snapshot was taken just after the 570k evaluation started; brief low utilization is consistent with the evaluation/checkpoint phase."
+  }
+}

@@ -192,6 +192,18 @@
         0.4530340628420483
       ],
       "checkpoint_sha256": "0c7a0841cd0906fe0d8d2d90328b1f485553a94ebde09bb69edd3c00d6af5921"
+    },
+    {
+      "global_step": 560000,
+      "stage2_updates": 160000,
+      "stage": "stage2",
+      "validation_loss": 2.2772821785193855,
+      "p_at_l": 0.4504395706892803,
+      "p_at_l_95_ci": [
+        0.44794202982012316,
+        0.45298497569864493
+      ],
+      "checkpoint_sha256": "cb11a81cdb1456622c9937915925566e80581380ab699dc833c1f068224017dc"
     }
   ],
   "comparisons_to_400k": {
@@ -385,6 +397,19 @@
       "paired_chain_bootstrap_95_ci_percentage_points": [
         2.7473483431252084,
         2.863915876229178
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "560000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.03161020661798375,
+      "p_at_l_difference_percentage_points": 2.803034221643147,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        2.745921853769423,
+        2.8640524429116327
       ],
       "replicates": 5000,
       "unit_count": 20775,
