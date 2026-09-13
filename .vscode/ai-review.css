@@ -1,0 +1,49 @@
+/* Mark documentation awaiting owner review in the VS Code Markdown preview. */
+.ai,
+.ai p,
+.ai li,
+.ai td,
+.ai th,
+.ai h1,
+.ai h2,
+.ai h3,
+.ai h4,
+.ai h5,
+.ai h6,
+.ai a,
+.ai blockquote,
+.ai pre,
+.ai code,
+.ai code span[class] {
+  color: #0969da;
+}
+
+.ai {
+  border-left: 3px solid currentColor;
+  padding-left: .8em;
+}
+
+/* Inline changes retain their paragraph, list or table layout. */
+span.ai {
+  border-left: 0;
+  padding-left: 0;
+}
+
+body.vscode-dark .ai,
+body.vscode-dark .ai p,
+body.vscode-dark .ai li,
+body.vscode-dark .ai td,
+body.vscode-dark .ai th,
+body.vscode-dark .ai h1,
+body.vscode-dark .ai h2,
+body.vscode-dark .ai h3,
+body.vscode-dark .ai h4,
+body.vscode-dark .ai h5,
+body.vscode-dark .ai h6,
+body.vscode-dark .ai a,
+body.vscode-dark .ai blockquote,
+body.vscode-dark .ai pre,
+body.vscode-dark .ai code,
+body.vscode-dark .ai code span[class] {
+  color: #58a6ff;
+}

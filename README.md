@@ -25,6 +25,12 @@ choice of agent and search strategy remains yours.
   <a href="#citation">Citation</a>
 </p>
 
+<div class="ai">
+
+Agent-edited documentation awaiting owner review appears in blue in the local VS Code Markdown preview; see [AI review](docs/AI_REVIEW.md).
+
+</div>
+
 ## Setting up data & environments
 
 Prepare the environment and data once, then reuse them for training and evaluation.

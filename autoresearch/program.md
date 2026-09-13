@@ -2,15 +2,17 @@
 
 Read the user-selected task and the project's `AGENTS.md`. If no task is selected, stop. The task defines the objective, reward, evaluation commands and editable scope; this document defines the loop and records.
 
-## Evaluations per candidate
-
-`N=2` sets the number of complete evaluations per candidate; change it here or for a specific task. Use the same `N` for the starting implementation and candidates, preserving each evaluation's internal protocol and saving every run separately. All `N` evaluations must succeed; aggregate rewards using the task's rule, or the mean if unspecified.
-
 ## Start or resume
+
+Choose `ar_run_name` to briefly summarize the task and user prompt.
 
 - Use an isolated worktree under the main checkout's `.worktrees/<branch-name>/` directory. If the current branch does not match `ar-YYMMDD-<ar_run_name>`, create a worktree with a branch of that form; otherwise reuse its existing worktree and derive the date and `ar_run_name` from the branch. Run all campaign edits and commands from that worktree.
 - Follow the task's setup and baseline requirements, then evaluate the starting implementation to establish the incumbent. Keep the scoring reference fixed.
 - Keep `results.tsv`, `research.log` and trial artifacts under `autoresearch/<ar_run_name>/`. Resume existing journals; reuse results only when code, data, evaluation settings and environment still meet the task's requirements.
+
+## Evaluations per candidate
+
+Run `N` seed evaluations per candidate, where the task specifies `N` and evaluations may run in parallel when resources permit; all `N` must succeed for a valid run.
 
 ## Research records
 

@@ -32,3 +32,9 @@ data/cache/
 outputs/
 output/
 tmp/
+
+# Share Markdown review styles; keep other editor preferences local.
+!/.vscode/
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/ai-review.css
