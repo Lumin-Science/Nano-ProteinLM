@@ -1,0 +1,149 @@
+{
+  "assessment": {
+    "checked_utc": "2026-09-13T21:01:20.136164+00:00",
+    "global_step": 694810,
+    "stage2_updates": 294810,
+    "stage2_progress_percent": 98.27,
+    "recent_training_seconds_per_update": 0.5545157619266834,
+    "completed_evaluations": [
+      410000,
+      420000,
+      430000,
+      440000,
+      450000,
+      460000,
+      470000,
+      480000,
+      490000,
+      500000,
+      510000,
+      520000,
+      530000,
+      540000,
+      550000,
+      560000,
+      570000,
+      580000,
+      590000,
+      600000,
+      610000,
+      620000,
+      630000,
+      640000,
+      650000,
+      660000,
+      670000,
+      680000,
+      690000
+    ],
+    "remaining_evaluations": 1,
+    "evaluation_wall_seconds_estimate": 195.6881623850204,
+    "finish_toronto": "2026-09-13T17:52:33.761131-04:00",
+    "finish_10pct_slower_toronto": "2026-09-13T17:57:21.554811-04:00",
+    "allocation_hours_remaining": 14.378573287777776,
+    "finish_headroom_hours": 13.524788574722223,
+    "mgnify_unused": 5274528,
+    "mgnify_expected_remaining_draws": 637747.2,
+    "mgnify_headroom_fraction": 7.270562379576109,
+    "latest_verified_training_step": 694860,
+    "training_continued_after_evaluation": true,
+    "evaluation_audit_passed": true
+  },
+  "allocation": "12162637|RUNNING|14:22:43|2026-09-14T07:24:03|g27\n12162638|PENDING|7-00:00:00|N/A|",
+  "latest_train": {
+    "attention_backend": "flash3",
+    "batch_balance": {
+      "rank_tokens_after": [
+        17430,
+        17431,
+        17426,
+        17367,
+        17366,
+        17366,
+        17367,
+        17367
+      ],
+      "rank_tokens_before": [
+        17346,
+        19439,
+        15115,
+        17831,
+        16843,
+        17041,
+        19257,
+        16248
+      ]
+    },
+    "data_resampling": "per_source",
+    "estimated_training_flops": 380451807503470996512,
+    "event": "train",
+    "filled_residues": 368921694957,
+    "gradient_norm": 0.12948967516422272,
+    "learning_rate": 5.200785000000002e-05,
+    "loss": 2.198658764362335,
+    "mfu_6n": 0.14099968027643411,
+    "mfu_denominator": "6 * parameters * model_tokens / (989.5e12 BF16 FLOP/s * 8 GPUs)",
+    "model_tokens": 371767636717,
+    "objective_loss": 2.1336036324501038,
+    "optimizer": "muon",
+    "optimizer_step": 694810,
+    "sequences_seen": 1422970880,
+    "source_counts_global": {
+      "mgnify": 125442247,
+      "omg_img": 625180516,
+      "uniref90": 672348117
+    },
+    "source_counts_rank0": {
+      "mgnify": 15682729,
+      "omg_img": 78146930,
+      "uniref90": 84041702
+    },
+    "source_epoch_maxima": {
+      "mgnify": 0,
+      "omg_img": 2,
+      "uniref90": 9
+    },
+    "source_exposure_global": {
+      "mgnify": {
+        "available_records": 130716775,
+        "draws": 125442247,
+        "epoch": 0,
+        "epoch_cursor": 36222172,
+        "repeated_draws": 0,
+        "unique_records_seen": 125442247
+      },
+      "omg_img": {
+        "available_records": 262845186,
+        "draws": 625180516,
+        "epoch": 2,
+        "epoch_cursor": 99490144,
+        "repeated_draws": 362335330,
+        "unique_records_seen": 262845186
+      },
+      "uniref90": {
+        "available_records": 74175974,
+        "draws": 672348117,
+        "epoch": 9,
+        "epoch_cursor": 4764351,
+        "repeated_draws": 598172143,
+        "unique_records_seen": 74175974
+      }
+    },
+    "stage": "stage2",
+    "stage_progress": 0.9826966666666667,
+    "step_compute_seconds": 0.5428109569475055,
+    "step_model_tokens": 592031,
+    "tokens_per_second": 1090676.215029415,
+    "training_loss_reduction": "sqrt_mask_count",
+    "training_seconds": 163529.82004076848
+  },
+  "completed_evaluation": {
+    "status": "passed",
+    "optimizer_step": 690000,
+    "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/checkpoint-latest.pt",
+    "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-690000",
+    "started_utc": "2026-09-13T20:13:33.748112+00:00",
+    "wall_seconds": 195.6881623850204
+  },
+  "production_failure": ""
+}
