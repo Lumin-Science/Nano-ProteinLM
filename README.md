@@ -20,14 +20,50 @@ choice of agent and search strategy remains yours.
 <p align="center">
   <a href="#setting-up-data--environments">Setup</a> ·
   <a href="#training-and-evaluating">Training &amp; Evaluation</a> ·
-  <a href="#autoresearch">AutoResearch</a> ·
-  <a href="#test-leaderboard">Test Leaderboard</a> ·
+  <span class="ai"><a href="#auto-research-protocols">Auto Research Protocols</a></span> ·
+  <span class="ai"><a href="#auto-research-experiment">Experiments</a></span> ·
+  <span class="ai"><a href="#verification-of-auto-research-discovery--test">Verification / Test</a></span> ·
   <a href="#citation">Citation</a>
 </p>
 
 <div class="ai">
 
 Agent-edited documentation awaiting owner review appears in blue in the local VS Code Markdown preview; see [AI review](docs/AI_REVIEW.md).
+
+</div>
+
+<div class="ai">
+
+## Trained model and ESMC references
+
+</div>
+
+<div class="ai">
+
+Our best **171M Setting 3 model** completed **400k Stage 1 + 300k Stage 2 updates** at batch **2,048**, reaching **46.264% P@L** and **2.248124 validation loss**. All 30 Stage 2 evaluations and the final full model/optimizer checkpoint passed verification. See the [final run record](.dev/reports/nibi-setting3-stage2-b2048-300k-20260911/README.md) and [training recipes](.dev/configs/nibi/).
+
+</div>
+
+<div class="ai">
+
+![Contact P@L with 95% confidence intervals versus estimated training FLOPs, alongside Stage 1 and Stage 2 nominal token budgets for ESMC-300M, ESMC-600M, ESMC-6B and our 171M model.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
+
+</div>
+
+<div class="ai">
+
+| Model | P@L (95% CI) ↑ | Estimated FLOPs¹ | Stage 1 tokens¹ | Stage 2 tokens¹ |
+|---|---:|---:|---:|---:|
+| ESMC-6B | 72.500% (72.300–72.700%) | 2.555e+23 | 4.194T | 2.097T |
+| ESMC-600M | 58.900% (58.700–59.100%) | 2.491e+22 | 4.194T | 2.097T |
+| ESMC-300M | 55.200% (55.000–55.400%) | 1.480e+22 | 4.194T | 2.097T |
+| **NanoProteinLM-171M · Setting 3** | 46.264% (46.016–46.523%) | 2.334e+21 | 0.419T | 1.258T |
+
+</div>
+
+<div class="ai">
+
+ESMC scores and 95% intervals come from the [paper](https://doi.org/10.64898/2026.06.03.729735); our score uses the local 20,775-chain reconstruction, so this is a reference comparison rather than a matched training experiment. ¹ Tokens count **batch × maximum context × steps**; FLOPs are estimates from the paper’s architecture-aware formula on that same nominal basis. Our logged non-padding model tokens are **193.501B in Stage 1 + 181.404B in Stage 2**; the corresponding logged **6ND estimate is 3.837e20 FLOPs**. [Sources and calculation details](.dev/reports/readme-overview-20260913/README.md).
 
 </div>
 
@@ -202,7 +238,11 @@ shorten the evaluation protocol. See [EVALUATION.md](docs/EVALUATION.md#evaluati
 for commands, released ESMC comparisons, probe definitions, confidence intervals
 and additional downstream tasks.
 
-## AutoResearch
+<div class="ai">
+
+## Auto Research Protocols
+
+</div>
 
 Use NanoProteinLM as a research environment for improving training recipes under
 controlled budgets. Task definitions describe what is measured and held fixed;
@@ -224,74 +264,90 @@ Search trains each recipe for **one hour on four L40S GPUs per seed**, using **t
 
 The benchmark owner manually checks progress with **24.20B model tokens per seed on four H100s**, comparing mean MLM loss and P@L. Full rules and research commands are in [171m-validation-loss.md](tasks/171m-validation-loss.md) and [171m-p-at-l.md](tasks/171m-p-at-l.md).
 
-### Experiments
-
-A completed 38-round search found the cumulative recipe changes below. The
-figure shows their effect on the fixed-budget validation objective.
-
-![Autoresearch progress across 38 rounds: five cumulative improvements reduce validation loss by 2.20%; changes 4–5 use smaller models.](.dev/reports/program2/validation-loss.png)
-
-| Research metric | Baseline | 1: + Muon | 2: + batch balance | 3: + sqrt loss | 4: + FFN 1536* | 5: + tied embeddings* |
-|---|---:|---:|---:|---:|---:|---:|
-| Validation loss ↓ | 2.63868 ± 0.01303 | 2.61807 ± 0.00945 | 2.60415 ± 0.00650 | 2.59437 ± 0.00578 | 2.59095 ± 0.00132 | **2.58057 ± 0.00544** |
-| P@L (%) ↑ | 9.648 ± 0.598 | 9.795 ± 0.189 | 9.370 ± 0.270 | **10.533 ± 0.366** | 9.829 ± 0.286 | 9.527 ± 0.720 |
-
-Two-seed mean ± sample SD; one hour on four L40S GPUs per seed.
-[.dev/reports/program2/README.md](.dev/reports/program2/README.md) · [AUTORESEARCH.md](docs/AUTORESEARCH.md)
-
-*Changes 4–5 use ~142M models and predate the ±5% size rule. The fixed-size
-leaderboard skips 4 and applies tied embeddings directly to 3.
-
-## Test Leaderboard
-
-The latest matched Nibi comparison uses **100,000 Stage-1 steps, batch 2,048**
-and four H100s per model. Each run consumed **204.8M distinct records without
-repeats** and **48.39B non-padding model tokens**. Both full checkpoints and
-all ten evaluations per model are independently verified.
-
-| Nibi recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
-|---|---:|---:|---:|---:|
-| ESMC-like AdamW | 2.414734 | 28.173% | 27.932–28.421% | 21h 55m |
-| **Setting 3: Muon recipe + batch balance + sqrt loss** | **2.375701** | **36.567%** | **36.328–36.815%** | **22h 40m** |
-
-Setting 3 improves P@L by **8.394 percentage points** (paired chain-bootstrap
-95% CI **8.297–8.492 points**) and validation loss by **0.039033**.
-See the [full ten-point curves, checkpoint receipts and final audits](.dev/reports/nibi-paired-unique-b2048-100k-20260909/README.md).
-These are one-seed comparisons; intervals measure variation across contact
-chains. Times exclude evaluation pauses.
-
-Setting 3 [completed its continuation from 100k to 400k steps on eight Nibi H100s](.dev/reports/nibi-setting3-b2048-400k-20260910/README.md) on September 11, with batch 2,048, evaluation every 10k and an expanded 427.5M-record corpus. The [frozen continuation recipe](configs/setting3-nibi-b2048-400k.yaml) and full optimizer/sampler checkpoints support later continuation on four GPUs. Its final **400k** checkpoint has validation loss **2.308892** and P@L **42.241%** (95% CI **41.992–42.495%**), a **5.673-point** P@L gain over its 100k parent. The highest measured P@L was **42.280% at 390k**; 400k has the lowest validation loss. All 30 continuation evaluations were independently verified, and durable 200k, 300k and 400k checkpoints passed separate exact model/optimizer restoration audits. These continuation results use a larger training budget than the matched 100k comparison above. The historical Fir comparison below uses a smaller batch and different prepared-data budget.
-
 <div class="ai">
 
-Setting 3 [completed Stage 2 on eight Nibi H100s](.dev/reports/nibi-setting3-stage2-b2048-300k-20260911/README.md) on September 13: **300k additional updates, global 400k → 700k**, batch **2,048**, context **2,048**, mixture **63% UniRef90 / 6% MGnify / 31% OMG**, and evaluation every **10k**. The [frozen recipe](configs/setting3-nibi-stage2-b2048-300k.yaml) decayed base LR from **5e-4 to 5e-5** while preserving optimizer and sampler history. The final **700k** checkpoint reached validation loss **2.248124** and P@L **46.264%** (95% CI **46.016–46.523%**), a **4.023-point** gain over its 400k parent. All **30 evaluations** passed independent verification. The final full model/optimizer checkpoint is preserved in project storage and passed exact restoration; MGnify had zero repeats. Production took **48h 00m 39s** including evaluations and checkpoint handling.
+## Auto Research Experiment
 
 </div>
 
-Matched runs use **100,000 Stage-1 steps on four H100s**, batch **1,024**, base
-LR **5e-4**, base WD **0.01** and **1,000 warmup steps**. Each recipe has one
-training seed and uses the same 4,096 MLM validation sequences and 20,775 contact
-chains. These are historical step-budget results, separate from the two-seed
-Test of Progress protocol above.
+<div class="ai">
+
+A completed 38-round search found the cumulative recipe changes below. The figure shows their effect on the fixed-budget validation objective.
+
+</div>
+
+<div class="ai">
+
+![Autoresearch progress across 38 rounds: five cumulative improvements reduce validation loss by 2.20%; changes 4–5 use smaller models.](.dev/reports/program2/validation-loss.png)
+
+</div>
+
+<div class="ai">
+
+| Recipe | Validation loss ↓ | P@L (%) ↑ |
+|---|---:|---:|
+| Baseline | 2.63868 ± 0.01303 | 9.648 ± 0.598 |
+| 1: + Muon | 2.61807 ± 0.00945 | 9.795 ± 0.189 |
+| 2: + batch balance | 2.60415 ± 0.00650 | 9.370 ± 0.270 |
+| 3: + sqrt loss | 2.59437 ± 0.00578 | **10.533 ± 0.366** |
+| 4: + FFN 1536* | 2.59095 ± 0.00132 | 9.829 ± 0.286 |
+| 5: + tied embeddings* | **2.58057 ± 0.00544** | 9.527 ± 0.720 |
+
+</div>
+
+<div class="ai">
+
+Two-seed mean ± sample SD; one hour on four L40S GPUs per seed. [Full experiment record](.dev/reports/program2/README.md) · [Auto Research methods](docs/AUTORESEARCH.md).
+
+</div>
+
+<div class="ai">
+
+*Changes 4–5 use approximately 142M parameters and predate the ±5% size rule. The fixed-size verification below skips change 4 and applies tied embeddings directly to Setting 3.
+
+</div>
+
+<div class="ai">
+
+## Verification of Auto Research Discovery / Test
+
+</div>
+
+<div class="ai">
 
 | Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
 |---|---:|---:|---:|---:|
 | Baseline: ESMC-like AdamW | 2.47436 | 26.505% | 26.295–26.719% | 12h 01m |
-| 1: + Muon recipe† | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
+| 1: + Muon recipe | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
 | 2: + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
 | **3: + sqrt loss (default)** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
 | 5: + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
 
-†The Muon row includes the full optimizer recipe: Muon plus RMSNorm, residual routing and
-depth-scaled initialization, with RoPE 10k. The subsequent rows inherit these changes.
-Intervals are 95% chain-bootstrap CIs, not training-seed uncertainty; times
-exclude evaluation.
+</div>
 
-**The default recipe is best on both metrics in this comparison:** validation loss is **2.25% lower** and
-P@L is **6.18 percentage points higher** than the AdamW baseline.
-See [BEST_RECIPE_VS_BASELINE.md](docs/BEST_RECIPE_VS_BASELINE.md),
-[.dev/reports/fir-r02-rope10k-100k-20260906/README.md](.dev/reports/fir-r02-rope10k-100k-20260906/README.md) and the
-[TEST_LEADERBOARD_20260908.md](docs/archive/TEST_LEADERBOARD_20260908.md).
+<div class="ai">
+
+Each recipe trains for **100k Stage 1 steps on four H100s**, batch **1,024**, LR **5e-4**, weight decay **0.01** and **1,000 warmup steps**. The Muon recipe includes RMSNorm, residual routing, depth-scaled initialization and RoPE 10k; later rows add changes cumulatively. One seed per recipe; CIs bootstrap 20,775 contact chains, and training times exclude evaluation. [Recipe details](docs/BEST_RECIPE_VS_BASELINE.md) · [Run records](.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
+
+</div>
+
+<div class="ai">
+
+### AdamW versus the best recipe: 100k-step curves
+
+</div>
+
+<div class="ai">
+
+![P@L and MLM validation loss across all ten evaluations from 10k to 100k steps for the matched ESMC-like AdamW baseline and Setting 3.](.dev/reports/readme-overview-20260913/matched-100k-curves.png)
+
+</div>
+
+<div class="ai">
+
+This larger-batch comparison uses **batch 2,048**, **100k steps**, four H100s per model and the same **204.8M distinct training records / 48.39B model tokens**. Lines show every 10k-step evaluation; P@L shading is the 95% chain-bootstrap CI. At 100k, AdamW reaches **28.173% P@L / 2.414734 validation loss**, and Setting 3 reaches **36.567% / 2.375701**. [Full curves and verified records](.dev/reports/nibi-paired-unique-b2048-100k-20260909/README.md).
+
+</div>
 
 ## Citation
 

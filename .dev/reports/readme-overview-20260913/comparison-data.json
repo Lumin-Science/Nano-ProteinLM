@@ -1,0 +1,169 @@
+{
+  "models": [
+    {
+      "model": "ESMC-300M",
+      "parameters": 333000000,
+      "depth": 30,
+      "width": 960,
+      "p_at_l": 0.552,
+      "p_at_l_95_ci": [
+        0.55,
+        0.554
+      ],
+      "p_at_l_source": "ESMC paper, Appendix A.1.4.1",
+      "stage_steps": [
+        1000000,
+        500000
+      ],
+      "stage_batches": [
+        8192,
+        2048
+      ],
+      "stage_contexts": [
+        512,
+        2048
+      ],
+      "stage_nominal_tokens": [
+        4194304000000,
+        2097152000000
+      ],
+      "stage_nominal_flops": [
+        9122389740748800000000,
+        5674450393497600000000
+      ],
+      "total_nominal_flops": 14796840134246400000000,
+      "stage_actual_model_tokens": null,
+      "actual_6nd_flops": null
+    },
+    {
+      "model": "ESMC-600M",
+      "parameters": 575000000,
+      "depth": 36,
+      "width": 1152,
+      "p_at_l": 0.589,
+      "p_at_l_95_ci": [
+        0.587,
+        0.591
+      ],
+      "p_at_l_source": "ESMC paper, Appendix A.1.4.1",
+      "stage_steps": [
+        1000000,
+        500000
+      ],
+      "stage_batches": [
+        8192,
+        2048
+      ],
+      "stage_contexts": [
+        512,
+        2048
+      ],
+      "stage_nominal_tokens": [
+        4194304000000,
+        2097152000000
+      ],
+      "stage_nominal_flops": [
+        15539074102198272000000,
+        9372625004396544000000
+      ],
+      "total_nominal_flops": 24911699106594816000000,
+      "stage_actual_model_tokens": null,
+      "actual_6nd_flops": null
+    },
+    {
+      "model": "ESMC-6B",
+      "parameters": 6350000000,
+      "depth": 80,
+      "width": 2560,
+      "p_at_l": 0.725,
+      "p_at_l_95_ci": [
+        0.723,
+        0.727
+      ],
+      "p_at_l_source": "ESMC paper, Appendix A.1.4.1",
+      "stage_steps": [
+        1000000,
+        500000
+      ],
+      "stage_batches": [
+        8192,
+        2048
+      ],
+      "stage_contexts": [
+        512,
+        2048
+      ],
+      "stage_nominal_tokens": [
+        4194304000000,
+        2097152000000
+      ],
+      "stage_nominal_flops": [
+        165080638213324800000000,
+        90456802826649600000000
+      ],
+      "total_nominal_flops": 255537441039974400000000,
+      "stage_actual_model_tokens": null,
+      "actual_6nd_flops": null
+    },
+    {
+      "model": "NanoProteinLM-171M",
+      "parameters": 170559856,
+      "depth": 24,
+      "width": 768,
+      "p_at_l": 0.46264334547804026,
+      "p_at_l_95_ci": [
+        0.4601573526828393,
+        0.46522984711922616
+      ],
+      "p_at_l_source": "local 20775-chain reconstruction",
+      "stage_steps": [
+        400000,
+        300000
+      ],
+      "stage_batches": [
+        2048,
+        2048
+      ],
+      "stage_contexts": [
+        512,
+        2048
+      ],
+      "stage_nominal_tokens": [
+        419430400000,
+        1258291200000
+      ],
+      "stage_nominal_flops": [
+        476726834076057600000,
+        1857670623107481600000
+      ],
+      "total_nominal_flops": 2334397457183539200000,
+      "stage_actual_model_tokens": [
+        193501303973,
+        181403984859
+      ],
+      "actual_6nd_flops": 383662752460945969152
+    }
+  ],
+  "formula": "Sum over stages: 3 * (2 * parameters + 4 * depth * context * width) * batch * context * steps",
+  "token_basis": "Nominal tokens (batch \u00d7 maximum context \u00d7 steps); not measured non-padding tokens.",
+  "paper": {
+    "url": "https://doi.org/10.64898/2026.06.03.729735",
+    "pdf_url": "https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf",
+    "sha256": "19ce3beeda5128dc90835b30804ec980ee5e063902a1de934510d8d9e136382c",
+    "pages": [
+      28,
+      29,
+      30
+    ],
+    "tables": [
+      "S1",
+      "S3",
+      "S4"
+    ]
+  },
+  "sources": {
+    ".dev/reports/nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-700000/RESULT_VERIFIED.json": "8447d7435497f9d5b6142f81f72ad4844b7f2bcb539cdae83fa8be88144eba0b",
+    ".dev/reports/nibi-setting3-b2048-400k-20260910/full/evaluations/step-400000/RESULT_VERIFIED.json": "3c4b0af2dee3a3d9764649f4acb970c1b07d269990b3f3a6b650f03766bdd1e2",
+    ".dev/reports/nibi-paired-unique-b2048-100k-20260909/learning-curve.json": "7148eff47daef38d7a04a38d65e97e9131e2e00f743898095a7491245240263e"
+  }
+}

@@ -16,7 +16,9 @@ export CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export PRESERVE_MILESTONES=0
 parent=/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-b2048-400k-20260910/checkpoint-400000.pt
 initial="$PAIR_ROOT/transition/checkpoint-stage2-start.pt"
-config="$PAIR_REPO/configs/setting3-nibi-stage2-b2048-300k.yaml"
+config="$PAIR_REPO/.dev/configs/nibi/setting3-nibi-stage2-b2048-300k.yaml"
+# Frozen historical checkouts retain their original config location.
+[[ -f "$config" ]] || config="$PAIR_REPO/configs/setting3-nibi-stage2-b2048-300k.yaml"
 cd "$PAIR_REPO"
 commit=$(cat "$PAIR_ROOT/SOURCE_COMMIT.txt")
 [[ "$(git rev-parse HEAD)" == "$commit" && -z "$(git status --porcelain)" ]]

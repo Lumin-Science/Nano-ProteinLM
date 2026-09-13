@@ -1,0 +1,22 @@
+[
+  {
+    "old_path": "configs/esmc-171m-baseline-nibi-unique-b2048-100k.yaml",
+    "new_path": ".dev/configs/nibi/esmc-171m-baseline-nibi-unique-b2048-100k.yaml",
+    "sha256": "eac9f074b92e2aaa68e3a1d93dbc7355d7a7122a22e11533ca479021b57a5c14"
+  },
+  {
+    "old_path": "configs/esmc-171m-setting3-nibi-unique-b2048-100k.yaml",
+    "new_path": ".dev/configs/nibi/esmc-171m-setting3-nibi-unique-b2048-100k.yaml",
+    "sha256": "5981b3c139273f146512b579642d1bc72a50c10f8cf81418fd1f13876eaec8c2"
+  },
+  {
+    "old_path": "configs/setting3-nibi-b2048-400k.yaml",
+    "new_path": ".dev/configs/nibi/setting3-nibi-b2048-400k.yaml",
+    "sha256": "afdeaad2f3810a2ad6fb0e86e1c57ba100a402c12e6157e8f406a7c7936bb43f"
+  },
+  {
+    "old_path": "configs/setting3-nibi-stage2-b2048-300k.yaml",
+    "new_path": ".dev/configs/nibi/setting3-nibi-stage2-b2048-300k.yaml",
+    "sha256": "424cd4c1c10dffb027f90c55db5755e448435496f23b2d45c58a7c36e6298c73"
+  }
+]

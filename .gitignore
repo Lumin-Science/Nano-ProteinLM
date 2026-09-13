@@ -7,6 +7,7 @@
 !/.dev/configs/
 /.dev/configs/*
 !/.dev/configs/archive/
+!/.dev/configs/nibi/
 !/.dev/scripts/
 !/.dev/tests/
 !/.dev/reports/

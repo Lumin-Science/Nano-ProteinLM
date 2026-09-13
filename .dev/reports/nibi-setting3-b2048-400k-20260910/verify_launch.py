@@ -27,7 +27,7 @@ def metrics(name):
     ]
 
 
-recipe_path = REPO / "configs/setting3-nibi-b2048-400k.yaml"
+recipe_path = REPO / ".dev/configs/nibi/setting3-nibi-b2048-400k.yaml"
 recipe = yaml.safe_load(recipe_path.read_text())
 actual = yaml.safe_load((LAUNCH / "full/config.yaml").read_text())
 assert actual == recipe

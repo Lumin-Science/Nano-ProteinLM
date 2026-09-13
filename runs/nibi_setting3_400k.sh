@@ -20,7 +20,9 @@ commit=$(cat "$PAIR_ROOT/SOURCE_COMMIT.txt")
 [[ "$(git rev-parse HEAD)" == "$commit" && -z "$(git status --porcelain)" ]]
 [[ "$(hostname -s):$SLURM_JOB_ID" == g27:12162637 ]]
 test -f "$PAIR_ROOT/DATA_READY.json"
-config="$PAIR_REPO/configs/setting3-nibi-b2048-400k.yaml"
+config="$PAIR_REPO/.dev/configs/nibi/setting3-nibi-b2048-400k.yaml"
+# Frozen historical checkouts retain their original config location.
+[[ -f "$config" ]] || config="$PAIR_REPO/configs/setting3-nibi-b2048-400k.yaml"
 if [[ "$mode" == migration ]]; then
   "$TRAIN_PYTHON" -m nanoprotein.data_migration --checkpoint "$parent" \
     --old-data-root /scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/data \
