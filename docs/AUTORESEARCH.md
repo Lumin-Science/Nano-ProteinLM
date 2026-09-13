@@ -1,14 +1,6 @@
 # AutoResearch records
 
-The [171M validation-loss task](../tasks/171m-validation-loss.md) is designed for
-small-budget training experiments. Its baseline backbone follows the paper's
-170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29));
-[300M/600M references](../configs/esmc/README.md) are separate from this task.
-Its [research shell script](../tasks/171m-validation-loss_ar.sh) calls the standard
-training/evaluation APIs directly. [autoresearch/program.md](../autoresearch/program.md)
-defines baseline measurement, iteration, comparison and recording rules; the task
-owns scientific settings, and the agent reviews compliance. Test of Progress is
-manual. This page is a results index.
+The [171M validation-loss task](../tasks/171m-validation-loss.md) and [171M contact P@L task](../tasks/171m-p-at-l.md) are designed for small-budget training experiments. They share the same protocol and differ only in the research reward: minimize MLM validation loss or maximize contact P@L. Their baseline backbone follows the paper's 170M scaling model ([Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)); [300M/600M references](../configs/esmc/README.md) are separate from these tasks. Both use the same [measurement script](../tasks/171m-validation-loss_ar.sh), which calls the standard training/evaluation APIs directly. [autoresearch/program.md](../autoresearch/program.md) defines baseline measurement, iteration, comparison and recording rules; each task owns scientific settings, and the agent reviews compliance. Test of Progress is manual. This page is a results index.
 
 The historical [38-round research campaign](../.dev/reports/program2/README.md)
 predates the current ±5% parameter bound. Its 142M FFN/tied endpoints retain
@@ -25,7 +17,7 @@ that full recipe, so it is not a Muon-only ablation. See [executed configuration
 ## Commands and results
 
 - [Recommended training command](../README.md#train-the-esmc-style-protein-language-model) for the 100k-step default run.
-- [Research and progress commands](../tasks/171m-validation-loss.md) for paired-seed comparisons.
+- Paired-seed research and progress commands: [validation-loss reward](../tasks/171m-validation-loss.md) or [P@L reward](../tasks/171m-p-at-l.md).
 - [38-round curve](../README.md#autoresearch), including all means and sample SDs.
 - [Test Leaderboard](../README.md#test-leaderboard).
 - [All 78 runs through R38](../.dev/reports/program2/runs-through-r38.tsv).

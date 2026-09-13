@@ -1,4 +1,5 @@
 .venv/
+/.worktrees/
 .uv-cache/
 .env
 .exps/

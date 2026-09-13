@@ -114,24 +114,21 @@ state; see [continuation](checkpoint-resume.md) for resuming on another GPU coun
 
 ## AutoResearch
 
-[autoresearch/program.md](../autoresearch/program.md) defines the research loop;
-[171m-validation-loss.md](../tasks/171m-validation-loss.md) defines the scientific
-protocol and command. To start an agent, tell it:
+[autoresearch/program.md](../autoresearch/program.md) defines the research loop; [171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) define the same scientific protocol with different rewards. To start an agent, select the task to optimize and tell it:
 
 > Read `autoresearch/program.md` and start autoresearch for `tasks/171m-validation-loss.md`.
+
+Use `tasks/171m-p-at-l.md` in that instruction to optimize contact P@L instead.
 
 After setup and GPU allocation, run one research measurement:
 
 ```bash
 bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001
+# Or use P@L as the reward with the same measurements:
+bash tasks/171m-p-at-l_ar.sh configs/default.yaml experiment-p-at-l-001
 ```
 
-The task script loads `.env`, saves the candidate recipe, runs seeds 42 and 43
-through the standard training/evaluation APIs, and reports mean loss and sample
-SD in `$OUTPUT_ROOT/experiment-001/summary.json`. It records full contact P@L as a
-diagnostic. The agent reviews task boundaries and run completion. Ordinary
-trainer/evaluator integrity checks and the summary utility remain in place;
-the shell script contains no separate boundary checker or keep/discard logic.
+Each task script loads `.env`, saves the candidate recipe, runs seeds 42 and 43 through the standard training/evaluation APIs, and reports both metrics' means and sample SDs in `$OUTPUT_ROOT/<experiment-name>/summary.json`. The validation-loss task uses `metrics.validation_loss` as its reward (lower is better); the P@L task uses `metrics.p_at_l` (higher is better). The other metric remains a diagnostic. The agent reviews task boundaries and run completion. Ordinary trainer/evaluator integrity checks and the summary utility remain in place; the shell script contains no separate boundary checker or keep/discard logic.
 
 ## Evaluation
 

@@ -1,90 +1,53 @@
 # AutoResearch loop
 
-Read the task selected by the user in `tasks/` and the repository's `AGENTS.md`.
-This document guides the research loop. The task defines the question, score,
-budget, repeats, commands, boundaries and Test of Progress; take concrete
-settings from that task and its scripts, not from historical experiments.
+Read the user-selected task and the project's `AGENTS.md`. If no task is selected, stop. The task defines the objective, reward, evaluation commands and editable scope; this document defines the loop and records.
+
+## Evaluations per candidate
+
+`N=2` sets the number of complete evaluations per candidate; change it here or for a specific task. Use the same `N` for the starting implementation and candidates, preserving each evaluation's internal protocol and saving every run separately. All `N` evaluations must succeed; aggregate rewards using the task's rule, or the mean if unspecified.
 
 ## Start or resume
 
-- Use a dedicated research branch/worktree. Preserve unrelated changes and other
-  campaigns; choose a campaign name instead of reusing a historical branch name.
-- Keep `results.tsv`, `research.log` and trial artifacts under
-  `OUTPUT_ROOT/<campaign>/`, following the recording format below. Create the
-  journals only if absent; on resume, read their history before scheduling work.
-- Measure the task's starting recipe with all required repeats before changing
-  it. This establishes the incumbent. Reuse earlier measurements only when the
-  code, data, hardware and evaluation protocol match; otherwise rebaseline.
+- Use an isolated worktree under the main checkout's `.worktrees/<branch-name>/` directory. If the current branch does not match `ar-YYMMDD-<ar_run_name>`, create a worktree with a branch of that form; otherwise reuse its existing worktree and derive the date and `ar_run_name` from the branch. Run all campaign edits and commands from that worktree.
+- Follow the task's setup and baseline requirements, then evaluate the starting implementation to establish the incumbent. Keep the scoring reference fixed.
+- Keep `results.tsv`, `research.log` and trial artifacts under `autoresearch/<ar_run_name>/`. Resume existing journals; reuse results only when code, data, evaluation settings and environment still meet the task's requirements.
 
 ## Research records
 
-A trial is one candidate recipe evaluated across all required repeats. Use a
-stable ID such as `trial-001`; save its recipe, candidate diff, raw logs and run
-outputs under `OUTPUT_ROOT/<campaign>/<trial_id>/`.
+A trial is one candidate evaluated `N` times. Use an ID such as `trial-001` and save its diff, commands and all evaluation outputs under `autoresearch/<ar_run_name>/<trial_id>/`.
 
-**`results.tsv`** is the score ledger: append one row per finished trial,
-including the baseline and failed trials. Use this tab-separated header:
+**`results.tsv`**: append one row per finished trial, including the baseline and failed trials.
+
+For example:
 
 ```tsv
-timestamp_utc	trial_id	code_revision	incumbent_id	repeat_ids	scores	mean	std	improvement	status	description	artifacts
+timestamp_utc	trial_id	code_revision	incumbent_id	n_evaluations	completed_evaluations	samples_per_system	reward(mean)	ci95_low	ci95_high	improvement	status	description	artifacts
 ```
 
-`repeat_ids` and `scores` are comma-separated lists in matching order, preserving
-every seed/repeat's primary score. `mean`, `std` and `improvement` follow the
-comparison rule below; `incumbent_id` identifies the trial being compared against.
-Use `baseline`, `keep`, `discard` or `failed` for `status`, and `NA` for missing
-values. Failed or incomplete trials retain available scores but have no qualifying
-mean, SD or improvement. Keep cells on one line without embedded tabs; link
-detailed diagnostics through the campaign-relative `artifacts` directory.
+This is an example; add or adapt columns for the selected task and describe them in `research.log`. Keep headers and rows aligned, cells on one line without embedded tabs, and use `NA` for unavailable values while preserving historical measurements.
 
-**`research.log`** is the reasoning journal: append one timestamped line per trial
-event, using `timestamp_utc trial_id event message`. Before a trial, log `start`
-with its hypothesis and incumbent; after it, log the decision, evidence, failure
-cause if any, and next idea. Record the task path/version and measurement context
-when the campaign starts, and log interruptions or policy changes as they happen.
-Preserve both journals across restarts and discarded candidates.
+- `n_evaluations` / `completed_evaluations`: planned `N` / successful complete evaluations.
+- `reward(mean)`: mean evaluation reward in this example; use the task's aggregation rule when specified.
+- `ci95_low` / `ci95_high`: 95% confidence bounds calculated as the task specifies; for mean rewards, default to `mean ± t(0.975, N−1) × s / sqrt(N)`, where `s` is the sample standard deviation of the `N` complete evaluation rewards (denominator `N−1`). This assumes independent, approximately normal rewards and `N >= 2`.
+- `improvement`: candidate reward minus the reward of `incumbent_id`.
+- `status`: `baseline`, `keep`, `discard` or `failed`. A failed gate or incomplete evaluation has no qualifying reward, interval or improvement.
+- `artifacts`: campaign-relative trial directory. Retain measured regressions as completed trials.
 
-At startup/resume and before choosing every new trial, read the TSV header and
-the tails of both journals. Read older entries or linked artifacts when needed
-to understand the incumbent or avoid repeating an earlier experiment:
+**`research.log`**: append timestamped events using `timestamp_utc trial_id event message`. Record the task, `N`, baseline and evaluation settings at campaign start; for each trial, record the hypothesis, decision, evidence, failures and next idea. Log interruptions and policy changes, preserving history across restarts.
 
-```bash
-campaign_dir="$OUTPUT_ROOT/<campaign>"
-head -n 1 "$campaign_dir/results.tsv"
-tail -n 20 "$campaign_dir/results.tsv" "$campaign_dir/research.log"
-```
+Read the TSV header and recent entries in both journals at startup and before each trial; consult older entries and artifacts when needed to avoid repeating work.
+
+## Keep Rule
+
+Keep a candidate only when `candidate.ci95_low > incumbent.mean` and `candidate.mean > incumbent.ci95_high`.
 
 ## Iterate
 
-1. Read the history tails above and inspect the incumbent. Propose one clear
-   change and explain why it could improve the task's score within its compute
-   budget; record the hypothesis in `research.log` before running it.
-2. Review the diff against the task boundaries yourself. Check relevant code,
-   resolved settings and model size; run focused tests before expensive work.
-   A command succeeding does not establish scientific validity. Do not change
-   the task, measurement scripts or evaluation to make a candidate qualify.
-3. Run the task's ordinary train/simulate/evaluate command for every required
-   repeat, using fresh run directories and the same code/recipe across repeats.
-   Match seeds and measurement conditions to the incumbent.
-   Read the logs and completion records: verify the budget, data, hardware and
-   evaluation actually match the task. Record incomplete or failed runs with
-   their cause; they cannot supply a candidate score.
-4. Compare the task's primary score using all planned repeats. Report diagnostics
-   separately; do not substitute a better-looking diagnostic or cherry-pick seeds.
-   For repeated-run scores, use the arithmetic mean and sample SD (`ddof=1`).
-5. Default retention rule: keep a candidate only
-   when its improvement over the incumbent mean exceeds its own sample SD.
-   Improvement is `incumbent_mean - candidate_mean` for a lower-is-better score,
-   and the reverse for a higher-is-better score. A tie is not a keep. This is a
-   search heuristic, not a significance test; record any user-directed policy
-   change before comparing candidates.
-6. Append the trial row to `results.tsv` and its decision/evidence to `research.log`.
-   Commit a kept change on the research branch and update the incumbent. For a
-   discarded candidate, restore only its changes while retaining its recipe,
-   logs and measurements.
-   Continue within the user's budget; leave the incumbent and next hypothesis
-   clear when stopping or handing off.
+1. Review the incumbent and history, propose a change within the task's editable scope, and log the hypothesis before running.
+2. Check the diff against task boundaries and run relevant checks. Do not change protected files or evaluation rules to qualify a candidate.
+3. Run the complete evaluation `N` times with fixed candidate code and conditions, using a fresh output directory each time. Retain every result, including failures.
+4. Compare the aggregated reward with the incumbent using the task's objective, diagnostics and uncertainty. Remeasure unclear results consistently and retain every attempt.
+5. Decide whether to keep the current improvement using the keep rule; a tie is not a keep. Commit kept changes when using Git and update the incumbent; for discarded candidates, restore only their changes and retain the evidence.
+6. Append the trial row and decision to the journals. Continue within the user's budget, leaving the incumbent and next idea clear when stopping.
 
-Task compliance and research decisions belong to the agent. The task script is
-an executable measurement recipe, not a boundary adjudicator or an agent loop.
-Test of Progress is run separately by the benchmark owner when requested.
+Follow the task's instructions for any final or owner-run evaluation.

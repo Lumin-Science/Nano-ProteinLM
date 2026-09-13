@@ -116,8 +116,8 @@ held-out proteins.
 ### Install the environment and data
 
 ```bash
-git clone https://github.com/Lumin-Science/Nano-Protein-LM.git
-cd Nano-Protein-LM
+git clone https://github.com/Lumin-Science/Nano-ProteinLM.git
+cd Nano-ProteinLM
 bash runs/setup.sh
 ```
 The default downloads **30/565 training shards (29.98M proteins; 5.62 GB compressed, including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. For a larger training set:
@@ -172,10 +172,8 @@ and recipe changes.
 
 ### Evaluate a checkpoint
 
-- **MLM validation loss ↓:** mean per-protein masked-token loss on held-out data;
-  the autoresearch selection metric.
-- **Contact P@L ↑:** precision among the top L predicted long-range contacts,
-  where L is chain length, averaged over 20,775 chains; tests structural information.
+- **MLM validation loss ↓:** mean per-protein masked-token loss on held-out data; the reward for the [validation-loss task](tasks/171m-validation-loss.md).
+- **Contact P@L ↑:** precision among the top L predicted long-range contacts, where L is chain length, averaged over 20,775 chains; the reward for the [P@L task](tasks/171m-p-at-l.md).
 
 After setup, both metrics are ready to run. Load your paths and score a checkpoint:
 
@@ -207,20 +205,18 @@ Tell your coding agent:
 
 > Read `autoresearch/program.md` and start autoresearch for `tasks/171m-validation-loss.md`.
 
+For the same task with contact P@L as the reward, use:
+
+> Read `autoresearch/program.md` and start autoresearch for `tasks/171m-p-at-l.md`.
+
 The program covers iteration and keep/discard decisions. The selected task holds
 the scientific protocol and commands; the agent reviews its boundaries.
 
 ### Protocol
 
-Search trains each recipe for **one hour on four L40S GPUs per seed**, using
-**two matched seeds**. Its score is mean MLM validation loss, with lower values
-preferred. Data and evaluation stay fixed, and model size must remain within
-±5% of the original 171M baseline. The task script runs one measurement; it does
-not implement the research loop.
+Search trains each recipe for **one hour on four L40S GPUs per seed**, using **two matched seeds**. Choose mean MLM validation loss (lower is better) or mean contact P@L (higher is better) as the task's reward; the other metric remains a diagnostic. Both tasks use the same measurements. Data and evaluation stay fixed, and model size must remain within ±5% of the original 171M baseline. The task script runs one measurement; it does not implement the research loop.
 
-The benchmark owner manually checks progress with **24.20B model tokens per seed
-on four H100s**, comparing mean MLM loss and P@L. Full rules and research commands
-are in [171m-validation-loss.md](tasks/171m-validation-loss.md).
+The benchmark owner manually checks progress with **24.20B model tokens per seed on four H100s**, comparing mean MLM loss and P@L. Full rules and research commands are in [171m-validation-loss.md](tasks/171m-validation-loss.md) and [171m-p-at-l.md](tasks/171m-p-at-l.md).
 
 ### Experiments
 
@@ -297,7 +293,7 @@ If you use NanoProteinLM, please cite this repository and the original
   author = {Muchen Li},
   title = {NanoProteinLM: Minimal ESMC-Style Protein Language-Model Training},
   year = {2026},
-  url = {https://github.com/Lumin-Science/Nano-Protein-LM}
+  url = {https://github.com/Lumin-Science/Nano-ProteinLM}
 }
 
 @article{candido2026language,

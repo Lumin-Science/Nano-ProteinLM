@@ -14,18 +14,7 @@ All structures and structural contact labels for the P@L evaluation come from
 the frozen 2024-02-28 RCSB Protein Data Bank snapshot. This is also the PDB
 population protected during training-corpus decontamination.
 
-The small-budget 171M task uses the paper's 170M scaling backbone
-([architecture and scope](../tasks/171m-validation-loss.md#background)).
-Its AutoResearch score is held-out sequence-mean MLM loss averaged
-across two matched training seeds, with sample SD reported separately. The
-agent chooses its acceptance strategy. Training loss and full long-range
-contact P@L are required diagnostics; P-CORE provides additional representation
-measurements. These diagnostics do not affect research selection. See
-[tasks/171m-validation-loss.md](../tasks/171m-validation-loss.md) for the scoring rule and executable protocol,
-and [Test of Progress](../tasks/171m-validation-loss.md#test-of-progress)
-for token-budget confirmation. [AUTORESEARCH_SCALEUP.md](AUTORESEARCH_SCALEUP.md)
-records the executed historical 100k-step comparison. The current token-budget verification
-protocol does not relabel those single-seed results.
+The small-budget 171M tasks use the paper's 170M scaling backbone ([architecture and scope](../tasks/171m-validation-loss.md#background)). The [validation-loss task](../tasks/171m-validation-loss.md) scores held-out sequence-mean MLM loss (lower is better); the [P@L task](../tasks/171m-p-at-l.md) scores full long-range contact P@L (higher is better). Both average the selected metric across two matched training seeds, with sample SD reported separately, and use identical training and evaluation commands. The other metric and training loss remain diagnostics; P-CORE provides additional representation measurements. Diagnostics do not affect research selection. [autoresearch/program.md](../autoresearch/program.md) defines the default acceptance rule. See each task for its scoring rule and executable protocol, and [Test of Progress](../tasks/171m-validation-loss.md#test-of-progress) for token-budget confirmation. [AUTORESEARCH_SCALEUP.md](AUTORESEARCH_SCALEUP.md) records the executed historical 100k-step comparison. The current token-budget verification protocol does not relabel those single-seed results.
 
 ## Manual Test of Progress
 
