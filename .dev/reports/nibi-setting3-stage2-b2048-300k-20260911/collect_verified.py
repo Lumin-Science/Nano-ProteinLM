@@ -16,6 +16,11 @@ RAW = REPO / ".exps" / REPORT.name
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("step", type=int)
 parser.add_argument("--status", type=Path, required=True)
+parser.add_argument(
+    "--expected-program-sha256",
+    default="fbfb6078304127b3d5dd13cd1d6021b6ed28eca2b6032bab5d25551b8b941c0b",
+    help="Observed hash of the user's unrelated program file; collection must preserve it.",
+)
 args = parser.parse_args()
 
 
@@ -52,9 +57,7 @@ assert 410000 <= args.step < 700000 and args.step % 10000 == 0
 assert audit["status"] == "passed" and audit["optimizer_steps"] == args.step
 assert args.step in status["full"]["evaluated_steps"]
 assert current["optimizer_step"] >= args.step and not status["full"]["failure"]
-assert sha(REPO / "autoresearch/program.md") == (
-    "fbfb6078304127b3d5dd13cd1d6021b6ed28eca2b6032bab5d25551b8b941c0b"
-)
+assert sha(REPO / "autoresearch/program.md") == args.expected_program_sha256
 destination = REPORT / "full/evaluations" / source.name
 for path in source.rglob("*"):
     relative = path.relative_to(source)
@@ -261,4 +264,5 @@ files = [p for p in sorted(REPORT.rglob("*")) if p.is_file() and p.name != "SHA2
 (REPORT / "SHA256SUMS").write_text(
     "".join(f"{sha(p)}  {p.relative_to(REPORT)}\n" for p in files)
 )
+assert sha(REPO / "autoresearch/program.md") == args.expected_program_sha256
 print(json.dumps(dict(assessment=assessment, comparison_to_400k=comparison), indent=2))

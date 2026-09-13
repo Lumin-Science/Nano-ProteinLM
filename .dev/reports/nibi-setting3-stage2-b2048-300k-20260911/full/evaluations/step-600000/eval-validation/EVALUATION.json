@@ -1,0 +1,25 @@
+{
+  "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/checkpoint-latest.pt",
+  "checkpoint_sha256": "585edf8c0188c25f3ca6b9e513a917b129e0475e6d08ac9bbf767e782cbf1d0b",
+  "checkpoint_training_seconds": 327073.35905349813,
+  "peak_cuda_memory_bytes": 913949696,
+  "resumed_components": [],
+  "schema_version": 1,
+  "timing_seconds": {
+    "total": 9.565006209071726,
+    "validation_mlm": 6.6300997799262404
+  },
+  "validation_mlm": {
+    "masked_residues": 139963,
+    "perplexity": 9.659740292915101,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.2679667630716267,
+    "sequence_median_nll": 2.3332520723342896,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  }
+}

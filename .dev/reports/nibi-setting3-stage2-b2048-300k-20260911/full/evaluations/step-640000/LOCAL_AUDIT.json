@@ -1,0 +1,116 @@
+{
+  "status": "passed",
+  "comparison_to_400k": {
+    "reference_optimizer_steps": 400000,
+    "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+    "validation_loss_difference": -0.048777473113204906,
+    "p_at_l_difference_percentage_points": 3.5499810991506315,
+    "paired_chain_bootstrap_95_ci_percentage_points": [
+      3.4849612043436147,
+      3.6138445554883334
+    ],
+    "replicates": 5000,
+    "unit_count": 20775,
+    "note": "Across the same contact chains; this is not training-seed uncertainty."
+  },
+  "recipe": "setting3",
+  "world_size": 8,
+  "data_manifest_sha256": "76bf671104f795af68594110010c64e047dd75d4254cb5508d02a8e0407d32b2",
+  "source_epoch_and_exposure_accounting_verified": true,
+  "mgnify_no_repeats": true,
+  "source_exposure_at_checkpoint": {
+    "mgnify": {
+      "available_records": 130716775,
+      "draws": 118707449,
+      "epoch": 0,
+      "epoch_cursor": 29487374,
+      "repeated_draws": 0,
+      "unique_records_seen": 118707449
+    },
+    "omg_img": {
+      "available_records": 262845186,
+      "draws": 590383935,
+      "epoch": 2,
+      "epoch_cursor": 64693563,
+      "repeated_draws": 327538749,
+      "unique_records_seen": 262845186
+    },
+    "uniref90": {
+      "available_records": 74175974,
+      "draws": 601628616,
+      "epoch": 8,
+      "epoch_cursor": 8220824,
+      "repeated_draws": 527452642,
+      "unique_records_seen": 74175974
+    }
+  },
+  "data_coverage_passed": true,
+  "training_seconds_at_checkpoint": 133147.6472788134,
+  "model_tokens_at_checkpoint": 338626042521,
+  "source_counts_at_checkpoint": {
+    "mgnify": 118707449,
+    "omg_img": 590383935,
+    "uniref90": 601628616
+  },
+  "verified_utc": "2026-09-13T18:25:21.077521+00:00",
+  "source_commit": "f4b672d0a3a70e15740ee3876c202e535f727d3c",
+  "optimizer_steps": 640000,
+  "sequences_seen": 1310720000,
+  "checkpoint_sha256": "1b3e1db755339772e0bc0964d5fab6cc8e78604f7b00f8373121d58b33796b9d",
+  "validation": {
+    "masked_residues": 139963,
+    "perplexity": 9.584190442211963,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.2601149120241644,
+    "sequence_median_nll": 2.3224098682403564,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  },
+  "p_at_l": 0.457909039464355,
+  "uncertainty": {
+    "replicates": 5000,
+    "unit_count": 20775,
+    "confidence_interval_95": [
+      0.45541750148610183,
+      0.4604718518419176
+    ]
+  },
+  "complete_shards": 16,
+  "component_sha256": {
+    "eval-p-at-l/components/contact-shard-0/EVALUATION.json": "bd14f7e561fb877aa88df28009aac3e4962fa53cd6951d2fb1c986280426d088",
+    "eval-p-at-l/components/contact-shard-1/EVALUATION.json": "87e6144241750e250dfc8af3ce1fed96feeb9220a559116a835b71d7b84cbe5f",
+    "eval-p-at-l/components/contact-shard-2/EVALUATION.json": "0b2c7b39a23a8ae79ff30396fd9adb7b9b6c1bc9bb06a1e3dece978b5e8b6f36",
+    "eval-p-at-l/components/contact-shard-3/EVALUATION.json": "f9e044f780d0342c057a689db1381a08534f27c9e0b9be5d1252502b81e23b6f",
+    "eval-p-at-l/components/contact-shard-4/EVALUATION.json": "1f72f18f7fdddb9088234e4a22de2ba7cd2de22c15dc4cc89c68ee634e784062",
+    "eval-p-at-l/components/contact-shard-5/EVALUATION.json": "43e677287647a83d614a9d3828d6c2720ffb78e5bd671e6fef14fa668376d5c9",
+    "eval-p-at-l/components/contact-shard-6/EVALUATION.json": "72831b05a93d52bbc9691a1711356a854ea47bfd6665b7d65499f83f00697d04",
+    "eval-p-at-l/components/contact-shard-7/EVALUATION.json": "18af06521dfbbce661427114bea06b1ce838dc46a7dc0bd38da95614f92133f7",
+    "eval-p-at-l/components/contact-shard-8/EVALUATION.json": "020ae2bdfc45adcd08f785fc6669388ee861aac8d94a7afaefff0d08352ec96a",
+    "eval-p-at-l/components/contact-shard-9/EVALUATION.json": "3a56319906050fbec57a3e2c1193a5e1faa506100d86e24d6ee6a866ba9b62f7",
+    "eval-p-at-l/components/contact-shard-10/EVALUATION.json": "2a023a9a82798968124ccb3714c0eb1c9bb6b100c05f5449e23d61e81eb27efd",
+    "eval-p-at-l/components/contact-shard-11/EVALUATION.json": "b42b570221af4f70bda4709239b7d1361f453e6b5b6fccc63deabf1b8e8cd7d7",
+    "eval-p-at-l/components/contact-shard-12/EVALUATION.json": "87fa7c3209d89506afe0776aedb314224c8c9e6ab86e0a7c30581a127ec25163",
+    "eval-p-at-l/components/contact-shard-13/EVALUATION.json": "9fcf14c3d22d20eabb3b373a3b83dfc9ab8b416851e9ffc4142cb2b110876504",
+    "eval-p-at-l/components/contact-shard-14/EVALUATION.json": "ad3b44e8cfdf1d2930243e92cc047c77358e2720a9b41b52e569c6376cc3a46f",
+    "eval-p-at-l/components/contact-shard-15/EVALUATION.json": "56afa78376bb6902555942c208126f6533433ad539dd7973f690c803b8d74c71"
+  },
+  "bootstrap_independently_recomputed": true,
+  "same_contact_chain_set_as_historical_comparison": true,
+  "same_probe_split_and_fit_protocol_as_historical_comparison": true,
+  "checkpoint_receipt_bindings_verified": true,
+  "latest_verified_training_step": 678480,
+  "training_continued_after_evaluation": true,
+  "per_chain_table_sha256": "e5c6804a501816a3601f1d50f6ea943b7b02c9339046e02892500c908a36570a",
+  "evaluation_run": {
+    "status": "passed",
+    "optimizer_step": 640000,
+    "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/checkpoint-latest.pt",
+    "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-640000",
+    "started_utc": "2026-09-13T12:14:41.613734+00:00",
+    "wall_seconds": 204.66120482701808
+  }
+}

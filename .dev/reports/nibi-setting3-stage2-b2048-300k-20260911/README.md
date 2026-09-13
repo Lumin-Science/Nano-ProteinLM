@@ -4,7 +4,7 @@ Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step 
 
 ## Production evaluation results
 
-**16 of 30 production Stage 2 evaluations are verified**, through global **560k**. Each [independent audit](full/evaluations/step-560000/LOCAL_AUDIT.json) checks checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and an independently recomputed 5,000-replicate bootstrap. The [machine-readable curve](learning-curve.json) excludes qualification trials.
+**27 of 30 production Stage 2 evaluations are verified**, through global **670k**. Each [independent audit](full/evaluations/step-670000/LOCAL_AUDIT.json) checks checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and an independently recomputed 5,000-replicate bootstrap. The [machine-readable curve](learning-curve.json) excludes qualification trials.
 
 | Checkpoint | Stage 2 updates | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
 |---|---:|---:|---:|---:|
@@ -25,18 +25,29 @@ Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step 
 | Stage 2, 540k | 140,000 | 2.280197 | 44.732% | 44.481–44.987% |
 | Stage 2, 550k | 150,000 | 2.277880 | 45.046% | 44.795–45.303% |
 | Stage 2, 560k | 160,000 | 2.277282 | 45.044% | 44.794–45.298% |
+| Stage 2, 570k | 170,000 | 2.272784 | 45.225% | 44.976–45.478% |
+| Stage 2, 580k | 180,000 | 2.272021 | 45.215% | 44.965–45.469% |
+| Stage 2, 590k | 190,000 | 2.270239 | 45.371% | 45.122–45.625% |
+| Stage 2, 600k | 200,000 | 2.267967 | 45.330% | 45.082–45.587% |
+| Stage 2, 610k | 210,000 | 2.266018 | 45.435% | 45.189–45.691% |
+| Stage 2, 620k | 220,000 | 2.264071 | 45.557% | 45.309–45.813% |
+| Stage 2, 630k | 230,000 | 2.262353 | 45.725% | 45.477–45.983% |
+| Stage 2, 640k | 240,000 | 2.260115 | 45.791% | 45.542–46.047% |
+| Stage 2, 650k | 250,000 | 2.258179 | 45.882% | 45.632–46.134% |
+| Stage 2, 660k | 260,000 | 2.254962 | 45.971% | 45.722–46.227% |
+| Stage 2, 670k | 270,000 | 2.254061 | 46.117% | 45.868–46.372% |
 
-Relative to 400k, validation loss changed by **-0.031610**, and P@L changed by **+2.803 percentage points**. The paired chain-bootstrap 95% interval for this P@L change is **+2.746 to +2.864 points**, using the same chains and 5,000 replicates. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
+Relative to 400k, validation loss changed by **-0.054832**, and P@L changed by **+3.877 percentage points**. The paired chain-bootstrap 95% interval for this P@L change is **+3.810 to +3.940 points**, using the same chains and 5,000 replicates. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
 
-From 550k to 560k, validation loss changed by **-0.000598** and P@L by **-0.002 points**.
+From 660k to 670k, validation loss changed by **-0.000901** and P@L by **+0.146 points**.
 
-The latest independently checked training metrics reached global **569,950**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **216.7 seconds**.
+The latest independently checked training metrics reached global **678,480**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **204.6 seconds**.
 
 ## Latest monitoring check
 
-At **September 12, 21:02 Toronto**, the [monitoring receipt](monitoring/20260913T0102Z.json) recorded global **569,880**, or **169,880 / 300,000 Stage 2 updates (56.63%)**, with no production failure. Throughput was **0.554 seconds per update** since 550k. The allocation had **34.36 hours remaining**; estimated completion was **September 13 at 17:55 Toronto**, or **September 13 at 19:55** with a 10% training slowdown. MGnify had **20,623,767 unused records** versus **15,989,146 expected remaining draws**, with headroom of **28.99%**.
+At **September 13, 14:22 Toronto**, the [monitoring receipt](monitoring/20260913T1822Z.json) recorded global **678,370**, or **278,370 / 300,000 Stage 2 updates (92.79%)**, with no production failure. Throughput was **0.554 seconds per update** since 660k. The allocation had **17.02 hours remaining**; estimated completion was **September 13 at 17:52 Toronto**, or **September 13 at 18:12** with a 10% training slowdown. MGnify had **7,294,820 unused records** versus **2,657,894 expected remaining draws**, with headroom of **174.46%**.
 
-At **September 12, 21:04 Toronto**, training had reached **570,000**, and its scheduled evaluation was running. The [host check](monitoring/host-20260913T0104Z.json) confirmed all eight H100 GPUs were visible, Slurm step 12162637.44 remained active, and the production checkout was clean at the frozen commit. The GPU snapshot was taken just after the evaluation started, when brief low utilization was expected. No production failure was reported.
+SSH access was restored for the **September 13, 14:22 Toronto** check. All eleven previously uncollected production endpoints from **570k through 670k** passed independent verification. The [14:24 host check](monitoring/host-20260913T1825Z.json) found all eight H100 GPUs at **98–100% utilization**, Slurm step 12162637.44 active, and the production checkout clean at the frozen commit.
 
 ## Earlier monitoring check
 
@@ -96,5 +107,7 @@ Run artifacts are under `/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-
 The durable destination is `/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-stage2-b2048-300k-20260911`. It already contains the recipe, source bundle, transition receipts and qualification record. The launcher preserves full model/optimizer checkpoints at global 500k, 600k and 700k; scratch `full/checkpoint-latest.pt` updates every 10k. The final evaluation and report copies follow the final checkpoint audit. Later four-GPU continuation preserves global microbatch 512 with microbatch 128 per GPU and accumulation 4; its hardware memory/throughput still requires qualification.
 
 The durable **500k** full model/optimizer checkpoint is [preserved and checksum verified](milestones/checkpoint-500000.json). An [independent restoration audit](milestones/checkpoint-500000-restore-verified.json) on allocated CPUs confirmed exact model and optimizer tensor restoration, finite state, and matching global source history. Its SHA-256 is `020dc374ff438da6a38656def5aa3fc72aca6ee2a3bc174349d1d88b3ad2a072`; it contains the full replicated optimizer state for future continuation.
+
+The durable **600k** full model/optimizer checkpoint is also [preserved and checksum verified](milestones/checkpoint-600000.json). Its [independent restoration audit](milestones/checkpoint-600000-restore-verified.json) passed on allocated CPUs after access was restored, confirming exact model and optimizer restoration, finite state, and the same source history as the evaluated 600k checkpoint. Its SHA-256 is `585edf8c0188c25f3ca6b9e513a917b129e0475e6d08ac9bbf767e782cbf1d0b`.
 
 The existing two-hour thread monitor is active for this Stage 2 run. [status.py](status.py) reads lightweight state, [launch.py](launch.py) records the gated Slurm workflow, and [verify_launch.py](verify_launch.py) checks the actual production configuration, state continuity, GPU use and preserved source. Checkpoints and large raw contact components remain remote; the curated report retains small receipts and launch metrics.

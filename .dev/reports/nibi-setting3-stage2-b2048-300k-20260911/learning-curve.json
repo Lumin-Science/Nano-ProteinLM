@@ -204,6 +204,138 @@
         0.45298497569864493
       ],
       "checkpoint_sha256": "cb11a81cdb1456622c9937915925566e80581380ab699dc833c1f068224017dc"
+    },
+    {
+      "global_step": 570000,
+      "stage2_updates": 170000,
+      "stage": "stage2",
+      "validation_loss": 2.272783797105717,
+      "p_at_l": 0.45224777976960284,
+      "p_at_l_95_ci": [
+        0.44976448645078093,
+        0.454781088810165
+      ],
+      "checkpoint_sha256": "f1b23c1b90a272b63107c679e0955897a6ad7f20c5579a0a355adaa870f5263e"
+    },
+    {
+      "global_step": 580000,
+      "stage2_updates": 180000,
+      "stage": "stage2",
+      "validation_loss": 2.2720205190216802,
+      "p_at_l": 0.45215436567404454,
+      "p_at_l_95_ci": [
+        0.4496516499045992,
+        0.45468746109488833
+      ],
+      "checkpoint_sha256": "bd2cbf4286b9ea7e454dcc26205b06b1eeee6a07ae2ddd223cf8eab605c09083"
+    },
+    {
+      "global_step": 590000,
+      "stage2_updates": 190000,
+      "stage": "stage2",
+      "validation_loss": 2.2702390036477027,
+      "p_at_l": 0.4537083097757758,
+      "p_at_l_95_ci": [
+        0.45122210848197397,
+        0.456254257012926
+      ],
+      "checkpoint_sha256": "81ec0455bd4c8da5c6744f3f81cf5734c670d09fc1e785a4666a022ce78d8f8d"
+    },
+    {
+      "global_step": 600000,
+      "stage2_updates": 200000,
+      "stage": "stage2",
+      "validation_loss": 2.2679667630716267,
+      "p_at_l": 0.4533049796426648,
+      "p_at_l_95_ci": [
+        0.45081601760280426,
+        0.4558723628720789
+      ],
+      "checkpoint_sha256": "585edf8c0188c25f3ca6b9e513a917b129e0475e6d08ac9bbf767e782cbf1d0b"
+    },
+    {
+      "global_step": 610000,
+      "stage2_updates": 210000,
+      "stage": "stage2",
+      "validation_loss": 2.2660177151556127,
+      "p_at_l": 0.4543531668870543,
+      "p_at_l_95_ci": [
+        0.4518932474956654,
+        0.4569092625472622
+      ],
+      "checkpoint_sha256": "8cde9efa8cdf8c777b33bc874647b4e4eae371c4820a4e8cdac03282325638de"
+    },
+    {
+      "global_step": 620000,
+      "stage2_updates": 220000,
+      "stage": "stage2",
+      "validation_loss": 2.264070706295115,
+      "p_at_l": 0.4555700118027911,
+      "p_at_l_95_ci": [
+        0.4530904609780055,
+        0.458132122076797
+      ],
+      "checkpoint_sha256": "d18caca34d6e0a58ca4f4c406480d4244bee6bdf9de5c1b1ba32f7c579c32dbd"
+    },
+    {
+      "global_step": 630000,
+      "stage2_updates": 230000,
+      "stage": "stage2",
+      "validation_loss": 2.2623525951746615,
+      "p_at_l": 0.4572492657787634,
+      "p_at_l_95_ci": [
+        0.45477083702641136,
+        0.4598298237116181
+      ],
+      "checkpoint_sha256": "0c025b48acf301485d5d21a5e193aa3d42e80790ed969dba8b2aa0855da6065e"
+    },
+    {
+      "global_step": 640000,
+      "stage2_updates": 240000,
+      "stage": "stage2",
+      "validation_loss": 2.2601149120241644,
+      "p_at_l": 0.457909039464355,
+      "p_at_l_95_ci": [
+        0.45541750148610183,
+        0.4604718518419176
+      ],
+      "checkpoint_sha256": "1b3e1db755339772e0bc0964d5fab6cc8e78604f7b00f8373121d58b33796b9d"
+    },
+    {
+      "global_step": 650000,
+      "stage2_updates": 250000,
+      "stage": "stage2",
+      "validation_loss": 2.25817860029656,
+      "p_at_l": 0.45881673941098755,
+      "p_at_l_95_ci": [
+        0.4563229948399347,
+        0.46133844821544223
+      ],
+      "checkpoint_sha256": "c9bdb02cea4f9ff72f7a7c6b625503abd59971425e15f828b5c381443596554e"
+    },
+    {
+      "global_step": 660000,
+      "stage2_updates": 260000,
+      "stage": "stage2",
+      "validation_loss": 2.254961850796235,
+      "p_at_l": 0.45971388264586405,
+      "p_at_l_95_ci": [
+        0.4572157076144928,
+        0.4622741829847897
+      ],
+      "checkpoint_sha256": "b94b0904fd7d95a7169c58ff34a3622a10738651dcca81cead50adc815402c5e"
+    },
+    {
+      "global_step": 670000,
+      "stage2_updates": 270000,
+      "stage": "stage2",
+      "validation_loss": 2.2540607181415453,
+      "p_at_l": 0.4611742562839043,
+      "p_at_l_95_ci": [
+        0.45867785404169353,
+        0.46371918185616046
+      ],
+      "checkpoint_sha256": "4b8d51e2642fc37bc339b46e72c411b8cbec04d0cbe3396f19dbaefd8a6c2286"
     }
   ],
   "comparisons_to_400k": {
@@ -410,6 +542,149 @@
       "paired_chain_bootstrap_95_ci_percentage_points": [
         2.745921853769423,
         2.8640524429116327
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "570000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.03610858803165229,
+      "p_at_l_difference_percentage_points": 2.983855129675402,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        2.925164822436418,
+        3.043498468990353
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "580000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.036871866115689045,
+      "p_at_l_difference_percentage_points": 2.97451372011958,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        2.9156767700878974,
+        3.0346007320679704
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "590000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.03865338148966657,
+      "p_at_l_difference_percentage_points": 3.1299081302926974,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        3.0696029616713103,
+        3.190491457782621
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "600000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.04092562206574257,
+      "p_at_l_difference_percentage_points": 3.0895751169816053,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        3.0296628897596354,
+        3.1513336903940377
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "610000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.0428746699817566,
+      "p_at_l_difference_percentage_points": 3.1943938414205433,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        3.132682454268702,
+        3.257913188064824
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "620000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.04482167884225419,
+      "p_at_l_difference_percentage_points": 3.3160783329942336,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        3.2532510349895642,
+        3.379334436296751
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "630000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.0465397899627078,
+      "p_at_l_difference_percentage_points": 3.4840037305914646,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        3.4207440020106192,
+        3.5477805240201907
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "640000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.048777473113204906,
+      "p_at_l_difference_percentage_points": 3.5499810991506315,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        3.4849612043436147,
+        3.6138445554883334
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "650000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.05071378484080924,
+      "p_at_l_difference_percentage_points": 3.6407510938138876,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        3.5758105026892917,
+        3.7060830026864453
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "660000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.05393053434113426,
+      "p_at_l_difference_percentage_points": 3.7304654173015277,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        3.6658085043980564,
+        3.7945765783608905
+      ],
+      "replicates": 5000,
+      "unit_count": 20775,
+      "note": "Across the same contact chains; this is not training-seed uncertainty."
+    },
+    "670000": {
+      "reference_optimizer_steps": 400000,
+      "reference_checkpoint_sha256": "c205ca56a3c8ecd47a5985444d2d012a2a4e5fa38de8b1e58469619b7eff6dc2",
+      "validation_loss_difference": -0.05483166699582398,
+      "p_at_l_difference_percentage_points": 3.8765027811055606,
+      "paired_chain_bootstrap_95_ci_percentage_points": [
+        3.8103244485091863,
+        3.9401744927421745
       ],
       "replicates": 5000,
       "unit_count": 20775,
