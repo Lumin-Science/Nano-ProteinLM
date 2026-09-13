@@ -4,7 +4,7 @@ Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step 
 
 ## Production evaluation results
 
-**27 of 30 production Stage 2 evaluations are verified**, through global **670k**. Each [independent audit](full/evaluations/step-670000/LOCAL_AUDIT.json) checks checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and an independently recomputed 5,000-replicate bootstrap. The [machine-readable curve](learning-curve.json) excludes qualification trials.
+**28 of 30 production Stage 2 evaluations are verified**, through global **680k**. Each [independent audit](full/evaluations/step-680000/LOCAL_AUDIT.json) checks checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols, and an independently recomputed 5,000-replicate bootstrap. The [machine-readable curve](learning-curve.json) excludes qualification trials.
 
 | Checkpoint | Stage 2 updates | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
 |---|---:|---:|---:|---:|
@@ -36,18 +36,17 @@ Production launched September 11, 2026 at 17:52 Toronto on Nibi g27, Slurm step 
 | Stage 2, 650k | 250,000 | 2.258179 | 45.882% | 45.632–46.134% |
 | Stage 2, 660k | 260,000 | 2.254962 | 45.971% | 45.722–46.227% |
 | Stage 2, 670k | 270,000 | 2.254061 | 46.117% | 45.868–46.372% |
+| Stage 2, 680k | 280,000 | 2.251548 | 46.122% | 45.872–46.377% |
 
-Relative to 400k, validation loss changed by **-0.054832**, and P@L changed by **+3.877 percentage points**. The paired chain-bootstrap 95% interval for this P@L change is **+3.810 to +3.940 points**, using the same chains and 5,000 replicates. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
+Relative to 400k, validation loss changed by **-0.057344**, and P@L changed by **+3.881 percentage points**. The paired chain-bootstrap 95% interval for this P@L change is **+3.814 to +3.945 points**, using the same chains and 5,000 replicates. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
 
-From 660k to 670k, validation loss changed by **-0.000901** and P@L by **+0.146 points**.
+From 670k to 680k, validation loss changed by **-0.002512** and P@L by **+0.004 points**.
 
-The latest independently checked training metrics reached global **678,480**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **204.6 seconds**.
+The latest independently checked training metrics reached global **682,230**. MGnify had no repeats, and the fixed Stage 2 decay schedule remained correct. The latest evaluation took **211.6 seconds**.
 
 ## Latest monitoring check
 
-At **September 13, 14:22 Toronto**, the [monitoring receipt](monitoring/20260913T1822Z.json) recorded global **678,370**, or **278,370 / 300,000 Stage 2 updates (92.79%)**, with no production failure. Throughput was **0.554 seconds per update** since 660k. The allocation had **17.02 hours remaining**; estimated completion was **September 13 at 17:52 Toronto**, or **September 13 at 18:12** with a 10% training slowdown. MGnify had **7,294,820 unused records** versus **2,657,894 expected remaining draws**, with headroom of **174.46%**.
-
-SSH access was restored for the **September 13, 14:22 Toronto** check. All eleven previously uncollected production endpoints from **570k through 670k** passed independent verification. The [14:24 host check](monitoring/host-20260913T1825Z.json) found all eight H100 GPUs at **98–100% utilization**, Slurm step 12162637.44 active, and the production checkout clean at the frozen commit.
+At **September 13, 15:01 Toronto**, the [monitoring receipt](monitoring/20260913T1901Z.json) recorded global **682,170**, or **282,170 / 300,000 Stage 2 updates (94.06%)**, with no production failure. Throughput was **0.555 seconds per update** since 670k. The allocation had **16.38 hours remaining**; estimated completion was **September 13 at 17:53 Toronto**, or **September 13 at 18:09** with a 10% training slowdown. MGnify had **6,827,274 unused records** versus **2,190,950 expected remaining draws**, with headroom of **211.61%**.
 
 ## Earlier monitoring check
 
