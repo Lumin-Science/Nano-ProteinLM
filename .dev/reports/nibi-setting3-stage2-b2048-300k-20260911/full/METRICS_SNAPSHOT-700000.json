@@ -1,0 +1,6 @@
+{
+  "snapshot_file": "metrics-through-700000.jsonl.gz",
+  "last_logged_step": 700000,
+  "sha256": "2e8a61efc9ca60650c37fa96ce86ed7ac0948dde36e1ea5c7bb5e7e3220a7483",
+  "description": "Final metric snapshot used in the independent 700k endpoint audit."
+}

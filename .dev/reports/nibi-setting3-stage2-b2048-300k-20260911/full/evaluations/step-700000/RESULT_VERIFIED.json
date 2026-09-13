@@ -1,0 +1,64 @@
+{
+  "status": "passed",
+  "scope": "checkpoint_at_step",
+  "checkpoint_sha256": "69f9f07ae0462834029fa2ccbbb05b93034097bfc540157385fb362ad7a7abeb",
+  "optimizer_steps": 700000,
+  "sequences_seen": 1433600000,
+  "model_tokens": 374905288832,
+  "world_size": 8,
+  "parameter_count": 170559856,
+  "full_training_complete": true,
+  "finite_model_and_optimizer": true,
+  "model_and_optimizer_roundtrip_exact": false,
+  "optimizer_layout": "replicated_ddp_full_state",
+  "source_exposure_global": {
+    "mgnify": {
+      "draws": 126080947,
+      "unique_records_seen": 126080947,
+      "repeated_draws": 0,
+      "epoch": 0,
+      "epoch_cursor": 36860872,
+      "available_records": 130716775
+    },
+    "omg_img": {
+      "draws": 628477017,
+      "unique_records_seen": 262845186,
+      "repeated_draws": 365631831,
+      "epoch": 2,
+      "epoch_cursor": 102786645,
+      "available_records": 262845186
+    },
+    "uniref90": {
+      "draws": 679042036,
+      "unique_records_seen": 74175974,
+      "repeated_draws": 604866062,
+      "epoch": 9,
+      "epoch_cursor": 11458270,
+      "available_records": 74175974
+    }
+  },
+  "global_sampler_state_verified": true,
+  "data_manifest_sha256": "76bf671104f795af68594110010c64e047dd75d4254cb5508d02a8e0407d32b2",
+  "validation": {
+    "masked_residues": 139963,
+    "perplexity": 9.46995426709992,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.2481240779466134,
+    "sequence_median_nll": 2.310165762901306,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  },
+  "p_at_l": 0.46264334547804026,
+  "uncertainty": {
+    "confidence_interval_95": [
+      0.4601573526828393,
+      0.46522984711922616
+    ],
+    "replicates": 5000,
+    "unit_count": 20775
+  }
+}
