@@ -334,7 +334,7 @@ Our **171M Auto Research Best** model completed **400k Stage 1 + 300k Stage 2 up
 
 <div class="ai">
 
-![ESMC-300M, ESMC-600M, ESM-2 150M and Profluent-E1 150M versus our final 171M model: contact P@L with available 95% confidence intervals on our full 20,775-chain split.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
+![ESMC-300M, ESMC-600M and ESM-2 150M versus our final 171M model: contact P@L with available 95% confidence intervals on our full 20,775-chain split.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
 
 </div>
 
@@ -342,7 +342,6 @@ Our **171M Auto Research Best** model completed **400k Stage 1 + 300k Stage 2 up
 
 | Model | Our split P@L ↑ | Our split 95% CI | Estimated FLOPs¹ | Training tokens (S1 + S2 / total)¹ |
 |---|---:|---:|---:|---:|
-| Profluent-E1 150M | 61.743% | 61.480–61.999% | — | 4.000T total |
 | ESMC-600M | 58.031% | — | 2.491e+22 | 4.194T + 2.097T |
 | ESMC-300M | 53.867% | — | 1.480e+22 | 4.194T + 2.097T |
 | **Auto Research Best · 171M** | **46.264%** | **46.016–46.523%** | 2.334e+21 | 0.419T + 1.258T |
@@ -352,13 +351,13 @@ Our **171M Auto Research Best** model completed **400k Stage 1 + 300k Stage 2 up
 
 <div class="ai">
 
-All P@L values above use **our 20,775-chain split** and the same frozen fitted-probe protocol. **Profluent-E1 uses single-sequence inference without retrieved homologs.** The two 150M references have new full-split evaluations and 5,000-resample chain-bootstrap intervals; ESMC full-split intervals were not recovered. [New reference evaluations and audit records](.dev/reports/released-150m-contact-20260913/README.md).
+All P@L values above use **our 20,775-chain split** and the same frozen fitted-probe protocol. ESM-2 150M has a new full-split evaluation and a 5,000-resample chain-bootstrap interval; ESMC full-split intervals were not recovered. [ESM-2 evaluation and audit record](.dev/reports/released-150m-contact-20260913/esm2/RESULT_VERIFIED.json).
 
 </div>
 
 <div class="ai">
 
-¹ ESMC and our model use nominal **batch × maximum context × steps** token budgets and the [ESMC paper](https://doi.org/10.64898/2026.06.03.729735) FLOP formula. ESM-2’s approximately **1T total tokens** follow [its author’s training description](https://cs.nyu.edu/media/publications/ZemingLin-phd.pdf); Profluent-E1’s **4T** follow [its paper](https://storage.googleapis.com/e1-paper-a26c3c79/profluent-e1.pdf). Their two-stage breakdowns and comparable FLOP estimates are omitted. Our actual logged model tokens are **193.501B in Stage 1 + 181.404B in Stage 2**, with a **6ND estimate of 3.837e20 FLOPs**. [Sources and calculation details](.dev/reports/readme-overview-20260913/README.md).
+¹ ESMC and our model use nominal **batch × maximum context × steps** token budgets and the [ESMC paper](https://doi.org/10.64898/2026.06.03.729735) FLOP formula. ESM-2’s approximately **1T total tokens** follow [its author’s training description](https://cs.nyu.edu/media/publications/ZemingLin-phd.pdf). Its two-stage breakdown and comparable FLOP estimate are omitted. Our actual logged model tokens are **193.501B in Stage 1 + 181.404B in Stage 2**, with a **6ND estimate of 3.837e20 FLOPs**. [Sources and calculation details](.dev/reports/readme-overview-20260913/README.md).
 
 </div>
 

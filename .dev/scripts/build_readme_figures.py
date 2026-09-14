@@ -60,7 +60,7 @@ def trailing_mean(values, window=100):
     return (cumulative[ends] - cumulative[starts]) / (ends - starts)
 
 
-fig, performance = plt.subplots(figsize=(10.8, 5.7))
+fig, performance = plt.subplots(figsize=(10.8, 5.2))
 fig.subplots_adjust(left=0.255, right=0.95, top=0.79, bottom=0.20)
 fig.suptitle(
     "Released protein models on our evaluation split",
@@ -98,12 +98,12 @@ performance.set_ylim(len(rows) - 0.5, -0.5)
 performance.grid(axis="x", color="#e2e8f0", linewidth=0.7)
 performance.set_axisbelow(True)
 performance.tick_params(length=0, pad=8)
-performance.set_xlim(0, 67)
+performance.set_xlim(0, 64)
 performance.set_xlabel("Contact P@L (%) ↑ · bars show mean, whiskers 95% CI")
 fig.text(
     0.035,
     0.067,
-    "ESMC full-split CIs were not recovered. Profluent-E1 uses no retrieved homologs.",
+    "ESMC full-split CIs were not recovered.",
     fontsize=8.7,
     color="#64748b",
 )

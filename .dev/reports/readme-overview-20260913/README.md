@@ -6,7 +6,7 @@
 
 <div class="ai">
 
-The opening figure summarizes saved training results. The final comparison also includes new frozen contact evaluations of ESM-2 150M and Profluent-E1 150M; no model was pretrained for this README update. The [data and source hashes](comparison-data.json) and [figure generator](../../scripts/build_readme_figures.py) make the plots reproducible. PNGs are used in the README; SVGs are available for export.
+The opening figure summarizes saved training results. The final comparison also includes a new frozen contact evaluation of ESM-2 150M; no model was pretrained for this README update. The [data and source hashes](comparison-data.json) and [figure generator](../../scripts/build_readme_figures.py) make the plots reproducible. PNGs are used in the README; SVGs are available for export.
 
 </div>
 
@@ -48,13 +48,13 @@ The common `loss` field is rank 0’s sequence-mean masked cross entropy, averag
 
 <div class="ai">
 
-The final reference block includes ESMC-300M, ESMC-600M, ESM-2 150M, Profluent-E1 150M and our completed 171M model. All P@L values use our full 20,775-chain split. The ESMC means are 0.5386739700782069 and 0.5803125316548938; the [recovery receipt](released-local-split.json) records their full-report hashes, model revisions and source archive hashes. They come specifically from `source.full_point_estimate` in archived diagnostic receipts and agree with the rounded full-population values in [EVALUATION.md](../../../docs/EVALUATION.md#released-esmc-checkpoint-pl). The 1,024-chain diagnostic means and intervals are not used. Full-population confidence intervals were not recovered for the ESMC references, so their table cells are blank and their plot markers have no error bars. The final 171M point and its 95% interval come from the [verified Stage 2 record](../nibi-setting3-stage2-b2048-300k-20260911/FINAL_VERIFIED.json).
+The final reference block includes ESMC-300M, ESMC-600M, ESM-2 150M and our completed 171M model. All P@L values use our full 20,775-chain split. The ESMC means are 0.5386739700782069 and 0.5803125316548938; the [recovery receipt](released-local-split.json) records their full-report hashes, model revisions and source archive hashes. They come specifically from `source.full_point_estimate` in archived diagnostic receipts and agree with the rounded full-population values in [EVALUATION.md](../../../docs/EVALUATION.md#released-esmc-checkpoint-pl). The 1,024-chain diagnostic means and intervals are not used. Full-population confidence intervals were not recovered for the ESMC references, so their table cells are blank and their plot markers have no error bars. The final 171M point and its 95% interval come from the [verified Stage 2 record](../nibi-setting3-stage2-b2048-300k-20260911/FINAL_VERIFIED.json).
 
 </div>
 
 <div class="ai">
 
-The two 150M references have new full-split evaluations with the unchanged fitted-probe and scoring APIs, including 5,000-resample chain confidence intervals. Profluent-E1 uses single-sequence inference without retrieved homologs. [Evaluation receipts, adapter validation and exact revisions](../released-150m-contact-20260913/README.md) document the comparison. The figure shows a single horizontal P@L chart with available 95% confidence intervals for all five models.
+ESM-2 150M has a new full-split evaluation with the unchanged fitted-probe and scoring APIs, including a 5,000-resample chain confidence interval. The [verified evaluation receipt](../released-150m-contact-20260913/esm2/RESULT_VERIFIED.json) documents its checkpoint identity and result. The figure shows a single horizontal P@L chart with available 95% confidence intervals for all four models.
 
 </div>
 
