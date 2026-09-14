@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "optimizer_step": 40000,
+  "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/full-training/checkpoint-latest.pt",
+  "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/full-training/evaluations/step-040000",
+  "started_utc": "2026-09-14T07:58:03.562855+00:00",
+  "wall_seconds": 222.64533628802747
+}
