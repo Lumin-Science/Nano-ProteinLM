@@ -5,12 +5,9 @@
       "parameters": 333000000,
       "depth": 30,
       "width": 960,
-      "p_at_l": 0.552,
-      "p_at_l_95_ci": [
-        0.55,
-        0.554
-      ],
-      "p_at_l_source": "ESMC paper, Appendix A.1.4.1",
+      "p_at_l": 0.5386739700782069,
+      "p_at_l_95_ci": null,
+      "p_at_l_source": "Our full 20775-chain split; recovered source.full_point_estimate",
       "stage_steps": [
         1000000,
         500000
@@ -33,19 +30,17 @@
       ],
       "total_nominal_flops": 14796840134246400000000,
       "stage_actual_model_tokens": null,
-      "actual_6nd_flops": null
+      "actual_6nd_flops": null,
+      "ci_note": "Full-population CI not present in recovered summary; paper and diagnostic-subset intervals are not substituted."
     },
     {
       "model": "ESMC-600M",
       "parameters": 575000000,
       "depth": 36,
       "width": 1152,
-      "p_at_l": 0.589,
-      "p_at_l_95_ci": [
-        0.587,
-        0.591
-      ],
-      "p_at_l_source": "ESMC paper, Appendix A.1.4.1",
+      "p_at_l": 0.5803125316548938,
+      "p_at_l_95_ci": null,
+      "p_at_l_source": "Our full 20775-chain split; recovered source.full_point_estimate",
       "stage_steps": [
         1000000,
         500000
@@ -68,42 +63,8 @@
       ],
       "total_nominal_flops": 24911699106594816000000,
       "stage_actual_model_tokens": null,
-      "actual_6nd_flops": null
-    },
-    {
-      "model": "ESMC-6B",
-      "parameters": 6350000000,
-      "depth": 80,
-      "width": 2560,
-      "p_at_l": 0.725,
-      "p_at_l_95_ci": [
-        0.723,
-        0.727
-      ],
-      "p_at_l_source": "ESMC paper, Appendix A.1.4.1",
-      "stage_steps": [
-        1000000,
-        500000
-      ],
-      "stage_batches": [
-        8192,
-        2048
-      ],
-      "stage_contexts": [
-        512,
-        2048
-      ],
-      "stage_nominal_tokens": [
-        4194304000000,
-        2097152000000
-      ],
-      "stage_nominal_flops": [
-        165080638213324800000000,
-        90456802826649600000000
-      ],
-      "total_nominal_flops": 255537441039974400000000,
-      "stage_actual_model_tokens": null,
-      "actual_6nd_flops": null
+      "actual_6nd_flops": null,
+      "ci_note": "Full-population CI not present in recovered summary; paper and diagnostic-subset intervals are not substituted."
     },
     {
       "model": "NanoProteinLM-171M",
@@ -164,6 +125,24 @@
   "sources": {
     ".dev/reports/nibi-setting3-stage2-b2048-300k-20260911/full/evaluations/step-700000/RESULT_VERIFIED.json": "8447d7435497f9d5b6142f81f72ad4844b7f2bcb539cdae83fa8be88144eba0b",
     ".dev/reports/nibi-setting3-b2048-400k-20260910/full/evaluations/step-400000/RESULT_VERIFIED.json": "3c4b0af2dee3a3d9764649f4acb970c1b07d269990b3f3a6b650f03766bdd1e2",
-    ".dev/reports/nibi-paired-unique-b2048-100k-20260909/learning-curve.json": "7148eff47daef38d7a04a38d65e97e9131e2e00f743898095a7491245240263e"
+    ".dev/reports/nibi-paired-unique-b2048-100k-20260909/learning-curve.json": "7148eff47daef38d7a04a38d65e97e9131e2e00f743898095a7491245240263e",
+    ".dev/reports/readme-overview-20260913/released-local-split.json": "226aefd4201faeec98146f714f708609bf061abd3ae990d6234d0c087244a237",
+    ".dev/reports/nibi-paired-unique-b2048-100k-20260909/full/baseline/metrics.jsonl.gz": "fd3db7dc92c556e99ad55e82eb03f48beab8899517be6d703a44d0fdf514d2ba",
+    ".dev/reports/nibi-paired-unique-b2048-100k-20260909/full/setting3/metrics.jsonl.gz": "f52ea3c589e7d87f6e4bcc237b50b67cc5f9320c976768dc8b732848436056c4"
+  },
+  "matched_plot": {
+    "labels": {
+      "baseline": "ESMC 171M \u00b7 AdamW",
+      "setting3": "Auto Research Best \u00b7 Sep 13, 2026"
+    },
+    "baseline_identity": "Local ESMC-like 171M reproduction, not a released Biohub checkpoint",
+    "training_loss_field": "loss",
+    "training_loss_definition": "Rank-0 sequence-mean masked cross entropy, averaged across local gradient-accumulation microbatches; same diagnostic for both recipes",
+    "objective_loss_excluded": true,
+    "records_per_recipe": 10001,
+    "training_log_cadence": "step 1, then every 10 steps through 100000",
+    "smoothing": "100-record trailing mean (1000 optimizer steps after warmup); raw values retained",
+    "warmup_display": "Steps 1\u20131000 shown in inset; main training panel shows steps 1000\u2013100000",
+    "evaluation_layout": "P@L on left axis and MLM validation loss on right axis; both metrics in one shared plot"
   }
 }

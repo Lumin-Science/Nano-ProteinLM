@@ -34,36 +34,25 @@ Agent-edited documentation awaiting owner review appears in blue in the local VS
 
 <div class="ai">
 
-## Trained model and ESMC references
+## Auto Research at 171M
 
 </div>
 
 <div class="ai">
 
-Our best **171M Setting 3 model** completed **400k Stage 1 + 300k Stage 2 updates** at batch **2,048**, reaching **46.264% P@L** and **2.248124 validation loss**. All 30 Stage 2 evaluations and the final full model/optimizer checkpoint passed verification. See the [final run record](.dev/reports/nibi-setting3-stage2-b2048-300k-20260911/README.md) and [training recipes](.dev/configs/nibi/).
+![Matched 171M models: orange ESMC 171M AdamW versus green Auto Research Best, September 13, 2026. Contact P@L and MLM validation loss share the upper plot with separate left and right axes; dense training-loss traces and a warmup inset appear below.](.dev/reports/readme-overview-20260913/matched-100k-curves.png)
 
 </div>
 
 <div class="ai">
 
-![Contact P@L with 95% confidence intervals versus estimated training FLOPs, alongside Stage 1 and Stage 2 nominal token budgets for ESMC-300M, ESMC-600M, ESMC-6B and our 171M model.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
+**Auto Research Best · September 13, 2026** reaches **36.567% P@L** versus **28.173%** for our ESMC-like 171M AdamW baseline after the same **100k updates**: **+8.394 percentage points**. MLM validation loss falls from **2.414734 to 2.375701**. Both runs use batch **2,048**, four H100s, and the same **204.8M distinct training records / 48.39B model tokens**. [Recipe differences](docs/BEST_RECIPE_VS_BASELINE.md) · [Verified run records](.dev/reports/nibi-paired-unique-b2048-100k-20260909/README.md).
 
 </div>
 
 <div class="ai">
 
-| Model | P@L (95% CI) ↑ | Estimated FLOPs¹ | Stage 1 tokens¹ | Stage 2 tokens¹ |
-|---|---:|---:|---:|---:|
-| ESMC-6B | 72.500% (72.300–72.700%) | 2.555e+23 | 4.194T | 2.097T |
-| ESMC-600M | 58.900% (58.700–59.100%) | 2.491e+22 | 4.194T | 2.097T |
-| ESMC-300M | 55.200% (55.000–55.400%) | 1.480e+22 | 4.194T | 2.097T |
-| **NanoProteinLM-171M · Setting 3** | 46.264% (46.016–46.523%) | 2.334e+21 | 0.419T | 1.258T |
-
-</div>
-
-<div class="ai">
-
-ESMC scores and 95% intervals come from the [paper](https://doi.org/10.64898/2026.06.03.729735); our score uses the local 20,775-chain reconstruction, so this is a reference comparison rather than a matched training experiment. ¹ Tokens count **batch × maximum context × steps**; FLOPs are estimates from the paper’s architecture-aware formula on that same nominal basis. Our logged non-padding model tokens are **193.501B in Stage 1 + 181.404B in Stage 2**; the corresponding logged **6ND estimate is 3.837e20 FLOPs**. [Sources and calculation details](.dev/reports/readme-overview-20260913/README.md).
+The upper plot includes all ten 10k-step evaluations; solid lines use the left P@L axis and dashed lines use the right validation-loss axis. P@L bands are 95% chain-bootstrap intervals over our **20,775-chain split**; validation uses **4,096 sequences**. The lower plot uses **10,001 training-log records per recipe**, with raw traces and a 1,000-step trailing mean; warmup is shown in the inset. Training loss is the same rank-0 sequence-mean MLM diagnostic for both recipes. One training seed per recipe. [Figure data and methods](.dev/reports/readme-overview-20260913/README.md).
 
 </div>
 
@@ -333,19 +322,35 @@ Each recipe trains for **100k Stage 1 steps on four H100s**, batch **1,024**, LR
 
 <div class="ai">
 
-### AdamW versus the best recipe: 100k-step curves
+## Final model and released ESMC references
 
 </div>
 
 <div class="ai">
 
-![P@L and MLM validation loss across all ten evaluations from 10k to 100k steps for the matched ESMC-like AdamW baseline and Setting 3.](.dev/reports/readme-overview-20260913/matched-100k-curves.png)
+Our **171M Auto Research Best** model completed **400k Stage 1 + 300k Stage 2 updates** at batch **2,048**, reaching **46.264% P@L** and **2.248124 validation loss**. All 30 Stage 2 evaluations and the final full model/optimizer checkpoint passed verification. [Final run record](.dev/reports/nibi-setting3-stage2-b2048-300k-20260911/README.md) · [Training recipes](.dev/configs/nibi/).
 
 </div>
 
 <div class="ai">
 
-This larger-batch comparison uses **batch 2,048**, **100k steps**, four H100s per model and the same **204.8M distinct training records / 48.39B model tokens**. Lines show every 10k-step evaluation; P@L shading is the 95% chain-bootstrap CI. At 100k, AdamW reaches **28.173% P@L / 2.414734 validation loss**, and Setting 3 reaches **36.567% / 2.375701**. [Full curves and verified records](.dev/reports/nibi-paired-unique-b2048-100k-20260909/README.md).
+![Released ESMC-300M and ESMC-600M versus our final 171M model: P@L measured on our full 20,775-chain split against estimated training FLOPs, with nominal Stage 1 and Stage 2 token budgets.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
+
+</div>
+
+<div class="ai">
+
+| Model | Our split P@L ↑ | Our split 95% CI | Estimated FLOPs¹ | Stage 1 tokens¹ | Stage 2 tokens¹ |
+|---|---:|---:|---:|---:|---:|
+| ESMC-600M | 58.031% | — | 2.491e+22 | 4.194T | 2.097T |
+| ESMC-300M | 53.867% | — | 1.480e+22 | 4.194T | 2.097T |
+| **Auto Research Best · 171M** | **46.264%** | **46.016–46.523%** | 2.334e+21 | 0.419T | 1.258T |
+
+</div>
+
+<div class="ai">
+
+All P@L values above were evaluated on **our 20,775-chain split**. The released-model full-split confidence intervals were not recovered; their paper intervals and 1,024-chain diagnostic intervals are omitted. ¹ Tokens count **batch × maximum context × steps**; FLOPs use the [ESMC paper](https://doi.org/10.64898/2026.06.03.729735) formula on the same nominal basis. Our actual logged model tokens are **193.501B in Stage 1 + 181.404B in Stage 2**, with a **6ND estimate of 3.837e20 FLOPs**. [Sources and calculation details](.dev/reports/readme-overview-20260913/README.md).
 
 </div>
 
