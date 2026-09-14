@@ -1,0 +1,50 @@
+{
+  "status": "passed",
+  "scope": "checkpoint_at_step",
+  "checkpoint_sha256": "806115e61306905494cb4a9d7c9620539a2b66366724b4b08d7d8527b888696e",
+  "optimizer_steps": 70000,
+  "sequences_seen": 71680000,
+  "model_tokens": 14258462894,
+  "world_size": 8,
+  "parameter_count": 170559856,
+  "full_training_complete": false,
+  "finite_model_and_optimizer": true,
+  "model_and_optimizer_roundtrip_exact": false,
+  "optimizer_layout": "replicated_ddp_full_state",
+  "source_exposure_global": {
+    "esm_atlas": {
+      "draws": 71680000,
+      "unique_records_seen": 71680000,
+      "repeated_draws": 0,
+      "epoch": 0,
+      "epoch_cursor": 71680000,
+      "available_records": 119969818
+    }
+  },
+  "global_sampler_state_verified": true,
+  "data_manifest_sha256": "25bdbe338f3c71f8cc8ce3b67ed81ab6654bda184105b6ef2166faa9d8028262",
+  "training_data_homology_exclusion": false,
+  "evaluation_contamination_checked": false,
+  "validation": {
+    "masked_residues": 139963,
+    "perplexity": 11.686248116810239,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.458412775877605,
+    "sequence_median_nll": 2.53501296043396,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1387,
+      "uniref90": 1316
+    }
+  },
+  "p_at_l": 0.2868975762060384,
+  "uncertainty": {
+    "confidence_interval_95": [
+      0.28470999944940584,
+      0.289146523471572
+    ],
+    "replicates": 5000,
+    "unit_count": 20775
+  }
+}
