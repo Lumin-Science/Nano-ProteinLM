@@ -1,5 +1,8 @@
 {
   "markdown.styles": [
     ".vscode/ai-review.css"
-  ]
+  ],
+  "[markdown]": {
+    "editor.tabCompletion": "onlySnippets"
+  }
 }

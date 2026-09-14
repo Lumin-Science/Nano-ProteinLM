@@ -39,3 +39,4 @@ tmp/
 /.vscode/*
 !/.vscode/settings.json
 !/.vscode/ai-review.css
+!/.vscode/ai-review.code-snippets

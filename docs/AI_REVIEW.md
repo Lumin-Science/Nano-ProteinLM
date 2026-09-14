@@ -76,6 +76,46 @@ Existing text with <span class="ai">an updated phrase</span>.
 
 <div class="ai">
 
+## Leave an inline fix request
+
+</div>
+
+<div class="ai">
+
+Type `aitofix` and press **Tab** in a Markdown file, then replace the selected placeholder with your request. The shortcut inserts `<aitofix>your note</aitofix>`, which works in the standard VS Code preview without an extension. Literal `\aitofix{...}` is not a Markdown command; use the snippet or type the short HTML tag directly.
+
+</div>
+
+<div class="ai">
+
+Place one note beside the paragraph it refers to so the request and its eventual resolution can be reviewed independently. Open notes are red and labeled **AI TO FIX**; adding the `resolved` attribute makes the note orange and labels it **AI FIXED**, including inside a blue `ai` paragraph. The labels are added by the preview stylesheet; the original note remains in the Markdown source.
+
+</div>
+
+<div class="ai">
+
+```markdown
+The benchmark reports precision over all evaluation chains. <aitofix>Explain how the chains are selected.</aitofix>
+
+The benchmark reports precision over all evaluation chains. <aitofix resolved>Explain how the chains are selected. — Fixed: added the selection rule and checked it against the evaluator.</aitofix>
+```
+
+</div>
+
+<div class="ai">
+
+Ask the agent to address the unresolved `aitofix` notes in the file. It reads the nearby text, implements and checks each fix, then adds `resolved` while preserving your request and a short explanation of the result; unresolved or blocked work stays red. Code-block examples are not requests. After reviewing a completed fix, remove its note; remove only `resolved` to reopen it.
+
+</div>
+
+<div class="ai">
+
+The optional `aitofixdone` snippet inserts a resolved note with a `Fixed:` placeholder. If Tab does not expand a prefix, use **Insert Snippet** from the Command Palette and choose **AI fix request**; the tracked workspace settings enable Markdown snippet completion. These notes do not launch an agent automatically.
+
+</div>
+
+<div class="ai">
+
 ## Finish the review
 
 </div>
@@ -88,12 +128,12 @@ After reviewing a paragraph, the owner removes just its surrounding `div` or `sp
 
 <div class="ai">
 
-When applying this setup to another repository, add `.vscode/ai-review.css` to the existing `markdown.styles` array in `.vscode/settings.json`, preserving other settings and styles.
+When applying this setup to another repository, add `.vscode/ai-review.css` to the existing `markdown.styles` array in `.vscode/settings.json`, preserving other settings and styles; also copy `.vscode/ai-review.code-snippets` and enable `editor.tabCompletion` for Markdown to use the fix-note shortcuts.
 
 </div>
 
 <div class="ai">
 
-If `.vscode/` is ignored, reopen the directory with `!/.vscode/`, ignore other entries with `/.vscode/*`, and allow `!/.vscode/settings.json` and `!/.vscode/ai-review.css`; Git cannot re-include files while their parent directory remains ignored. Confirm the files are not ignored with `git check-ignore .vscode/settings.json .vscode/ai-review.css`, then track them with Git.
+If `.vscode/` is ignored, reopen the directory with `!/.vscode/`, ignore other entries with `/.vscode/*`, and allow `!/.vscode/settings.json`, `!/.vscode/ai-review.css` and `!/.vscode/ai-review.code-snippets`; Git cannot re-include files while their parent directory remains ignored. Confirm the files are not ignored with `git check-ignore .vscode/settings.json .vscode/ai-review.css .vscode/ai-review.code-snippets`, then track them with Git.
 
 </div>

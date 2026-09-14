@@ -47,3 +47,40 @@ body.vscode-dark .ai code,
 body.vscode-dark .ai code span[class] {
   color: #58a6ff;
 }
+
+/* Inline owner requests. Keep their status visible inside blue AI paragraphs. */
+aitofix {
+  --aitofix-color: #cf222e;
+  border: 1px dashed currentColor;
+  border-radius: .25em;
+  padding: .1em .35em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+aitofix,
+aitofix * {
+  color: var(--aitofix-color) !important;
+}
+
+aitofix::before {
+  content: "AI TO FIX: ";
+  font-weight: 700;
+}
+
+aitofix[resolved] {
+  --aitofix-color: #9a4d00;
+  border-style: solid;
+}
+
+aitofix[resolved]::before {
+  content: "AI FIXED: ";
+}
+
+body.vscode-dark aitofix {
+  --aitofix-color: #ff7b72;
+}
+
+body.vscode-dark aitofix[resolved] {
+  --aitofix-color: #ffa657;
+}

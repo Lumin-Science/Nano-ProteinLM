@@ -1,0 +1,14 @@
+{
+  "AI fix request": {
+    "scope": "markdown",
+    "prefix": "aitofix",
+    "body": "<aitofix>${1:${TM_SELECTED_TEXT:Describe what to fix}}</aitofix>$0",
+    "description": "Leave an inline fix request for the AI; red until resolved."
+  },
+  "Resolved AI fix request": {
+    "scope": "markdown",
+    "prefix": "aitofixdone",
+    "body": "<aitofix resolved>${1:${TM_SELECTED_TEXT:Original request}} — Fixed: ${2:What changed and how it was checked}.</aitofix>$0",
+    "description": "Record an implemented and verified fix; orange until owner review."
+  }
+}
