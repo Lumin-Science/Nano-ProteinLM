@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "optimizer_steps": 20000,
+  "checkpoint": "/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-atlas-setting3-b1024-20260914/full/checkpoint-020000.pt",
+  "checkpoint_sha256": "cd904fca8db821047b883be313f0d217b268df775df84ad575486205f23dd188",
+  "bytes": 1367460588
+}

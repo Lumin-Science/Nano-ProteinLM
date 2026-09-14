@@ -1,0 +1,35 @@
+{
+  "checked_utc": "2026-09-14T07:02:55.795210+00:00",
+  "step": 25450,
+  "training_seconds": 5398.801167458994,
+  "recent_seconds_per_step": 0.21256819694908335,
+  "latest_evaluation": {
+    "status": "passed",
+    "optimizer_step": 20000,
+    "checkpoint": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/full-training/checkpoint-latest.pt",
+    "output_root": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/full-training/evaluations/step-020000",
+    "started_utc": "2026-09-14T06:39:56.850074+00:00",
+    "wall_seconds": 219.6084035320673
+  },
+  "remaining_training_window_seconds": 14467.204807519913,
+  "estimated_final_step": 87136.19874933775,
+  "source_exposure": {
+    "esm_atlas": {
+      "available_records": 119969818,
+      "draws": 26060800,
+      "epoch": 0,
+      "epoch_cursor": 26060800,
+      "repeated_draws": 0,
+      "unique_records_seen": 26060800
+    }
+  },
+  "latest_checkpoint": {
+    "filled_residues": 5041110141,
+    "model_tokens": 5092310141,
+    "optimizer_step": 25000,
+    "path": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/full-training/checkpoint-latest.pt",
+    "sequences_seen": 25600000,
+    "sha256": "f9dcfd1d4be6972a644d0713fa46f825c21adaea977d78eb382caad142439637",
+    "training_seconds": 5300.660214125877
+  }
+}
