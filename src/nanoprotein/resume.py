@@ -93,6 +93,7 @@ def validate_resume(
         "max_model_tokens",
         "schedule_steps",
         "walltime_seconds",
+        "stop_at_unix_time",
         "log_interval",
         "checkpoint_interval",
         "expected_world_size",

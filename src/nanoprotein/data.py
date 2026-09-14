@@ -15,6 +15,7 @@ import torch
 from .tokenizer import ProteinTokenizer
 
 SOURCES = ("uniref90", "mgnify", "omg_img")
+TRAINING_SOURCES = (*SOURCES, "esm_atlas")
 INDEX_DTYPE = np.dtype([("offset", "<u8"), ("length", "<u4"), ("digest", "S32")])
 
 
@@ -145,7 +146,7 @@ class MixtureBatcher:
         world_size: int = 1,
         allow_resampling: bool = True,
     ) -> None:
-        missing = set(weights) - set(SOURCES)
+        missing = set(weights) - set(TRAINING_SOURCES)
         if missing:
             raise ValueError(f"unknown mixture sources: {sorted(missing)}")
         self.names = tuple(sorted(weights))

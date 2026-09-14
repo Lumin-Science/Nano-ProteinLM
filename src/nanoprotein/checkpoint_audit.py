@@ -48,7 +48,9 @@ def audit_checkpoint(checkpoint: Path, data_root: Path, *, expected_step=None, r
 
     packet = torch.load(checkpoint, map_location="cpu", weights_only=False)
     config = packet["train_config"]
-    manifest = validate_data_manifest(data_root)
+    manifest = validate_data_manifest(
+        data_root, allow_unscreened=config.get("allow_unscreened_training_data") is True
+    )
     if packet["data_manifest_sha256"] != file_sha256(data_root / "manifest.json"):
         raise ValueError("checkpoint and data manifest differ")
     step = int(packet["optimizer_step"])
@@ -115,6 +117,7 @@ def audit_checkpoint(checkpoint: Path, data_root: Path, *, expected_step=None, r
         "source_exposure_global": exposure,
         "global_sampler_state_verified": True,
         "data_manifest_sha256": packet["data_manifest_sha256"],
+        "training_data_homology_exclusion": manifest["decontamination"]["homology_exclusion"],
     }
 
 

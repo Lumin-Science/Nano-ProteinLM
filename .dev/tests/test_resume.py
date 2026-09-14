@@ -104,7 +104,7 @@ class ResumeTests(unittest.TestCase):
             "data_manifest_sha256": "same-data",
         }
         new = copy.deepcopy(config)
-        new.update(max_steps=200000, schedule_steps=200000)
+        new.update(max_steps=200000, schedule_steps=200000, stop_at_unix_time=2000000000)
         new["stages"][0]["gradient_accumulation"] = 8
         validate_resume(packet, new, world_size=4, data_manifest_sha256="same-data")
         with self.assertRaisesRegex(ValueError, "batch"):

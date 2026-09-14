@@ -11,7 +11,7 @@ from typing import Any
 import numpy as np
 import torch
 
-from .data import SOURCES, TokenStore
+from .data import TRAINING_SOURCES, TokenStore
 
 
 def origin_draws(origin):
@@ -196,7 +196,7 @@ class GlobalMixtureBatcher:
     ):
         if world_size < 1 or not 0 <= rank < world_size:
             raise ValueError("invalid global sampler rank")
-        if not weights or set(weights) - set(SOURCES) or set(policies) != set(weights):
+        if not weights or set(weights) - set(TRAINING_SOURCES) or set(policies) != set(weights):
             raise ValueError("global sampler sources/policies differ")
         if any(v not in ("allow", "error") for v in policies.values()):
             raise ValueError("invalid source resampling policy")

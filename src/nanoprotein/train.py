@@ -152,12 +152,15 @@ def training_stop_reason(
     max_steps: int | None,
     training_seconds: float,
     walltime_seconds: float,
+    deadline_reached: bool = False,
 ) -> str | None:
     """Check only optimizer boundaries; a reached token endpoint wins over safety caps."""
     if max_model_tokens is not None and model_tokens >= max_model_tokens:
         return "max_model_tokens"
     if max_steps is not None and optimizer_step >= max_steps:
         return "max_steps"
+    if deadline_reached:
+        return "allocation_deadline"
     if training_seconds >= walltime_seconds:
         return "walltime"
     return None
@@ -165,14 +168,20 @@ def training_stop_reason(
 
 def validate_data_manifest(
     data_root: Path,
+    *,
+    allow_unscreened: bool = False,
 ) -> dict[str, Any]:
-    """Load the data receipt and enforce the mandatory contamination gate."""
+    """Validate a screened corpus, or an explicitly opted-in unscreened experiment."""
 
     manifest_path = data_root / "manifest.json"
     with manifest_path.open() as handle:
         manifest = json.load(handle)
     if not isinstance(manifest, dict):
         raise TypeError("data manifest must be a mapping")
+    if allow_unscreened and manifest.get("protocol") == "atlas-clustered-subset-mmap-v1":
+        from .atlas_data import validate_atlas_manifest
+
+        return validate_atlas_manifest(data_root, manifest)
     decontamination = manifest.get("decontamination")
     homology_exclusion = (
         decontamination.get("homology_exclusion") if isinstance(decontamination, dict) else None
@@ -641,7 +650,9 @@ def train(
     if loss_reduction not in {"sequence_mean", "sqrt_mask_count"}:
         raise ValueError(f"unknown training loss reduction {loss_reduction!r}")
     balance_batches = bool(config.get("balance_batches_across_ranks", False))
-    data_manifest = validate_data_manifest(data_root)
+    data_manifest = validate_data_manifest(
+        data_root, allow_unscreened=config.get("allow_unscreened_training_data") is True
+    )
     rank, local_rank, world_size = _distributed()
     if int(config.get("expected_world_size", world_size)) != world_size:
         raise ValueError("configured GPU count differs from the distributed world size")
@@ -975,16 +986,17 @@ def train(
     if world_size > 1:
         dist.barrier()
     training_started = time.perf_counter()
+    stop_at_unix_time = float(config.get("stop_at_unix_time", 0))
 
     while True:
         elapsed = torch.tensor(
-            time.perf_counter() - training_started,
+            [time.perf_counter() - training_started, time.time()],
             dtype=torch.float64,
             device=device,
         )
         if world_size > 1:
             dist.all_reduce(elapsed, op=dist.ReduceOp.MAX)
-        training_seconds = float(elapsed.item())
+        training_seconds = float(elapsed[0].item())
         stop_reason = training_stop_reason(
             model_tokens=model_tokens,
             max_model_tokens=max_model_tokens,
@@ -992,6 +1004,7 @@ def train(
             max_steps=max_steps,
             training_seconds=training_seconds,
             walltime_seconds=walltime_seconds,
+            deadline_reached=bool(stop_at_unix_time and elapsed[1].item() >= stop_at_unix_time),
         )
         if stop_reason is not None:
             break
