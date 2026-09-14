@@ -1,0 +1,51 @@
+{
+  "compute_seconds": 21.45993101852946,
+  "cumulative_training_seconds": 25.33807659219019,
+  "event": "training_complete",
+  "filled_residues": 20171393,
+  "final_checkpoint": {
+    "filled_residues": 20171393,
+    "model_tokens": 20376193,
+    "optimizer_step": 100,
+    "path": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/pilot-training/checkpoint-final.pt",
+    "sequences_seen": 102400,
+    "sha256": "7fa5daf02a9563ed5a55a0da37b3422f5381f691131410182e0181f6660ff844",
+    "training_seconds": 25.33807659219019
+  },
+  "model_tokens": 20376193,
+  "optimizer_steps": 100,
+  "parameter_count": 170559856,
+  "peak_cuda_memory_bytes": 18486531584,
+  "periodic_evaluation_seconds": 0.0,
+  "resume_data_mode": "fresh",
+  "schedule_optimizer_steps": 100,
+  "sequences_seen": 102400,
+  "source_counts": {
+    "stage1": {
+      "esm_atlas": 102400
+    }
+  },
+  "source_counts_scope": "current_sampler_stream_including_restored_history",
+  "source_epoch_maxima": {
+    "stage1": {
+      "esm_atlas": 0
+    }
+  },
+  "source_exposure_global": {
+    "stage1": {
+      "esm_atlas": {
+        "available_records": 1999496,
+        "draws": 102400,
+        "epoch": 0,
+        "epoch_cursor": 102400,
+        "repeated_draws": 0,
+        "unique_records_seen": 102400
+      }
+    }
+  },
+  "stage_checkpoint": null,
+  "stop_reason": "max_steps",
+  "target_optimizer_steps": 100,
+  "training_seconds": 25.33807659219019,
+  "walltime_budget_seconds": 86400.0
+}

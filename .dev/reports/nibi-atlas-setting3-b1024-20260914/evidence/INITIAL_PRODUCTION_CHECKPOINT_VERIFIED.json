@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "scope": "checkpoint_at_step",
+  "checkpoint_sha256": "ca637306b960398447a7819c968728b92d90ffbee381378a2f829b6456568450",
+  "optimizer_steps": 1000,
+  "sequences_seen": 1024000,
+  "model_tokens": 203703456,
+  "world_size": 8,
+  "parameter_count": 170559856,
+  "full_training_complete": false,
+  "finite_model_and_optimizer": true,
+  "model_and_optimizer_roundtrip_exact": false,
+  "optimizer_layout": "replicated_ddp_full_state",
+  "source_exposure_global": {
+    "esm_atlas": {
+      "draws": 1024000,
+      "unique_records_seen": 1024000,
+      "repeated_draws": 0,
+      "epoch": 0,
+      "epoch_cursor": 1024000,
+      "available_records": 119969818
+    }
+  },
+  "global_sampler_state_verified": true,
+  "data_manifest_sha256": "25bdbe338f3c71f8cc8ce3b67ed81ab6654bda184105b6ef2166faa9d8028262",
+  "training_data_homology_exclusion": false
+}

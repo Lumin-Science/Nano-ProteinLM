@@ -1,0 +1,74 @@
+{
+  "attention_implementation": "whole-transformer-packed-_flash_attn3_cuda_477ab85",
+  "attention_kernel": {
+    "build": "build/torch-stable-abi210-cu130-x86_64-linux",
+    "implementation": "FlashAttention-3",
+    "operator": "_flash_attn3_cuda_477ab85",
+    "repository": "kernels-community/flash-attn3",
+    "revision": "e29f138fc363b396e5d2706c8a5f6fa7d36f41e0"
+  },
+  "config_overrides": {},
+  "config_path": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/full-training/launch-config.yaml",
+  "config_sha256": "5969c6c239cece9657f946eee3891ad09139a8ec1e8994783fcf94f229a340d5",
+  "corpus_verification_sha256": "83b2f19ad5dac4418cac7d1e9194f3f02422e45fb2dc01cc6d86b483b3d425b6",
+  "cuda": "13.0",
+  "data_coverage": {
+    "headroom_fraction": 0.01,
+    "policy": "per_source",
+    "protocol": "training-data-coverage-v1",
+    "resume_step": 0,
+    "runtime_exhaustion_guard": true,
+    "scope": "per-run records across all ranks and stages; draws are not unique proteins when resampling is allowed",
+    "sources": {
+      "esm_atlas": {
+        "available_records": 119969818,
+        "expected_draws": 102400000.0,
+        "expected_exposures": 0.8535480148848771,
+        "previously_seen_unique_records": 0,
+        "required_records_with_headroom": 103424000,
+        "resampling": "error",
+        "sufficient": true,
+        "unused_records": 119969818
+      }
+    },
+    "stages": [
+      {
+        "draws": 102400000,
+        "global_batch": 1024,
+        "name": "stage1",
+        "steps": 100000
+      }
+    ],
+    "status": "passed",
+    "world_size": 8
+  },
+  "data_manifest": "/local/scratch/muchenli.12162637.0/nano-atlas-20260914/full/data/manifest.json",
+  "data_manifest_sha256": "25bdbe338f3c71f8cc8ce3b67ed81ab6654bda184105b6ef2166faa9d8028262",
+  "data_migration": null,
+  "git_commit": "5e381a257a902f629442ac76ac9d489372eafbd6",
+  "git_dirty": false,
+  "homology_exclusion": false,
+  "homology_exclusion_receipt_sha256": null,
+  "python": "3.11.4",
+  "python_executable": "/cvmfs/soft.computecanada.ca/gentoo/2023/x86-64-v3/usr/bin/python3.11",
+  "resolved_config_path": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/full-training/config.yaml",
+  "resolved_config_sha256": "5969c6c239cece9657f946eee3891ad09139a8ec1e8994783fcf94f229a340d5",
+  "resume_checkpoint": null,
+  "resume_checkpoint_sha256": null,
+  "resume_optimizer_step": 0,
+  "resume_source_world_size": null,
+  "runtime_packages": {
+    "PyYAML": "6.0.3",
+    "huggingface-hub": "1.27.0",
+    "numpy": "2.4.6",
+    "pyarrow": "25.0.0",
+    "torch": "2.13.0"
+  },
+  "stage_transition": null,
+  "torch": "2.13.0+cu130",
+  "training_budget_semantics": "true synchronized training-loop wall time; setup, final checkpoint, and evaluation are outside the training clock",
+  "uv_lock": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/training-source/uv.lock",
+  "uv_lock_sha256": "3dcddbfce190a8b2dabc1841ddcd08c67f06e8a727f52fab86c72b4da0b75f15",
+  "visible_gpu": "NVIDIA H100 80GB HBM3",
+  "world_size": 8
+}

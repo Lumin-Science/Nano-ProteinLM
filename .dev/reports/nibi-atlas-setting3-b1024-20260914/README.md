@@ -16,6 +16,8 @@ Eight H100s use microbatch 64 per GPU and two accumulation steps, preserving glo
 
 The 2M-record qualification corpus is separate from production. The successful pilot trained 100 updates in 25.34 seconds including one intermediate checkpoint; steady updates took approximately 0.206 seconds. FA3 was active, the loss was finite, and peak allocated memory was 18.49 GB per GPU. The initial deployment attempt failed before training because the new source snapshot omitted `uv.lock`; the lockfile was deployed before the successful retry. Pilot metrics are not production results.
 
+The pilot subsequently passed the complete fixed MLM/contact evaluation and exact model/optimizer restoration. The contact sweep took 248 seconds on four GPUs. Production launched from clean commit `5e381a257a902f629442ac76ac9d489372eafbd6` in the same retained allocation, with the full Atlas corpus and fresh model/optimizer state. Its startup contract confirms eight GPUs, global batch 1,024, FA3, sufficient data and zero repeated draws. Approximately 85k updates are expected before the deadline, subject to observed evaluation and checkpoint overhead; this is an estimate, not a completed result. Two-hour monitoring has been restored for this run.
+
 ## Evaluation and continuation
 
 Production evaluates every 10,000 updates and at the final endpoint. MLM validation retains 4,096 sequences, 139,963 masked residues and context 512. P@L uses all 20,775 contact chains, the fixed probe split and 5,000 chain-bootstrap replicates. These metrics are labeled as measurements of an unscreened training experiment.
@@ -27,7 +29,7 @@ Rolling full model/optimizer checkpoints are written every 1,000 updates on shar
 | Run root | `/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914` |
 | Production output | Run root `/full-training` |
 | Shared training data | Run root `/data` |
-| Source snapshot | Run root `/source` |
+| Frozen scientific checkout | Run root `/training-source` at `5e381a257a902f629442ac76ac9d489372eafbd6` |
 | Durable checkpoints | `/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-atlas-setting3-b1024-20260914/full` |
 
 `bootstrap.sh`, `prepare.sh`, `run.sh`, `evaluate-checkpoint.sh`, `preserve-data.sh` and `status.py` record the workflow. Data preparation and heavy verification run inside overlapping Slurm steps in the retained allocation. No allocation is cancelled or released.
@@ -35,3 +37,5 @@ Rolling full model/optimizer checkpoints are written every 1,000 updates on shar
 ## Verification
 
 The relevant local regression suites passed: Atlas preparation/explicit opt-in/deadline (3), data capacity (6), global sampling and 4↔8 GPU continuity (8), training budget semantics (11), optimizer/sampler resume (5), and distributed periodic evaluation (2). The distributed evaluation tests required local loopback access outside the sandbox. Ruff and shell syntax checks passed. `autoresearch/program.md` was not modified.
+
+At 01:29:46 America/Toronto, production had reached 1,220 updates with finite training loss 2.72856 and approximately 0.209 seconds per update. Its first 1,000-step checkpoint passed a separate finite model/optimizer and global sampler audit: 1,024,000 distinct proteins consumed, no repeats, full replicated optimizer state, and the correct production manifest. Checkpoint SHA256: `ca637306b960398447a7819c968728b92d90ffbee381378a2f829b6456568450`. The committed source bundle and exact runtime recipe also passed hash verification after copying to project storage. Small launch, pilot, data-preservation and checkpoint receipts are retained in [evidence](evidence/); these are launch checks, not final scientific results.

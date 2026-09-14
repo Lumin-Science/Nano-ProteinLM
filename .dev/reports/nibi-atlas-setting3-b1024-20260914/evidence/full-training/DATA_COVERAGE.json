@@ -1,0 +1,30 @@
+{
+  "headroom_fraction": 0.01,
+  "policy": "per_source",
+  "protocol": "training-data-coverage-v1",
+  "resume_step": 0,
+  "runtime_exhaustion_guard": true,
+  "scope": "per-run records across all ranks and stages; draws are not unique proteins when resampling is allowed",
+  "sources": {
+    "esm_atlas": {
+      "available_records": 119969818,
+      "expected_draws": 102400000.0,
+      "expected_exposures": 0.8535480148848771,
+      "previously_seen_unique_records": 0,
+      "required_records_with_headroom": 103424000,
+      "resampling": "error",
+      "sufficient": true,
+      "unused_records": 119969818
+    }
+  },
+  "stages": [
+    {
+      "draws": 102400000,
+      "global_batch": 1024,
+      "name": "stage1",
+      "steps": 100000
+    }
+  ],
+  "status": "passed",
+  "world_size": 8
+}

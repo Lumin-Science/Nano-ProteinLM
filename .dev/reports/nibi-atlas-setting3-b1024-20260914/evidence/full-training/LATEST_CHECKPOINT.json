@@ -1,0 +1,9 @@
+{
+  "filled_residues": 201655456,
+  "model_tokens": 203703456,
+  "optimizer_step": 1000,
+  "path": "/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/full-training/checkpoint-latest.pt",
+  "sequences_seen": 1024000,
+  "sha256": "ca637306b960398447a7819c968728b92d90ffbee381378a2f829b6456568450",
+  "training_seconds": 208.77224782691337
+}
