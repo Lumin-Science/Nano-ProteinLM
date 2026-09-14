@@ -1,0 +1,25 @@
+{
+  "esm2": {
+    "model_id": "facebook/esm2_t30_150M_UR50D",
+    "revision": "a695f6045e2e32885fa60af20c13cb35398ce30c",
+    "directory": "/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/models/esm2",
+    "files": {
+      "README.md": "462a2f24724e19c6be0efab926315c294a863c9a9770e2c8b3d859b2d81a07de",
+      "config.json": "e512f68ec444d99477703a9806639ca83da3dbc19f6c5fe428d6e5b7460972dc",
+      "model.safetensors": "c3f1da8aea53bddd32c246c86168c23b9fd72341fb9db9a94436f855f5053566",
+      "special_tokens_map.json": "3aedcd4211c0d43aec4e607ff60a63255f3174ead795e997350f09a5f8cd9ee1",
+      "tokenizer_config.json": "7e9161ecdb548ec45a41cbc6b24aa4476fdd418461f491c4207baa99419a29ad",
+      "vocab.txt": "0b82cc0a7c7cf9e567b1e5892d793285b9fbae822c964ca48696f7db44598e03"
+    }
+  },
+  "e1": {
+    "model_id": "Profluent-Bio/E1-150m",
+    "revision": "c4dbfe827e4aa6ed7f95eaef50dc1e084f4d77dc",
+    "directory": "/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/models/e1",
+    "files": {
+      "README.md": "4e364ec31ed39ba9001cc0ab92ce1d64be07604a98ee83cc760dd21021640ee0",
+      "config.json": "5722eaebe049f0d5ec4c5b1d08c763c9b68cc8a4fce5997c2f0fdabb3e694886",
+      "model.safetensors": "ba2656339005e6598642836acfdafde480fecc7e145ce0058eb54adf572c3484"
+    }
+  }
+}

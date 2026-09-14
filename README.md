@@ -40,7 +40,7 @@ Agent-edited documentation awaiting owner review appears in blue in the local VS
 
 <div class="ai">
 
-![Matched 171M models: orange ESMC 171M AdamW versus green Auto Research Best, September 13, 2026. Contact P@L and MLM validation loss share the upper plot with separate left and right axes; dense training-loss traces and a warmup inset appear below.](.dev/reports/readme-overview-20260913/matched-100k-curves.png)
+![Matched 171M models: orange ESMC 171M AdamW versus green Auto Research Best, September 13, 2026. Contact P@L and MLM validation loss share the left panel with separate left and right axes; dense training-loss traces and a warmup inset appear in the right panel.](.dev/reports/readme-overview-20260913/matched-100k-curves.png)
 
 </div>
 
@@ -52,7 +52,7 @@ Agent-edited documentation awaiting owner review appears in blue in the local VS
 
 <div class="ai">
 
-The upper plot includes all ten 10k-step evaluations; solid lines use the left P@L axis and dashed lines use the right validation-loss axis. P@L bands are 95% chain-bootstrap intervals over our **20,775-chain split**; validation uses **4,096 sequences**. The lower plot uses **10,001 training-log records per recipe**, with raw traces and a 1,000-step trailing mean; warmup is shown in the inset. Training loss is the same rank-0 sequence-mean MLM diagnostic for both recipes. One training seed per recipe. [Figure data and methods](.dev/reports/readme-overview-20260913/README.md).
+The left panel includes all ten 10k-step evaluations; solid lines use the left P@L axis and dashed lines use the right validation-loss axis. P@L bands are 95% chain-bootstrap intervals over our **20,775-chain split**; validation uses **4,096 sequences**. The right panel uses **10,001 training-log records per recipe**, with raw traces and a 1,000-step trailing mean; warmup is shown in the inset. Training loss is the same rank-0 sequence-mean MLM diagnostic for both recipes. One training seed per recipe. [Figure data and methods](.dev/reports/readme-overview-20260913/README.md).
 
 </div>
 
@@ -322,7 +322,7 @@ Each recipe trains for **100k Stage 1 steps on four H100s**, batch **1,024**, LR
 
 <div class="ai">
 
-## Final model and released ESMC references
+## Final model and released protein-model references
 
 </div>
 
@@ -334,23 +334,31 @@ Our **171M Auto Research Best** model completed **400k Stage 1 + 300k Stage 2 up
 
 <div class="ai">
 
-![Released ESMC-300M and ESMC-600M versus our final 171M model: P@L measured on our full 20,775-chain split against estimated training FLOPs, with nominal Stage 1 and Stage 2 token budgets.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
+![ESMC-300M, ESMC-600M, ESM-2 150M and Profluent-E1 150M versus our final 171M model: contact P@L on our full 20,775-chain split, alongside training-token budgets.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
 
 </div>
 
 <div class="ai">
 
-| Model | Our split P@L ↑ | Our split 95% CI | Estimated FLOPs¹ | Stage 1 tokens¹ | Stage 2 tokens¹ |
-|---|---:|---:|---:|---:|---:|
-| ESMC-600M | 58.031% | — | 2.491e+22 | 4.194T | 2.097T |
-| ESMC-300M | 53.867% | — | 1.480e+22 | 4.194T | 2.097T |
-| **Auto Research Best · 171M** | **46.264%** | **46.016–46.523%** | 2.334e+21 | 0.419T | 1.258T |
+| Model | Our split P@L ↑ | Our split 95% CI | Estimated FLOPs¹ | Training tokens (S1 + S2 / total)¹ |
+|---|---:|---:|---:|---:|
+| Profluent-E1 150M | 61.743% | 61.480–61.999% | — | 4.000T total |
+| ESMC-600M | 58.031% | — | 2.491e+22 | 4.194T + 2.097T |
+| ESMC-300M | 53.867% | — | 1.480e+22 | 4.194T + 2.097T |
+| **Auto Research Best · 171M** | **46.264%** | **46.016–46.523%** | 2.334e+21 | 0.419T + 1.258T |
+| ESM-2 150M | 44.927% | 44.682–45.177% | — | 1.000T total |
 
 </div>
 
 <div class="ai">
 
-All P@L values above were evaluated on **our 20,775-chain split**. The released-model full-split confidence intervals were not recovered; their paper intervals and 1,024-chain diagnostic intervals are omitted. ¹ Tokens count **batch × maximum context × steps**; FLOPs use the [ESMC paper](https://doi.org/10.64898/2026.06.03.729735) formula on the same nominal basis. Our actual logged model tokens are **193.501B in Stage 1 + 181.404B in Stage 2**, with a **6ND estimate of 3.837e20 FLOPs**. [Sources and calculation details](.dev/reports/readme-overview-20260913/README.md).
+All P@L values above use **our 20,775-chain split** and the same frozen fitted-probe protocol. **Profluent-E1 uses single-sequence inference without retrieved homologs.** The two 150M references have new full-split evaluations and 5,000-resample chain-bootstrap intervals; ESMC full-split intervals were not recovered. [New reference evaluations and audit records](.dev/reports/released-150m-contact-20260913/README.md).
+
+</div>
+
+<div class="ai">
+
+¹ ESMC and our model use nominal **batch × maximum context × steps** token budgets and the [ESMC paper](https://doi.org/10.64898/2026.06.03.729735) FLOP formula. ESM-2’s approximately **1T total tokens** follow [its author’s training description](https://cs.nyu.edu/media/publications/ZemingLin-phd.pdf); Profluent-E1’s **4T** follow [its paper](https://storage.googleapis.com/e1-paper-a26c3c79/profluent-e1.pdf). Their two-stage breakdowns and comparable FLOP estimates are omitted. Our actual logged model tokens are **193.501B in Stage 1 + 181.404B in Stage 2**, with a **6ND estimate of 3.837e20 FLOPs**. [Sources and calculation details](.dev/reports/readme-overview-20260913/README.md).
 
 </div>
 

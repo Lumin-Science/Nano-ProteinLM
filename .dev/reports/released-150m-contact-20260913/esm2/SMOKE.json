@@ -1,0 +1,21 @@
+{
+  "family": "esm2",
+  "sequence_length": 81,
+  "logits_identical_with_capture": true,
+  "residue_attention_identity_verified": true,
+  "layers": 30,
+  "heads": 20,
+  "native_context_relative_l2_errors": [],
+  "actual_parameters": 148140154,
+  "full_length_case": {
+    "family": "esm2",
+    "sequence_length": 510,
+    "logits_identical_with_capture": true,
+    "residue_attention_identity_verified": true,
+    "layers": 30,
+    "heads": 20,
+    "native_context_relative_l2_errors": [],
+    "actual_parameters": 148140154
+  },
+  "elapsed_seconds": 60.71145745785907
+}

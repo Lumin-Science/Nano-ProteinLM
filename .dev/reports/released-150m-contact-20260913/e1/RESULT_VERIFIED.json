@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "protocol": "autoresearch-frozen-full-contact-merge-v1",
+  "checkpoint_sha256": "ba2656339005e6598642836acfdafde480fecc7e145ce0058eb54adf572c3484",
+  "evaluation_chains": 20775,
+  "p_at_l": 0.617425569082583,
+  "random_p_at_l": 0.016893223436056953,
+  "selected_C": 1.0,
+  "validation_trace": [
+    {
+      "C": 0.01,
+      "validation_average_precision": 0.7987697121664687
+    },
+    {
+      "C": 0.1,
+      "validation_average_precision": 0.8145491203508052
+    },
+    {
+      "C": 1.0,
+      "validation_average_precision": 0.8468651573023329
+    },
+    {
+      "C": 10.0,
+      "validation_average_precision": 0.8430650179604608
+    }
+  ],
+  "selection_seed": 20260820,
+  "components": [
+    {
+      "shard_index": 0,
+      "path": "/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/e1/shard-0.json",
+      "sha256": "c165d5fcfea0cecf125d469f142a6f64f21334f3f8c10db4adb2fc914aca2829",
+      "chains": 5194
+    },
+    {
+      "shard_index": 1,
+      "path": "/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/e1/shard-1.json",
+      "sha256": "872f734365e67dd2ef5372e0de7838edc8b0485035f3831fd56c6e52c7c214fb",
+      "chains": 5194
+    },
+    {
+      "shard_index": 2,
+      "path": "/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/e1/shard-2.json",
+      "sha256": "7bf419da4382d6bb0f30277435d3a50b009ec9dc1b7f44b455ef64825698556b",
+      "chains": 5194
+    },
+    {
+      "shard_index": 3,
+      "path": "/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/e1/shard-3.json",
+      "sha256": "8eb7ef13db6d42b7c6833b1cdba9efaebc4632b20bb4ee2448340bdfbb1f2420",
+      "chains": 5193
+    }
+  ],
+  "family": "e1",
+  "model_source": {
+    "model_id": "Profluent-Bio/E1-150m",
+    "revision": "c4dbfe827e4aa6ed7f95eaef50dc1e084f4d77dc",
+    "directory": "/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/models/e1",
+    "files": {
+      "README.md": "4e364ec31ed39ba9001cc0ab92ce1d64be07604a98ee83cc760dd21021640ee0",
+      "config.json": "5722eaebe049f0d5ec4c5b1d08c763c9b68cc8a4fce5997c2f0fdabb3e694886",
+      "model.safetensors": "ba2656339005e6598642836acfdafde480fecc7e145ce0058eb54adf572c3484"
+    }
+  },
+  "dataset_manifest_sha256": "c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3",
+  "probe_receipt_sha256": "6f1bbfe8613f7c08f4218d438a20b0b51061bc4378c3d3647cc7982f5bc7c701",
+  "p_at_l_95_ci": [
+    0.6148041564383918,
+    0.619990423820279
+  ],
+  "uncertainty": {
+    "replicates": 5000,
+    "unit_count": 20775,
+    "confidence_interval_95": [
+      0.6148041564383918,
+      0.619990423820279
+    ]
+  },
+  "smoke": {
+    "family": "e1",
+    "sequence_length": 81,
+    "logits_identical_with_capture": true,
+    "residue_attention_identity_verified": true,
+    "layers": 20,
+    "heads": 12,
+    "native_context_relative_l2_errors": [
+      0.001662946306169033,
+      0.0017291607800871134,
+      0.0017316604498773813,
+      0.0017108953325077891,
+      0.0018089191289618611,
+      0.0017067333683371544,
+      0.001713749603368342,
+      0.0017376162577420473,
+      0.0017328165704384446,
+      0.0017797116888687015,
+      0.0017312284326180816,
+      0.0017103455029428005,
+      0.0016981137450784445,
+      0.0016568510327488184,
+      0.0016987911658361554,
+      0.0016990827862173319,
+      0.0017067979788407683,
+      0.0017226896015927196,
+      0.0017216313863173127,
+      0.0016737260157242417,
+      0.0016418923623859882,
+      0.0017085870495066047,
+      0.0017358919139951468,
+      0.0016766550252214074,
+      0.0017632764065638185,
+      0.0016672378405928612,
+      0.001719323336146772,
+      0.001705230912193656,
+      0.001701953704468906,
+      0.0017334131989628077,
+      0.0017168292542919517,
+      0.0017014166805893183,
+      0.0017147499602288008,
+      0.0016923928633332253,
+      0.0017013256438076496,
+      0.0017085530562326312,
+      0.0017209779471158981,
+      0.0016899339389055967,
+      0.0017470435705035925,
+      0.0016737156547605991
+    ],
+    "actual_parameters": 154423330,
+    "full_length_case": {
+      "family": "e1",
+      "sequence_length": 510,
+      "logits_identical_with_capture": true,
+      "residue_attention_identity_verified": true,
+      "layers": 20,
+      "heads": 12,
+      "native_context_relative_l2_errors": [
+        0.001662946306169033,
+        0.0017291607800871134,
+        0.0017316604498773813,
+        0.0017108953325077891,
+        0.0018089191289618611,
+        0.0017067333683371544,
+        0.001713749603368342,
+        0.0017376162577420473,
+        0.0017328165704384446,
+        0.0017797116888687015,
+        0.0017312284326180816,
+        0.0017103455029428005,
+        0.0016981137450784445,
+        0.0016568510327488184,
+        0.0016987911658361554,
+        0.0016990827862173319,
+        0.0017067979788407683,
+        0.0017226896015927196,
+        0.0017216313863173127,
+        0.0016737260157242417,
+        0.0016418923623859882,
+        0.0017085870495066047,
+        0.0017358919139951468,
+        0.0016766550252214074,
+        0.0017632764065638185,
+        0.0016672378405928612,
+        0.001719323336146772,
+        0.001705230912193656,
+        0.001701953704468906,
+        0.0017334131989628077,
+        0.0017168292542919517,
+        0.0017014166805893183,
+        0.0017147499602288008,
+        0.0016923928633332253,
+        0.0017013256438076496,
+        0.0017085530562326312,
+        0.0017209779471158981,
+        0.0016899339389055967,
+        0.0017470435705035925,
+        0.0016737156547605991
+      ],
+      "actual_parameters": 154423330
+    },
+    "elapsed_seconds": 89.27758903102949
+  },
+  "chain_coverage_verified": true,
+  "inference_mode": "single_sequence_without_retrieval",
+  "per_chain_sha256": "80bfd9d4de93bded4b1aa1dd7bc0699151c0b97ecb2f78041ef6e5afb9909d74"
+}

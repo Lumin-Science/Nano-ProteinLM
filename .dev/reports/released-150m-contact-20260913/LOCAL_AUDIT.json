@@ -1,0 +1,28 @@
+{
+  "esm2": {
+    "chain_count": 20775,
+    "independent_mean": 0.44926842212915996,
+    "independent_ci": [
+      0.44682080589071815,
+      0.4517693148357217
+    ],
+    "bootstrap_replicates": 5000,
+    "bootstrap_seed": 20260820,
+    "independent_chunk_size": 32,
+    "mean_and_ci_match": true,
+    "chain_id_set_matches_final_171m": true
+  },
+  "e1": {
+    "chain_count": 20775,
+    "independent_mean": 0.617425569082583,
+    "independent_ci": [
+      0.6148041564383918,
+      0.619990423820279
+    ],
+    "bootstrap_replicates": 5000,
+    "bootstrap_seed": 20260820,
+    "independent_chunk_size": 32,
+    "mean_and_ci_match": true,
+    "chain_id_set_matches_final_171m": true
+  }
+}

@@ -103,6 +103,38 @@
         181403984859
       ],
       "actual_6nd_flops": 383662752460945969152
+    },
+    {
+      "model": "ESM-2 150M",
+      "parameters": 148140154,
+      "p_at_l": 0.44926842212915996,
+      "p_at_l_95_ci": [
+        0.44682080589071815,
+        0.4517693148357217
+      ],
+      "evaluation_chains": 20775,
+      "reported_training_tokens": 1000000000000,
+      "training_budget_source": "https://cs.nyu.edu/media/publications/ZemingLin-phd.pdf",
+      "stage_nominal_tokens": null,
+      "total_nominal_flops": null,
+      "inference_mode": "single_sequence_without_retrieval",
+      "result_source": ".dev/reports/released-150m-contact-20260913/esm2/RESULT_VERIFIED.json"
+    },
+    {
+      "model": "Profluent-E1 150M",
+      "parameters": 154423330,
+      "p_at_l": 0.617425569082583,
+      "p_at_l_95_ci": [
+        0.6148041564383918,
+        0.619990423820279
+      ],
+      "evaluation_chains": 20775,
+      "reported_training_tokens": 4000000000000,
+      "training_budget_source": "https://storage.googleapis.com/e1-paper-a26c3c79/profluent-e1.pdf",
+      "stage_nominal_tokens": null,
+      "total_nominal_flops": null,
+      "inference_mode": "single_sequence_without_retrieval",
+      "result_source": ".dev/reports/released-150m-contact-20260913/e1/RESULT_VERIFIED.json"
     }
   ],
   "formula": "Sum over stages: 3 * (2 * parameters + 4 * depth * context * width) * batch * context * steps",
@@ -128,7 +160,9 @@
     ".dev/reports/nibi-paired-unique-b2048-100k-20260909/learning-curve.json": "7148eff47daef38d7a04a38d65e97e9131e2e00f743898095a7491245240263e",
     ".dev/reports/readme-overview-20260913/released-local-split.json": "226aefd4201faeec98146f714f708609bf061abd3ae990d6234d0c087244a237",
     ".dev/reports/nibi-paired-unique-b2048-100k-20260909/full/baseline/metrics.jsonl.gz": "fd3db7dc92c556e99ad55e82eb03f48beab8899517be6d703a44d0fdf514d2ba",
-    ".dev/reports/nibi-paired-unique-b2048-100k-20260909/full/setting3/metrics.jsonl.gz": "f52ea3c589e7d87f6e4bcc237b50b67cc5f9320c976768dc8b732848436056c4"
+    ".dev/reports/nibi-paired-unique-b2048-100k-20260909/full/setting3/metrics.jsonl.gz": "f52ea3c589e7d87f6e4bcc237b50b67cc5f9320c976768dc8b732848436056c4",
+    ".dev/reports/released-150m-contact-20260913/esm2/RESULT_VERIFIED.json": "9219d96ab475b62680a92a70c7be15167722cea06ceb1e415b369969f66f9bcc",
+    ".dev/reports/released-150m-contact-20260913/e1/RESULT_VERIFIED.json": "306e29600e1262c6c3f633f0eaebcb731b5c3aa2576210deb29e3db76ec64305"
   },
   "matched_plot": {
     "labels": {
@@ -143,6 +177,7 @@
     "training_log_cadence": "step 1, then every 10 steps through 100000",
     "smoothing": "100-record trailing mean (1000 optimizer steps after warmup); raw values retained",
     "warmup_display": "Steps 1\u20131000 shown in inset; main training panel shows steps 1000\u2013100000",
-    "evaluation_layout": "P@L on left axis and MLM validation loss on right axis; both metrics in one shared plot"
+    "evaluation_layout": "P@L on left axis and MLM validation loss on right axis; both metrics in one shared plot",
+    "panel_layout": "Side by side: evaluation at left, dense training loss at right"
   }
 }

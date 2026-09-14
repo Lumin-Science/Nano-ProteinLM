@@ -6,7 +6,7 @@
 
 <div class="ai">
 
-These figures summarize saved results; no model was trained or re-evaluated for this README update. The [data and source hashes](comparison-data.json) and [figure generator](../../scripts/build_readme_figures.py) make the plots reproducible. PNGs are used in the README; SVGs are available for export.
+The opening figure summarizes saved training results. The final comparison also includes new frozen contact evaluations of ESM-2 150M and Profluent-E1 150M; no model was pretrained for this README update. The [data and source hashes](comparison-data.json) and [figure generator](../../scripts/build_readme_figures.py) make the plots reproducible. PNGs are used in the README; SVGs are available for export.
 
 </div>
 
@@ -24,13 +24,13 @@ The opening figure compares our local ESMC-like 171M AdamW reproduction (orange,
 
 <div class="ai">
 
-The upper plot puts all four evaluation curves on one shared step axis: two contact P@L curves on the left vertical axis and two MLM validation-loss curves on the right. It uses all ten 10k-spaced endpoints per model from the [matched Nibi experiment](../nibi-paired-unique-b2048-100k-20260909/learning-curve.json): batch 2,048, 100k updates, four H100s per model, 204.8M distinct records and approximately 48.39B model tokens. Every endpoint was independently audited. P@L bands are 5,000-replicate 95% chain-bootstrap intervals over 20,775 chains; validation loss uses 4,096 held-out sequences. One training seed per recipe means these are chain intervals, not seed intervals.
+The left panel puts all four evaluation curves on one shared step axis: two contact P@L curves on the left vertical axis and two MLM validation-loss curves on the right. It uses all ten 10k-spaced endpoints per model from the [matched Nibi experiment](../nibi-paired-unique-b2048-100k-20260909/learning-curve.json): batch 2,048, 100k updates, four H100s per model, 204.8M distinct records and approximately 48.39B model tokens. Every endpoint was independently audited. P@L bands are 5,000-replicate 95% chain-bootstrap intervals over 20,775 chains; validation loss uses 4,096 held-out sequences. One training seed per recipe means these are chain intervals, not seed intervals.
 
 </div>
 
 <div class="ai">
 
-The lower plot reads the original compressed [AdamW logs](../nibi-paired-unique-b2048-100k-20260909/full/baseline/metrics.jsonl.gz) and [Auto Research logs](../nibi-paired-unique-b2048-100k-20260909/full/setting3/metrics.jsonl.gz): 10,001 records each, at step 1 and every tenth update through 100k. Thin translucent traces show raw `loss`; thick lines show a trailing average of 100 records, spanning 1,000 updates after warmup. The main training panel shows steps 1,000–100,000; an inset preserves the full loss range for steps 1–1,000. [Extracted summaries](training-curve-summary.json) record endpoints and post-warmup ranges.
+The right panel reads the original compressed [AdamW logs](../nibi-paired-unique-b2048-100k-20260909/full/baseline/metrics.jsonl.gz) and [Auto Research logs](../nibi-paired-unique-b2048-100k-20260909/full/setting3/metrics.jsonl.gz): 10,001 records each, at step 1 and every tenth update through 100k. Thin translucent traces show raw `loss`; thick lines show a trailing average of 100 records, spanning 1,000 updates after warmup. The main training panel shows steps 1,000–100,000; an inset preserves the full loss range for steps 1–1,000. [Extracted summaries](training-curve-summary.json) record endpoints and post-warmup ranges.
 
 </div>
 
@@ -48,7 +48,13 @@ The common `loss` field is rank 0’s sequence-mean masked cross entropy, averag
 
 <div class="ai">
 
-The final reference block includes ESMC-300M, ESMC-600M and our completed 171M model. All P@L values use our full 20,775-chain split. The released-model means are 0.5386739700782069 and 0.5803125316548938; the [recovery receipt](released-local-split.json) records their full-report hashes, model revisions and source archive hashes. They come specifically from `source.full_point_estimate` in archived diagnostic receipts and agree with the rounded full-population values in [EVALUATION.md](../../../docs/EVALUATION.md#released-esmc-checkpoint-pl). The 1,024-chain diagnostic means and intervals are not used. Full-population confidence intervals were not recovered for those released models, so their table cells are blank and their plot markers have no error bars. The final 171M point and its 95% interval come from the [verified Stage 2 record](../nibi-setting3-stage2-b2048-300k-20260911/FINAL_VERIFIED.json).
+The final reference block includes ESMC-300M, ESMC-600M, ESM-2 150M, Profluent-E1 150M and our completed 171M model. All P@L values use our full 20,775-chain split. The ESMC means are 0.5386739700782069 and 0.5803125316548938; the [recovery receipt](released-local-split.json) records their full-report hashes, model revisions and source archive hashes. They come specifically from `source.full_point_estimate` in archived diagnostic receipts and agree with the rounded full-population values in [EVALUATION.md](../../../docs/EVALUATION.md#released-esmc-checkpoint-pl). The 1,024-chain diagnostic means and intervals are not used. Full-population confidence intervals were not recovered for the ESMC references, so their table cells are blank and their plot markers have no error bars. The final 171M point and its 95% interval come from the [verified Stage 2 record](../nibi-setting3-stage2-b2048-300k-20260911/FINAL_VERIFIED.json).
+
+</div>
+
+<div class="ai">
+
+The two 150M references have new full-split evaluations with the unchanged fitted-probe and scoring APIs, including 5,000-resample chain confidence intervals. Profluent-E1 uses single-sequence inference without retrieved homologs. [Evaluation receipts, adapter validation and exact revisions](../released-150m-contact-20260913/README.md) document the comparison. The figure uses horizontal P@L bars so models without a comparable FLOP estimate remain visible. Its token panel retains separate nominal ESMC/Auto Research stages and shows reported total tokens for ESM-2 and E1.
 
 </div>
 
@@ -60,7 +66,7 @@ The [ESMC paper](https://doi.org/10.64898/2026.06.03.729735) specifies 1M Stage 
 
 <div class="ai">
 
-FLOPs are computed separately for each stage with the paper’s page-30 formula: `3 × (2 × parameters + 4 × layers × context × width) × nominal tokens`, then summed. ESMC-300M and ESMC-600M parameter counts are the paper’s Table S4 estimates, 333.0M and 575.0M; architecture dimensions come from Table S1. Our checkpoint has 170,559,856 parameters, 24 layers and width 768. The plotted values are nominal-budget estimates, not measured hardware operations or a transcription of the paper’s Stage 1 scaling-curve FLOPs.
+FLOPs are computed separately for each stage with the paper’s page-30 formula: `3 × (2 × parameters + 4 × layers × context × width) × nominal tokens`, then summed. ESMC-300M and ESMC-600M parameter counts are the paper’s Table S4 estimates, 333.0M and 575.0M; architecture dimensions come from Table S1. Our checkpoint has 170,559,856 parameters, 24 layers and width 768. These table values are nominal-budget estimates, not measured hardware operations or a transcription of the paper’s Stage 1 scaling-curve FLOPs.
 
 </div>
 

@@ -11,6 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -60,93 +61,89 @@ def trailing_mean(values, window=100):
     return (cumulative[ends] - cumulative[starts]) / (ends - starts)
 
 
-fig, (performance, tokens) = plt.subplots(1, 2, figsize=(13, 5.5))
-fig.subplots_adjust(left=0.075, right=0.975, top=0.79, bottom=0.22, wspace=0.27)
+fig, (performance, tokens) = plt.subplots(
+    1, 2, figsize=(14, 5.8), gridspec_kw={"width_ratios": [1.15, 1]}
+)
+fig.subplots_adjust(left=0.19, right=0.955, top=0.76, bottom=0.22, wspace=0.19)
 fig.suptitle(
-    "Released ESMC references on our evaluation split",
-    x=0.075,
+    "Released protein models on our evaluation split",
+    x=0.035,
     ha="left",
     y=0.97,
     fontsize=18,
     fontweight="bold",
 )
 fig.text(
-    0.075,
+    0.035,
     0.895,
-    "Final Auto Research model: 171M · 400k Stage 1 + 300k Stage 2 updates",
+    "Single-sequence contact prediction · same frozen probe protocol · 20,775 chains",
     fontsize=11,
     color="#475569",
 )
-offsets = {"ESMC-300M": (-75, -31), "ESMC-600M": (-100, 9), "NanoProteinLM-171M": (12, 6)}
-for row in data["models"]:
+rows = sorted(data["models"], key=lambda r: r["p_at_l"], reverse=True)
+y_positions = np.arange(len(rows))
+for i, row in enumerate(rows):
     ours = row["model"].startswith("Nano")
     y = row["p_at_l"] * 100
     interval = row["p_at_l_95_ci"]
-    yerr = None
-    if interval is not None:
-        low, high = np.array(interval) * 100
-        yerr = [[y - low], [high - y]]
-    performance.errorbar(
-        row["total_nominal_flops"],
-        y,
-        yerr=yerr,
-        fmt="D" if ours else "o",
-        color=TEAL if ours else BLUE,
-        markersize=8,
-        capsize=5,
-        elinewidth=1.8,
-        zorder=4,
-    )
-    label = "Auto Research Best 171M" if ours else row["model"]
-    performance.annotate(
-        f"{label}\n{y:.2f}%",
-        (row["total_nominal_flops"], y),
-        xytext=offsets[row["model"]],
-        textcoords="offset points",
-        fontsize=10,
-        color=TEAL if ours else BLUE,
-    )
-performance.set_xscale("log")
-performance.set_xlim(1.5e21, 4.2e22)
-performance.set_ylim(43, 62)
-performance.set_ylabel("Contact P@L (%) on our 20,775-chain split ↑")
-performance.set_xlabel("Estimated training FLOPs · nominal token budget")
-style(performance)
-rows = [data["models"][-1], *data["models"][:-1]]
-x = np.arange(len(rows))
-s1 = np.array([r["stage_nominal_tokens"][0] for r in rows]) / 1e12
-s2 = np.array([r["stage_nominal_tokens"][1] for r in rows]) / 1e12
-tokens.bar(x, s1, width=0.5, label="Stage 1 · context 512", color=BLUE)
-tokens.bar(x, s2, width=0.5, bottom=s1, label="Stage 2 · context 2,048", color="#98c8e6")
-for i, total in enumerate(s1 + s2):
-    tokens.text(i, total + 0.16, f"{total:.2f}T", ha="center", fontweight="bold")
-tokens.set_xticks(x, ["Auto Research\n171M", "ESMC\n300M", "ESMC\n600M"])
-tokens.set_ylim(0, 7.1)
-tokens.set_ylabel("Nominal training tokens (trillions)")
+    error = None if interval is None else [[y - interval[0] * 100], [interval[1] * 100 - y]]
+    performance.barh(i, y, height=0.52, color=TEAL if ours else BLUE, alpha=0.85)
+    performance.errorbar(y, i, xerr=error, fmt="none", ecolor="#0f172a", capsize=4)
+    performance.text(y + 1.2, i, f"{y:.2f}%", va="center", fontsize=10, fontweight="bold")
+    stages = row.get("stage_nominal_tokens")
+    if stages:
+        s1, s2 = np.array(stages) / 1e12
+        tokens.barh(i, s1, height=0.52, color=BLUE)
+        tokens.barh(i, s2, left=s1, height=0.52, color="#98c8e6")
+        total = s1 + s2
+    else:
+        total = row["reported_training_tokens"] / 1e12
+        tokens.barh(i, total, height=0.52, color="#9d91b5", hatch="//", edgecolor="white")
+    tokens.text(total + 0.13, i, f"{total:.2f}T", va="center", fontsize=10)
+labels = [
+    "Auto Research Best\n171M · 400k S1 + 300k S2"
+    if r["model"].startswith("Nano")
+    else r["model"]
+    for r in rows
+]
+performance.set_yticks(y_positions, labels)
+tokens.set_yticks(y_positions, [""] * len(rows))
+for axis in (performance, tokens):
+    axis.set_ylim(len(rows) - 0.5, -0.5)
+    axis.grid(axis="x", color="#e2e8f0", linewidth=0.7)
+    axis.set_axisbelow(True)
+    axis.tick_params(length=0, pad=8)
+performance.set_xlim(0, 67)
+performance.set_xlabel("Contact P@L (%) ↑ · bars show mean, whiskers 95% CI")
+tokens.set_xlim(0, 7.2)
+tokens.set_xlabel("Training token budget (trillions)")
 tokens.legend(
+    handles=[
+        Patch(color=BLUE, label="Nominal Stage 1"),
+        Patch(color="#98c8e6", label="Nominal Stage 2"),
+        Patch(facecolor="#9d91b5", hatch="//", label="Reported total"),
+    ],
     frameon=False,
-    fontsize=9,
+    fontsize=8.3,
     loc="lower center",
-    bbox_to_anchor=(0.5, -0.22),
-    ncol=2,
-    columnspacing=1,
-)
-style(tokens)
-fig.text(
-    0.075,
-    0.04,
-    "All P@L values use our split. Full-split CIs were not recovered for the released "
-    "models; the 171M error bar is a 95% chain-bootstrap CI.",
-    color="#64748b",
-    fontsize=8.7,
+    bbox_to_anchor=(0.5, 1.03),
+    ncol=3,
 )
 fig.text(
-    0.075,
-    0.008,
-    "Token budgets use batch × maximum context × steps; FLOPs follow the paper's "
-    "formula on that nominal basis, not measured GPU work.",
-    color="#64748b",
+    0.035,
+    0.067,
+    "ESMC full-split CIs were not recovered. Profluent-E1 uses no retrieved homologs. "
+    "All available intervals use 5,000 chain-bootstrap replicates.",
     fontsize=8.7,
+    color="#64748b",
+)
+fig.text(
+    0.035,
+    0.018,
+    "ESMC / Auto Research tokens = batch × maximum context × steps; ESM-2 / E1 use "
+    "reported token budgets. Token exposures are not unique proteins.",
+    fontsize=8.7,
+    color="#64748b",
 )
 save(fig, "released-model-comparison")
 
@@ -154,23 +151,23 @@ paired = ROOT / ".dev/reports/nibi-paired-unique-b2048-100k-20260909"
 curve = json.loads((paired / "learning-curve.json").read_text())
 assert curve["global_batch"] == 2048 and curve["target_steps"] == 100000
 fig, (contact, training) = plt.subplots(
-    2, 1, figsize=(13, 9), gridspec_kw={"height_ratios": [1.15, 1]}
+    1, 2, figsize=(15.5, 6.3), gridspec_kw={"width_ratios": [1.05, 1]}
 )
-fig.subplots_adjust(left=0.075, right=0.92, top=0.77, bottom=0.13, hspace=0.38)
+fig.subplots_adjust(left=0.06, right=0.975, top=0.69, bottom=0.23, wspace=0.45)
 validation = contact.twinx()
 validation.spines["right"].set_visible(True)
 validation.tick_params(length=0, pad=8)
 fig.suptitle(
     "171M models: Auto Research improves the training recipe",
-    x=0.075,
+    x=0.06,
     ha="left",
     y=0.975,
     fontsize=18,
     fontweight="bold",
 )
 fig.text(
-    0.075,
-    0.928,
+    0.06,
+    0.915,
     "Matched 100k updates · batch 2,048 · 48.39B model tokens · four H100s per model",
     fontsize=11,
     color="#475569",
@@ -184,7 +181,7 @@ fig.legend(
     [label for _, label, _ in recipes],
     frameon=False,
     loc="upper left",
-    bbox_to_anchor=(0.067, 0.892),
+    bbox_to_anchor=(0.053, 0.863),
     ncol=2,
     fontsize=11,
 )
@@ -196,19 +193,20 @@ fig.legend(
     ["Contact P@L · left axis ↑", "MLM validation loss · right axis ↓"],
     frameon=False,
     loc="upper left",
-    bbox_to_anchor=(0.067, 0.851),
+    bbox_to_anchor=(0.053, 0.809),
     ncol=2,
     fontsize=10,
 )
+contact.set_title("Evaluation · every 10k steps", loc="left", fontsize=11, pad=12)
 training.set_title(
-    "Training loss · raw 10-step logs + 1,000-step trailing mean",
+    "Training loss · raw logs + 1,000-step mean",
     loc="left",
     fontsize=11,
     pad=12,
 )
-warmup = training.inset_axes([0.59, 0.52, 0.36, 0.4])
+warmup = training.inset_axes([0.49, 0.55, 0.46, 0.35])
 warmup.set_facecolor("#f8fafc")
-warmup.set_title("First 1,000 steps · full loss range", fontsize=9, pad=6)
+warmup.set_title("Warmup · first 1,000 steps", fontsize=8, pad=6)
 training_stats = {}
 for key, _label, color in recipes:
     rows = curve["runs"][key]
@@ -295,16 +293,16 @@ warmup.set_xticks([0, 500, 1000])
 warmup.set_yticks([3, 4])
 warmup.tick_params(labelsize=8, length=0, pad=3)
 fig.text(
-    0.075,
     0.06,
+    0.095,
     "One seed per recipe; all ten evaluations are shown. P@L bands: 95% chain-bootstrap "
     "CI (20,775 chains). Validation: 4,096 sequences.",
     fontsize=9,
     color="#64748b",
 )
 fig.text(
-    0.075,
-    0.032,
+    0.06,
+    0.055,
     "Training traces: 10,001 logged rank-0 sequence-mean losses per recipe; warmup is "
     "shown in the inset. ESMC 171M is our AdamW reproduction.",
     fontsize=9,
