@@ -22,6 +22,12 @@ The pilot subsequently passed the complete fixed MLM/contact evaluation and exac
 
 Production evaluates every 10,000 updates and at the final endpoint. MLM validation retains 4,096 sequences, 139,963 masked residues and context 512. P@L uses all 20,775 contact chains, the fixed probe split and 5,000 chain-bootstrap replicates. These metrics are labeled as measurements of an unscreened training experiment.
 
+| Production step | Validation loss ↓ | P@L ↑ | P@L 95% chain-bootstrap CI |
+| --- | --- | --- | --- |
+| 10,000 | 2.59672 | 15.513% | 15.382–15.650% |
+
+The [10k result](evaluations/step-010000/RESULT_VERIFIED.json) passed the fixed evaluation protocol and checkpoint-identity checks; the evaluation pause lasted 228.63 seconds. Its complete model/optimizer checkpoint was hash-verified in project storage with SHA256 `5b5ad1188728c4c6974f4c4eeca842e251e2bfad5ceedffe24b1effed9c932eb`. At 02:23 America/Toronto, training had reached 15,210 updates, consumed 15,575,040 unique proteins without repeats, and averaged 0.2118 seconds per update over the preceding 1,000 updates. The estimated endpoint is approximately 87k updates at the unchanged 07:04 training deadline, including the observed evaluation overhead; the 20k result is expected around 02:44.
+
 Rolling full model/optimizer checkpoints are written every 1,000 updates on shared scratch. Each evaluation checkpoint and the final checkpoint are hash-verified and copied to project storage. The full optimizer is replicated, not split into unrecoverable GPU-specific pieces. For later four-GPU continuation, use microbatch 128 per GPU and accumulation 2 to preserve both the global microbatch and global batch; the compact global sampler state preserves the next records. A new runtime allocation deadline is permitted during resume.
 
 | Artifact | Remote location |
