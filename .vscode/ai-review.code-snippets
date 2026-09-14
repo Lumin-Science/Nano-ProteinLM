@@ -1,7 +1,7 @@
 {
   "AI fix request": {
     "scope": "markdown",
-    "prefix": "aitofix",
+    "prefix": ["aif", "aitofix"],
     "body": "<aitofix>${1:${TM_SELECTED_TEXT:Describe what to fix}}</aitofix>$0",
     "description": "Leave an inline fix request for the AI; red until resolved."
   },

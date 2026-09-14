@@ -82,7 +82,7 @@ Existing text with <span class="ai">an updated phrase</span>.
 
 <div class="ai">
 
-Type `aitofix` and press **Tab** in a Markdown file, then replace the selected placeholder with your request. The shortcut inserts `<aitofix>your note</aitofix>`, which works in the standard VS Code preview without an extension. Literal `\aitofix{...}` is not a Markdown command; use the snippet or type the short HTML tag directly.
+Type `aif` and press **Tab** in a Markdown file, then replace the selected placeholder with your request. The longer `aitofix` shortcut still works. The shortcut inserts `<aitofix>your note</aitofix>`, which works in the standard VS Code preview without an extension. Literal `\aitofix{...}` is not a Markdown command; use the snippet or type the short HTML tag directly.
 
 </div>
 
