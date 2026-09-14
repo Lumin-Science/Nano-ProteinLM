@@ -11,7 +11,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -61,10 +60,8 @@ def trailing_mean(values, window=100):
     return (cumulative[ends] - cumulative[starts]) / (ends - starts)
 
 
-fig, (performance, tokens) = plt.subplots(
-    1, 2, figsize=(14, 5.8), gridspec_kw={"width_ratios": [1.15, 1]}
-)
-fig.subplots_adjust(left=0.19, right=0.955, top=0.76, bottom=0.22, wspace=0.19)
+fig, performance = plt.subplots(figsize=(10.8, 5.7))
+fig.subplots_adjust(left=0.255, right=0.95, top=0.79, bottom=0.20)
 fig.suptitle(
     "Released protein models on our evaluation split",
     x=0.035,
@@ -90,16 +87,6 @@ for i, row in enumerate(rows):
     performance.barh(i, y, height=0.52, color=TEAL if ours else BLUE, alpha=0.85)
     performance.errorbar(y, i, xerr=error, fmt="none", ecolor="#0f172a", capsize=4)
     performance.text(y + 1.2, i, f"{y:.2f}%", va="center", fontsize=10, fontweight="bold")
-    stages = row.get("stage_nominal_tokens")
-    if stages:
-        s1, s2 = np.array(stages) / 1e12
-        tokens.barh(i, s1, height=0.52, color=BLUE)
-        tokens.barh(i, s2, left=s1, height=0.52, color="#98c8e6")
-        total = s1 + s2
-    else:
-        total = row["reported_training_tokens"] / 1e12
-        tokens.barh(i, total, height=0.52, color="#9d91b5", hatch="//", edgecolor="white")
-    tokens.text(total + 0.13, i, f"{total:.2f}T", va="center", fontsize=10)
 labels = [
     "Auto Research Best\n171M · 400k S1 + 300k S2"
     if r["model"].startswith("Nano")
@@ -107,41 +94,23 @@ labels = [
     for r in rows
 ]
 performance.set_yticks(y_positions, labels)
-tokens.set_yticks(y_positions, [""] * len(rows))
-for axis in (performance, tokens):
-    axis.set_ylim(len(rows) - 0.5, -0.5)
-    axis.grid(axis="x", color="#e2e8f0", linewidth=0.7)
-    axis.set_axisbelow(True)
-    axis.tick_params(length=0, pad=8)
+performance.set_ylim(len(rows) - 0.5, -0.5)
+performance.grid(axis="x", color="#e2e8f0", linewidth=0.7)
+performance.set_axisbelow(True)
+performance.tick_params(length=0, pad=8)
 performance.set_xlim(0, 67)
 performance.set_xlabel("Contact P@L (%) ↑ · bars show mean, whiskers 95% CI")
-tokens.set_xlim(0, 7.2)
-tokens.set_xlabel("Training token budget (trillions)")
-tokens.legend(
-    handles=[
-        Patch(color=BLUE, label="Nominal Stage 1"),
-        Patch(color="#98c8e6", label="Nominal Stage 2"),
-        Patch(facecolor="#9d91b5", hatch="//", label="Reported total"),
-    ],
-    frameon=False,
-    fontsize=8.3,
-    loc="lower center",
-    bbox_to_anchor=(0.5, 1.03),
-    ncol=3,
-)
 fig.text(
     0.035,
     0.067,
-    "ESMC full-split CIs were not recovered. Profluent-E1 uses no retrieved homologs. "
-    "All available intervals use 5,000 chain-bootstrap replicates.",
+    "ESMC full-split CIs were not recovered. Profluent-E1 uses no retrieved homologs.",
     fontsize=8.7,
     color="#64748b",
 )
 fig.text(
     0.035,
-    0.018,
-    "ESMC / Auto Research tokens = batch × maximum context × steps; ESM-2 / E1 use "
-    "reported token budgets. Token exposures are not unique proteins.",
+    0.028,
+    "All available intervals use 5,000 chain-bootstrap replicates.",
     fontsize=8.7,
     color="#64748b",
 )

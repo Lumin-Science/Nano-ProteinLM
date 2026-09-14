@@ -334,7 +334,7 @@ Our **171M Auto Research Best** model completed **400k Stage 1 + 300k Stage 2 up
 
 <div class="ai">
 
-![ESMC-300M, ESMC-600M, ESM-2 150M and Profluent-E1 150M versus our final 171M model: contact P@L on our full 20,775-chain split, alongside training-token budgets.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
+![ESMC-300M, ESMC-600M, ESM-2 150M and Profluent-E1 150M versus our final 171M model: contact P@L with available 95% confidence intervals on our full 20,775-chain split.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
 
 </div>
 

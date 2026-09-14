@@ -54,7 +54,7 @@ The final reference block includes ESMC-300M, ESMC-600M, ESM-2 150M, Profluent-E
 
 <div class="ai">
 
-The two 150M references have new full-split evaluations with the unchanged fitted-probe and scoring APIs, including 5,000-resample chain confidence intervals. Profluent-E1 uses single-sequence inference without retrieved homologs. [Evaluation receipts, adapter validation and exact revisions](../released-150m-contact-20260913/README.md) document the comparison. The figure uses horizontal P@L bars so models without a comparable FLOP estimate remain visible. Its token panel retains separate nominal ESMC/Auto Research stages and shows reported total tokens for ESM-2 and E1.
+The two 150M references have new full-split evaluations with the unchanged fitted-probe and scoring APIs, including 5,000-resample chain confidence intervals. Profluent-E1 uses single-sequence inference without retrieved homologs. [Evaluation receipts, adapter validation and exact revisions](../released-150m-contact-20260913/README.md) document the comparison. The figure shows a single horizontal P@L chart with available 95% confidence intervals for all five models.
 
 </div>
 
