@@ -1,9 +1,34 @@
 #!/usr/bin/env bash
 # Usage: bash runs/speedrun.sh [recipe.yaml] [run-name] [nanoprotein.train options...]
+#        bash runs/speedrun.sh --evaluate [run-name] [nanoprotein.evaluate options...]
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
+if [[ "${1:-}" == "--evaluate" ]]; then
+  shift
+  run_name="default-100k"
+  if [[ $# -gt 0 && "$1" != --* ]]; then
+    run_name="$1"
+    shift
+  fi
+  if [[ ! "$run_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+    echo "Supply a simple run name (letters, numbers, '.', '_', '-')." >&2
+    exit 1
+  fi
+  set -a
+  if [[ -f "$repo_root/.env" ]]; then source "$repo_root/.env"; fi
+  source "$repo_root/.env.example"
+  set +a
+  exec "${UV_BIN:-uv}" run --frozen python -m nanoprotein.evaluate \
+    --checkpoint "$OUTPUT_ROOT/$run_name/checkpoint-final.pt" \
+    --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/$run_name/evaluation" \
+    --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
+    --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
+    --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source" \
+    "$@"
+fi
+
 recipe="${1:-configs/default.yaml}"
 run_name="${2:-default-100k}"
 if [[ $# -gt 0 ]]; then shift; fi

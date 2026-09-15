@@ -43,12 +43,9 @@ and all MLM validation and contact P@L assets. The general setup default is now
 bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001
 ```
 
-The [171m-validation-loss_ar.sh](171m-validation-loss_ar.sh) script loads local paths, snapshots the
-recipe, trains/evaluates both seeds through the standard APIs and summarizes the
-scores in `$OUTPUT_ROOT/experiment-001/summary.json`. Use a fresh experiment name
-for each candidate. Setup and GPU allocation happen before this command.
-Incomplete runs cannot supply a benchmark score. Loop policy lives in
-[autoresearch/program.md](../autoresearch/program.md).
+The [171m-validation-loss_ar.sh](171m-validation-loss_ar.sh) script loads local paths, snapshots the recipe, trains/evaluates both seeds through the standard APIs and summarizes the scores in `$OUTPUT_ROOT/experiment-001/summary.json`. The standard evaluator runs accelerated P@L by default: it fits one shared probe, scores all 20,775 chains with 32 workers across the four allocated GPUs, then performs the same 5,000-replicate global chain bootstrap. MLM validation retains its 32 sequences and existing masking protocol. Evaluation remains outside the one-hour training clock.
+
+Use a fresh experiment name for each candidate. Setup and GPU allocation happen before this command. Incomplete runs cannot supply a benchmark score. Loop policy lives in [autoresearch/program.md](../autoresearch/program.md).
 
 ## Test of Progress
 

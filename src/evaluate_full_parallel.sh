@@ -81,6 +81,7 @@ for ((shard = 0; shard < contact_shards; shard++)); do
     --contact-shard-index "$shard" \
     --contact-shard-count "$contact_shards" \
     --contact-probe-receipt "$probe_receipt" \
+    --contact-mode serial \
     "${cache_args[@]}" \
     --run-contact \
     --skip-validation-mlm \

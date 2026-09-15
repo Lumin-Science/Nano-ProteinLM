@@ -5,7 +5,7 @@ Run with a separate plotting environment (the training lock is unchanged):
     python .dev/scripts/plot_autoresearch_history.py
 
 Requires matplotlib >= 3.9, < 4. Accepts per-run or per-method TSV data.
-Writes PNG and SVG to .dev/reports/program2/ by default.
+Writes PNG and SVG to .dev/reports/readme-figures-20260914/ by default.
 """
 
 from __future__ import annotations
@@ -22,22 +22,9 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 from matplotlib.ticker import MultipleLocator, StrMethodFormatter
 
 ROOT = Path(__file__).resolve().parents[2]
-INK = "#233446"
-MUTED = "#64748b"
-GRAY = "#94a3b8"
-TEAL = "#087f70"
-AMBER = "#a96613"
-ACCEPTED_CHANGES = {
-    "r01_muon": (1, "Muon"),
-    "r04_batchbalance": (2, "Batch balance"),
-    "r10_sqrtloss": (3, "Sqrt loss"),
-    "r22_ffn1536": (4, "FFN 1536*"),
-    "r29_tied": (5, "Tied embeddings*"),
-}
 
 
 def summarize_runs(rows: list[dict[str, str]]) -> tuple[list[dict[str, str]], list[str]]:
@@ -135,154 +122,76 @@ def plot_history(source: Path, output: Path) -> None:
     means = [float(row["mean"]) for row in rows]
     deviations = [float(row["sample_sd"]) for row in rows]
     kept = [index for index, row in enumerate(rows) if row["decision"] == "keep"]
-    gain = (means[0] - accepted_means[-1]) / means[0] * 100
-
+    plt.rcdefaults()
     plt.rcParams.update(
         {
             "font.family": "DejaVu Sans",
             "font.size": 10,
-            "text.color": INK,
-            "axes.labelcolor": INK,
-            "xtick.color": MUTED,
-            "ytick.color": MUTED,
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "axes.linewidth": 0.8,
+            "svg.fonttype": "none",
             "svg.hashsalt": "nano-protein-autoresearch-history",
         }
     )
-    fig, ax = plt.subplots(figsize=(11.8, 5.6), facecolor="white")
-    fig.subplots_adjust(left=0.085, right=0.98, bottom=0.25, top=0.76)
-    fig.text(0.085, 0.92, "Autoresearch progress", fontsize=20, weight="bold")
-    fig.text(
-        0.98,
-        0.92,
-        f"−{gain:.2f}% loss",
-        ha="right",
-        fontsize=18,
-        weight="bold",
-        color=TEAL,
-    )
-    fig.text(
-        0.085,
-        0.858,
-        f"171M baseline · 4 × L40S · 1 h per seed · {len(seeds)} seeds",
-        fontsize=10,
-        color=MUTED,
-    )
-
+    fig, ax = plt.subplots(figsize=(10, 3.9), layout="constrained")
+    ax.set_title("AutoResearch progress", fontsize=12)
     ax.set_axisbelow(True)
-    ax.grid(axis="y", color="#eef1f4", linewidth=0.7)
-    ax.errorbar(
+    ax.grid(axis="y", color="0.9", linewidth=0.6)
+    trials = ax.errorbar(
         rounds,
         means,
         yerr=deviations,
         fmt="o",
+        color="tab:orange",
         markersize=3.5,
         markerfacecolor="white",
-        markeredgecolor=GRAY,
-        ecolor="#cbd5e1",
-        elinewidth=0.8,
-        capsize=1.8,
-        capthick=0.8,
+        elinewidth=0.9,
+        capsize=2,
+        capthick=0.9,
         alpha=0.8,
+        label="Trial mean ± SD",
         zorder=2,
     )
-    ax.step(rounds, accepted_means, where="post", color=TEAL, linewidth=2.1, zorder=3)
-    for index in [0, *kept]:
-        change = ACCEPTED_CHANGES.get(rows[index]["method_id"])
-        # R29 inherits the narrower FFN: both changes 4 and 5 are ~142M models.
-        color = INK if index == 0 else AMBER if change and change[0] >= 4 else TEAL
-        ax.errorbar(
-            index,
-            means[index],
-            yerr=deviations[index],
-            fmt="o",
-            color=color,
-            markersize=12 if change else 5,
-            markeredgecolor="white",
-            markeredgewidth=0.8,
-            elinewidth=1,
-            capsize=2,
-            capthick=1,
-            zorder=4,
+    (retained,) = ax.step(
+        rounds,
+        accepted_means,
+        where="post",
+        color="tab:blue",
+        linewidth=1.8,
+        label="Retained recipe",
+        zorder=3,
+    )
+    for number, index in enumerate(kept, start=1):
+        ax.annotate(
+            str(number),
+            (index, accepted_means[index]),
+            xytext=(5, -15),
+            textcoords="offset points",
+            color="tab:blue",
+            fontsize=10,
+            fontweight="medium",
         )
-        if change:
-            ax.text(
-                index,
-                means[index],
-                str(change[0]),
-                ha="center",
-                va="center",
-                color="white",
-                weight="bold",
-                fontsize=8,
-                zorder=5,
-            )
-
     ax.legend(
-        [
-            Line2D(
-                [],
-                [],
-                marker="o",
-                markerfacecolor="white",
-                markeredgecolor=GRAY,
-                color="#cbd5e1",
-                linestyle="none",
-                markersize=4,
-            ),
-            Line2D([], [], color=TEAL, linewidth=2.1),
-        ],
-        ["Trials ± SD", "Retained recipe"],
+        [trials, retained],
+        ["Trial mean ± SD", "Retained recipe"],
         loc="upper right",
         frameon=False,
+        ncol=2,
         fontsize=9,
-        ncols=2,
-        columnspacing=1.6,
-        borderaxespad=0,
     )
     ax.set_xlim(-0.65, rounds[-1] + 0.65)
     lower = min(mean - sd for mean, sd in zip(means, deviations, strict=True))
     upper = max(mean + sd for mean, sd in zip(means, deviations, strict=True))
     ax.set_ylim(lower - 0.004, upper + 0.004)
     ax.set_xticks(sorted({0, *range(10, rounds[-1], 10), rounds[-1]}))
-    ax.tick_params(axis="both", length=0, pad=7, labelsize=9)
+    ax.tick_params(direction="out", length=3, width=0.8)
     ax.yaxis.set_major_locator(MultipleLocator(0.02))
     ax.yaxis.set_major_formatter(StrMethodFormatter("{x:.2f}"))
-    ax.set_xlabel("Research round", labelpad=9)
-    ax.set_ylabel("Validation loss ↓", labelpad=10)
-    for spine in ax.spines.values():
-        spine.set_visible(False)
-
-    for position, index in enumerate(kept):
-        change = ACCEPTED_CHANGES.get(rows[index]["method_id"])
-        if change is None:
-            continue
-        number, label = change
-        color = AMBER if number >= 4 else TEAL
-        fig.text(
-            0.085 + position * 0.186,
-            0.098,
-            f"{number}  {label}",
-            fontsize=10,
-            weight="normal",
-            color=color,
-        )
-    fig.text(
-        0.085,
-        0.044,
-        "0 = AdamW baseline",
-        fontsize=8.5,
-        color=MUTED,
-    )
-    fig.text(
-        0.98,
-        0.044,
-        "*4–5 use ~142M models",
-        ha="right",
-        fontsize=8.5,
-        color=AMBER,
-    )
+    ax.set_xlabel("Research round")
+    ax.set_ylabel("Validation loss")
     output.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output.with_suffix(".png"), dpi=180, metadata={"Software": "Matplotlib"})
+    fig.savefig(output.with_suffix(".png"), dpi=200, metadata={"Software": "Matplotlib"})
     svg_path = output.with_suffix(".svg")
     fig.savefig(svg_path, metadata={"Date": None})
     svg_text = "\n".join(line.rstrip() for line in svg_path.read_text().splitlines())
@@ -298,7 +207,9 @@ def main() -> None:
         "--input", type=Path, default=ROOT / ".dev/reports/program2/runs-through-r38.tsv"
     )
     parser.add_argument(
-        "--output", type=Path, default=ROOT / ".dev/reports/program2/validation-loss"
+        "--output",
+        type=Path,
+        default=ROOT / ".dev/reports/readme-figures-20260914/validation-loss",
     )
     args = parser.parse_args()
     plot_history(args.input, args.output)

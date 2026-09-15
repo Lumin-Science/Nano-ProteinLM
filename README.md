@@ -1,101 +1,50 @@
 # NanoProteinLM
+> [!NOTE]
+> We are actively looking for contributor & collaborator for this project.
 
-Inspired by [nanoGPT](https://github.com/karpathy/nanoGPT) and
-[nanochat](https://github.com/karpathy/nanochat), NanoProteinLM makes protein
-language-model training accessible, inspectable and easy to experiment with.
-Our goal is to help researchers train better protein embeddings for downstream
-biology tasks, through a small, open implementation and reproducible experiments.
+Inspired by [nanochat](https://github.com/karpathy/nanochat), NanoProteinLM makes protein language-model training accessible, inspectable and easy to experiment with.
+Our goal is to help researchers train better protein embeddings for downstream biology tasks, through a small, open implementation and reproducible experiments.
 
-**For protein researchers**, this repository provides a minimal reproduction of
-ESMC-style model training: public data, readable PyTorch code, training recipes
-and evaluations in one place. We aim to contribute an open-source foundation
-that researchers can understand, reproduce and extend in support of open science.
+**For protein researchers**, this repository provides a minimal reproduction of ESMC-style model training: public data, readable PyTorch code, training recipes and evaluations in one place. We aim to contribute an open-source foundation that researchers can understand, reproduce and extend in support of open science.
 
-**For agentic researchers**, it provides a controlled environment for iterative
-autoresearch on the same scientific objective. Deterministic data selection, fixed seeds, explicit
-compute budgets and frozen evaluation protocols make recipe changes measurable.
-An agent can modify the training recipe, train, evaluate and improve it; the
-choice of agent and search strategy remains yours.
+**For agentic researchers**, it provides a controlled environment for iterative autoresearch on the same scientific objective. Deterministic data selection, fixed seeds, explicit compute budgets and frozen evaluation protocols make recipe changes measurable. An agent can modify the training recipe, train, evaluate and improve it; the choice of agent and search strategy remains yours.
 
-<p align="center">
-  <a href="#setting-up-data--environments">Setup</a> ·
-  <a href="#training-and-evaluating">Training &amp; Evaluation</a> ·
-  <span class="ai"><a href="#auto-research-protocols">Auto Research Protocols</a></span> ·
-  <span class="ai"><a href="#auto-research-experiment">Experiments</a></span> ·
-  <span class="ai"><a href="#verification-of-auto-research-discovery--test">Verification / Test</a></span> ·
-  <a href="#citation">Citation</a>
-</p>
+[AutoResearch setup](#auto-research-protocols) · [AutoResearch](#benchmarking-agentic-autoresearch-systems) · [Protein models](#training-and-evaluating) · [Dataset](#data-preparation)
 
-<div class="ai">
 
-Agent-edited documentation awaiting owner review appears in blue in the local VS Code Markdown preview; see [AI review](docs/AI_REVIEW.md).
+## Discovering better protein-model training recipes
 
-</div>
+![Matched 171M models: training loss on the left; contact P@L and validation loss on the right. Blue is the ESMC-like AdamW baseline and orange is the AutoResearch recipe.](.dev/reports/readme-figures-20260914/matched-100k-curves.png)
 
-<div class="ai">
 
-## Auto Research at 171M
+GPT-6 found this improved 171M training recipe using our [AutoResearch setup](#karpathy-style-sequential-search) and [protocols](#auto-research-protocols). Against our ESMC-like AdamW baseline, it improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. Both recipes use the same data, batch size of 2,048 and 100k updates on four H100s, with one training seed each. [Recipe details](docs/BEST_RECIPE_VS_BASELINE.md) · [Figure data and methods](.dev/reports/readme-figures-20260914/README.md).
 
-</div>
 
-<div class="ai">
-
-![Matched 171M models: orange ESMC 171M AdamW versus green Auto Research Best, September 13, 2026. Contact P@L and MLM validation loss share the left panel with separate left and right axes; dense training-loss traces and a warmup inset appear in the right panel.](.dev/reports/readme-overview-20260913/matched-100k-curves.png)
-
-</div>
-
-<div class="ai">
-
-**Auto Research Best · September 13, 2026** reaches **36.567% P@L** versus **28.173%** for our ESMC-like 171M AdamW baseline after the same **100k updates**: **+8.394 percentage points**. MLM validation loss falls from **2.414734 to 2.375701**. Both runs use batch **2,048**, four H100s, and the same **204.8M distinct training records / 48.39B model tokens**. [Recipe differences](docs/BEST_RECIPE_VS_BASELINE.md) · [Verified run records](.dev/reports/nibi-paired-unique-b2048-100k-20260909/README.md).
-
-</div>
-
-<div class="ai">
-
-The left panel includes all ten 10k-step evaluations; solid lines use the left P@L axis and dashed lines use the right validation-loss axis. P@L bands are 95% chain-bootstrap intervals over our **20,775-chain split**; validation uses **4,096 sequences**. The right panel uses **10,001 training-log records per recipe**, with raw traces and a 1,000-step trailing mean; warmup is shown in the inset. Training loss is the same rank-0 sequence-mean MLM diagnostic for both recipes. One training seed per recipe. [Figure data and methods](.dev/reports/readme-overview-20260913/README.md).
-
-</div>
 
 ## Setting up data & environments
 
 Prepare the environment and data once, then reuse them for training and evaluation.
 The same setup supports ordinary research and the fixed autoresearch task.
 
-**Scaling the training budget also requires scaling the prepared data.** Training
-checks each source against global batch × steps and prevents source resampling
-by default. See [data coverage and no-repeat training](docs/data-coverage.md) for
-sample-budget preparation, exposure accounting and checkpoint continuation.
+**Scaling the training budget also requires scaling the prepared data.** Training checks each source against global batch × steps and prevents source resampling by default. See [data coverage and no-repeat training](docs/data-coverage.md) for sample-budget preparation, exposure accounting and checkpoint continuation.
 
 ### Requirements
 
 - **Environment:** Linux, a compatible NVIDIA driver and
   `uv >=0.11.31,<0.12`. Setup installs Python and dependencies from the repository lock.
-- **Training:** the default speedrun uses **four H100 GPUs with FA3**.
-  The one-hour autoresearch profile uses **four L40S GPUs with FA2**.
+- **Training:** You would ideadly need GPU with memory > 40GB. There is no restriction to types of GPUs, but you might need to adjust the receipe accordingly. Our default speedrun uses scripts **four H100 GPUs with FA3**. The one-hour autoresearch profile uses **four L40S GPUs with FA2**.
   See [USAGE.md](docs/USAGE.md#training) for other configurations.
-- **Data preparation:** no GPU required; allow space for both downloaded Parquet
+- **Data preparation:** Allow space for both downloaded Parquet
   files and their prepared token stores—**allow 20 GB for the default 30-shard
   data setup**, plus separate space for the environment and training checkpoints.
 
 ### Data preparation
+> [!NOTE]
+> **Data may change:** we could not find a public version of the July 2023 JGI snapshot, so we substitute OMG/IMG; our corpus has [about 30% of ESMC’s reported 70%-identity clusters](docs/DATA.md#main-corpus-gap-relative-to-esmc), supports our current training budgets, and may expand as more data becomes available.
 
-We curate a public protein corpus following the ESMC data recipe, with explicit
-filtering and evaluation decontamination before training.
+We curate a public protein corpus following the ESMC data recipe, with filtering and evaluation decontamination before training.
 
-```mermaid
-flowchart LR
-    S["UniRef90 · MGnify · OMG/IMG"] --> Q["Quality filtering<br/>+ exact deduplication"]
-    Q --> C["70% identity<br/>clustering"]
-    C --> D["Evaluation<br/>decontamination"]
-    E["Protected evaluation sets"] --> D
-    D --> R["Split + verify<br/>666.0M training proteins"]
-    classDef input fill:#eef2ff,stroke:#6366f1,color:#1e1b4b
-    classDef process fill:#f8fafc,stroke:#94a3b8,color:#0f172a
-    classDef output fill:#ecfdf5,stroke:#10b981,color:#064e3b
-    class S,E input
-    class Q,C,D process
-    class R output
-```
+![Data preparation: public protein sequences are filtered, deduplicated, clustered, decontaminated against protected evaluations, then split and verified.](.dev/reports/readme-figures-20260914/data-preparation.png)
 
 <table align="center">
   <tr>
@@ -121,28 +70,9 @@ characters, and filtered to remove proteins shorter than 60 amino acids or with
 more than 20% non-canonical residues. MGnify-derived records in OMG are excluded
 from the IMG arm to avoid sampling the same source twice.
 
-We collapse exact sequence duplicates and cluster each source with MMseqs2
-Linclust at **70% sequence identity and 80% coverage** of the shorter sequence.
-To protect evaluation, we exclude exact matches and homologs of a frozen union
-of **317,000 evaluation proteins**. The homology filter requires at least 30%
-identity, 80% coverage of both sequences and an E-value of at most 0.001.
-Shared representatives are assigned to one source in UniRef90 → MGnify → OMG/IMG
-order, so they cannot be overweighted through cross-source duplicates.
+We remove exact duplicates, cluster each source at **70% sequence identity**, and exclude matches and homologs of **317,000 protected evaluation proteins**. After cross-source deduplication and length filtering, we reserve **12,288 validation proteins** and release **666.0M training proteins** in **565 training shards plus 3 validation shards**, with independent checks of hashes, duplicates and evaluation exclusions. [Filtering and verification details](docs/DATA.md).
 
-After the storage-length filter, we reserve **4,096 validation proteins per
-source** and write the remaining **666.0M training proteins** to deterministic
-Parquet shards. An independent verifier checks sequence and shard hashes,
-duplicate removal, evaluation exclusions and train/validation separation before
-publication. The release contains **565 training Parquet shards**—92 UniRef90,
-229 MGnify and 244 OMG/IMG—plus **3 validation shards** containing all 12,288
-held-out proteins.
-
-> [!NOTE]
-> **Gap from ESMC:** public OMG/IMG substitutes for the paper's July 2023 JGI
-> snapshot, leaving roughly **1.68B fewer 70%-identity representatives** in that
-> source arm; a public JGI-scale replacement remains future work.
-
-[DATA.md](docs/DATA.md) · [🤗 Processed data](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259) · [🤗 Raw dataset](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
+We open-sourced both the [🤗 Processed data](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259) and the [🤗 Raw dataset](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW) with all the cluster information. For more detailed information about data colnstruction please refer to [DATA.md](docs/DATA.md).
 
 ### Install the environment and data
 
@@ -206,103 +136,86 @@ and recipe changes.
 - **MLM validation loss ↓:** mean per-protein masked-token loss on held-out data; the reward for the [validation-loss task](tasks/171m-validation-loss.md).
 - **Contact P@L ↑:** precision among the top L predicted long-range contacts, where L is chain length, averaged over 20,775 chains; the reward for the [P@L task](tasks/171m-p-at-l.md).
 
-After setup, both metrics are ready to run. Load your paths and score a checkpoint:
+After training finishes, evaluate a completed run with:
 
 ```bash
-set -a
-if [ -f .env ]; then source .env; fi
-source .env.example
-set +a
-uv run --frozen python -m nanoprotein.evaluate \
-  --checkpoint "$OUTPUT_ROOT/default-100k/checkpoint-final.pt" \
-  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-100k/evaluation" \
-  --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
-  --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
-  --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
+bash runs/speedrun.sh --evaluate default-100k
 ```
 
-This reports MLM loss on 4,096 held-out sequences and P@L over the full contact
-population. Evaluation is a separate run; a 100-step training trial does not
-shorten the evaluation protocol. See [EVALUATION.md](docs/EVALUATION.md#evaluation-execution)
-for commands, released ESMC comparisons, probe definitions, confidence intervals
-and additional downstream tasks.
+This loads your paths, reports MLM loss on **4,096 held-out sequences**, and scores P@L over **all 20,775 chains** using the accelerated parallel evaluator. Replace `default-100k` with your run name; additional [evaluation options](docs/EVALUATION.md#evaluation-execution) can follow it. Evaluation is separate from training and keeps the same sample counts for short training trials.
 
-<div class="ai">
 
 ## Auto Research Protocols
 
+Use NanoProteinLM to improve protein-model training under a fixed compute budget. Each task defines the objective, permitted changes, search-time evaluation and scale-up test. These protocols apply independently of the agent or search strategy.
+
+
+
+- **Objective:** the scientific outcome the research aims to improve.
+- **Design space:** what may change during research and what must remain fixed.
+- **Per-round budget:** the resources allowed to evaluate one candidate, including hardware, training time and number of seeds.
+- **Hill-climbing reward:** the score used to compare candidates during search, its direction and how results are combined across seeds.
+- **Scale-up test:** a comparison against the baseline under a larger training budget or model size to check whether the discovered improvements transfer.
+
+| Protocol item | Requirement |
+|---|---|
+| Objective | Finding better training receipe for training Protein Embedding Model. |
+| Design space | **Fixed:** the task’s 7-shard corpus, source mixture, tokenizer, Stage-1 context and learning-rate schedule, evaluation, dependencies and input receipts. Keep trainable parameter count within **±5% of the original 171M model**; no pretrained weights, held-out training or changes to task scripts. **Mutable:** Anything else including training recipe, model architecture and training implementation. |
+| Per-round budget | Fixed GPU walltime. Our default is N x **one hour on four L40S GPUs**, where N is number of seeds. Final checkpoint saving and evaluation are excluded from this buget. For an alternative such as 15 minutes on four H100s, rebenchmark the baseline and use that same hardware and time budget for every candidate. |
+| Hill-climbing reward | The selected metric, averaged across training seeds, measures progress; report its sample SD and use the other metric as a diagnostic. Per seed, evaluate MLM loss on **32 validation sequences** and P@L on **all 20,775 chains**, report a 95% confidence interval for P@L. |
+| Scale-up test| Scaled up training under a fixed budget of **about 24B model tokens per seed** (24.20B target), taking roughly **12 hours on four H100s**. Evaluated **4,096 MLM validation sequences** and **all 20,775 contact chains**, following the [scale-up test settings](docs/EVALUATION.md#manual-test-of-progress). |
+
+
+Full task definitions and commands: [171M validation loss](tasks/171m-validation-loss.md) · [171M contact P@L](tasks/171m-p-at-l.md).
+
+
+## Benchmarking Agentic AutoResearch Systems
+
+Compare agents using the same starting recipe, task and **fixed number of research rounds**. Rank agents by their best valid mean reward: lowest validation loss or highest P@L. Report agent model, search settings and agent-side compute costs alongside the result.
+
+<div class="ai">
+
+Then compare each agent’s selected recipe under the same **scale-up test** to measure which discoveries transfer to a larger training budget. To test transfer to larger models, define a separate shared model size and training budget before evaluation; the 171M search itself retains its ±5% parameter bound.
+
 </div>
 
-Use NanoProteinLM as a research environment for improving training recipes under
-controlled budgets. Task definitions describe what is measured and held fixed;
-[autoresearch/program.md](autoresearch/program.md) guides the research loop.
-Tell your coding agent:
+### Karpathy-style sequential search
+
+[autoresearch/program.md](autoresearch/program.md) provides a small Karpathy-style hill-climbing baseline: propose one change, train and evaluate it, keep or discard it, then repeat. Candidates are explored sequentially; training and evaluation can use multiple GPUs.
+
+![Example AutoResearch loop: evaluate a baseline, propose a change, train and evaluate two seeds, keep or discard, record the result and repeat; test the selected recipe at scale after search.](.dev/reports/readme-figures-20260914/autoresearch-loop.png)
+
+
+Each candidate uses the selected task's measurements and seed aggregation. The current example program compares seed-level 95% confidence intervals: for a reward oriented so higher is better, keep a candidate only when `candidate.ci95_low > incumbent.mean` and `candidate.mean > incumbent.ci95_high`. Use negative validation loss for the loss task's reward comparison and retain the raw loss in reports; P@L already has the higher-is-better direction. Every trial and decision is recorded. This acceptance policy belongs to the example agent, not the task protocol.
+
+
+> [!NOTE]
+> This hill-climbing loop is a simple AutoResearch baseline. You are welcome to bring your own agent or search strategy, provided it follows the selected task's protocol. Discoveries are evaluated under the same scale-up test settings.
+
+To use the included loop, tell your coding agent:
 
 > Read `autoresearch/program.md` and start autoresearch for `tasks/171m-validation-loss.md`.
 
-For the same task with contact P@L as the reward, use:
+For contact P@L as the objective:
 
 > Read `autoresearch/program.md` and start autoresearch for `tasks/171m-p-at-l.md`.
 
-The program covers iteration and keep/discard decisions. The selected task holds
-the scientific protocol and commands; the agent reviews its boundaries.
+The completed 38-round search below used an earlier acceptance rule: keep a candidate when its mean validation-loss reduction exceeds its own two-seed sample SD. The plot preserves those recorded decisions; the blue line follows the retained recipe, and orange points show trial means with sample-SD error bars. Numbers 1–5 identify the [accepted changes](.dev/reports/program2/README.md#numbered-improvements).
 
-### Protocol
 
-Search trains each recipe for **one hour on four L40S GPUs per seed**, using **two matched seeds**. Choose mean MLM validation loss (lower is better) or mean contact P@L (higher is better) as the task's reward; the other metric remains a diagnostic. Both tasks use the same measurements. Data and evaluation stay fixed, and model size must remain within ±5% of the original 171M baseline. The task script runs one measurement; it does not implement the research loop.
-
-The benchmark owner manually checks progress with **24.20B model tokens per seed on four H100s**, comparing mean MLM loss and P@L. Full rules and research commands are in [171m-validation-loss.md](tasks/171m-validation-loss.md) and [171m-p-at-l.md](tasks/171m-p-at-l.md).
-
-<div class="ai">
-
-## Auto Research Experiment
-
-</div>
-
-<div class="ai">
-
-A completed 38-round search found the cumulative recipe changes below. The figure shows their effect on the fixed-budget validation objective.
-
-</div>
-
-<div class="ai">
-
-![Autoresearch progress across 38 rounds: five cumulative improvements reduce validation loss by 2.20%; changes 4–5 use smaller models.](.dev/reports/program2/validation-loss.png)
-
-</div>
-
-<div class="ai">
-
-| Recipe | Validation loss ↓ | P@L (%) ↑ |
-|---|---:|---:|
-| Baseline | 2.63868 ± 0.01303 | 9.648 ± 0.598 |
-| 1: + Muon | 2.61807 ± 0.00945 | 9.795 ± 0.189 |
-| 2: + batch balance | 2.60415 ± 0.00650 | 9.370 ± 0.270 |
-| 3: + sqrt loss | 2.59437 ± 0.00578 | **10.533 ± 0.366** |
-| 4: + FFN 1536* | 2.59095 ± 0.00132 | 9.829 ± 0.286 |
-| 5: + tied embeddings* | **2.58057 ± 0.00544** | 9.527 ± 0.720 |
-
-</div>
-
-<div class="ai">
+![Validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](.dev/reports/readme-figures-20260914/validation-loss.png)
 
 Two-seed mean ± sample SD; one hour on four L40S GPUs per seed. [Full experiment record](.dev/reports/program2/README.md) · [Auto Research methods](docs/AUTORESEARCH.md).
 
-</div>
+*Changes 4–5 use approximately 142M parameters and predate the ±5% size rule. The 171M scale-up test below skips change 4 and applies tied embeddings directly to Setting 3.
 
-<div class="ai">
 
-*Changes 4–5 use approximately 142M parameters and predate the ±5% size rule. The fixed-size verification below skips change 4 and applies tied embeddings directly to Setting 3.
+### Scale-up test
 
-</div>
 
-<div class="ai">
+The results below are the historical 100k-step, single-seed scale-up test. New discoveries use the two-seed, 24.20B-token test specified in the [protocol above](#auto-research-protocols); the token target determines the budget, while the roughly 12-hour runtime is an estimate.
 
-## Verification of Auto Research Discovery / Test
 
-</div>
-
-<div class="ai">
 
 | Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
 |---|---:|---:|---:|---:|
@@ -312,54 +225,27 @@ Two-seed mean ± sample SD; one hour on four L40S GPUs per seed. [Full experimen
 | **3: + sqrt loss (default)** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
 | 5: + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
 
-</div>
-
-<div class="ai">
-
 Each recipe trains for **100k Stage 1 steps on four H100s**, batch **1,024**, LR **5e-4**, weight decay **0.01** and **1,000 warmup steps**. The Muon recipe includes RMSNorm, residual routing, depth-scaled initialization and RoPE 10k; later rows add changes cumulatively. One seed per recipe; CIs bootstrap 20,775 contact chains, and training times exclude evaluation. [Recipe details](docs/BEST_RECIPE_VS_BASELINE.md) · [Run records](.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
 
-</div>
 
-<div class="ai">
 
-## Final model and released protein-model references
+### Longer training of the best candidate
 
-</div>
 
-<div class="ai">
+<!-- <div class="ai">
 
-Our **171M Auto Research Best** model completed **400k Stage 1 + 300k Stage 2 updates** at batch **2,048**, reaching **46.264% P@L** and **2.248124 validation loss**. All 30 Stage 2 evaluations and the final full model/optimizer checkpoint passed verification. [Final run record](.dev/reports/nibi-setting3-stage2-b2048-300k-20260911/README.md) · [Training recipes](.dev/configs/nibi/).
+![ESMC-300M, ESMC-600M and ESM-2 150M versus our final 171M model: contact P@L with available 95% confidence intervals on our full 20,775-chain split.](.dev/reports/readme-figures-20260914/released-model-comparison.png)
 
-</div>
+</div> -->
 
-<div class="ai">
+| Model | P@L ↑ | Estimated training FLOPs |
+|---|---:|---:|
+| ESMC-600M | 58.031% | 2.491 × 10²² |
+| ESMC-300M | 53.867% | 1.480 × 10²² |
+| **AutoResearch 171M** | **46.264%** | **2.334 × 10²¹** |
 
-![ESMC-300M, ESMC-600M and ESM-2 150M versus our final 171M model: contact P@L with available 95% confidence intervals on our full 20,775-chain split.](.dev/reports/readme-overview-20260913/released-model-comparison.png)
+Our 171M recipe reaches **46.264% P@L** with 2.3e21 flops training buget(.dev/reports/nibi-setting3-stage2-b2048-300k-20260911/README.md). All models use the same frozen 20,775-chain contact evaluation, but their training corpora and compute budgets differ, so this is a reference comparison rather than a controlled recipe comparison. FLOPs are [estimates with stated token and context assumptions](.dev/reports/readme-figures-20260914/README.md#training-compute-estimates).
 
-</div>
-
-<div class="ai">
-
-| Model | Our split P@L ↑ | Our split 95% CI | Estimated FLOPs¹ | Training tokens (S1 + S2 / total)¹ |
-|---|---:|---:|---:|---:|
-| ESMC-600M | 58.031% | — | 2.491e+22 | 4.194T + 2.097T |
-| ESMC-300M | 53.867% | — | 1.480e+22 | 4.194T + 2.097T |
-| **Auto Research Best · 171M** | **46.264%** | **46.016–46.523%** | 2.334e+21 | 0.419T + 1.258T |
-| ESM-2 150M | 44.927% | 44.682–45.177% | — | 1.000T total |
-
-</div>
-
-<div class="ai">
-
-All P@L values above use **our 20,775-chain split** and the same frozen fitted-probe protocol. ESM-2 150M has a new full-split evaluation and a 5,000-resample chain-bootstrap interval; ESMC full-split intervals were not recovered. [ESM-2 evaluation and audit record](.dev/reports/released-150m-contact-20260913/esm2/RESULT_VERIFIED.json).
-
-</div>
-
-<div class="ai">
-
-¹ ESMC and our model use nominal **batch × maximum context × steps** token budgets and the [ESMC paper](https://doi.org/10.64898/2026.06.03.729735) FLOP formula. ESM-2’s approximately **1T total tokens** follow [its author’s training description](https://cs.nyu.edu/media/publications/ZemingLin-phd.pdf). Its two-stage breakdown and comparable FLOP estimate are omitted. Our actual logged model tokens are **193.501B in Stage 1 + 181.404B in Stage 2**, with a **6ND estimate of 3.837e20 FLOPs**. [Sources and calculation details](.dev/reports/readme-overview-20260913/README.md).
-
-</div>
 
 ## Citation
 

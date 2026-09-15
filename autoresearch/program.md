@@ -7,7 +7,7 @@ Read the user-selected task and the project's `AGENTS.md`. If no task is selecte
 Choose `ar_run_name` to briefly summarize the task and user prompt.
 
 - Use an isolated worktree under the main checkout's `.worktrees/<branch-name>/` directory. If the current branch does not match `ar-YYMMDD-<ar_run_name>`, create a worktree with a branch of that form; otherwise reuse its existing worktree and derive the date and `ar_run_name` from the branch. Run all campaign edits and commands from that worktree.
-- Follow the task's setup and baseline requirements, then evaluate the starting implementation to establish the incumbent. Keep the scoring reference fixed.
+- Follow the task's setup and baseline requirements, then run its measurement command to evaluate the starting implementation and establish the incumbent. Use the task's standard evaluation entry point and execution defaults for every candidate. Keep the scoring reference fixed.
 - Keep `results.tsv`, `research.log` and trial artifacts under `autoresearch/<ar_run_name>/`. Resume existing journals; reuse results only when code, data, evaluation settings and environment still meet the task's requirements.
 
 ## Evaluations per candidate

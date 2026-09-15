@@ -1107,6 +1107,7 @@ def merge_contact_evaluation(
     *,
     contact_paths: list[Path],
     expected_contact_chains: int,
+    contact_bootstrap: int | None = None,
 ) -> dict[str, object]:
     """Strictly merge exact deterministic P@L shards without P-CORE."""
 
@@ -1186,7 +1187,7 @@ def merge_contact_evaluation(
         raise ValueError("invalid P@L values")
     if not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in random_precision):
         raise ValueError("invalid random P@L values")
-    return {
+    receipt = {
         "schema_version": 1,
         "protocol": "autoresearch-frozen-full-contact-merge-v1",
         "checkpoint_sha256": checkpoint_sha256,
@@ -1198,6 +1199,27 @@ def merge_contact_evaluation(
         "selection_seed": 20260820,
         "components": components,
     }
+    if contact_bootstrap is not None:
+        contact = dict(shards[0][2])
+        probe_digest = contact.get("probe_receipt_sha256")
+        if any(
+            part.get("probe_receipt_sha256") != probe_digest for _, _, part in shards.values()
+        ):
+            raise ValueError("contact shards use different fitted probe receipts")
+        contact.update(
+            evaluation_chains=len(rows),
+            selection_total_chains=len(rows),
+            shard_index=0,
+            shard_count=1,
+            precision_at_l=receipt["p_at_l"],
+            random_precision_at_l=receipt["random_p_at_l"],
+            precision_at_l_uncertainty=bootstrap_mean_interval(
+                np.asarray(precision), replicates=contact_bootstrap, seed=20260820
+            ),
+            rows=rows,
+        )
+        receipt["contact"] = contact
+    return receipt
 
 
 def merge_full_evaluation(
@@ -1344,7 +1366,7 @@ def merge_full_evaluation(
     }
 
 
-def main() -> None:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--data-root", type=Path, required=True)
@@ -1355,8 +1377,20 @@ def main() -> None:
     parser.add_argument("--validation-batches", type=int, default=8)
     parser.add_argument("--validation-batch-size", type=int, default=4)
     parser.add_argument("--validation-context", type=int, default=512)
-    parser.add_argument("--contact-chains", type=int, default=32)
+    parser.add_argument(
+        "--contact-chains", type=int, default=20775, help="default: all 20,775 chains"
+    )
     parser.add_argument("--contact-bootstrap", type=int, default=5000)
+    parser.add_argument(
+        "--contact-mode",
+        choices=("parallel", "serial"),
+        default="parallel",
+        help="parallel (default) shares one probe across workers; serial uses one process",
+    )
+    parser.add_argument(
+        "--contact-gpus", help="GPU identifiers; defaults to visible CUDA devices"
+    )
+    parser.add_argument("--contact-workers", type=int, help="default: eight workers per GPU")
     parser.add_argument("--contact-shard-index", type=int, default=0)
     parser.add_argument("--contact-shard-count", type=int, default=1)
     parser.add_argument("--contact-probe-receipt", type=Path)
@@ -1372,11 +1406,28 @@ def main() -> None:
     parser.add_argument("--run-contact", action="store_true")
     parser.add_argument("--skip-validation-mlm", action="store_true")
     parser.add_argument("--resume-components", action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.run_pcore and args.run_pcore_diagnostic:
         parser.error("choose either --run-pcore or --run-pcore-diagnostic")
     if args.pcore_diagnostic_timeout <= 0 or args.pcore_probe_threads <= 0:
         parser.error("diagnostic timeout and probe threads must be positive")
+    if args.run_contact and (args.external_src is None or args.contact_root is None):
+        parser.error("--run-contact requires --external-src and --contact-root")
+    if (args.run_pcore or args.run_pcore_diagnostic) and (
+        args.external_src is None or args.pcore_root is None
+    ):
+        parser.error("P-CORE evaluation requires --external-src and --pcore-root")
+    if args.contact_chains <= 0 or args.contact_bootstrap < 0:
+        parser.error("contact chains must be positive and bootstrap nonnegative")
+    if args.contact_workers is not None and args.contact_workers <= 0:
+        parser.error("contact workers must be positive")
+    if not 0 <= args.contact_shard_index < args.contact_shard_count:
+        parser.error("invalid contact shard index/count")
+    return args
+
+
+def main() -> None:
+    args = parse_args()
     if not torch.cuda.is_available():
         raise RuntimeError("evaluation requires CUDA")
     np.random.seed(20260821)
@@ -1385,17 +1436,37 @@ def main() -> None:
     evaluation_started = time.monotonic()
     timing_seconds: dict[str, float] = {}
     device = torch.device("cuda", 0)
-    model, checkpoint_packet = load_checkpoint(args.checkpoint, device)
     args.output_root.mkdir(parents=True, exist_ok=True)
     resumed_components: list[str] = []
     report: dict[str, object] = {
         "schema_version": 1,
         "checkpoint": str(args.checkpoint.resolve()),
         "checkpoint_sha256": file_sha256(args.checkpoint),
-        "checkpoint_training_seconds": checkpoint_packet["training_seconds"],
         "resumed_components": resumed_components,
         "timing_seconds": timing_seconds,
     }
+    parallel_contact = (
+        args.run_contact
+        and args.contact_mode == "parallel"
+        and args.contact_shard_count == 1
+        and args.contact_probe_receipt is None
+    )
+    if parallel_contact:
+        from .contact_parallel import run_contact_parallel
+
+        component_started = time.monotonic()
+        parallel_report = run_contact_parallel(args, str(report["checkpoint_sha256"]))
+        report.update(parallel_report)
+        timing_seconds["contact"] = time.monotonic() - component_started
+    needs_model = (
+        not args.skip_validation_mlm
+        or args.run_pcore
+        or args.run_pcore_diagnostic
+        or (args.run_contact and not parallel_contact)
+    )
+    if needs_model:
+        model, checkpoint_packet = load_checkpoint(args.checkpoint, device)
+        report["checkpoint_training_seconds"] = checkpoint_packet["training_seconds"]
     if not args.skip_validation_mlm:
         validation_path = args.output_root / "VALIDATION_MLM.json"
         if args.resume_components and validation_path.exists():
@@ -1416,9 +1487,7 @@ def main() -> None:
             timing_seconds["validation_mlm"] = time.monotonic() - component_started
             write_json(validation_path, validation)
         report["validation_mlm"] = validation
-    if args.run_contact:
-        if args.external_src is None or args.contact_root is None:
-            parser.error("--run-contact requires --external-src and --contact-root")
+    if args.run_contact and not parallel_contact:
         contact_path = args.output_root / "CONTACT.json"
         if args.resume_components and contact_path.exists():
             contact = json.loads(contact_path.read_text())
@@ -1444,8 +1513,6 @@ def main() -> None:
             write_json(contact_path, contact)
         report["contact"] = contact
     if args.run_pcore_diagnostic:
-        if args.external_src is None or args.pcore_root is None:
-            parser.error("--run-pcore-diagnostic requires --external-src and --pcore-root")
         component_started = time.monotonic()
         report["pcore_diagnostic"] = run_pcore_diagnostic(
             model,
@@ -1460,8 +1527,6 @@ def main() -> None:
         )
         timing_seconds["pcore_diagnostic"] = time.monotonic() - component_started
     if args.run_pcore:
-        if args.external_src is None or args.pcore_root is None:
-            parser.error("--run-pcore requires --external-src and --pcore-root")
         component_started = time.monotonic()
         report["pcore"] = run_pcore(
             model,
@@ -1477,7 +1542,10 @@ def main() -> None:
         )
         timing_seconds["pcore"] = time.monotonic() - component_started
     timing_seconds["total"] = time.monotonic() - evaluation_started
-    report["peak_cuda_memory_bytes"] = int(torch.cuda.max_memory_allocated(device))
+    report["peak_cuda_memory_bytes"] = max(
+        int(report.get("peak_cuda_memory_bytes", 0)),
+        int(torch.cuda.max_memory_allocated(device)),
+    )
     report_path = args.output_root / "EVALUATION.json"
     write_json(report_path, report)
     print(

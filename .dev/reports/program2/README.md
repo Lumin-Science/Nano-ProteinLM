@@ -28,6 +28,31 @@ The line follows the retained recipe. Changes 4–5 use roughly 142M parameters
 and predate the current fixed-size task. See the [source TSV](runs-through-r38.tsv)
 and [current task definition](../../../tasks/171m-validation-loss.md) for their distinct protocols.
 
+<div class="ai">
+
+## Numbered improvements
+
+</div>
+
+<div class="ai">
+
+Numbers 1–5 in the [README progress figure](../readme-figures-20260914/validation-loss.png) correspond to rounds 1, 4, 10, 22 and 29. Each change is cumulative; values are means ± sample SD across seeds 42 and 43, trained for one hour on four L40S GPUs per seed. Changes 4–5 use approximately 142M parameters and predate the current ±5% size rule.
+
+</div>
+
+<div class="ai">
+
+| Recipe | Validation loss ↓ | P@L (%) ↑ |
+|---|---:|---:|
+| Baseline | 2.63868 ± 0.01303 | 9.648 ± 0.598 |
+| 1: + Muon | 2.61807 ± 0.00945 | 9.795 ± 0.189 |
+| 2: + batch balance | 2.60415 ± 0.00650 | 9.370 ± 0.270 |
+| 3: + sqrt loss | 2.59437 ± 0.00578 | **10.533 ± 0.366** |
+| 4: + FFN 1536* | 2.59095 ± 0.00132 | 9.829 ± 0.286 |
+| 5: + tied embeddings* | **2.58057 ± 0.00544** | 9.527 ± 0.720 |
+
+</div>
+
 ## R29 improvement
 
 R29 ties the input embedding to the final vocabulary projection. Both roles contribute gradients to one AdamW-owned parameter; the rest of R22 is retained. It removes 49,152 parameters, giving **142,310,464** trainable parameters.

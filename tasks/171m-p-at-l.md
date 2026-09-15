@@ -24,6 +24,8 @@ bash tasks/171m-p-at-l_ar.sh configs/default.yaml experiment-p-at-l-001
 
 The [171m-p-at-l_ar.sh](171m-p-at-l_ar.sh) script delegates to the same [measurement command](171m-validation-loss_ar.sh) as the validation-loss task. It loads local paths, snapshots the recipe, trains/evaluates both seeds through the standard APIs and summarizes both metrics in `$OUTPUT_ROOT/experiment-p-at-l-001/summary.json`. Use `metrics.p_at_l.mean` as the reward, `metrics.p_at_l.sample_sd` as its sample SD and each entry's `p_at_l` in `runs` as the per-seed score. P@L is stored as a fraction from 0 to 1; use the same units for all score comparisons.
 
+The standard evaluator runs accelerated P@L by default: one shared probe, 32 workers across the four allocated GPUs, all 20,775 frozen chains and the same 5,000-replicate global chain bootstrap. MLM validation retains its 32 sequences and existing masking protocol. Evaluation remains outside the one-hour training clock; no separate fast-evaluation command is needed.
+
 Use a fresh experiment name for each candidate. Setup and GPU allocation happen before this command. Incomplete runs cannot supply a benchmark score. Loop policy lives in [autoresearch/program.md](../autoresearch/program.md); apply its higher-is-better comparison rule to P@L.
 
 ## Test of Progress

@@ -94,6 +94,12 @@ measurement; the 1,024-chain diagnostic remains an execution check only.
 
 ## Evaluation execution
 
+<div class="ai">
+
+For a run created by the speedrun, use `bash runs/speedrun.sh --evaluate default-100k` after setup. It loads `.env`, measures MLM loss on 4,096 sequences and runs parallel P@L over all 20,775 chains with 5,000 bootstrap replicates. Replace the run name or append options such as `--contact-gpus 0,1 --contact-workers 16`; the ordinary evaluation API below remains available for other checkpoints.
+
+</div>
+
 `EVAL_PROFILE=full` runs all six frozen representation-probe contracts and
 aggregates the four trusted tasks into P-CORE. It embeds protein means for all
 108,215 sequences but writes residue embeddings only for the 11,411
@@ -102,15 +108,17 @@ subprocesses with bounded parallelism, followed by a digest-checked reduction.
 Secondary structure performs four full-residue LBFGS fits and is not suitable
 for a short training gate.
 
-The full contact evaluation uses the exact fast P@L path by default. It fits
-the frozen probe once, binds the coefficients to the checkpoint and contact
-manifest, and reuses that receipt across every deterministic inference shard.
-Because the selected L1 probe is sparse, inference transfers and scores only
-nonzero attention channels. Contact shards can run concurrently with
-representation embedding. The merger restores the global SHA-ranked chain
-order and performs the same 5,000-replicate chain bootstrap over all 20,775
-rows; these execution changes do not alter the examples, probe, ordering, or
-metric.
+<div class="ai">
+
+The standard `python -m nanoprotein.evaluate --run-contact` command runs parallel P@L by default, including both task measurement scripts and the manual Test of Progress commands. It fits the frozen probe once, shares the checkpoint- and manifest-bound receipt across eight workers per visible GPU (32 workers on four GPUs), and scores only nonzero L1-probe channels. It restores the global SHA-ranked chain order and performs the same 5,000-replicate chain bootstrap over all 20,775 chains. `EVALUATION.json` retains the ordinary combined MLM/contact format used by the seed summarizer.
+
+</div>
+
+<div class="ai">
+
+Use `--contact-gpus 0,1,2,3` to select GPU identifiers and `--contact-workers 16` to adjust worker concurrency. By default, GPU selection follows `EVAL_GPUS`, then `CUDA_VISIBLE_DEVICES`, then all detected GPUs. Use `--contact-mode serial` for one-process evaluation. The default contact population is 20,775; a smaller `--contact-chains` value is an explicit diagnostic subset. Worker shard arguments and shared probe receipts remain supported for existing launchers.
+
+</div>
 
 Static contact labels and eligible-pair geometry may also be cached once. The
 optional cache is bound to the source payload and contact-manifest digests and
@@ -118,11 +126,11 @@ must pass a complete preflight hash check before inference. Without a cache,
 the same fast probe-reuse and sparse-scoring path reads the frozen source
 payloads directly.
 
-Component receipts (`VALIDATION_MLM.json`, `CONTACT.json`, diagnostic
-embedding, and per-task JSON) are written atomically. A later failure does not
-erase completed work, and the runner reuses completed components on restart.
-Output roots are checkpoint-specific; never point a different checkpoint at an
-existing evaluation directory.
+<div class="ai">
+
+Component receipts (`VALIDATION_MLM.json`, `CONTACT.json`, diagnostic embedding, and per-task JSON) are written atomically. A later failure preserves completed work. Use `--resume-components` with the same output directory and arguments to reuse completed parallel contact shards; the saved request binds the checkpoint digest and execution settings. Use a fresh output directory for a different checkpoint or evaluation request. The parallel contact workers finish before MLM/P-CORE runs in the parent process, so its model does not occupy GPU memory during contact inference.
+
+</div>
 
 Execution improvements retained on `main` include cross-protein residue-budget
 batching, secondary-structure-only residue caches, bounded parallel probe
@@ -140,18 +148,32 @@ uv run --frozen python -m nanoprotein.build_contact_scoring_cache \
   --output-root "$CONTACT_SCORING_CACHE_ROOT"
 ```
 
-Then run the full fast contact evaluation with four GPUs:
+<div class="ai">
+
+Run contact-only evaluation through the same standard command, optionally using the prepared static cache:
+
+</div>
+
+<div class="ai">
 
 ```bash
-CONTACT_ROOT=/path/to/frozen-contact-data \
-EXTERNAL_SRC=/path/to/evaluation-source \
-CONTACT_SCORING_CACHE_ROOT=/path/to/contact-scoring-cache \
-EVAL_GPUS=0,1,2,3 \
-  bash src/evaluate_p_at_l_parallel.sh
+uv run --frozen python -m nanoprotein.evaluate \
+  --checkpoint "$OUTPUT_ROOT/default-100k/checkpoint-final.pt" \
+  --data-root "$DATA_ROOT/training" \
+  --output-root "$OUTPUT_ROOT/default-100k/eval-p-at-l" \
+  --contact-root "$DATA_ROOT/evaluation/contact" \
+  --external-src "$DATA_ROOT/evaluation/source" \
+  --run-contact --skip-validation-mlm --contact-gpus 0,1,2,3 \
+  --contact-scoring-cache-root "$CONTACT_SCORING_CACHE_ROOT"
 ```
 
-Omit `CONTACT_SCORING_CACHE_ROOT` to disable only the static cache. Probe reuse,
-sparse scoring, deterministic sharding, and exact aggregation remain enabled.
+</div>
+
+<div class="ai">
+
+Omit `--contact-scoring-cache-root` to read the frozen structure payloads directly. Probe reuse, sparse scoring, deterministic sharding and exact aggregation remain enabled. When a cache root is supplied, the evaluator performs its hash preflight automatically. The older `src/evaluate_p_at_l_parallel.sh` entry point delegates to this evaluator and preserves its environment-variable interface and `P_AT_L.json` output.
+
+</div>
 
 Baseline training recipes, compute-matched comparisons, and fairness caveats
 are documented in [`BASELINES.md`](BASELINES.md).

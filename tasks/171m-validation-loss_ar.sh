@@ -7,6 +7,10 @@ if [[ -f .env ]]; then source .env; fi
 source .env.example
 set +a
 
+IFS=',' read -r -a gpu_ids <<< "${CUDA_VISIBLE_DEVICES:-0,1,2,3}"
+[[ ${#gpu_ids[@]} -ge 4 ]] || { echo "This task requires four visible GPUs" >&2; exit 2; }
+evaluation_gpus="${gpu_ids[0]},${gpu_ids[1]},${gpu_ids[2]},${gpu_ids[3]}"
+
 recipe="${1:-configs/default.yaml}"
 run_root="$OUTPUT_ROOT/${2:-experiment-001}"
 mkdir -p "$(dirname "$run_root")"
@@ -24,11 +28,13 @@ for seed in 42 43; do
     --checkpoint-interval 0 --periodic-evaluation-interval 0 \
     --peak-bf16-tflops-per-gpu 312
 
+  # The standard evaluator shares one probe across parallel P@L workers.
   uv run --frozen python -m nanoprotein.evaluate \
     --checkpoint "$run_dir/checkpoint-final.pt" --data-root "$DATA_ROOT/training" \
     --output-root "$run_dir/evaluation" \
     --validation-batches 8 --validation-batch-size 4 --validation-context 512 \
-    --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
+    --run-contact --contact-mode parallel --contact-chains 20775 --contact-bootstrap 5000 \
+    --contact-gpus "$evaluation_gpus" --contact-workers 32 \
     --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
 done
 

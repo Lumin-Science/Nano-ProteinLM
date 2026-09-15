@@ -132,13 +132,23 @@ Each task script loads `.env`, saves the candidate recipe, runs seeds 42 and 43 
 
 ## Evaluation
 
+<div class="ai">
+
+After setup, `bash runs/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint with 4,096 MLM validation sequences and parallel contact P@L over all 20,775 chains. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
+
+</div>
+
 Setup installs all MLM validation data plus the frozen contact payload and
 evaluator under `$DATA_ROOT/evaluation/{contact,source}`. The installer checks
 all frozen hashes before reporting success and verifies existing installations
 on reuse. See [contact data provenance](CONTACT_DATA.md) and
 [evaluation provenance](EVALUATION.md#dataset-provenance-and-split-contract).
 
-With the two roots loaded in your shell, evaluate a saved checkpoint:
+<div class="ai">
+
+With the two roots loaded in your shell, evaluate a saved checkpoint. Contact P@L uses parallel workers across the visible GPUs by default (32 workers on four GPUs), with one shared probe and the full 20,775-chain population:
+
+</div>
 
 ```bash
 uv run --frozen python -m nanoprotein.evaluate \
@@ -149,10 +159,11 @@ uv run --frozen python -m nanoprotein.evaluate \
   --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
 ```
 
-Omit `--run-contact` and the contact arguments for MLM alone. Parallel evaluation
-helpers live in `src/`; [EVALUATION.md](EVALUATION.md) documents their interfaces.
-Test of Progress is owner-run using the [manual commands](EVALUATION.md#manual-test-of-progress).
-There is no verification launcher.
+<div class="ai">
+
+Omit `--run-contact` and the contact arguments for MLM alone. Use `--contact-mode serial` for one-process contact evaluation, or `--contact-gpus` and `--contact-workers` to select devices and concurrency. Both research tasks use the standard parallel evaluator automatically. [EVALUATION.md](EVALUATION.md#evaluation-execution) documents caching, resuming and the compatibility launcher. Test of Progress remains owner-run using the [manual commands](EVALUATION.md#manual-test-of-progress).
+
+</div>
 
 ## Repository layout
 
