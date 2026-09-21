@@ -1,0 +1,204 @@
+{
+  "steps": 100000,
+  "parameter_count": 170559856,
+  "last_loss": 2.39448082447052,
+  "last_metrics": {
+    "attention_backend": "flash",
+    "batch_balance": {
+      "rank_tokens_after": [
+        15382,
+        15382,
+        15381,
+        15381
+      ],
+      "rank_tokens_before": [
+        15153,
+        14620,
+        14774,
+        16979
+      ]
+    },
+    "data_resampling": "error",
+    "estimated_training_flops": 24762204148833438720,
+    "event": "train",
+    "filled_residues": 23992183520,
+    "gradient_norm": 0.11582964658737183,
+    "learning_rate": 0.00045000000000000004,
+    "loss": 2.39448082447052,
+    "mfu_6n": 0.15632644734700732,
+    "mfu_denominator": "6 * parameters * model_tokens / (312.0e12 BF16 FLOP/s * 4 GPUs)",
+    "model_tokens": 24196983520,
+    "objective_loss": 2.3477994203567505,
+    "optimizer": "muon",
+    "optimizer_step": 100000,
+    "sequences_seen": 102400000,
+    "source_counts_global": {
+      "mgnify": 11158844,
+      "omg_img": 54746671,
+      "uniref90": 36494485
+    },
+    "source_counts_rank0": {
+      "mgnify": 2787677,
+      "omg_img": 13688313,
+      "uniref90": 9124010
+    },
+    "source_epoch_maxima": {
+      "mgnify": 0,
+      "omg_img": 0,
+      "uniref90": 0
+    },
+    "stage": "stage1",
+    "stage_progress": 0.6385019281621557,
+    "step_compute_seconds": 1.27990045491606,
+    "step_model_tokens": 244003,
+    "tokens_per_second": 190642.1699146927,
+    "training_loss_reduction": "sqrt_mask_count",
+    "training_seconds": 127701.66601502057
+  },
+  "training_seconds": 127701.66645671614,
+  "p_at_l": 0.33449770398392276,
+  "validation_mlm": {
+    "masked_residues": 140009,
+    "perplexity": 11.134351028362593,
+    "protocol": "heldout-cluster-representative-mlm-v1",
+    "sequence_mean_nll": 2.410035016870097,
+    "sequence_median_nll": 2.4862189292907715,
+    "sequences": 4096,
+    "source_counts": {
+      "mgnify": 1393,
+      "omg_img": 1378,
+      "uniref90": 1325
+    }
+  },
+  "contact_uncertainty": {
+    "confidence_interval_95": [
+      0.3321495203000082,
+      0.33679334418061857
+    ],
+    "replicates": 5000,
+    "unit_count": 20775
+  },
+  "best_p_at_l": {
+    "utc": "2026-09-21T03:47:27.287976+00:00",
+    "optimizer_step": 100000,
+    "p_at_l": 0.33449770398392276,
+    "checkpoint_sha256": "035e28203e606a511491f986174e3caf3cf28e78edf1712eae46d899e59e68bb",
+    "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluation/results/EVALUATION.json",
+    "evaluation_chains": 20775,
+    "bootstrap_replicates": 5000,
+    "selected_as_best": true,
+    "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-100000-035e28203e60.pt"
+  },
+  "periodic_evaluations": [
+    {
+      "utc": "2026-09-19T19:00:09.289333+00:00",
+      "optimizer_step": 10000,
+      "p_at_l": 0.18760364298088986,
+      "checkpoint_sha256": "30bf69f4ff07b0af02b352ab61388da2977cf3163004e794cf666888ebfb8a10",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluations/step-010000/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-010000-30bf69f4ff07.pt"
+    },
+    {
+      "utc": "2026-09-19T22:39:00.809298+00:00",
+      "optimizer_step": 20000,
+      "p_at_l": 0.23835268471151802,
+      "checkpoint_sha256": "5cdb75107cca1313b265c704c788a9821d01b054d1ef54be1e34c439d7946399",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluations/step-020000/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-020000-5cdb75107cca.pt"
+    },
+    {
+      "utc": "2026-09-20T02:18:19.749991+00:00",
+      "optimizer_step": 30000,
+      "p_at_l": 0.2678222562877972,
+      "checkpoint_sha256": "ecbd83ca75f9af9e9dc32891fefc32949ddec2f6a9bad9d5f67d4b8e64ba859e",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluations/step-030000/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-030000-ecbd83ca75f9.pt"
+    },
+    {
+      "utc": "2026-09-20T05:57:10.389659+00:00",
+      "optimizer_step": 40000,
+      "p_at_l": 0.28516054443561706,
+      "checkpoint_sha256": "e42ee086e9006a33351b3845940591892e22985fd7eba7729046bd78c30d826d",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluations/step-040000/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-040000-e42ee086e900.pt"
+    },
+    {
+      "utc": "2026-09-20T09:35:52.555702+00:00",
+      "optimizer_step": 50000,
+      "p_at_l": 0.29692277991892674,
+      "checkpoint_sha256": "a38484f4883f71ed8dccb1484ef6fdaa3fc137ab2440f854a4cdb765618b6fcd",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluations/step-050000/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-050000-a38484f4883f.pt"
+    },
+    {
+      "utc": "2026-09-20T13:14:26.041869+00:00",
+      "optimizer_step": 60000,
+      "p_at_l": 0.3078471838304921,
+      "checkpoint_sha256": "13b03cf77fca8ea9590e1d73f1e6d1d71e1dea78cb696e6d2c3e25846735fbe6",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluations/step-060000/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-060000-13b03cf77fca.pt"
+    },
+    {
+      "utc": "2026-09-20T16:53:23.806561+00:00",
+      "optimizer_step": 70000,
+      "p_at_l": 0.31717377235333194,
+      "checkpoint_sha256": "31b82d53371499bc3fe9eca59f08132769ec5db871638dd5bd118caede634d9e",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluations/step-070000/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-070000-31b82d533714.pt"
+    },
+    {
+      "utc": "2026-09-20T20:32:07.417520+00:00",
+      "optimizer_step": 80000,
+      "p_at_l": 0.32125706383876873,
+      "checkpoint_sha256": "581d7157b4637c4923ea4b65446e0744983fd9321cd62d2d439c1470ea039a1c",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluations/step-080000/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-080000-581d7157b463.pt"
+    },
+    {
+      "utc": "2026-09-21T00:10:42.742336+00:00",
+      "optimizer_step": 90000,
+      "p_at_l": 0.3286033584773273,
+      "checkpoint_sha256": "fd6a1f74616858c1b430d06875f3ad7c4e7c0efae8a8000f99dcb5a3a1db31db",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluations/step-090000/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-090000-fd6a1f746168.pt"
+    },
+    {
+      "utc": "2026-09-21T03:47:27.287976+00:00",
+      "optimizer_step": 100000,
+      "p_at_l": 0.33449770398392276,
+      "checkpoint_sha256": "035e28203e606a511491f986174e3caf3cf28e78edf1712eae46d899e59e68bb",
+      "evaluation": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/evaluation/results/EVALUATION.json",
+      "evaluation_chains": 20775,
+      "bootstrap_replicates": 5000,
+      "selected_as_best": true,
+      "checkpoint": "/scratch/muchenli/Nano-ProteinLM/.worktrees/ar-260913-contact50/outputs/contact-ablations-100k-20260919/runs/no-query-centering/best-checkpoints/step-100000-035e28203e60.pt"
+    }
+  ]
+}

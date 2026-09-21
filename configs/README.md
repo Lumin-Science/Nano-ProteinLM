@@ -2,7 +2,7 @@
 
 | Recipe | File | Parameters | Role |
 |---|---|---:|---|
-| Improved 171M default | [default.yaml](default.yaml) | 170,559,856 | Muon, RMSNorm, residual routing and initialization, batch balance, sqrt loss |
+| Improved 171M default | [default.yaml](default.yaml) | 170,559,856 | <span class="ai">Muon with separate Q/K/V updates, RMSNorm, residual routing and initialization, batch balance, sqrt loss</span> |
 | ESMC-style 171M | [esmc-171m.yaml](esmc/esmc-171m.yaml) | 170,671,168 | AdamW reference for small-budget experiments |
 | ESMC-style 300M | [esmc-300m.yaml](esmc/esmc-300m.yaml) | 332,997,184 | Original-size architecture reference |
 | ESMC-style 600M | [esmc-600m.yaml](esmc/esmc-600m.yaml) | 575,036,992 | Original-size architecture reference |

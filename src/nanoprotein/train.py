@@ -562,6 +562,11 @@ def muon_adamw_parameter_groups(
 
 def build_optimizer(model: torch.nn.Module, config: dict[str, Any]) -> object:
     name = str(config.get("optimizer", "adamw")).lower()
+    split_qkv = config.get("muon_split_qkv", False)
+    if not isinstance(split_qkv, bool):
+        raise ValueError("muon_split_qkv must be boolean")
+    if split_qkv and name not in {"muon", "hybrid_muon", "muon_adamw"}:
+        raise ValueError("muon_split_qkv requires a Muon optimizer")
     learning_rate = float(config["learning_rate"])
     weight_decay = float(config["weight_decay"])
     if name == "adamw":
@@ -597,11 +602,23 @@ def build_optimizer(model: torch.nn.Module, config: dict[str, Any]) -> object:
     if not muon_groups:
         raise ValueError("optimizer='muon' found no transformer block matrices for Muon")
     adjust_lr_fn = config.get("muon_adjust_lr_fn", "match_rms_adamw")
+    muon_class = torch.optim.Muon
+    muon_options = {}
+    if split_qkv:
+        from .split_qkv_muon import SplitQKVMuon
+
+        muon_class = SplitQKVMuon
+        muon_options["qkv_parameters"] = [
+            parameter
+            for raw_name, parameter in model.named_parameters()
+            if _canonical_parameter_name(raw_name).endswith(".attention.qkv.weight")
+            and parameter.requires_grad
+        ]
     return _OptimizerBundle(
         (
             (
                 "muon",
-                torch.optim.Muon(
+                muon_class(
                     muon_groups,
                     lr=learning_rate * muon_lr_scale,
                     weight_decay=weight_decay * muon_weight_decay_scale,
@@ -611,6 +628,7 @@ def build_optimizer(model: torch.nn.Module, config: dict[str, Any]) -> object:
                     nesterov=bool(config.get("muon_nesterov", True)),
                     ns_steps=int(config.get("muon_ns_steps", 5)),
                     adjust_lr_fn=None if adjust_lr_fn is None else str(adjust_lr_fn),
+                    **muon_options,
                 ),
             ),
             (

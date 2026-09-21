@@ -1,5 +1,11 @@
 # Best 100k-step recipe versus the ESMC-like AdamW baseline
 
+<div class="ai">
+
+This page records the six-run H100 comparison completed before the September 21, 2026 default update. Its uses of "default" refer to that historical recipe, which did not use separate Q/K/V Muon updates. The current default adds those updates; see the [promotion decision and matched CCK evidence](../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md). The measurements below retain their original configurations and protocol.
+
+</div>
+
 **The default recipe is best in this completed six-run comparison.** It
 reduces validation loss from **2.47436 to 2.41872** and increases long-range
 contact P@L from **26.505% to 32.682%**. Training takes **12h 34m 40s**, compared

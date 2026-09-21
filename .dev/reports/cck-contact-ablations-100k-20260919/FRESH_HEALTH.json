@@ -1,0 +1,61 @@
+{
+  "passed": true,
+  "checked_utc": "2026-09-19T15:21:16.279068+00:00",
+  "start_step": 0,
+  "resume_checkpoint": null,
+  "parallel_arms": 3,
+  "runs": {
+    "no-query-centering": {
+      "node": "kn086",
+      "job_id": 5218651,
+      "worker_pid": 2660061,
+      "latest_step": 60,
+      "last_loss": 2.8633742332458496,
+      "observed_seconds_per_update": 1.7626082348823546,
+      "observed_window_updates": 50,
+      "planning_seconds_per_update": 1.7626082348823546,
+      "estimated_finish_toronto": "2026-09-21T14:11:42.208707-04:00",
+      "fresh_data_coverage_passed": true,
+      "resume_checkpoint": null,
+      "start_step": 0
+    },
+    "no-split-qkv": {
+      "node": "kn087",
+      "job_id": 5218652,
+      "worker_pid": 3865889,
+      "latest_step": 90,
+      "last_loss": 2.8316524624824524,
+      "observed_seconds_per_update": 1.393629194481764,
+      "observed_window_updates": 80,
+      "planning_seconds_per_update": 1.393629194481764,
+      "estimated_finish_toronto": "2026-09-21T03:44:06.283050-04:00",
+      "fresh_data_coverage_passed": true,
+      "resume_checkpoint": null,
+      "start_step": 0
+    },
+    "full": {
+      "node": "kn088",
+      "job_id": 5339730,
+      "worker_pid": 1089896,
+      "latest_step": 90,
+      "last_loss": 2.832116723060608,
+      "observed_seconds_per_update": 1.412382430350408,
+      "observed_window_updates": 80,
+      "planning_seconds_per_update": 1.412382430350408,
+      "estimated_finish_toronto": "2026-09-21T04:15:57.391561-04:00",
+      "fresh_data_coverage_passed": true,
+      "resume_checkpoint": null,
+      "start_step": 0
+    }
+  },
+  "matched_logged_steps_verified": [
+    1,
+    10,
+    20,
+    30,
+    40,
+    50,
+    60
+  ],
+  "eta_assumptions": "Recent rate or historical steady-state rate, whichever is slower; 2% checkpoint margin; ten measured 334.8-second evaluations; no further interruptions. Startup estimates may shift by hours."
+}

@@ -30,7 +30,7 @@ class TrainingCLITests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return yaml.safe_load(result.stdout)
 
-    def test_default_retains_winner_without_its_old_stopping_budget(self):
+    def test_default_adds_split_qkv_to_previous_winner_without_old_stopping_budget(self):
         default = yaml.safe_load((ROOT / "configs/default.yaml").read_text())
         historical = yaml.safe_load(
             (ROOT / ".dev/configs/archive/program2_h100_100k/r10_sqrtloss.yaml").read_text()
@@ -38,6 +38,7 @@ class TrainingCLITests(unittest.TestCase):
         for key in ("max_steps", "schedule_steps", "walltime_seconds"):
             historical.pop(key)
             self.assertNotIn(key, default)
+        self.assertIs(default.pop("muon_split_qkv"), True)
         self.assertEqual(default, historical)
 
     def test_research_clears_old_caps_and_records_explicit_seed_and_backend(self):

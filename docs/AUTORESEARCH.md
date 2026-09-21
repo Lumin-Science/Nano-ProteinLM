@@ -16,6 +16,8 @@ that full recipe, so it is not a Muon-only ablation. See [executed configuration
 
 ## Commands and results
 
+- <span class="ai">[Benchmark-standard discussion draft](AUTORESEARCH_BENCHMARK_DRAFT.md): proposed budget, checkpoint, replication and promotion rules for the next protocol version; current task rules remain in force.</span>
+- <span class="ai">[September 2026 default promotion](../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md): separate Q/K/V Muon updates, supported by the completed three-arm CCK comparison.</span>
 - [Recommended training command](../README.md#train-the-esmc-style-protein-language-model) for the 100k-step default run.
 - Paired-seed research and progress commands: [validation-loss reward](../tasks/171m-validation-loss.md) or [P@L reward](../tasks/171m-p-at-l.md).
 - [38-round curve](../README.md#autoresearch), including all means and sample SDs.
