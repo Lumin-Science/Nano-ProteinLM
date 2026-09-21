@@ -1,0 +1,27 @@
+{
+  "created_utc": "2026-09-21T19:47:28.030514+00:00",
+  "remote": "git@github.com:Lumin-Science/Nano-ProteinLM.git",
+  "scope": "GitHub origin only; local and CCK branches retained",
+  "bundle": "/Users/jojo/workspace/AutoResearch_ESMC/nano-protein-embedding/outputs/branch-backups/20260921/origin-branches.bundle",
+  "refs": {
+    "refs/remotes/origin/ar-260913-contact50": "e330dcd737f8f679a00584645bc378acabaf7269",
+    "refs/remotes/origin/auto-research": "02f7806e9aafae7c813945a6cbcc165c1508e19c",
+    "refs/remotes/origin/autoresearch-171m": "b9ceae79c45c776e1d7113fadafa534490ab6f03",
+    "refs/remotes/origin/autoresearch-171m-val-loss": "9db6e85f3453a4d9ed25b775c649dbfe630d60d0",
+    "refs/remotes/origin/codex/esmc-300m-stage1-3d": "a7ae118dbcf411ef2a197bd03d3a345a3a89133d",
+    "refs/remotes/origin/main": "6b5de857b448c6a1235ac754df67b2fcace09be7"
+  },
+  "remote_branches_to_delete": [
+    "ar-260913-contact50",
+    "auto-research",
+    "autoresearch-171m",
+    "autoresearch-171m-val-loss",
+    "codex/esmc-300m-stage1-3d"
+  ],
+  "bundle_sha256": "143896f1338d9d061b04bf208f54cd51dcbe57bc4eab0c5ad01462d8c4e48b51",
+  "bundle_restore_verified": true,
+  "git_fsck_passed": true,
+  "cck_bundle": "/scratch/muchenli/Nano-ProteinLM/outputs/branch-backups/20260921/origin-branches.bundle",
+  "cck_bundle_sha256": "143896f1338d9d061b04bf208f54cd51dcbe57bc4eab0c5ad01462d8c4e48b51",
+  "cck_copy_verified": true
+}
