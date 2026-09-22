@@ -3,7 +3,11 @@
 Preserved from the [README at `0bba9f3`](https://github.com/Lumin-Science/Nano-Protein-LM/blob/0bba9f30efdadc9c53ef549d6236226e38c03b7c/README.md#scale-up-leaderboard) before its reorganization.
 The original table, numbers, discussion and numbering are retained below; relative links are adjusted for this archive directory. This is a historical snapshot, not live training status.
 
-In the current [Test Leaderboard](../../README.md#test-leaderboard), tied embeddings are **Setting 5**, corresponding to the historical **Setting 4** below. Current change 4 denotes FFN narrowing and is excluded from the fixed-size tests. The previous RoPE20k R02 row remains a historical reference.
+<div class="ai">
+
+In the reorganized [historical scale-up table](../autoresearch-sequential-search.md#detailed-scale-up-results), tied embeddings are **Setting 5**, corresponding to the historical **Setting 4** below. Current change 4 denotes FFN narrowing and is excluded from the fixed-size tests. The previous RoPE20k R02 row remains a historical reference.
+
+</div>
 
 ## Original leaderboard
 

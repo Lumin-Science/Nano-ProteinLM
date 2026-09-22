@@ -9,7 +9,11 @@ Our goal is to help researchers train better protein embeddings for downstream b
 
 **For agentic researchers**, it provides a controlled environment for iterative autoresearch on the same scientific objective. Deterministic data selection, fixed seeds, explicit compute budgets and frozen evaluation protocols make recipe changes measurable. An agent can modify the training recipe, train, evaluate and improve it; the choice of agent and search strategy remains yours.
 
-[AutoResearch setup](#auto-research-protocols) · [AutoResearch](#benchmarking-agentic-autoresearch-systems) · [Protein models](#training-and-evaluating) · [Dataset](#data-preparation)
+<div class="ai">
+
+[AutoResearch protocol](docs/autoresearch.md) · [Sequential search](docs/autoresearch-sequential-search.md) · [Protein models](#training-and-evaluating) · [Dataset](#data-preparation)
+
+</div>
 
 
 ## Discovering better protein-model training recipes
@@ -17,7 +21,11 @@ Our goal is to help researchers train better protein embeddings for downstream b
 ![Matched 171M models: training loss on the left; contact P@L and validation loss on the right. Blue is the ESMC-like AdamW baseline and orange is the AutoResearch recipe.](.dev/reports/readme-figures-20260914/matched-100k-curves.png)
 
 
-GPT-6 found this improved 171M training recipe using our [AutoResearch setup](#karpathy-style-sequential-search) and [protocols](#auto-research-protocols). Against our ESMC-like AdamW baseline, it improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. Both recipes use the same data, batch size of 2,048 and 100k updates on four H100s, with one training seed each. [Recipe details](docs/BEST_RECIPE_VS_BASELINE.md) · [Figure data and methods](.dev/reports/readme-figures-20260914/README.md).
+<div class="ai">
+
+GPT-6 found this improved 171M training recipe using our [sequential-search setup](docs/autoresearch-sequential-search.md) and its [historical protocol](docs/autoresearch-sequential-search.md#historical-38-round-example). Against our ESMC-like AdamW baseline, it improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. Both recipes use the same data, batch size of 2,048 and 100k updates on four H100s, with one training seed each. [Recipe details](docs/BEST_RECIPE_VS_BASELINE.md) · [Figure data and methods](.dev/reports/readme-figures-20260914/README.md).
+
+</div>
 
 
 
@@ -145,107 +153,15 @@ bash runs/speedrun.sh --evaluate default-100k
 This loads your paths, reports MLM loss on **4,096 held-out sequences**, and scores P@L over **all 20,775 chains** using the accelerated parallel evaluator. Replace `default-100k` with your run name; additional [evaluation options](docs/EVALUATION.md#evaluation-execution) can follow it. Evaluation is separate from training and keeps the same sample counts for short training trials.
 
 
-## Auto Research Protocols
-
-Use NanoProteinLM to improve protein-model training under a fixed compute budget. Each task defines the objective, permitted changes, search-time evaluation and scale-up test. These protocols apply independently of the agent or search strategy.
-
-
-
-- **Objective:** the scientific outcome the research aims to improve.
-- **Design space:** what may change during research and what must remain fixed.
-- **Per-round budget:** the resources allowed to evaluate one candidate, including hardware, training time and number of seeds.
-- **Hill-climbing reward:** the score used to compare candidates during search, its direction and how results are combined across seeds.
-- **Scale-up test:** a comparison against the baseline under a larger training budget or model size to check whether the discovered improvements transfer.
-
-| Protocol item | Requirement |
-|---|---|
-| Objective | Finding better training receipe for training Protein Embedding Model. |
-| Design space | **Fixed:** the task’s 7-shard corpus, source mixture, tokenizer, Stage-1 context and learning-rate schedule, evaluation, dependencies and input receipts. Keep trainable parameter count within **±5% of the original 171M model**; no pretrained weights, held-out training or changes to task scripts. **Mutable:** Anything else including training recipe, model architecture and training implementation. |
-| Per-round budget | Fixed GPU walltime. Our default is N x **one hour on four L40S GPUs**, where N is number of seeds. Final checkpoint saving and evaluation are excluded from this buget. For an alternative such as 15 minutes on four H100s, rebenchmark the baseline and use that same hardware and time budget for every candidate. |
-| Hill-climbing reward | The selected metric, averaged across training seeds, measures progress; report its sample SD and use the other metric as a diagnostic. Per seed, evaluate MLM loss on **32 validation sequences** and P@L on **all 20,775 chains**, report a 95% confidence interval for P@L. |
-| Scale-up test| Scaled up training under a fixed budget of **about 24B model tokens per seed** (24.20B target), taking roughly **12 hours on four H100s**. Evaluated **4,096 MLM validation sequences** and **all 20,775 contact chains**, following the [scale-up test settings](docs/EVALUATION.md#manual-test-of-progress). |
-
-
-Full task definitions and commands: [171M validation loss](tasks/171m-validation-loss.md) · [171M contact P@L](tasks/171m-p-at-l.md).
-
-
 ## Benchmarking Agentic AutoResearch Systems
-
-Compare agents using the same starting recipe, task and **fixed number of research rounds**. Rank agents by their best valid mean reward: lowest validation loss or highest P@L. Report agent model, search settings and agent-side compute costs alongside the result.
-
-<div class="ai">
-
-Then compare each agent’s selected recipe under the same **scale-up test** to measure which discoveries transfer to a larger training budget. To test transfer to larger models, define a separate shared model size and training budget before evaluation; the 171M search itself retains its ±5% parameter bound.
-
-</div>
-
-### Karpathy-style sequential search
-
-[autoresearch/program.md](autoresearch/program.md) provides a small Karpathy-style hill-climbing baseline: propose one change, train and evaluate it, keep or discard it, then repeat. Candidates are explored sequentially; training and evaluation can use multiple GPUs.
-
-![Example AutoResearch loop: evaluate a baseline, propose a change, train and evaluate two seeds, keep or discard, record the result and repeat; test the selected recipe at scale after search.](.dev/reports/readme-figures-20260914/autoresearch-loop.png)
-
-
-Each candidate uses the selected task's measurements and seed aggregation. The current example program compares seed-level 95% confidence intervals: for a reward oriented so higher is better, keep a candidate only when `candidate.ci95_low > incumbent.mean` and `candidate.mean > incumbent.ci95_high`. Use negative validation loss for the loss task's reward comparison and retain the raw loss in reports; P@L already has the higher-is-better direction. Every trial and decision is recorded. This acceptance policy belongs to the example agent, not the task protocol.
-
-
-> [!NOTE]
-> This hill-climbing loop is a simple AutoResearch baseline. You are welcome to bring your own agent or search strategy, provided it follows the selected task's protocol. Discoveries are evaluated under the same scale-up test settings.
-
-To use the included loop, tell your coding agent:
-
-> Read `autoresearch/program.md` and start autoresearch for `tasks/171m-validation-loss.md`.
-
-For contact P@L as the objective:
-
-> Read `autoresearch/program.md` and start autoresearch for `tasks/171m-p-at-l.md`.
-
-The completed 38-round search below used an earlier acceptance rule: keep a candidate when its mean validation-loss reduction exceeds its own two-seed sample SD. The plot preserves those recorded decisions; the blue line follows the retained recipe, and orange points show trial means with sample-SD error bars. Numbers 1–5 identify the [accepted changes](.dev/reports/program2/README.md#numbered-improvements).
-
 
 ![Validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](.dev/reports/readme-figures-20260914/validation-loss.png)
 
-Two-seed mean ± sample SD; one hour on four L40S GPUs per seed. [Full experiment record](.dev/reports/program2/README.md) · [Auto Research methods](docs/AUTORESEARCH.md).
+<div class="ai">
 
-*Changes 4–5 use approximately 142M parameters and predate the ±5% size rule. The 171M scale-up test below skips change 4 and applies tied embeddings directly to Setting 3.
+A historical sequential search improved validation loss over 38 rounds; each point is a two-seed mean ± sample SD, with one hour on four L40S GPUs per seed. See [the benchmark protocol and search-time/test-time leaderboards](docs/autoresearch.md) for the two search tracks and best-of-three iso-token scale-up rule, and [the sequential-search example](docs/autoresearch-sequential-search.md) for the loop, accepted changes and experiment records.
 
-
-### Scale-up test
-
-
-The results below are the historical 100k-step, single-seed scale-up test. New discoveries use the two-seed, 24.20B-token test specified in the [protocol above](#auto-research-protocols); the token target determines the budget, while the roughly 12-hour runtime is an estimate.
-
-
-
-| Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
-|---|---:|---:|---:|---:|
-| Baseline: ESMC-like AdamW | 2.47436 | 26.505% | 26.295–26.719% | 12h 01m |
-| 1: + Muon recipe | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
-| 2: + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
-| **3: + sqrt loss (default)** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
-| 5: + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
-
-Each recipe trains for **100k Stage 1 steps on four H100s**, batch **1,024**, LR **5e-4**, weight decay **0.01** and **1,000 warmup steps**. The Muon recipe includes RMSNorm, residual routing, depth-scaled initialization and RoPE 10k; later rows add changes cumulatively. One seed per recipe; CIs bootstrap 20,775 contact chains, and training times exclude evaluation. [Recipe details](docs/BEST_RECIPE_VS_BASELINE.md) · [Run records](.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
-
-
-
-### Longer training of the best candidate
-
-
-<!-- <div class="ai">
-
-![ESMC-300M, ESMC-600M and ESM-2 150M versus our final 171M model: contact P@L with available 95% confidence intervals on our full 20,775-chain split.](.dev/reports/readme-figures-20260914/released-model-comparison.png)
-
-</div> -->
-
-| Model | P@L ↑ | Estimated training FLOPs |
-|---|---:|---:|
-| ESMC-600M | 58.031% | 2.491 × 10²² |
-| ESMC-300M | 53.867% | 1.480 × 10²² |
-| **AutoResearch 171M** | **46.264%** | **2.334 × 10²¹** |
-
-Our 171M recipe reaches **46.264% P@L** with 2.3e21 flops training buget(.dev/reports/nibi-setting3-stage2-b2048-300k-20260911/README.md). All models use the same frozen 20,775-chain contact evaluation, but their training corpora and compute budgets differ, so this is a reference comparison rather than a controlled recipe comparison. FLOPs are [estimates with stated token and context assumptions](.dev/reports/readme-figures-20260914/README.md#training-compute-estimates).
-
+</div>
 
 ## Citation
 

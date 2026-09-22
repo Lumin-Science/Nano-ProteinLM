@@ -20,4 +20,4 @@ git fetch outputs/branch-backups/20260921/origin-branches.bundle \
   refs/remotes/origin/ar-260913-contact50:refs/heads/restored-contact50
 ```
 
-The selected separate-Q/K/V implementation, tests and curated 100k-step evidence were imported onto main before the research branch reference was removed. See the [default promotion](../cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md) and [benchmark-standard discussion draft](../../../docs/AUTORESEARCH_BENCHMARK_DRAFT.md).
+The selected separate-Q/K/V implementation, tests and curated 100k-step evidence were imported onto main before the research branch reference was removed. See the [default promotion](../cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md) and [benchmark protocol](../../../docs/autoresearch.md).

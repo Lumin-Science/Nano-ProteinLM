@@ -1,5 +1,7 @@
 # AutoResearch loop
 
+This is the example [sequential-search policy](../docs/autoresearch-sequential-search.md). The [agent benchmark protocol](../docs/autoresearch.md) separately defines search budgets, frozen three-setting submissions and scale-up ranking; use a task configured for that protocol when running a benchmark campaign.
+
 Read the user-selected task and the project's `AGENTS.md`. If no task is selected, stop. The task defines the objective, reward, evaluation commands and editable scope; this document defines the loop and records.
 
 ## Start or resume

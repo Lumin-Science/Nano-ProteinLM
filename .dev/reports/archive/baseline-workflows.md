@@ -63,10 +63,7 @@ incumbent progression was:
 | Depth-scaled residual initialization | 0.0981775134 | retained |
 | Final-20% learning-rate cooldown | 0.0987620524 | current incumbent |
 
-These are development-selection results, not multi-seed release claims.
-The experiment contract and retained changes are summarized in
-[`AUTORESEARCH.md`](../../../docs/AUTORESEARCH.md); rejected candidates remain on the
-`auto-research` branch.
+These are development-selection results, not multi-seed release claims. The experiment contract and retained changes are summarized in [the sequential-search guide](../../../docs/autoresearch-sequential-search.md); rejected candidates remain on the `auto-research` branch.
 
 ### Validated ESMC-171M preset
 

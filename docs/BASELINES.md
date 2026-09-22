@@ -15,7 +15,7 @@ architectures. Their local training assumptions and paper references are in
 - [171m-validation-loss.md](../tasks/171m-validation-loss.md): research score, budget and boundaries.
 - [EVALUATION.md](EVALUATION.md#manual-test-of-progress): matched owner-run verification.
 - [BEST_RECIPE_VS_BASELINE.md](BEST_RECIPE_VS_BASELINE.md): completed 100k-step comparison and worked method examples.
-- [AUTORESEARCH.md](AUTORESEARCH.md): experiment records and provenance.
+- <span class="ai">[autoresearch.md](autoresearch.md): benchmark protocol and search-time/test-time leaderboards; [sequential search](autoresearch-sequential-search.md): example loop and experiment provenance.</span>
 
 Released ESMC checkpoints are capability references, with results in
 [EVALUATION.md](EVALUATION.md#released-esmc-checkpoint-pl); they used substantially

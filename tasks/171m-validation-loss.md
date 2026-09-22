@@ -1,5 +1,7 @@
 # 171M validation loss
 
+This file is the existing two-seed, one-hour/four-L40S example task. The [agent benchmark protocol](../docs/autoresearch.md) defines the new search tracks and three-setting scale-up submission; its allowances are not automatically implemented by this task script.
+
 ## Background
 
 Improve protein-embedding training recipes under a small compute budget.
@@ -53,7 +55,4 @@ The benchmark owner manually verifies a selected recipe with a fixed 24.20B-toke
 training budget on four H100s per seed, then compares full validation loss and
 P@L against the reference. This is separate from the agent's research loop.
 
-Use the manual training/evaluation commands in [EVALUATION.md](../docs/EVALUATION.md#manual-test-of-progress)
-and preserve the full final optimizer checkpoint for continuation.
-Historical results retain their original protocols; see the
-[AUTORESEARCH.md](../docs/AUTORESEARCH.md).
+Use the manual training/evaluation commands in [EVALUATION.md](../docs/EVALUATION.md#manual-test-of-progress) and preserve the full final optimizer checkpoint for continuation. Historical results retain their original protocols; see the [benchmark protocol and historical results](../docs/autoresearch.md).

@@ -14,21 +14,37 @@ All structures and structural contact labels for the P@L evaluation come from
 the frozen 2024-02-28 RCSB Protein Data Bank snapshot. This is also the PDB
 population protected during training-corpus decontamination.
 
-The small-budget 171M tasks use the paper's 170M scaling backbone ([architecture and scope](../tasks/171m-validation-loss.md#background)). The [validation-loss task](../tasks/171m-validation-loss.md) scores held-out sequence-mean MLM loss (lower is better); the [P@L task](../tasks/171m-p-at-l.md) scores full long-range contact P@L (higher is better). Both average the selected metric across two matched training seeds, with sample SD reported separately, and use identical training and evaluation commands. The other metric and training loss remain diagnostics; P-CORE provides additional representation measurements. Diagnostics do not affect research selection. [autoresearch/program.md](../autoresearch/program.md) defines the default acceptance rule. See each task for its scoring rule and executable protocol, and [Test of Progress](../tasks/171m-validation-loss.md#test-of-progress) for token-budget confirmation. [AUTORESEARCH_SCALEUP.md](AUTORESEARCH_SCALEUP.md) records the executed historical 100k-step comparison. The current token-budget verification protocol does not relabel those single-seed results.
+<div class="ai">
+
+The existing small-budget 171M example tasks use the paper's 170M scaling backbone ([architecture and scope](../tasks/171m-validation-loss.md#background)). The [validation-loss task](../tasks/171m-validation-loss.md) scores held-out sequence-mean MLM loss (lower is better); the [P@L task](../tasks/171m-p-at-l.md) scores full long-range contact P@L (higher is better). Both average the selected metric across two matched training seeds, with sample SD reported separately, and use identical training and evaluation commands. The other metric and training loss remain diagnostics; P-CORE provides additional representation measurements. Diagnostics do not affect research selection. [autoresearch/program.md](../autoresearch/program.md) defines the example sequential-search acceptance rule. See each task for its scoring rule and executable profile. The [agent benchmark protocol](autoresearch.md) separately defines the two new search tracks, N-seed confirmation and three-setting scale-up submission. [AUTORESEARCH_SCALEUP.md](AUTORESEARCH_SCALEUP.md) records the executed historical 100k-step comparison. The current token-budget verification protocol does not relabel those single-seed results.
+
+</div>
 
 ## Manual Test of Progress
 
-The benchmark owner runs this separately from the agent's research loop. After
-[setup](USAGE.md#setup), select a frozen recipe and fresh experiment name. Use
-`bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` for the
-benchmark corpus used by the historical comparison. The general setup default
-of 30 shards does not change that reference. A larger-data experiment must use
-the same selected corpus for both recipes and be reported as a separate comparison;
-[DATA.md](DATA.md#sizing-a-training-download) gives capacity estimates. Run the
-original AdamW reference and selected recipe with the same command/settings.
-Use four H100s; these commands retain the recipe's optimizer-group multipliers
-while fixing batch 1,024, base LR/WD and warmup. The standard trainer saves the
-full optimizer state and checks the first completed update at the token endpoint.
+<div class="ai">
+
+The benchmark owner runs token-budget verification separately from the agent's research loop. For the [agent benchmark](autoresearch.md#three-submitted-settings-and-the-scale-up-test), freeze three submitted settings before testing, run all three on the same token target and predeclared scale-up seeds, and report the best setting on the predeclared ranking metric together with all three results. Track 1's N-seed confirmation is a separate repeat of the short-budget search winner, reported as mean ± sample SD.
+
+</div>
+
+<div class="ai">
+
+The commands below are the existing two-seed reference procedure, with seeds 42 and 43, batch 1,024, fixed base LR/WD and warmup, and a 24,200,224,761-model-token endpoint. They are an example for one recipe, not a launcher for the entire new benchmark. Use each frozen submission's permitted recipe settings and the benchmark's published seed list when adapting the procedure; do not silently override submitted settings with these example defaults. Keep the token target, data and evaluation fixed across settings and run any shared AdamW reference under the same comparison contract.
+
+</div>
+
+<div class="ai">
+
+After [setup](USAGE.md#setup), select a frozen recipe and fresh experiment name. The historical comparison used `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT`; the general 30-shard default does not change that historical reference. For a new benchmark, pin a common corpus with enough per-source capacity for all runs before search starts, using [data sizing](DATA.md#sizing-a-training-download) and [coverage checks](data-coverage.md). A seven-shard download alone is not proof of sufficient scale-up coverage. Keep the training sampler's no-repeat checks enabled; expanded-data comparisons retain their own manifests and are distinct from the historical table.
+
+</div>
+
+<div class="ai">
+
+Use four H100s for this example. The trainer saves the full optimizer state and checks the first completed update at the token endpoint. The 16-hour wall-time guard is a safety limit; if reached early, the run is incomplete and must resume to the token target before scoring. The nominal 48 H100 GPU-hour reference is approximately 12 hours on four GPUs, while the token target determines the actual training budget.
+
+</div>
 
 ```bash
 set -a
@@ -65,12 +81,11 @@ uv run --frozen python -m nanoprotein.summarize_training_runs \
   --output "$experiment/summary.json"
 ```
 
-Require `stop_reason=max_model_tokens` and `model_token_budget_reached=true` in
-each `TRAINING_COMPLETE.json`. The count includes non-padding model tokens and
-BOS/EOS, stopping at the first update reaching 24,200,224,761; an early wall-time
-stop is incomplete. Report actual tokens/overrun, both metric means, sample SDs,
-and the per-run chain-bootstrap P@L intervals. Evaluation assets overlap research;
-this checks transfer to the larger budget, not a blind holdout.
+<div class="ai">
+
+Require `stop_reason=max_model_tokens` and `model_token_budget_reached=true` in each `TRAINING_COMPLETE.json`. The count includes non-padding model tokens and BOS/EOS, stopping at the first update reaching 24,200,224,761; an early wall-time stop is incomplete. Report actual tokens/overrun, both metric means, sample SDs, and the per-run chain-bootstrap P@L intervals. Use the final token-endpoint checkpoint for scoring. Evaluation assets overlap research; this checks transfer to the larger budget rather than performance on a blind holdout.
+
+</div>
 
 ## Released ESMC checkpoint P@L
 
