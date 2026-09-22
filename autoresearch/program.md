@@ -1,6 +1,6 @@
 # AutoResearch loop
 
-This is the example [sequential-search policy](../docs/autoresearch-sequential-search.md). The [agent benchmark protocol](../docs/autoresearch.md) separately defines search budgets, frozen three-setting submissions and scale-up ranking; use a task configured for that protocol when running a benchmark campaign.
+This is our [Karpathy-style sequential-search policy](../docs/AUTORESEARCH_BASELINE.md). The shared [AutoResearch protocol](../docs/autoresearch.md) defines the design boundaries, fixed round allowance, per-round compute and final evaluation budget. Each seed training run consumes one budgeted round; this method's candidate comparison uses all seeds specified by the selected task.
 
 Read the user-selected task and the project's `AGENTS.md`. If no task is selected, stop. The task defines the objective, reward, evaluation commands and editable scope; this document defines the loop and records.
 

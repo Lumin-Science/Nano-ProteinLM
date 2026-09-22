@@ -17,4 +17,4 @@ analysis. Training and autoresearch runtime commands live in
 - [Historical round summary](summarize_autoresearch_round.py): reads the older
   campaign's output layout.
 
-Run plotting tools from a separate Matplotlib environment, as documented in [sequential-search plot guide](../../docs/autoresearch-sequential-search.md#evidence-and-plot-regeneration). The training dependency lock is unchanged.
+Run plotting tools from a separate Matplotlib environment, as documented in [sequential-search plot guide](../../docs/AUTORESEARCH_BASELINE.md#evidence-and-plot-regeneration). The training dependency lock is unchanged.

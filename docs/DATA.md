@@ -15,15 +15,11 @@ whose independently verified manifest contains 665,970,495 training proteins:
 | OMG/IMG | 262,845,186 | 65,256,646,612 | 244 |
 | **Total** | **665,970,495** | **151,304,238,405** | **565** |
 
-Each source also has one 4,096-protein validation shard, for 12,288 validation
-proteins in total. The complete artifact contains 568 train/validation shards
-and occupies 109,661,312,410 compressed bytes. Setup downloads 30 training shards
-by default (29,979,351 proteins), plus all validation shards.
-`bash runs/setup.sh --training-shards N` selects 3–565 whole training shards;
-choose a fresh `DATA_ROOT` for another selection.
-The direct data API also supports a requested sample budget. Both routes use
-checksum-bound source prefixes and always include complete MLM validation.
-The setup command separately installs the [frozen P@L bundle](CONTACT_DATA.md).
+<div class="ai">
+
+Each source also has one 4,096-protein validation shard, for 12,288 validation proteins in total. The complete artifact contains 568 train/validation shards and occupies 109,661,312,410 compressed bytes. Setup downloads 30 training shards by default (29,979,351 proteins), plus all validation shards. `bash runs/setup.sh --training-shards N` selects 3–565 whole training shards; choose a fresh `DATA_ROOT` for another selection. The direct data API also supports a requested sample budget. Both routes use checksum-bound source prefixes and always include complete MLM validation. The setup command separately installs the [frozen P@L bundle](#frozen-contact-evaluation-data).
+
+</div>
 
 The companion [raw clustering release](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
 preserves the source-specific 70%-identity representative FASTAs and cluster
@@ -39,7 +35,7 @@ also includes all three MLM validation shards.
 
 | Training shards | Source allocation | Training proteins | Stored training residues | Parquet GB | Parquet + prepared stores GB |
 |---|---|---:|---:|---:|---:|
-| 7 — frozen benchmark | 3 / 1 / 3 | 7,109,469 | 1,879,045,806 | 1.32 | 3.51 |
+| <span class="ai">7 — historical sequential-search corpus</span> | 3 / 1 / 3 | 7,109,469 | 1,879,045,806 | 1.32 | 3.51 |
 | 30 — setup default | 13 / 3 / 14 | 29,979,351 | 8,053,052,338 | 5.62 | 15.00 |
 | 105 — 100k × 1,024 | 46 / 8 / 51 | 103,867,089 | 28,185,691,687 | 19.64 | 52.40 |
 | 209 — 100k × 2,048 | 91 / 16 / 102 | 206,909,262 | 56,102,947,191 | 39.09 | 104.30 |
@@ -254,3 +250,37 @@ The source publications are Suzek et al.
 ([UniRef](https://doi.org/10.1093/bioinformatics/btu739)), Richardson et al.
 ([MGnify](https://doi.org/10.1093/nar/gkac1080)), and Cornman et al.
 ([OMG](https://doi.org/10.1101/2024.08.14.607850)).
+
+## Frozen contact evaluation data
+
+NanoProteinLM's P@L setup bundle contains the exact normalized chain payloads and
+frozen evaluator used by the [completed 100k-step comparison](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
+It includes 16 probe-fit chains, 4 probe-validation chains and 20,775 evaluation
+chains. It does not include P-CORE datasets, model weights or training outputs.
+
+Structures come from the **2024-02-28 RCSB Protein Data Bank snapshot**. Chain
+selection and preprocessing remain unchanged: the benchmark is paper-faithful,
+not claimed to be identical to the ESMC authors' unpublished chain selection.
+The [evaluation contract](EVALUATION.md#contact-pl) defines probe fitting,
+long-range contacts and confidence intervals.
+
+PDB archive data are available under **CC0 1.0**, per the
+[wwPDB usage policy](https://www.wwpdb.org/about/usage-policies).
+Please acknowledge the PDB and original structure authors. Chain IDs remain in
+`CONTACT_MANIFEST.jsonl`; PDB entry pages provide the associated publications.
+
+> Berman, H. M. et al. The Protein Data Bank. *Nucleic Acids Research* 28,
+> 235–242 (2000). [doi:10.1093/nar/28.1.235](https://doi.org/10.1093/nar/28.1.235).
+
+The evaluator source is distributed under this repository's [MIT license](../LICENSE).
+Its six source files are copied byte-for-byte from the recorded evaluator bundle;
+`SOURCE_MANIFEST.json` retains their SHA-256 hashes. The contact manifest hash is
+`c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3`.
+The payload inventory hash is
+`1b73f5f466420c8d0c74be452ebabe46af837482cee357674cad01d99e6f4b70`.
+
+Setup verifies the archive checksum, source files, manifest, inventory and every
+chain payload before reporting success. Both `evaluation/contact/` and
+`evaluation/source/` live beneath `DATA_ROOT`. The
+[packaging utility](../.dev/scripts/package_contact_evaluation.py) reproduces the
+archive from the existing frozen dataset without altering its contents.

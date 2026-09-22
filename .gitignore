@@ -18,6 +18,7 @@
 !/.dev/report/main.pdf
 !/.dev/report/references.bib
 !/.dev/report/report_style.sty
+/.dev/reports
 .DS_Store
 __pycache__/
 *.py[cod]

@@ -18,14 +18,11 @@ $OUTPUT_ROOT/
   <run-name>/           # Checkpoints, effective config, logs and evaluation records
 ```
 
-The default pins the release revision and downloads **30 of 565 training Parquet
-shards**: 13 UniRef90, 3 MGnify and 14 OMG/IMG, containing 29,979,351 training
-proteins. Downloads including MLM validation occupy 5.62 GB; prepared token stores
-add 9.38 GB. Allow 20 GB for the complete data setup, excluding the environment
-and checkpoints. All three MLM validation shards (12,288 proteins) and the frozen
-[CONTACT_DATA.md](CONTACT_DATA.md) bundle are always prepared; no P-CORE data
-are downloaded. At 100k steps and batch 1,024, the default corpus is sampled for
-about 3.4 passes. See [DATA.md](DATA.md#sizing-a-training-download) for larger selections.
+<div class="ai">
+
+The default pins the release revision and downloads **30 of 565 training Parquet shards**: 13 UniRef90, 3 MGnify and 14 OMG/IMG, containing 29,979,351 training proteins. Downloads including MLM validation occupy 5.62 GB; prepared token stores add 9.38 GB. Allow 20 GB for the complete data setup, excluding the environment and checkpoints. All three MLM validation shards (12,288 proteins) and the frozen [contact evaluation](DATA.md#frozen-contact-evaluation-data) bundle are always prepared; no P-CORE data are downloaded. At 100k steps and batch 1,024, the default corpus is sampled for about 3.4 passes. See [DATA.md](DATA.md#sizing-a-training-download) for larger selections.
+
+</div>
 
 For a different training corpus size, choose a fresh `DATA_ROOT` in `.env` and run:
 
@@ -108,13 +105,19 @@ uv run --frozen python -m nanoprotein.train --config configs/default.yaml \
   --seed 42 --max-steps 100000 --walltime-seconds 57600 --print-config
 ```
 
-Budget arguments accept `none` to clear inherited step/token limits. Batch-layout
-overrides require a single-stage recipe. Full final checkpoints include optimizer
-state; see [continuation](checkpoint-resume.md) for resuming on another GPU count.
+<div class="ai">
+
+Budget arguments accept `none` to clear inherited step/token limits. Batch-layout overrides require a single-stage recipe. Full final checkpoints include optimizer state. Pass `--resume /path/to/checkpoint-final.pt` to the training API with the original recipe and a fresh output directory to continue training; preserve the global batch size when changing the GPU count.
+
+</div>
 
 ## AutoResearch
 
-[autoresearch/program.md](../autoresearch/program.md) defines the research loop; [171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) define the same scientific protocol with different rewards. To start an agent, select the task to optimize and tell it:
+<div class="ai">
+
+[autoresearch/program.md](../autoresearch/program.md) defines our sequential-search method; [171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) retain its historical one-hour/four-L40S measurement profile with different rewards. The current [benchmark protocol](autoresearch.md) uses 20-minute/four-H100 rounds. The commands below reproduce the historical profile. To start an agent, select the task to optimize and give it the following instruction.
+
+</div>
 
 > Read `autoresearch/program.md` and start autoresearch for `tasks/171m-validation-loss.md`.
 
@@ -138,11 +141,11 @@ After setup, `bash runs/speedrun.sh --evaluate default-100k` loads your local pa
 
 </div>
 
-Setup installs all MLM validation data plus the frozen contact payload and
-evaluator under `$DATA_ROOT/evaluation/{contact,source}`. The installer checks
-all frozen hashes before reporting success and verifies existing installations
-on reuse. See [contact data provenance](CONTACT_DATA.md) and
-[evaluation provenance](EVALUATION.md#dataset-provenance-and-split-contract).
+<div class="ai">
+
+Setup installs all MLM validation data plus the frozen contact payload and evaluator under `$DATA_ROOT/evaluation/{contact,source}`. The installer checks all frozen hashes before reporting success and verifies existing installations on reuse. See [contact data provenance](DATA.md#frozen-contact-evaluation-data) and [evaluation provenance](EVALUATION.md#dataset-provenance-and-split-contract).
+
+</div>
 
 <div class="ai">
 

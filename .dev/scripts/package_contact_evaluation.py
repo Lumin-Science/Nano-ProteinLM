@@ -45,7 +45,7 @@ def package(contact: Path, output: Path) -> dict:
         files["source/" + name] = path
     files["source/SOURCE_MANIFEST.json"] = SOURCE / "SOURCE_MANIFEST.json"
     files["LICENSE"] = ROOT / "LICENSE"
-    files["ATTRIBUTION.md"] = ROOT / "docs/CONTACT_DATA.md"
+    files["ATTRIBUTION.md"] = ROOT / "docs/DATA.md"
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("wb") as raw:
         with gzip.GzipFile(filename="", fileobj=raw, mode="wb", mtime=0) as compressed:

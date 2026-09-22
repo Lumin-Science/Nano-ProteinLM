@@ -11,7 +11,7 @@ Our goal is to help researchers train better protein embeddings for downstream b
 
 <div class="ai">
 
-[AutoResearch protocol](docs/autoresearch.md) · [Sequential search](docs/autoresearch-sequential-search.md) · [Protein models](#training-and-evaluating) · [Dataset](#data-preparation)
+[AutoResearch protocol](#auto-research-protocols) · [Sequential search](docs/AUTORESEARCH_BASELINE.md) · [Protein models](#training-and-evaluating) · [Dataset](#data-preparation)
 
 </div>
 
@@ -23,7 +23,7 @@ Our goal is to help researchers train better protein embeddings for downstream b
 
 <div class="ai">
 
-GPT-6 found this improved 171M training recipe using our [sequential-search setup](docs/autoresearch-sequential-search.md) and its [historical protocol](docs/autoresearch-sequential-search.md#historical-38-round-example). Against our ESMC-like AdamW baseline, it improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. Both recipes use the same data, batch size of 2,048 and 100k updates on four H100s, with one training seed each. [Recipe details](docs/BEST_RECIPE_VS_BASELINE.md) · [Figure data and methods](.dev/reports/readme-figures-20260914/README.md).
+GPT-6 found this improved 171M training recipe using our [sequential-search setup](docs/AUTORESEARCH_BASELINE.md) and its [historical protocol](docs/AUTORESEARCH_BASELINE.md#historical-38-round-example). Against our ESMC-like AdamW baseline, it improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. Both recipes use the same data, batch size of 2,048 and 100k updates on four H100s, with one training seed each. [Recipe details](docs/leaderboard/BEST_RECIPE_22_09_26.md) · [Figure data and methods](.dev/reports/readme-figures-20260914/README.md).
 
 </div>
 
@@ -34,14 +34,17 @@ GPT-6 found this improved 171M training recipe using our [sequential-search setu
 Prepare the environment and data once, then reuse them for training and evaluation.
 The same setup supports ordinary research and the fixed autoresearch task.
 
-**Scaling the training budget also requires scaling the prepared data.** Training checks each source against global batch × steps and prevents source resampling by default. See [data coverage and no-repeat training](docs/data-coverage.md) for sample-budget preparation, exposure accounting and checkpoint continuation.
+<div class="ai">
+
+**Scaling the training budget also requires scaling the prepared data.** Training checks each source against global batch × steps and prevents source resampling by default. See [data sizing](docs/DATA.md#sizing-a-training-download) for sample-budget preparation and [training commands](docs/USAGE.md#training) for checkpoint continuation.
+
+</div>
 
 ### Requirements
 
 - **Environment:** Linux, a compatible NVIDIA driver and
   `uv >=0.11.31,<0.12`. Setup installs Python and dependencies from the repository lock.
-- **Training:** You would ideadly need GPU with memory > 40GB. There is no restriction to types of GPUs, but you might need to adjust the receipe accordingly. Our default speedrun uses scripts **four H100 GPUs with FA3**. The one-hour autoresearch profile uses **four L40S GPUs with FA2**.
-  See [USAGE.md](docs/USAGE.md#training) for other configurations.
+- <span class="ai">**Training:** You would ideadly need GPU with memory > 40GB. There is no restriction to types of GPUs, but you might need to adjust the receipe accordingly. The default speedrun and current AutoResearch benchmark use **four H100 GPUs with FA3**. The historical one-hour sequential-search profile uses **four L40S GPUs with FA2**. See [USAGE.md](docs/USAGE.md#training) for other configurations.</span>
 - **Data preparation:** Allow space for both downloaded Parquet
   files and their prepared token stores—**allow 20 GB for the default 30-shard
   data setup**, plus separate space for the environment and training checkpoints.
@@ -95,7 +98,11 @@ The default downloads **30/565 training shards (29.98M proteins; 5.62 GB compres
 bash runs/setup.sh --training-shards $number_of_shards
 # Use 30 for one-hour research trials, 209 for larger-data scale-up tests.
 ```
-The frozen benchmark's data selection is defined in [171m-validation-loss.md](tasks/171m-validation-loss.md).
+<div class="ai">
+
+The [historical sequential-search task](tasks/171m-validation-loss.md) fixes a seven-shard selection. The current [AutoResearch protocol](docs/autoresearch.md#design-space) permits data selection and source-mixture changes within the provided training corpus.
+
+</div>
 
 Data and outputs default to `data/` and `outputs/`. To use another path, copy
 [.env.example](.env.example) to `.env` and set `DATA_ROOT` and `OUTPUT_ROOT`:
@@ -127,12 +134,11 @@ Python APIs so you can adapt the commands to your own research.
 ```bash
 bash runs/speedrun.sh
 ```
-This launches **100,000 Stage-1 steps on four GPUs**, global batch **1,024**,
-context **512**, **BF16/FA3**, base learning rate **5e-4**, weight decay **0.01**
-and **1,000 warmup steps**. A 16-hour training guard stops an overlong run.
-Checkpoints, the resolved recipe and training records are saved under
-`$OUTPUT_ROOT/default-100k/`, including the full final optimizer state. See
-[checkpoint-resume.md](docs/checkpoint-resume.md) for continuation. Repeats require a fresh run name.
+<div class="ai">
+
+This launches **100,000 Stage-1 steps on four GPUs**, global batch **1,024**, context **512**, **BF16/FA3**, base learning rate **5e-4**, weight decay **0.01** and **1,000 warmup steps**. A 16-hour training guard stops an overlong run. Checkpoints, the resolved recipe and training records are saved under `$OUTPUT_ROOT/default-100k/`, including the full final optimizer state. See [training and continuation](docs/USAGE.md#training) for the resume option. Repeats require a fresh run name.
+
+</div>
 
 For 171M training, choose [default.yaml](configs/default.yaml) or
 [esmc-171m.yaml](configs/esmc/esmc-171m.yaml). The scripts call the standard
@@ -153,13 +159,49 @@ bash runs/speedrun.sh --evaluate default-100k
 This loads your paths, reports MLM loss on **4,096 held-out sequences**, and scores P@L over **all 20,775 chains** using the accelerated parallel evaluator. Replace `default-100k` with your run name; additional [evaluation options](docs/EVALUATION.md#evaluation-execution) can follow it. Evaluation is separate from training and keeps the same sample counts for short training trials.
 
 
+<div class="ai">
+
+## Auto Research Protocols
+
+</div>
+
+<div class="ai">
+
+Use NanoProteinLM to compare AutoResearch methods under a fixed number of search rounds and a fixed compute budget per round. The protocol specifies the objective, permitted changes, search measurements and final evaluation budget. Each method chooses its own proposal strategy and improvement criteria within those limits.
+
+</div>
+
+- <span class="ai">**Objective:** the scientific outcome the research aims to improve.</span>
+- <span class="ai">**Design space:** what may change during research and what must remain fixed.</span>
+- <span class="ai">**Search budget:** the fixed number of rounds and the hardware and training time available per round.</span>
+- <span class="ai">**Evaluation:** the common metrics, evaluation data and final training budget used to compare the recipes found by different methods.</span>
+- <span class="ai">**Scale-up test:** a comparison against the baseline under a larger training budget or model size to check whether the discovered improvements transfer.</span>
+
+<div class="ai">
+
+| Protocol item | Requirement |
+|---|---|
+| Objective | Find better training recipes for protein embedding models. Declare the primary comparison metric before search. |
+| Design space | **Fixed:** use only the provided training corpus; keep the tokenizer, context 512, linear-warmup/constant-LR schedule, evaluation and compute settings unchanged. Keep trainable parameters within **±5% of the original 171M model**, with no pretrained weights or held-out training. **Mutable:** data selection and source mixture within that corpus, architecture, training loss, optimizer and training implementation. |
+| Search budget | **72 rounds**, each providing **20 minutes on four H100 GPUs** for one training run: **24 node-hours, or 96 H100 GPU-hours**, in total. Repeated seeds consume additional rounds. Setup, final checkpoint saving and evaluation are timed separately. |
+| Search measurements | Evaluate the final checkpoint on **32 MLM validation sequences** and **all 20,775 contact chains**, with a chain-bootstrap 95% interval for P@L. Each method decides how to use this feedback. |
+| Final evaluation budget | Train the selected recipe and reference to **24,200,224,761 model tokens per seed** on four H100s, using a common final seed list and repeat count declared before search. The reference takes roughly **12 hours per seed**. Evaluate **4,096 MLM validation sequences** and **all 20,775 contact chains**. |
+
+</div>
+
+<div class="ai">
+
+[Full AutoResearch protocol](docs/autoresearch.md) · [Our Karpathy-style sequential method](docs/AUTORESEARCH_BASELINE.md), including its pipeline, two-seed settings, improvement criteria and commands.
+
+</div>
+
 ## Benchmarking Agentic AutoResearch Systems
 
 ![Validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](.dev/reports/readme-figures-20260914/validation-loss.png)
 
 <div class="ai">
 
-A historical sequential search improved validation loss over 38 rounds; each point is a two-seed mean ± sample SD, with one hour on four L40S GPUs per seed. See [the benchmark protocol and search-time/test-time leaderboards](docs/autoresearch.md) for the two search tracks and best-of-three iso-token scale-up rule, and [the sequential-search example](docs/autoresearch-sequential-search.md) for the loop, accepted changes and experiment records.
+A historical sequential search improved validation loss over 38 rounds; each point is a two-seed mean ± sample SD, with one hour on four L40S GPUs per seed. See [the illustrated protocol](docs/autoresearch.md) for the design space, fixed search budget and scale-up evaluation, [the recorded results](docs/LEADERBOARD.md) for measurements, and [the sequential-search example](docs/AUTORESEARCH_BASELINE.md) for the loop, accepted changes and experiment records.
 
 </div>
 

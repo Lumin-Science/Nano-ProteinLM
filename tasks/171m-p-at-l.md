@@ -1,6 +1,6 @@
 # 171M contact P@L
 
-This file is the existing two-seed, one-hour/four-L40S example task. The [agent benchmark protocol](../docs/autoresearch.md) defines the new search tracks and three-setting scale-up submission; its allowances are not automatically implemented by this task script.
+This is the historical contact-P@L measurement profile for [our Karpathy-style sequential-search method](../docs/AUTORESEARCH_BASELINE.md). It evaluates each candidate over two seeds, with one hour on four L40S GPUs per seed. The current [AutoResearch protocol](../docs/autoresearch.md) uses 72 rounds of 20 minutes on four H100s and allows data selection and mixture changes within the provided corpus. This task retains its original measurement settings and boundaries for reproduction.
 
 ## Background
 
@@ -8,9 +8,9 @@ Improve protein-embedding training recipes under a small compute budget. The 171
 
 [default.yaml](../configs/default.yaml) is the starting recipe; [esmc-171m.yaml](../configs/esmc/esmc-171m.yaml) is the reference. The larger presets in [configs/esmc/README.md](../configs/esmc/README.md) support separate experiments and are outside this task's size bound.
 
-This task uses the same protocol as [171m-validation-loss.md](171m-validation-loss.md), with contact P@L as the research reward instead of MLM validation loss.
+This task uses the same measurement procedure as [171m-validation-loss.md](171m-validation-loss.md), with contact P@L as the research reward instead of MLM validation loss.
 
-## Autoresearch protocol
+## Sequential-search measurement
 
 Compare mean contact P@L after time-limited training of approximately fixed-size models on the same data and hardware.
 
@@ -34,4 +34,4 @@ Use a fresh experiment name for each candidate. Setup and GPU allocation happen 
 
 The benchmark owner manually verifies a selected recipe with a fixed 24.20B-token training budget on four H100s per seed, then compares full validation loss and P@L against the reference. This is separate from the agent's research loop.
 
-Use the manual training/evaluation commands in [EVALUATION.md](../docs/EVALUATION.md#manual-test-of-progress) and preserve the full final optimizer checkpoint for continuation. Historical results retain their original protocols; see the [benchmark protocol and historical results](../docs/autoresearch.md).
+Use the manual training/evaluation commands in [EVALUATION.md](../docs/EVALUATION.md#manual-test-of-progress) and preserve the full final optimizer checkpoint for continuation. See the shared [benchmark protocol](../docs/autoresearch.md) for evaluation budgets and [the method's historical results](../docs/AUTORESEARCH_BASELINE.md#detailed-scale-up-results) for their original settings.

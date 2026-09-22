@@ -16,7 +16,7 @@ population protected during training-corpus decontamination.
 
 <div class="ai">
 
-The existing small-budget 171M example tasks use the paper's 170M scaling backbone ([architecture and scope](../tasks/171m-validation-loss.md#background)). The [validation-loss task](../tasks/171m-validation-loss.md) scores held-out sequence-mean MLM loss (lower is better); the [P@L task](../tasks/171m-p-at-l.md) scores full long-range contact P@L (higher is better). Both average the selected metric across two matched training seeds, with sample SD reported separately, and use identical training and evaluation commands. The other metric and training loss remain diagnostics; P-CORE provides additional representation measurements. Diagnostics do not affect research selection. [autoresearch/program.md](../autoresearch/program.md) defines the example sequential-search acceptance rule. See each task for its scoring rule and executable profile. The [agent benchmark protocol](autoresearch.md) separately defines the two new search tracks, N-seed confirmation and three-setting scale-up submission. [AUTORESEARCH_SCALEUP.md](AUTORESEARCH_SCALEUP.md) records the executed historical 100k-step comparison. The current token-budget verification protocol does not relabel those single-seed results.
+Our [sequential-search implementation](AUTORESEARCH_BASELINE.md) uses the paper's 170M scaling backbone ([architecture and scope](../tasks/171m-validation-loss.md#background)). Its [validation-loss task](../tasks/171m-validation-loss.md) scores held-out sequence-mean MLM loss (lower is better); its [P@L task](../tasks/171m-p-at-l.md) scores full long-range contact P@L (higher is better). Both average the selected metric across two matched training seeds, with sample SD reported separately, and use identical training and evaluation commands. The other metric and training loss remain diagnostics; P-CORE provides additional representation measurements. Diagnostics do not affect this method's research selection. Its two-seed policy and acceptance rule are described in [AUTORESEARCH_BASELINE.md](AUTORESEARCH_BASELINE.md#running-the-example-loop). The shared [AutoResearch protocol](autoresearch.md) defines the design boundaries, fixed round allowance, per-round compute and final evaluation budget. [Historical scale-up results](AUTORESEARCH_BASELINE.md#detailed-scale-up-results) retain their original single-seed protocols.
 
 </div>
 
@@ -24,19 +24,19 @@ The existing small-budget 171M example tasks use the paper's 170M scaling backbo
 
 <div class="ai">
 
-The benchmark owner runs token-budget verification separately from the agent's research loop. For the [agent benchmark](autoresearch.md#three-submitted-settings-and-the-scale-up-test), freeze three submitted settings before testing, run all three on the same token target and predeclared scale-up seeds, and report the best setting on the predeclared ranking metric together with all three results. Track 1's N-seed confirmation is a separate repeat of the short-budget search winner, reported as mean ± sample SD.
+The benchmark owner runs token-budget verification separately from the agent's research loop. Freeze the selected recipe and train it and the reference from scratch to the same token target, using the same data, training seeds and evaluation. Report both metrics for every seed, then their means and sample SDs. This checks whether the search improvement carries over to a larger training budget, as described in the [illustrated protocol](autoresearch.md#evaluation).
 
 </div>
 
 <div class="ai">
 
-The commands below are the existing two-seed reference procedure, with seeds 42 and 43, batch 1,024, fixed base LR/WD and warmup, and a 24,200,224,761-model-token endpoint. They are an example for one recipe, not a launcher for the entire new benchmark. Use each frozen submission's permitted recipe settings and the benchmark's published seed list when adapting the procedure; do not silently override submitted settings with these example defaults. Keep the token target, data and evaluation fixed across settings and run any shared AdamW reference under the same comparison contract.
+The commands below show the manual reference implementation linked from [our sequential-search method](AUTORESEARCH_BASELINE.md#running-the-example-loop), with seeds 42 and 43, batch 1,024, base LR 5e-4, weight decay 0.01, 1,000 warmup steps and a 24,200,224,761-model-token endpoint. For a comparison of AutoResearch methods, use the common final evaluation seed list and repeat count published for that benchmark. Run the procedure for each recipe with a fresh experiment name. If the selected recipe changes an allowed setting that these commands override, adapt the override explicitly and record the resolved configuration. Keep the token target, data and evaluation fixed across recipes.
 
 </div>
 
 <div class="ai">
 
-After [setup](USAGE.md#setup), select a frozen recipe and fresh experiment name. The historical comparison used `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT`; the general 30-shard default does not change that historical reference. For a new benchmark, pin a common corpus with enough per-source capacity for all runs before search starts, using [data sizing](DATA.md#sizing-a-training-download) and [coverage checks](data-coverage.md). A seven-shard download alone is not proof of sufficient scale-up coverage. Keep the training sampler's no-repeat checks enabled; expanded-data comparisons retain their own manifests and are distinct from the historical table.
+After [setup](USAGE.md#setup), select a frozen recipe and fresh experiment name. The historical comparison used `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT`; the general 30-shard default does not change that historical reference. For scale-up, prepare the required selections from the provided corpus using [data sizing](DATA.md#sizing-a-training-download). A seven-shard download alone is not proof of sufficient scale-up coverage. Preserve each recipe's declared sampling policy and record its source exposure and any reuse. Expanded-data comparisons retain their own manifests and are distinct from the historical table.
 
 </div>
 
