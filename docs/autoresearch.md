@@ -1,22 +1,9 @@
-<div class="ai">
-
 # Benchmarking Agentic AutoResearch Systems
-
-</div>
-
-<div class="ai">
 
 NanoProteinLM benchmarks an agent's ability to discover better protein-model training recipes.
 
-</div>
-
-<div class="ai">
-
 This page details the [Auto Research Protocols in the README](../README.md#auto-research-protocols). A benchmark specifies the permitted design space, a fixed number of search rounds, the compute available in each round and the final evaluation budget. Publish these settings before search and use them for every method being compared. Each method chooses how to propose recipes, use previous results and select its final recipe within those limits.
 
-</div>
-
-<div class="ai">
 
 ```mermaid
 flowchart LR
@@ -25,78 +12,23 @@ flowchart LR
     C --> E["Owner-run evaluation<br/>Fixed token budget and metrics"]
 ```
 
-</div>
-
-<div class="ai">
 
 The protocol applies to any AutoResearch algorithm. Our implementation of Karpathy-style sequential search, including its pipeline, training-seed policy and improvement criteria, is described in [AUTORESEARCH_BASELINE.md](AUTORESEARCH_BASELINE.md).
 
-</div>
-
-<div class="ai">
 
 ## Design Space
 
-</div>
+**Immutable settings**:
 
-<div class="ai">
+- **Model and training settings:** use only the provided training corpus, without adding datasets. Keep the tokenizer, Stage-1 context of 512 tokens and linear-warmup/constant-LR schedule fixed. Actual trainable parameters must stay within ±5% of the original 171M model, with no unused parameters added to satisfy the bound. Train from scratch without pretrained models.
+- **Evaluation and execution:** preserve the hardware, round allowance and per-round training budget. Keep the evaluation code, data, masking, contact-probe procedure and metric definitions unchanged; do not train on held-out evaluation data. Preserve the published dependencies and source-data verification records.
 
-<aitofix resolved>detailizing the design space and design boudries here, use itemlize to show examples. Fixed: Listed the task's fixed boundaries and examples of permitted architecture, loss, optimizer and implementation changes.</aitofix>
-
-</div>
-
-<div class="ai">
-
-The immutable settings define the boundaries of the 171M benchmark.
-
-</div>
-
-<div class="ai">
-
-<aitofix resolved>here just seperate by immutable settings and other, the only restriction on training data is that not introducing additional dataset, it can be just two item, model & training setting: data, tokenizer, context, lr scheduler, model size, no pretrained model. Evaluation and execution: keep training budget, do not touch evaluation code... e.t.c. Fixed: Reduced the contract to two items; training data must come from the provided corpus, while selection and source mixture are editable.</aitofix>
-
-</div>
-
-- <span class="ai">**Model and training settings:** use only the provided training corpus, without adding datasets. Keep the tokenizer, Stage-1 context of 512 tokens and linear-warmup/constant-LR schedule fixed. Actual trainable parameters must stay within ±5% of the original 171M model, with no unused parameters added to satisfy the bound. Train from scratch without pretrained models.</span>
-- <span class="ai">**Evaluation and execution:** preserve the hardware, round allowance and per-round training budget. Keep the evaluation code, data, masking, contact-probe procedure and metric definitions unchanged; do not train on held-out evaluation data. Preserve the published dependencies and source-data verification records.</span>
-
-<div class="ai">
-
-<aitofix resolved>use a shortend paragraph instead of the below itemized stuffs. Fixed: Replaced the editable-setting list with one paragraph.</aitofix>
-
-</div>
-
-<div class="ai">
-
-Everything outside the immutable contract is open to research, including data selection and source mixture within the provided corpus, model architecture, training loss, optimizer settings, batch size and training implementation. [DATA.md](DATA.md) describes the available corpus, and [EVALUATION.md](EVALUATION.md) specifies the scientific measurements.
-
-</div>
-
-<div class="ai">
+**Design space**:
+* Everything outside the immutable contract is open to research, including data selection and source mixture within the provided corpus, model architecture, training loss, optimizer settings, batch size and training implementation. [DATA.md](DATA.md) describes the available corpus, and [EVALUATION.md](EVALUATION.md) specifies the scientific measurements.
 
 ## Search Budget
 
-</div>
-
-<div class="ai">
-
-<aitofix resolved>have a table here showing the search time budget for different setup. Fixed: Following the clarification to use one setup, tabulated the fixed round allowance, per-round compute and total search budget independently of the search method.</aitofix>
-
-</div>
-
-<div class="ai">
-
-<aitofix resolved>Here just to update let's all use H100 setting, and the total compute to consume are 1 day on a 4xH100 node. Fixed: Set 72 rounds of 20 minutes on four H100s, totaling 24 node-hours or 96 H100 GPU-hours of search training.</aitofix>
-
-</div>
-
-<div class="ai">
-
 A budgeted round consists of one training run and its evaluation. Each method receives **72 rounds of 20 minutes on four H100 GPUs**, totaling **24 hours of training on one four-GPU node**, or **96 H100 GPU-hours**. Setup, checkpoint saving and evaluation add to elapsed runtime and are reported separately.
-
-</div>
-
-<div class="ai">
 
 | Budget item | Protocol setting |
 |---|---|
@@ -107,84 +39,93 @@ A budgeted round consists of one training run and its evaluation. Each method re
 | Measurement after each round | Final checkpoint; 32 MLM validation sequences and all 20,775 contact chains |
 | Outside the training clock | Environment/data setup, final checkpoint saving and evaluation; report their time separately |
 
-</div>
-
-<div class="ai">
-
 Methods may spend rounds exploring new recipes or repeating earlier recipes. Every training run, including a seed repeat or an agent-run reference measurement, consumes a round. Retain failed attempts and their consumed compute; declare any infrastructure-failure replacement policy before the benchmark. A method's internal iteration may contain several budgeted rounds.
-
-</div>
-
-<div class="ai">
 
 The training clock includes batch loading and synchronization. Prepare the inputs before timing a run and keep data placement consistent across methods. Record the code revision, resolved recipe, data receipts, seed, actual steps and non-padding model tokens for each run, together with its metrics and elapsed training time.
 
-</div>
-
-<div class="ai">
-
 Search results use the fixed evaluation described below. Proposal generation, repeated-seed comparisons, candidate retention and stopping within the round allowance are choices made by the AutoResearch method.
 
-</div>
-
 <div class="ai">
 
-## Evaluation
-
-</div>
-
-<div class="ai">
-
-<aitofix resolved>show here the scaled up setting of evaluation. Fixed: Added the token target, hardware, validation sizes and checkpoint rule beside the search settings; the benchmark declares its final evaluation seeds before search.</aitofix>
+<aitofix resolved>use 24B model taokens is enough not necesaary to tell the exact number, and we are only going to train 1 seed. Also I think here it might be confusing to mix the search time reward with the final evaluation, so we should have sapaerate subsecion of ## hill-clibing evaluation and ## final evaluation. for hill-climbing we default at validation loss since it;s more stable. Fixed: Split search and final evaluation into separate sections, set validation loss as the default search reward, and described the final budget as 24B tokens with one training seed.</aitofix>
 
 </div>
 
 <div class="ai">
 
-Choose the primary metric before search and keep it fixed. MLM validation loss is mean per-protein masked-token negative log-likelihood, with lower values better. Contact P@L measures precision among the top L predicted long-range contacts, where L is the evaluated chain length, averaged over the frozen chains; higher values are better. Every completed run reports both metrics. The benchmark uses the chosen metric to compare final recipes; each method defines how it uses search feedback.
+## Hill-climbing evaluation
 
 </div>
 
 <div class="ai">
 
-| Measurement | During search | Scale-up test |
-|---|---|---|
-| Training budget | **20 minutes on 4 H100 GPUs per round** | **24,200,224,761 non-padding model tokens per training seed**, including BOS/EOS, on 4 H100s |
-| Repeated training | Chosen by the method; each repeat uses a round | A common seed list and repeat count **N_eval**, published before search |
-| MLM validation | **32 fixed sequences**, context 512 | **4,096 fixed sequences**, context 512 |
-| Contact P@L | **All 20,775 frozen chains** | **All 20,775 frozen chains** |
-| Scored checkpoint | Final checkpoint at the time limit | Final checkpoint at the token target |
-| Reported uncertainty | P@L chain-bootstrap 95% interval for each checkpoint | Per-seed metrics, mean and sample SD across training seeds when N_eval ≥ 2; P@L chain-bootstrap interval per checkpoint |
+The default hill-climbing reward is **MLM validation loss**, which we use for a more stable search signal. It is the mean per-protein masked-token negative log-likelihood on held-out sequences; lower is better. Each round evaluates the final checkpoint from its 20-minute training run. The AutoResearch method decides how to use these measurements to propose and retain recipes.
 
 </div>
 
 <div class="ai">
 
-Contact evaluation fits one probe per checkpoint using the fixed probe split and uses 5,000 chain-bootstrap replicates. Across-seed SD describes variation between training runs; the chain-bootstrap interval describes variation over evaluated chains. Report them separately. With a single final training seed, report its metrics and mark across-seed SD unavailable.
+| Measurement | Search setting |
+|---|---|
+| Default reward | **MLM validation loss ↓** |
+| Validation data | **32 fixed sequences**, context 512, with fixed masking |
+| Contact diagnostic | **P@L over all 20,775 frozen chains**, with a chain-bootstrap 95% interval |
+| Scored checkpoint | Final checkpoint at the round's training-time limit |
 
 </div>
 
 <div class="ai">
 
-After search, each method submits its selected recipe for owner-run evaluation. Freeze the recipe before this evaluation. The owner trains it and the reference from scratch using the same permitted corpus, token target and final evaluation seeds, retaining each recipe's selected data mixture, then compares the primary metric and reports both metrics.
+Contact P@L measures precision among the top L predicted long-range contacts, where L is the evaluated chain length, averaged over the frozen chains. Higher is better. Report it alongside validation loss as a diagnostic. A method may repeat training runs within its search allowance; each repeat consumes another round.
 
 </div>
 
 <div class="ai">
 
-The final training allowance is **N_eval × 24,200,224,761 model tokens per recipe**, reported separately from the search allowance. Prepare the required portion of the provided corpus before training and record each recipe's data selection, source exposure and any reuse. Keep the evaluation fixed across recipes.
+## Final evaluation
 
 </div>
 
 <div class="ai">
 
-The reference scale-up budget takes roughly **12 hours on four H100s per seed**, or about **48 H100 GPU-hours**. Actual time depends on the recipe; the token target determines completion. Score the checkpoint at the first optimizer update reaching that target and report its actual token count and overrun. [EVALUATION.md](EVALUATION.md#manual-test-of-progress) provides a reference implementation and completion checks.
+After search, each method submits its selected recipe for owner-run evaluation. Freeze the recipe before this test. Train it and the reference from scratch for **24B model tokens each**, using **one common training seed** declared before the comparison. Both recipes use the provided corpus and retain their selected data mixtures.
 
 </div>
 
 <div class="ai">
 
-This scale-up test measures whether the search improvement carries over to longer training. It uses evaluation assets also available during search, so it does not establish performance on a blind holdout. Training a larger model requires its own agreed model size and comparison budget.
+| Measurement | Final evaluation setting |
+|---|---|
+| Training budget | **24B non-padding model tokens per recipe**, including BOS/EOS, on **4 H100 GPUs** |
+| Training seeds | **1 per recipe**, matched between the selected recipe and reference |
+| MLM validation | **4,096 fixed sequences**, context 512 |
+| Contact P@L | **All 20,775 frozen chains** |
+| Scored checkpoint | Final checkpoint at the token target |
+| Reported results | MLM validation loss and P@L, with a chain-bootstrap 95% interval for P@L |
+
+</div>
+
+<div class="ai">
+
+Final evaluation reports both metrics at the larger training budget. Contact evaluation fits one probe per checkpoint using the fixed probe split and uses 5,000 chain-bootstrap replicates. Its interval describes variation over evaluated chains. With one training seed, across-seed variability is not estimated.
+
+</div>
+
+<div class="ai">
+
+The final training budget is separate from the 72-round search allowance. Prepare the required portion of the provided corpus before training and record each recipe's data selection, source exposure and any reuse. Keep the evaluation data and code fixed across recipes.
+
+</div>
+
+<div class="ai">
+
+The reference takes roughly **12 hours on four H100s**, or about **48 H100 GPU-hours**, per recipe. Actual time depends on the recipe; the token target determines completion. Score the checkpoint at the first optimizer update reaching that target and report its actual token count and overrun. [EVALUATION.md](EVALUATION.md#manual-test-of-progress) provides the training command and completion checks.
+
+</div>
+
+<div class="ai">
+
+This test measures whether search improvements carry over to longer training. It uses evaluation assets also available during search, so it does not establish performance on a blind holdout. Training a larger model requires its own agreed model size and comparison budget.
 
 </div>
 

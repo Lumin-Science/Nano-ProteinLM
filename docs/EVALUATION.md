@@ -24,13 +24,13 @@ Our [sequential-search implementation](AUTORESEARCH_BASELINE.md) uses the paper'
 
 <div class="ai">
 
-The benchmark owner runs token-budget verification separately from the agent's research loop. Freeze the selected recipe and train it and the reference from scratch to the same token target, using the same data, training seeds and evaluation. Report both metrics for every seed, then their means and sample SDs. This checks whether the search improvement carries over to a larger training budget, as described in the [illustrated protocol](autoresearch.md#evaluation).
+The benchmark owner runs token-budget verification separately from the agent's research loop. Freeze the selected recipe and train it and the reference from scratch for 24B model tokens each, with one common training seed and the same evaluation. Report validation loss and P@L for each recipe, with the contact-chain bootstrap interval. This checks whether the search improvement carries over to a larger training budget, as described in the [final evaluation protocol](autoresearch.md#final-evaluation).
 
 </div>
 
 <div class="ai">
 
-The commands below show the manual reference implementation linked from [our sequential-search method](AUTORESEARCH_BASELINE.md#running-the-example-loop), with seeds 42 and 43, batch 1,024, base LR 5e-4, weight decay 0.01, 1,000 warmup steps and a 24,200,224,761-model-token endpoint. For a comparison of AutoResearch methods, use the common final evaluation seed list and repeat count published for that benchmark. Run the procedure for each recipe with a fresh experiment name. If the selected recipe changes an allowed setting that these commands override, adapt the override explicitly and record the resolved configuration. Keep the token target, data and evaluation fixed across recipes.
+The commands below show the manual reference implementation linked from [our sequential-search method](AUTORESEARCH_BASELINE.md#running-the-example-loop), with seed 42, batch 1,024, base LR 5e-4, weight decay 0.01 and 1,000 warmup steps. The executable token target retains the existing reference endpoint, rounded to 24B in the protocol. Run the procedure once for each recipe with a fresh experiment name and the same seed. If the selected recipe changes an allowed setting that these commands override, adapt the override explicitly and record the resolved configuration. Keep the token target, permitted corpus and evaluation fixed across recipes.
 
 </div>
 
@@ -46,6 +46,8 @@ Use four H100s for this example. The trainer saves the full optimizer state and 
 
 </div>
 
+<div class="ai">
+
 ```bash
 set -a
 if [ -f .env ]; then source .env; fi
@@ -58,32 +60,30 @@ mkdir "$experiment"
 uv run --frozen python -m nanoprotein.check_environment \
   --require-gpus 4 --gpu-name H100 --attention-backend flash3 \
   --output "$experiment/environment.json"
-for seed in 42 43; do
-  run_dir="$experiment/seed-$seed"
-  uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
-    -m nanoprotein.train --config "$recipe" --seed "$seed" \
-    --data-root "$DATA_ROOT/training" --output-root "$run_dir" \
-    --max-steps none --max-model-tokens 24200224761 --schedule-steps 100000 \
-    --walltime-seconds 57600 --attention-backend flash3 --warmup-steps 1000 \
-    --learning-rate 5e-4 --weight-decay 0.01 \
-    --micro-batch-size 64 --gradient-accumulation 4 \
-    --checkpoint-interval 0 --periodic-evaluation-interval 0 \
-    --peak-bf16-tflops-per-gpu 989.5
-  uv run --frozen python -m nanoprotein.evaluate \
-    --checkpoint "$run_dir/checkpoint-final.pt" --data-root "$DATA_ROOT/training" \
-    --output-root "$run_dir/evaluation" \
-    --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
-    --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
-    --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
-done
-uv run --frozen python -m nanoprotein.summarize_training_runs \
-  "$experiment/seed-42" "$experiment/seed-43" --validation-sequences 4096 \
-  --output "$experiment/summary.json"
+seed=42
+run_dir="$experiment/seed-$seed"
+uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
+  -m nanoprotein.train --config "$recipe" --seed "$seed" \
+  --data-root "$DATA_ROOT/training" --output-root "$run_dir" \
+  --max-steps none --max-model-tokens 24200224761 --schedule-steps 100000 \
+  --walltime-seconds 57600 --attention-backend flash3 --warmup-steps 1000 \
+  --learning-rate 5e-4 --weight-decay 0.01 \
+  --micro-batch-size 64 --gradient-accumulation 4 \
+  --checkpoint-interval 0 --periodic-evaluation-interval 0 \
+  --peak-bf16-tflops-per-gpu 989.5
+uv run --frozen python -m nanoprotein.evaluate \
+  --checkpoint "$run_dir/checkpoint-final.pt" --data-root "$DATA_ROOT/training" \
+  --output-root "$run_dir/evaluation" \
+  --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
+  --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
+  --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
 ```
+
+</div>
 
 <div class="ai">
 
-Require `stop_reason=max_model_tokens` and `model_token_budget_reached=true` in each `TRAINING_COMPLETE.json`. The count includes non-padding model tokens and BOS/EOS, stopping at the first update reaching 24,200,224,761; an early wall-time stop is incomplete. Report actual tokens/overrun, both metric means, sample SDs, and the per-run chain-bootstrap P@L intervals. Use the final token-endpoint checkpoint for scoring. Evaluation assets overlap research; this checks transfer to the larger budget rather than performance on a blind holdout.
+Require `stop_reason=max_model_tokens` and `model_token_budget_reached=true` in each `TRAINING_COMPLETE.json`. The count includes non-padding model tokens and BOS/EOS, stopping at the first update reaching the configured target; an early wall-time stop is incomplete. Report actual tokens and overrun, the validation loss and P@L from `evaluation/EVALUATION.json`, and the contact-chain bootstrap interval. One training seed does not provide an across-seed SD. Use the final token-endpoint checkpoint for scoring. Evaluation assets overlap research; this checks transfer to the larger budget rather than performance on a blind holdout.
 
 </div>
 

@@ -109,7 +109,7 @@ The current program averages the task's metric over training seeds and compares 
 
 <div class="ai">
 
-The manual scale-up example in [EVALUATION.md](EVALUATION.md#manual-test-of-progress) also uses seeds 42 and 43, training the selected recipe and reference to 24,200,224,761 model tokens per seed on four H100s. This is a concrete implementation of the final evaluation; a comparison of AutoResearch methods uses the common final seed list and repeat count declared by that benchmark.
+The manual scale-up example in [EVALUATION.md](EVALUATION.md#manual-test-of-progress) trains the selected recipe and reference for 24B model tokens each on four H100s, with one common training seed. Our two-seed candidate comparisons belong to the search method; the [final evaluation](autoresearch.md#final-evaluation) uses one training seed per recipe.
 
 </div>
 

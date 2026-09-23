@@ -184,8 +184,8 @@ Use NanoProteinLM to compare AutoResearch methods under a fixed number of search
 | Objective | Find better training recipes for protein embedding models. Declare the primary comparison metric before search. |
 | Design space | **Fixed:** use only the provided training corpus; keep the tokenizer, context 512, linear-warmup/constant-LR schedule, evaluation and compute settings unchanged. Keep trainable parameters within **±5% of the original 171M model**, with no pretrained weights or held-out training. **Mutable:** data selection and source mixture within that corpus, architecture, training loss, optimizer and training implementation. |
 | Search budget | **72 rounds**, each providing **20 minutes on four H100 GPUs** for one training run: **24 node-hours, or 96 H100 GPU-hours**, in total. Repeated seeds consume additional rounds. Setup, final checkpoint saving and evaluation are timed separately. |
-| Search measurements | Evaluate the final checkpoint on **32 MLM validation sequences** and **all 20,775 contact chains**, with a chain-bootstrap 95% interval for P@L. Each method decides how to use this feedback. |
-| Final evaluation budget | Train the selected recipe and reference to **24,200,224,761 model tokens per seed** on four H100s, using a common final seed list and repeat count declared before search. The reference takes roughly **12 hours per seed**. Evaluate **4,096 MLM validation sequences** and **all 20,775 contact chains**. |
+| Hill-climbing evaluation | Default reward: **MLM validation loss ↓** on **32 fixed sequences**. Report P@L over **all 20,775 contact chains** as a diagnostic, with a chain-bootstrap 95% interval. Each method decides how to use this feedback. |
+| Final evaluation budget | Train the selected recipe and reference for **24B model tokens each** on four H100s, using **one common training seed**. The reference takes roughly **12 hours per recipe**. Report loss on **4,096 MLM validation sequences** and P@L over **all 20,775 contact chains**. |
 
 </div>
 
