@@ -125,6 +125,52 @@ Both rounds ran before the current search setting, so their numbers are reported
 
 <div class="ai">
 
+### Previous two-seed pipeline
+
+</div>
+
+<div class="ai">
+
+![Previous sequential AutoResearch loop: evaluate a baseline, propose one change, train and evaluate two seeds, keep or discard, record the result and repeat; the retained recipe then goes to a scale-up test.](../.dev/reports/readme-figures-20260914/autoresearch-loop.png)
+
+</div>
+
+<div class="ai">
+
+Both rounds ran this loop. The agent measured the starting recipe, proposed one change, trained and evaluated it with seeds 42 and 43, kept or discarded it, recorded the result, and proposed the next change from the retained recipe. After search, a human-run 100k-step scale-up tested the retained changes. Round 1 launched each seed with its [one-hour launcher](archive/runs/README.md); round 2's task command trained both seeds and wrote their mean, per-seed values and sample SD to `summary.json`.
+
+</div>
+
+<div class="ai">
+
+| Pipeline setting | Rounds 1 and 2 |
+|---|---|
+| Training seeds per candidate | **42 and 43**, both trained from scratch |
+| Training per seed | **1 hour on 4 L40S GPUs**, FlashAttention-2 |
+| Schedule | **554 warmup steps**, then constant peak learning rate |
+| Global batch | 256 in round 1; 1,024 in round 2 |
+| Cost per candidate | **2 training runs = 8 L40S GPU-hours**, excluding setup and evaluation |
+| Data | Seven-shard corpus |
+| MLM evaluation | **32 fixed sequences**, context 512 |
+| Contact evaluation | All **20,775 chains**, one probe per checkpoint, 5,000 chain-bootstrap replicates |
+| Candidate score | Mean of the objective over the two seeds, with per-seed values and sample SD |
+
+</div>
+
+<div class="ai">
+
+Round 1 kept a candidate when its mean validation-loss reduction exceeded that candidate's own two-seed sample SD, following its [archived instructions](archive/program2.md). Round 2 followed the [two-seed loop program](archive/program-round2.md), which kept a candidate only when `candidate.ci95_low > incumbent.mean` and `candidate.mean > incumbent.ci95_high`. Each interval was `mean ± t(0.975, 1) × s / sqrt(2)` over the two seeds, with the reward oriented so that higher is better; ties were discarded.
+
+</div>
+
+<div class="ai">
+
+Each campaign ran in its own worktree on a branch named `ar-YYMMDD-<name>`. It appended one row per trial to `results.tsv` and the hypothesis, evidence and decision to `research.log`, and saved every trial's diff, commands and outputs. The [current method](#running-the-example-loop) keeps this loop but trains one seed per candidate and leaves the keep decision to the agent's documented judgement.
+
+</div>
+
+<div class="ai">
+
 ### Round 1: validation loss
 
 </div>
