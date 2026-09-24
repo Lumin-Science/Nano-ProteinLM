@@ -14,7 +14,7 @@ Each recipe trains from scratch to 24,200,224,761 non-padding model tokens with 
 
 ## Search budget
 
-Each recipe trains its [autoresearch config](../configs/autoresearch/) for 1,200 seconds on four H100 GPUs with FA3: global batch 256 and 500 warmup steps followed by constant learning rate. Values are the mean ± sample SD over training seeds 42, 43 and 44; P@L SD is in percentage points. Scores use the same evaluation as final evaluation. These nine runs completed on Fir node `fc10219` on 2026-09-24.
+Each recipe trains its [autoresearch config](../configs/autoresearch/) for 1,200 seconds on four H100 GPUs with FA3: global batch 256 and 500 warmup steps followed by constant learning rate. Values are the mean ± sample SD over training seeds 42, 43 and 44; P@L SD is in percentage points. Scores use the same evaluation as final evaluation. These nine runs completed on 2026-09-24.
 
 | Recipe | MLM validation loss ↓, mean ± SD | P@L ↑, mean ± SD |
 |---|---:|---:|
