@@ -18,77 +18,7 @@ Our sequential-search method proposes one change, measures it, keeps or discards
 
 <div class="ai">
 
-Prepare a fresh workspace from the `autoresearch-v0` release using [the preparation instructions](AUTORESEARCH.md#preparation). The release includes both programs. Run the steps below on the allocated compute node; never run training on a login node.
-
-</div>
-
-<div class="ai">
-
-### Install the loop skill
-
-</div>
-
-<div class="ai">
-
-[`ar-loop-n-sleep`](https://github.com/Lumin-Science/Nano-AutoResearch-Skills) lets Codex sleep while training or evaluation runs and wake the same tmux pane at the next useful check, instead of spending model turns on polling. It keeps the original prompt in `.ar/PROMPT.md` and one row per check in `.ar/events.tsv`. The node needs Node.js for `npx`, tmux, Python 3 and the Codex CLI.
-
-</div>
-
-<div class="ai">
-
-```bash
-# Install the skill globally (-g) for Codex (-a codex):
-npx skills add Lumin-Science/Nano-AutoResearch-Skills --skill ar-loop-n-sleep -g -a codex
-# Confirm that ar-loop-n-sleep is listed for Codex:
-npx skills list -g
-```
-
-</div>
-
-<div class="ai">
-
-Omit `-g` to install the skill only for the current project, and run `npx skills update ar-loop-n-sleep` to update it later. `npx skills add Lumin-Science/Nano-AutoResearch-Skills --list` shows the collection's other skills.
-
-</div>
-
-<div class="ai">
-
-### Start Codex
-
-</div>
-
-<div class="ai">
-
-Start Codex inside tmux in the prepared workspace, so the skill can wake the same pane. `--approve-for-me` routes execution approvals, including GPU access outside the workspace sandbox, through Codex's automatic review.
-
-</div>
-
-<div class="ai">
-
-```bash
-tmux new-session -s nanoprotein-ar
-codex --approve-for-me
-```
-
-</div>
-
-<div class="ai">
-
-Give Codex the task, method, resources and stopping condition together:
-
-</div>
-
-<div class="ai">
-
-```text
-Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/karpathy_ar_reward_gate.md. Use the allocated four H100 GPUs and verify the current allocation. Run the baseline and one candidate following the program's keep rule, with the complete task evaluation for each run. Explain the keep/discard decision, then stop without another wakeup.
-```
-
-</div>
-
-<div class="ai">
-
-This qualification tests launch, sleeping, continuation, evaluation and a candidate decision in three or four rounds under the reward gate. Name `autoresearch/karpathy_ar_agent_gate.md` instead to let the agent decide; its qualification takes two rounds unless the agent adds a seed. A full campaign may use the 72-round allowance. For contact P@L, select `tasks/171m-p-at-l.md`.
+Paste the [launch prompt](../README.md#launch-autoresearch) into any coding agent on your GPU compute node. It installs the loop skill, prepares the workspace and leaves Codex in a tmux session with the search prompt already typed; run `tmux attach -t nanoprotein-ar` and press Enter. Edit the typed prompt to choose the agent gate, the P@L task or a short qualification run.
 
 </div>
 
@@ -106,7 +36,7 @@ This qualification tests launch, sleeping, continuation, evaluation and a candid
 
 <div class="ai">
 
-Under the reward gate, the baseline takes two rounds and each candidate one or two, so 72 rounds cover 35–70 candidates. Under the agent gate, the count depends on how many rounds the agent spends on repeats and refinements. Each program lists the records to keep for every run.
+Under the reward gate, each candidate takes one or two rounds, so 72 rounds cover 36–72 candidates when the baseline reuses the owner's four-H100 reference measurement, or 35–70 when it is measured. Under the agent gate, the count depends on how many rounds the agent spends on repeats and refinements. Each program lists the records to keep for every run.
 
 </div>
 
