@@ -46,7 +46,7 @@ bash runs/setup.sh
 
 <div class="ai">
 
-`--depth 1 --single-branch --no-tags` downloads only the tagged commit, so the workspace has no `main` branch, other tags or research history. The tag pins the same starting point for every participant; record `git rev-parse HEAD` with the organizer records. Removing the remote prevents fetching other branches by accident. While the repository is private, use credentials with read access or the SSH URL `git@github.com:Lumin-Science/Nano-ProteinLM.git`. Do not reuse an existing research clone, which retains old Git objects.
+`--depth 1 --single-branch --no-tags` downloads only the tagged commit, so the workspace has no `main` branch, other tags or research history. The tag pins the same starting point for every participant; record `git rev-parse HEAD` with the organizer records. Removing the remote prevents fetching other branches by accident. The clone starts on a detached HEAD at the release commit; a search method creates its own branch before committing. While the repository is private, use credentials with read access or the SSH URL `git@github.com:Lumin-Science/Nano-ProteinLM.git`. Do not reuse an existing research clone, which retains old Git objects.
 
 </div>
 
