@@ -10,7 +10,7 @@ Work inside the organizer-prepared clone of the AutoResearch release tag. Do not
 
 Choose a short campaign name. Keep `results.tsv`, `research.log`, candidate diffs and measurement receipts under `$OUTPUT_ROOT/autoresearch/<campaign>/`. Record the release commit, task, primary metric, hardware, data receipts, round limit and any user-imposed stopping condition before training. Read the TSV header and recent journal entries before every trial; retain failures and discarded results.
 
-Measure the untouched starting recipe first to establish the incumbent. Do not launch owner-run final evaluation unless it was requested.
+Establish the incumbent first, by measuring the untouched starting recipe or reusing the reference measurement below. Do not launch owner-run final evaluation unless it was requested.
 
 ## Resources and measurement
 
@@ -25,6 +25,17 @@ bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml trial-
 ```
 
 Use the selected task's entry point for other objectives. Read the completed run's `TRAINING_COMPLETE.json` and `evaluation/EVALUATION.json`, and verify that evaluation matches the final checkpoint and covers the task's full evaluation population. A missing, failed or non-finite measurement cannot support a keep.
+
+## Reference measurement
+
+The owner measured the untouched starting recipe, `configs/autoresearch/esmc-171m.yaml`, with this release's task command on the four-H100 profile, using seeds 42, 43 and 44:
+
+| Task score | Mean ± sample SD over seeds 42, 43 and 44 |
+|---|---:|
+| `validation_mlm.sequence_mean_nll` | 2.70552 ± 0.00245 |
+| `contact.precision_at_l` | 0.09841 ± 0.00250 |
+
+On that profile you may use these values as the baseline instead of measuring it; its three seeds also show the starting recipe's seed-to-seed spread. Reusing them runs nothing, so it consumes no round; record a `baseline` row with `reused` in `decision_reason`. Measure the baseline yourself on the L40S profile or if your starting recipe differs from the release.
 
 ## Goal and budget
 
@@ -59,7 +70,7 @@ The examples below show the kind of reasoning that can help. They are illustrati
 
 ## Research records
 
-Append one row per task invocation to `results.tsv`, using tab-separated cells on one line and `NA` for unavailable values. Suggested columns are:
+Append one row per task invocation, and one for a reused baseline, to `results.tsv`, using tab-separated cells on one line and `NA` for unavailable values. Suggested columns are:
 
 ```tsv
 timestamp_utc	round_id	trial_id	idea_id	seed	code_revision	incumbent_id	score	primary_gap	decision	decision_reason	artifacts

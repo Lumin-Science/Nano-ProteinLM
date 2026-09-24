@@ -189,19 +189,13 @@ Here we provide a baseline of autoresearch, see [AUTORESEARCH_BASELINE.md](docs/
 
 <div class="ai">
 
-By default, our sequential search runs the [reward-gate program](autoresearch/karpathy_ar_reward_gate.md) on the [validation-loss task](tasks/171m-validation-loss.md). It keeps a candidate only when its two-seed gain beats the seed-to-seed spread. Run these steps on the allocated compute node, never on a login node.
+By default, our sequential search runs the [reward-gate program](autoresearch/karpathy_ar_reward_gate.md) on the [validation-loss task](tasks/171m-validation-loss.md). It keeps a candidate only when its two-seed gain beats the seed-to-seed spread, and it can reuse the owner's four-H100 [baseline measurement](docs/LEADERBOARD.md#search-budget) instead of spending rounds on it. Run everything on the allocated compute node, never on a login node.
 
 </div>
 
 <div class="ai">
 
-**1. Prepare the workspace** with the clone and setup commands [above](#prepare-an-autoresearch-workspace).
-
-</div>
-
-<div class="ai">
-
-**2. Install the loop skill.** [`ar-loop-n-sleep`](https://github.com/Lumin-Science/Nano-AutoResearch-Skills) lets Codex sleep while training runs and wake the same tmux pane at the next useful check. It needs Node.js for `npx`, tmux and Python 3.
+**1. Install the loop skill once.** [`ar-loop-n-sleep`](https://github.com/Lumin-Science/Nano-AutoResearch-Skills) lets Codex sleep while training runs and wake the same tmux pane at the next useful check. It needs Node.js for `npx`, tmux and Python 3.
 
 </div>
 
@@ -216,15 +210,15 @@ npx skills list -g  # confirm ar-loop-n-sleep is listed for Codex
 
 <div class="ai">
 
-**3. Start Codex inside tmux** in the prepared workspace.
+**2. Open tmux, create an empty folder and start Codex in it.**
 
 </div>
 
 <div class="ai">
 
 ```bash
-cd nano-protein-autoresearch
 tmux new-session -s nanoprotein-ar
+mkdir nano-protein-autoresearch && cd nano-protein-autoresearch
 codex --approve-for-me
 ```
 
@@ -232,21 +226,41 @@ codex --approve-for-me
 
 <div class="ai">
 
-**4. Give Codex the task, program, resources and stopping condition.**
+**3. Ask Codex to set up the workspace.** It clones the release into the folder and prepares the environment and about 20 GB of data.
 
 </div>
 
 <div class="ai">
 
 ```text
-Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/karpathy_ar_reward_gate.md. Use the allocated four GPUs and verify the allocation. Run sequential AutoResearch for the full 72-round allowance, following the program's keep rule, then stop without another wakeup.
+Set up this empty folder as the AutoResearch workspace: run `git clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 https://github.com/Lumin-Science/Nano-ProteinLM.git .`, then `git remote remove origin` and `bash runs/setup.sh`. Confirm that setup finished and four GPUs are visible, then stop without starting research.
 ```
 
 </div>
 
 <div class="ai">
 
-For a short qualification run, ask for the baseline and one candidate instead of the full allowance. To let the agent decide what to keep, name [`autoresearch/karpathy_ar_agent_gate.md`](autoresearch/karpathy_ar_agent_gate.md); to optimize contact P@L, name `tasks/171m-p-at-l.md`. [AUTORESEARCH_BASELINE.md](docs/AUTORESEARCH_BASELINE.md#running-the-example-loop) explains both programs.
+**4. Start the search.**
+
+</div>
+
+<div class="ai">
+
+```text
+Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/karpathy_ar_reward_gate.md. Use the allocated four GPUs. Run sequential AutoResearch for the full 72-round allowance, following the program's keep rule, then stop without another wakeup.
+```
+
+</div>
+
+<div class="ai">
+
+While the repository is private, give Codex the SSH URL `git@github.com:Lumin-Science/Nano-ProteinLM.git` in step 3. If Codex cannot reach the network, run the commands from [Prepare an AutoResearch workspace](#prepare-an-autoresearch-workspace) in the tmux pane instead, then start Codex in the prepared folder. For a qualification run, ask for the baseline and one candidate in step 4. To let the agent decide what to keep, name `autoresearch/karpathy_ar_agent_gate.md`; to optimize contact P@L, name `tasks/171m-p-at-l.md`.
+
+</div>
+
+<div class="ai">
+
+This flow runs our baseline method. A benchmark comparison between methods should use an organizer-prepared workspace and a fresh agent session, as the [protocol](docs/AUTORESEARCH.md#preparation) requires.
 
 </div>
 

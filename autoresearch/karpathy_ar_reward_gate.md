@@ -28,20 +28,31 @@ bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml trial-
 
 Use the selected task's entry point for other objectives. Read the completed run's `TRAINING_COMPLETE.json` and `evaluation/EVALUATION.json`, and verify that evaluation matches the final checkpoint and covers the task's full evaluation population. A missing, failed or non-finite measurement is a failed run, and a failed run discards its candidate.
 
+## Reference measurement
+
+The owner measured the untouched starting recipe, `configs/autoresearch/esmc-171m.yaml`, with this release's task command on the four-H100 profile, using seeds 42, 43 and 44:
+
+| Task score | Mean ± sample SD over seeds 42, 43 and 44 |
+|---|---:|
+| `validation_mlm.sequence_mean_nll` | 2.70552 ± 0.00245 |
+| `contact.precision_at_l` | 0.09841 ± 0.00250 |
+
+On that profile you may use these values as the baseline instead of measuring it. Reusing them runs nothing, so it consumes no round; record a `baseline` row with `reused` in `decision_reason`. Measure the baseline yourself on the L40S profile or if your starting recipe differs from the release.
+
 ## Keep rule
 
-1. Measure the starting recipe with seeds 42 and 43 (two rounds). The incumbent's statistics are the mean and sample standard deviation of its two rewards.
+1. Measure the starting recipe with seeds 42 and 43 (two rounds), or reuse the reference measurement above. The incumbent's statistics are the mean and sample standard deviation of the rewards over its measured seeds.
 2. Train each candidate with seed 42. If its reward is at or below the incumbent's mean, discard it after this one round.
 3. Otherwise, train it with seed 43 and compute its two-seed mean and sample standard deviation. Keep the candidate only if its mean exceeds the incumbent's mean by more than the larger of the two standard deviations; otherwise discard it.
 4. A kept candidate becomes the incumbent, with its two-seed statistics.
 
-With two seeds, the sample standard deviation is `|r42 − r43| / sqrt(2)`. Apply the rule exactly: do not add seeds, rerun a discarded candidate or change the rule after seeing results. A revised version of an idea is a new candidate. If only one round remains, a candidate that passes step 2 cannot be kept.
+For a candidate's two seeds, the sample standard deviation is `|r42 − r43| / sqrt(2)`. For the reused validation-loss reference, the reward mean is −2.70552 and its standard deviation is 0.00245. Apply the rule exactly: do not add seeds, rerun a discarded candidate or change the rule after seeing results. A revised version of an idea is a new candidate. If only one round remains, a candidate that passes step 2 cannot be kept.
 
 Before each candidate, write the hypothesis. After each measurement, record the rewards and the step of the rule that decided.
 
 ## Research records
 
-Append one row per task invocation to `results.tsv`, using tab-separated cells on one line and `NA` for unavailable values. Suggested columns are:
+Append one row per task invocation, and one for a reused baseline, to `results.tsv`, using tab-separated cells on one line and `NA` for unavailable values. Suggested columns are:
 
 ```tsv
 timestamp_utc	round_id	trial_id	seed	code_revision	incumbent_id	score	reward	incumbent_mean	incumbent_sd	candidate_mean	candidate_sd	decision	decision_reason	artifacts
