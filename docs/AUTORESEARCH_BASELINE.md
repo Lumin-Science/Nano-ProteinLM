@@ -18,7 +18,7 @@ Our sequential-search method proposes one change, measures it, keeps or discards
 
 <div class="ai">
 
-Give any coding agent on your GPU compute node the [one-line launch prompt](../README.md#launch-autoresearch). It follows [setup_karpathy_ar.txt](../autoresearch/setup_karpathy_ar.txt): it asks for the workspace, data and output folders, the agent to run the search, and the task, program and round limit, then installs the loop skill, prepares the release and leaves the agent in a tmux session with the search prompt typed. Run `tmux attach -t nanoprotein-ar` and press Enter.
+Give any coding agent on your GPU compute node the [one-line launch prompt](../README.md#launch-autoresearch). It follows [setup_karpathy_ar.txt](../autoresearch/setup_karpathy_ar.txt) with the task and program named in the prompt and default paths for everything else, installs the loop skill, prepares the release and leaves the search agent in a tmux session with its prompt typed. Run `tmux attach -t nanoprotein-ar` and press Enter.
 
 </div>
 

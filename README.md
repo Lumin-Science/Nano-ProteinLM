@@ -196,20 +196,20 @@ On your GPU compute node, go to the folder you want to work in, start any coding
 <div class="ai">
 
 ```text
-Read https://raw.githubusercontent.com/Lumin-Science/Nano-ProteinLM/autoresearch-v0/autoresearch/setup_karpathy_ar.txt and set up AutoResearch for NanoProteinLM.
+Read https://raw.githubusercontent.com/Lumin-Science/Nano-ProteinLM/autoresearch-v0/autoresearch/setup_karpathy_ar.txt and set up sequential AutoResearch for NanoProteinLM on tasks/171m-validation-loss.md using autoresearch/karpathy_ar_reward_gate.md.
 ```
 
 </div>
 
 <div class="ai">
 
-The agent follows [setup_karpathy_ar.txt](autoresearch/setup_karpathy_ar.txt). It first asks where to put the workspace, data and outputs, which agent should run the search, and which task, program and round limit to use; accepting the defaults gives the reward gate on the validation-loss task for all 72 rounds. It then installs the loop skill, clones and sets up the release, and leaves a tmux session with your agent open in the workspace and the search prompt typed. Run `tmux attach -t nanoprotein-ar` and press Enter to start.
+Name `tasks/171m-p-at-l.md` to optimize contact P@L, or `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep; without them, the agent uses the validation-loss task and the reward gate. Everything else uses the defaults in [setup_karpathy_ar.txt](autoresearch/setup_karpathy_ar.txt): the uv environment from `runs/setup.sh`, data and outputs in the workspace's `data/` and `outputs/`, all 72 rounds, and a tmux session named `nanoprotein-ar`. The agent sets everything up without asking questions and leaves the search agent in that session with its prompt typed. Run `tmux attach -t nanoprotein-ar` and press Enter to start.
 
 </div>
 
 <div class="ai">
 
-The node needs tmux, git, Node.js and uv. While the repository is private, the agent also needs GitHub access, for example through `gh auth login`. This flow runs our baseline method; a benchmark comparison between methods should use an organizer-prepared workspace and a fresh agent session, as the [protocol](docs/AUTORESEARCH.md#preparation) requires.
+The node needs tmux, git and Node.js; the agent installs uv if it is missing. While the repository is private, the agent also needs GitHub access, for example through `gh auth login`. This flow runs our baseline method; a benchmark comparison between methods should use an organizer-prepared workspace and a fresh agent session, as the [protocol](docs/AUTORESEARCH.md#preparation) requires.
 
 </div>
 
