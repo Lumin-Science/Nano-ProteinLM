@@ -12,6 +12,7 @@
 !/.dev/tests/
 !/.dev/reports/
 !/.dev/LOG.md
+!/.dev/AI_REVIEW.md
 !/.dev/report/
 /.dev/report/*
 !/.dev/report/main.tex

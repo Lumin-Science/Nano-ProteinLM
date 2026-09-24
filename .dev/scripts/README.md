@@ -49,6 +49,6 @@ git push origin "$release"
 
 <div class="ai">
 
-Before pushing, clone the tag with the documented command from a local `file://` URL and run the starter's `.dev/tests` in the clone. Publish a new tag for every change instead of moving an existing one.
+Before pushing, clone the tag with the documented command from a local `file://` URL and run the starter's `.dev/tests` in the clone. To update an existing release, keep a local backup tag of its old commit, re-create the tag with `git tag -f -a` and push it with `git push -f origin "$release"`; workspaces cloned earlier keep the old commit, so tell participants to re-clone.
 
 </div>

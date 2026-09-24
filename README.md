@@ -1,6 +1,6 @@
 # NanoProteinLM
 > [!NOTE]
-> We are actively looking for <span class="ai">contributors and collaborators</span> for this project.
+> We are actively looking for contributors and collaborators for this project.
 
 Inspired by [nanochat](https://github.com/karpathy/nanochat), NanoProteinLM makes protein language-model training accessible, inspectable and easy to experiment with.
 Our goal is to help researchers train better protein embeddings for downstream biology tasks, through a small, open implementation and reproducible experiments.
@@ -9,36 +9,18 @@ Our goal is to help researchers train better protein embeddings for downstream b
 
 **For agentic researchers**, it provides a controlled environment for iterative autoresearch on the same scientific objective. Deterministic data selection, fixed seeds, explicit compute budgets and frozen evaluation protocols make recipe changes measurable. An agent can modify the training recipe, train, evaluate and improve it; the choice of agent and search strategy remains yours.
 
-<div class="ai">
-
 [Leaderboard](#final-evaluation-leaderboard) · [AutoResearch protocol](#autoresearch-protocol) · [Sequential search](docs/AUTORESEARCH_BASELINE.md) · [Protein models](#training-and-evaluating) · [Dataset](#data-preparation)
-
-</div>
 
 
 ## Discovering better protein-model training recipes
 
-![Matched 171M models: training loss on the left; contact P@L and validation loss on the right. Blue is the ESMC-like AdamW baseline and orange is the AutoResearch recipe.](.dev/reports/readme-figures-20260914/matched-100k-curves.png)
-
-<div class="ai">
+![Matched 171M models: training loss on the left; contact P@L and validation loss on the right. Blue is the ESMC-like AdamW baseline and orange is nanop-best-171m-round1.](.dev/reports/readme-figures-20260914/matched-100k-curves.png)
 
 GPT-6 and human effort produced our current best recipe over two rounds of [sequential AutoResearch](docs/AUTORESEARCH_BASELINE.md): round 1 found the Muon, batch-balancing and sqrt-loss changes, and round 2 added separate Q/K/V Muon updates. The curves compare the round-1 recipe with our ESMC-like AdamW baseline under the previous protocol: the same data, batch size 2,048 and 100k updates on four H100s, with one training seed each. The round-1 recipe improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. [Round-1 recipe](docs/leaderboard/nanop-best-171m-round1.md) · [Figure data and methods](.dev/reports/readme-figures-20260914/README.md).
 
-</div>
-
-<div class="ai">
-
 ### Final-evaluation leaderboard
 
-</div>
-
-<div class="ai">
-
 Final evaluation trains each recipe from scratch to 24.2B non-padding tokens at global batch 1,024 with seed 42, then scores MLM validation loss on all 12,288 validation proteins and contact P@L on 20,775 chains ([protocol](docs/AUTORESEARCH.md#final-evaluation)). Results under this protocol are pending.
-
-</div>
-
-<div class="ai">
 
 | Recipe | MLM validation loss ↓ | P@L ↑ |
 |---|---:|---:|
@@ -46,13 +28,7 @@ Final evaluation trains each recipe from scratch to 24.2B non-padding tokens at 
 | [nanop-best-171m-round1](docs/leaderboard/nanop-best-171m-round1.md) | — | — |
 | [nanop-best-171m-round2](docs/leaderboard/nanop-best-171m-round2.md) | — | — |
 
-</div>
-
-<div class="ai">
-
 [Full leaderboard, including search-budget results](docs/LEADERBOARD.md)
-
-</div>
 
 
 ## Setting up data & environments
@@ -60,17 +36,13 @@ Final evaluation trains each recipe from scratch to 24.2B non-padding tokens at 
 Prepare the environment and data once, then reuse them for training and evaluation.
 The same setup supports ordinary research and the fixed autoresearch task.
 
-<div class="ai">
-
 **Scaling the training budget also requires scaling the prepared data.** Training checks each source against global batch × steps and prevents source resampling by default. See [data sizing](docs/DATA.md#sizing-a-training-download) for sample-budget preparation and [training commands](docs/USAGE.md#training) for checkpoint continuation.
-
-</div>
 
 ### Requirements
 
 - **Environment:** Linux, a compatible NVIDIA driver and
   `uv >=0.11.31,<0.12`. Setup installs Python and dependencies from the repository lock.
-- <span class="ai">**Training:** Use GPUs with more than 40 GB of memory and adjust the recipe for your hardware. The default speedrun uses **four H100 GPUs with FA3**. An AutoResearch round provides **20 minutes on four H100 GPUs with FA3** or **one hour on four L40S GPUs with FA2**. See [USAGE.md](docs/USAGE.md#training) for other configurations.</span>
+- **Training:** Use GPUs with more than 40 GB of memory and adjust the recipe for your hardware. The default speedrun uses **four H100 GPUs with FA3**. An AutoResearch round provides **20 minutes on four H100 GPUs with FA3** or **one hour on four L40S GPUs with FA2**. See [USAGE.md](docs/USAGE.md#training) for other configurations.
 - **Data preparation:** Allow space for both downloaded Parquet
   files and their prepared token stores—**allow 20 GB for the default 30-shard
   data setup**, plus separate space for the environment and training checkpoints.
@@ -109,7 +81,7 @@ from the IMG arm to avoid sampling the same source twice.
 
 We remove exact duplicates, cluster each source at **70% sequence identity**, and exclude matches and homologs of **317,000 protected evaluation proteins**. After cross-source deduplication and length filtering, we reserve **12,288 validation proteins** and release **666.0M training proteins** in **565 training shards plus 3 validation shards**, with independent checks of hashes, duplicates and evaluation exclusions. [Filtering and verification details](docs/DATA.md).
 
-We open-sourced both the [🤗 Processed data](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259) and the [🤗 Raw dataset](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW) with all the cluster information. For more detailed information about data <span class="ai">construction</span> please refer to [DATA.md](docs/DATA.md).
+We open-sourced both the [🤗 Processed data](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/tree/bd38448d50d8f426d7b9bd4410b53159ea001259) and the [🤗 Raw dataset](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW) with all the cluster information. For more detailed information about data construction please refer to [DATA.md](docs/DATA.md).
 
 ### Install the environment and data
 
@@ -118,21 +90,15 @@ git clone https://github.com/Lumin-Science/Nano-ProteinLM.git
 cd Nano-ProteinLM
 bash runs/setup.sh
 ```
-The default downloads **30/565 training shards (29.98M proteins; 5.62 GB compressed, including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. For a larger training set:
 
-<div class="ai">
+The default downloads **30/565 training shards (29.98M proteins; 5.62 GB compressed, including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. For a larger training set:
 
 ```bash
 # In a fresh DATA_ROOT: 100k steps × batch 1,024, with 1% sampling headroom.
 bash runs/setup.sh --training-samples 103424000
 ```
 
-</div>
-<div class="ai">
-
 The [earlier search rounds](docs/AUTORESEARCH_BASELINE.md#two-rounds-under-the-previous-search-setting) used a seven-shard selection. The current [AutoResearch protocol](docs/AUTORESEARCH.md#design-space) permits data selection and source-mixture changes within the provided training corpus. Size the download for the run before training; [DATA.md](docs/DATA.md#sizing-a-training-download) explains source coverage and the default no-resampling policy.
-
-</div>
 
 Data and outputs default to `data/` and `outputs/`. To use another path, copy
 [.env.example](.env.example) to `.env` and set `DATA_ROOT` and `OUTPUT_ROOT`:
@@ -159,22 +125,15 @@ Python APIs so you can adapt the commands to your own research.
 
 > [!NOTE]
 > **Our default setting is a 171M variant, designed for small-budget training experiments.** Its baseline backbone follows the paper's 170M scaling model: 24 layers, width 768, and approximately 170.7M parameters ([ESMC Appendix A.1.4.1](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-> <span class="ai">Archived [300M and 600M presets](.dev/configs/archive/ESMC_REFERENCE_PRESETS.md) record the original ESMC **300M** and **600M** architectures.</span>
+> Archived [300M and 600M presets](.dev/configs/archive/ESMC_REFERENCE_PRESETS.md) record the original ESMC **300M** and **600M** architectures.
 
 ```bash
 bash runs/speedrun.sh
 ```
-<div class="ai">
 
 This trains [nanop-best-171m-round2](configs/test-100k/nanop-best-171m-round2.yaml) for **100,000 Stage-1 steps on four GPUs**, global batch **1,024**, context **512**, **BF16/FA3**, base learning rate **5e-4**, weight decay **0.01** and **1,000 warmup steps**. A 16-hour training guard stops an overlong run. Checkpoints, the resolved recipe and training records are saved under `$OUTPUT_ROOT/default-100k/`, including the full final optimizer state. See [training and continuation](docs/USAGE.md#training) for the resume option. Repeats require a fresh run name.
 
-</div>
-
-<div class="ai">
-
 Recipes live in two folders: [configs/autoresearch/](configs/autoresearch/) for the search setting (global batch 256) and [configs/test-100k/](configs/test-100k/) for final evaluation (global batch 1,024). Each holds the plain `esmc-171m` reference and `nanop-best-171m-round1` and `round2`; see [configs/README.md](configs/README.md). The scripts call the standard training API; see [USAGE.md](docs/USAGE.md#training) for other budgets, hardware and recipe changes.
-
-</div>
 
 ### Evaluate a checkpoint
 
@@ -190,19 +149,9 @@ bash runs/speedrun.sh --evaluate default-100k
 This loads your paths, reports MLM loss on **all 12,288 held-out validation proteins**, and scores P@L over **all 20,775 chains** using the accelerated parallel evaluator. Replace `default-100k` with your run name; additional [evaluation options](docs/EVALUATION.md#evaluation-execution) can follow it. Evaluation is separate from training and keeps the same sample counts for short training trials.
 
 
-<div class="ai">
-
 ## AutoResearch protocol
 
-</div>
-
-<div class="ai">
-
 Use NanoProteinLM to compare AutoResearch methods under a fixed number of search rounds and a fixed compute budget per round. The protocol specifies the objective, permitted changes, search measurements and final evaluation budget. Each method chooses its own proposal strategy and improvement criteria within those limits.
-
-</div>
-
-<div class="ai">
 
 | Protocol item | Requirement |
 |---|---|
@@ -212,21 +161,9 @@ Use NanoProteinLM to compare AutoResearch methods under a fixed number of search
 | Hill-climbing evaluation | Default reward: **MLM validation loss ↓** on **all 12,288 validation proteins** at context 512. Report P@L over **all 20,775 contact chains** as a diagnostic, with a chain-bootstrap 95% interval. Each method decides how to use this feedback. |
 | Final evaluation | Train the selected recipe and the [reference](configs/test-100k/esmc-171m.yaml) to **24,200,224,761 non-padding tokens each** at **global batch 1,024**, with 1,000 warmup steps, constant LR afterwards, the recipe's own LR and WD, and **one common training seed**. Hardware is not fixed; the reference takes about **12 hours on 4×H100**. Report loss on **all 12,288 validation proteins** and P@L over **all 20,775 contact chains**. |
 
-</div>
-
-<div class="ai">
-
 ### Prepare an AutoResearch workspace
 
-</div>
-
-<div class="ai">
-
 Benchmark agents start from the `autoresearch-v0` release tag, a single root commit with the plain ESMC implementation and no research history. On Linux with four matching H100 or four matching L40S GPUs, clone only that commit, remove the remote, then install the locked environment and verified data. [Preparation and information-access rules](docs/AUTORESEARCH.md#preparation) explain the release tag, private-repository access and the prohibition on looking up prior findings.
-
-</div>
-
-<div class="ai">
 
 ```bash
 git clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 \
@@ -236,33 +173,57 @@ git remote remove origin
 bash runs/setup.sh
 ```
 
-</div>
-
-<div class="ai">
-
 [Full AutoResearch protocol](docs/AUTORESEARCH.md)
-
-</div>
 
 ## AutoResearch baseline: sequential agentic search
 
-Here we provide a baseline of autoresearch, see [AUTORESEARCH_BASELINE.md](docs/AUTORESEARCH_BASELINE.md) for more details, including its pipeline, current one-seed policy, acceptance decisions and commands.
+Here we provide a baseline of autoresearch, see [AUTORESEARCH_BASELINE.md](docs/AUTORESEARCH_BASELINE.md) for more details, including its pipeline, <span class="ai">two acceptance programs</span>, acceptance decisions and commands.
 
 ![Validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](.dev/reports/readme-figures-20260914/validation-loss.png)
 
 <div class="ai">
 
-Prepare the clean workspace above, then install the [`ar-loop-n-sleep`](https://github.com/Lumin-Science/Nano-AutoResearch-Skills) skill and start Codex inside tmux on the allocated compute node. The skill lets Codex sleep while training runs and wake the same tmux pane at the next useful check. It needs Node.js for `npx`, tmux and Python 3. The release includes `autoresearch/program.md`; it uses one seed per candidate and requires the agent to explain each keep/discard decision.
+### Launch AutoResearch
+
+</div>
+
+<div class="ai">
+
+By default, our sequential search runs the [reward-gate program](autoresearch/karpathy_ar_reward_gate.md) on the [validation-loss task](tasks/171m-validation-loss.md). It keeps a candidate only when its two-seed gain beats the seed-to-seed spread. Run these steps on the allocated compute node, never on a login node.
+
+</div>
+
+<div class="ai">
+
+**1. Prepare the workspace** with the clone and setup commands [above](#prepare-an-autoresearch-workspace).
+
+</div>
+
+<div class="ai">
+
+**2. Install the loop skill.** [`ar-loop-n-sleep`](https://github.com/Lumin-Science/Nano-AutoResearch-Skills) lets Codex sleep while training runs and wake the same tmux pane at the next useful check. It needs Node.js for `npx`, tmux and Python 3.
 
 </div>
 
 <div class="ai">
 
 ```bash
-# Install the skill globally (-g) for Codex (-a codex), then confirm it is listed:
 npx skills add Lumin-Science/Nano-AutoResearch-Skills --skill ar-loop-n-sleep -g -a codex
-npx skills list -g
-# In the prepared workspace on the allocated node:
+npx skills list -g  # confirm ar-loop-n-sleep is listed for Codex
+```
+
+</div>
+
+<div class="ai">
+
+**3. Start Codex inside tmux** in the prepared workspace.
+
+</div>
+
+<div class="ai">
+
+```bash
+cd nano-protein-autoresearch
 tmux new-session -s nanoprotein-ar
 codex --approve-for-me
 ```
@@ -271,29 +232,25 @@ codex --approve-for-me
 
 <div class="ai">
 
-Then give Codex the task, method, resources and stopping condition. [The launch instructions](docs/AUTORESEARCH_BASELINE.md#running-the-example-loop) explain each step and a two-round qualification.
+**4. Give Codex the task, program, resources and stopping condition.**
 
 </div>
 
 <div class="ai">
 
 ```text
-Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/program.md. Use the allocated four GPUs, run the baseline and one candidate, explain the decision, then stop.
+Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/karpathy_ar_reward_gate.md. Use the allocated four GPUs and verify the allocation. Run sequential AutoResearch for the full 72-round allowance, following the program's keep rule, then stop without another wakeup.
 ```
 
 </div>
 
 <div class="ai">
 
-Use `tasks/171m-p-at-l.md` to optimize contact P@L instead. The [sequential-search commands](docs/AUTORESEARCH_BASELINE.md#running-the-example-loop) show how this method makes one-seed comparisons within the shared round budget.
+For a short qualification run, ask for the baseline and one candidate instead of the full allowance. To let the agent decide what to keep, name [`autoresearch/karpathy_ar_agent_gate.md`](autoresearch/karpathy_ar_agent_gate.md); to optimize contact P@L, name `tasks/171m-p-at-l.md`. [AUTORESEARCH_BASELINE.md](docs/AUTORESEARCH_BASELINE.md#running-the-example-loop) explains both programs.
 
 </div>
-
-<div class="ai">
 
 We ran two rounds of this method under an earlier search setting: round 1 optimized validation loss over 38 candidates, and round 2 optimized P@L and contributed separate Q/K/V Muon updates. The figure above shows round 1; each point is a two-seed mean ± sample SD, with one hour on four L40S GPUs per seed. See [the protocol](docs/AUTORESEARCH.md) for the design space, search budget and final evaluation, [the leaderboard](docs/LEADERBOARD.md) for results, and [the sequential-search page](docs/AUTORESEARCH_BASELINE.md) for both rounds and their records.
-
-</div>
 
 ## Citation
 

@@ -6,7 +6,7 @@
 
 <div class="ai">
 
-Our sequential-search method proposes one change, measures it, keeps or discards it and continues from the retained recipe. The current version uses one training seed per candidate and lets the agent judge whether the measured improvement is useful enough to retain; [program.md](../autoresearch/program.md) defines it. The [AutoResearch protocol](AUTORESEARCH.md) fixes the scientific boundaries and budgets. Two rounds of this method, together with human effort, produced [nanop-best-171m-round2](leaderboard/nanop-best-171m-round2.md).
+Our sequential-search method proposes one change, measures it, keeps or discards it and continues from the retained recipe. It comes in two programs that differ only in how they decide what to keep: [karpathy_ar_reward_gate.md](../autoresearch/karpathy_ar_reward_gate.md) applies a fixed two-seed reward rule, and [karpathy_ar_agent_gate.md](../autoresearch/karpathy_ar_agent_gate.md) leaves the decision to the agent's reasoning. Running both on the same task and budget compares the two acceptance policies. The [AutoResearch protocol](AUTORESEARCH.md) fixes the scientific boundaries and budgets. Two rounds of this method, together with human effort, produced [nanop-best-171m-round2](leaderboard/nanop-best-171m-round2.md).
 
 </div>
 
@@ -18,7 +18,7 @@ Our sequential-search method proposes one change, measures it, keeps or discards
 
 <div class="ai">
 
-Prepare a fresh workspace from the `autoresearch-v0` release using [the preparation instructions](AUTORESEARCH.md#preparation). The release includes [autoresearch/program.md](../autoresearch/program.md) as an optional method. Run the steps below on the allocated compute node; never run training on a login node.
+Prepare a fresh workspace from the `autoresearch-v0` release using [the preparation instructions](AUTORESEARCH.md#preparation). The release includes both programs. Run the steps below on the allocated compute node; never run training on a login node.
 
 </div>
 
@@ -81,33 +81,32 @@ Give Codex the task, method, resources and stopping condition together:
 <div class="ai">
 
 ```text
-Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/program.md. Use the allocated four H100 GPUs and verify the current allocation. Run the baseline and one candidate, with seed 42 and the complete task evaluation for each. Explain the keep/discard decision, then stop without another wakeup.
+Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/karpathy_ar_reward_gate.md. Use the allocated four H100 GPUs and verify the current allocation. Run the baseline and one candidate following the program's keep rule, with the complete task evaluation for each run. Explain the keep/discard decision, then stop without another wakeup.
 ```
 
 </div>
 
 <div class="ai">
 
-This two-round qualification tests launch, sleeping, continuation, evaluation and a candidate decision. A full campaign may use the 72-round allowance. For contact P@L, select `tasks/171m-p-at-l.md`.
+This qualification tests launch, sleeping, continuation, evaluation and a candidate decision in three or four rounds under the reward gate. Name `autoresearch/karpathy_ar_agent_gate.md` instead to let the agent decide; its qualification takes two rounds unless the agent adds a seed. A full campaign may use the 72-round allowance. For contact P@L, select `tasks/171m-p-at-l.md`.
 
 </div>
 
 <div class="ai">
 
-| Method setting | Current sequential-search implementation |
-|---|---|
-| Replication | One common seed, 42 by default |
-| Task measurement | 20 minutes on four H100 GPUs with FA3 |
-| Candidate cost | One round; 4/3 H100 GPU-hours of training |
-| Search evaluation | All 12,288 validation proteins and all 20,775 contact chains |
-| Acceptance | Agent judges the measured gain and records its evidence and reasoning |
-| Optional repeats | Matched repeats only when justified; each run consumes another round |
+| Method setting | Reward gate | Agent gate |
+|---|---|---|
+| Seeds | 42 for every run; 43 when seed 42 beats the incumbent's mean | 42 by default; more seeds when the agent decides |
+| Candidate cost | One round if screened out, otherwise two | One round per run the agent chooses |
+| Acceptance | Two-seed mean gain larger than the larger of the two seed SDs | The agent's reasoning about the final evaluation, recorded with its evidence |
+| Task measurement | 20 minutes on four H100 GPUs with FA3; 4/3 H100 GPU-hours per round | Same |
+| Search evaluation | All 12,288 validation proteins and all 20,775 contact chains | Same |
 
 </div>
 
 <div class="ai">
 
-Without failures or extra repeats, 72 rounds cover the baseline and 71 candidates. [program.md](../autoresearch/program.md#acceptance-decision) states the keep/discard rule and the records to keep for each run.
+Under the reward gate, the baseline takes two rounds and each candidate one or two, so 72 rounds cover 35–70 candidates. Under the agent gate, the count depends on how many rounds the agent spends on repeats and refinements. Each program lists the records to keep for every run.
 
 </div>
 
@@ -165,7 +164,7 @@ Round 1 kept a candidate when its mean validation-loss reduction exceeded that c
 
 <div class="ai">
 
-Each campaign ran in its own worktree on a branch named `ar-YYMMDD-<name>`. It appended one row per trial to `results.tsv` and the hypothesis, evidence and decision to `research.log`, and saved every trial's diff, commands and outputs. The [current method](#running-the-example-loop) keeps this loop but trains one seed per candidate and leaves the keep decision to the agent's documented judgement.
+Each campaign ran in its own worktree on a branch named `ar-YYMMDD-<name>`. It appended one row per trial to `results.tsv` and the hypothesis, evidence and decision to `research.log`, and saved every trial's diff, commands and outputs. The [current programs](#running-the-example-loop) keep this loop: the reward gate screens each candidate with one seed before spending a second, and the agent gate leaves the keep decision to the agent.
 
 </div>
 

@@ -30,7 +30,7 @@ The released-model comparison uses the unchanged [comparison data](../readme-ove
 
 <div class="ai">
 
-The data diagram summarizes [data preparation](../../../docs/DATA.md). The loop diagram summarizes the example in [program.md](../../../autoresearch/program.md), with the task's scale-up test after search. Diagram labels describe stages; they are not measured results.
+The data diagram summarizes [data preparation](../../../docs/DATA.md). The loop diagram summarizes the example in [two-seed loop program](../../../docs/archive/program-round2.md), with the task's scale-up test after search. Diagram labels describe stages; they are not measured results.
 
 </div>
 

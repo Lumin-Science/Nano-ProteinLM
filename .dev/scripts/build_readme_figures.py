@@ -83,7 +83,7 @@ def released_comparison(data):
     ax.set_yticks(
         range(len(rows)),
         [
-            "AutoResearch 171M" if row["model"].startswith("Nano") else row["model"]
+            "nanop-best-171m-round1" if row["model"].startswith("Nano") else row["model"]
             for row in rows
         ],
     )
@@ -109,7 +109,7 @@ def matched_curves():
     statistics = {}
     recipes = [
         ("baseline", "ESMC-like 171M (AdamW)", BLUE),
-        ("setting3", "AutoResearch 171M", ORANGE),
+        ("setting3", "nanop-best-171m-round1", ORANGE),
     ]
     for key, label, color in recipes:
         rows = curve["runs"][key]

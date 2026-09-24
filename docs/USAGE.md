@@ -135,13 +135,21 @@ Budget arguments accept `none` to clear inherited step/token limits. Batch-layou
 
 <div class="ai">
 
-[171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) each contain the complete scientific task definition for any AutoResearch method, and [AUTORESEARCH.md](AUTORESEARCH.md) defines the shared search budget and final evaluation. [autoresearch/program.md](../autoresearch/program.md) defines our sequential-search method. To start that method, select the task to optimize and give your agent the following instruction.
+[171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) each contain the complete scientific task definition for any AutoResearch method, and [AUTORESEARCH.md](AUTORESEARCH.md) defines the shared search budget and final evaluation. Our sequential-search method comes in two programs: [karpathy_ar_reward_gate.md](../autoresearch/karpathy_ar_reward_gate.md) keeps a candidate by a fixed two-seed rule, and [karpathy_ar_agent_gate.md](../autoresearch/karpathy_ar_agent_gate.md) lets the agent decide. To start it, select the task and program and give your agent the following instruction.
 
 </div>
 
-> Read `autoresearch/program.md` and start autoresearch for `tasks/171m-validation-loss.md`.
+<div class="ai">
 
-Use `tasks/171m-p-at-l.md` in that instruction to optimize contact P@L instead.
+> Read `autoresearch/karpathy_ar_reward_gate.md` and start autoresearch for `tasks/171m-validation-loss.md`.
+
+</div>
+
+<div class="ai">
+
+Use `tasks/171m-p-at-l.md` in that instruction to optimize contact P@L instead, or `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep.
+
+</div>
 
 After setup and GPU allocation, run one research measurement:
 

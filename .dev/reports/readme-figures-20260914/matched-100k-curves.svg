@@ -7714,28 +7714,28 @@ L 845.07325 259.168
   </g>
   <g id="legend_2">
    <g id="line2d_60">
-    <path d="M 309.787375 15.298437
-L 319.787375 15.298437
-L 329.787375 15.298437
+    <path d="M 295.803 15.298437
+L 305.803 15.298437
+L 315.803 15.298437
 " style="fill: none; stroke: #1f77b4; stroke-width: 1.8; stroke-linecap: square"/>
     <g>
-     <use xlink:href="#m795b0cbd63" x="319.787375" y="15.298437" style="fill: #1f77b4; stroke: #1f77b4"/>
+     <use xlink:href="#m795b0cbd63" x="305.803" y="15.298437" style="fill: #1f77b4; stroke: #1f77b4"/>
     </g>
    </g>
    <g id="text_48">
-    <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start" x="337.787375" y="18.798437" transform="rotate(-0 337.787375 18.798437)">ESMC-like 171M (AdamW)</text>
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start" x="323.803" y="18.798437" transform="rotate(-0 323.803 18.798437)">ESMC-like 171M (AdamW)</text>
    </g>
    <g id="line2d_61">
-    <path d="M 487.456125 15.298437
-L 497.456125 15.298437
-L 507.456125 15.298437
+    <path d="M 473.47175 15.298437
+L 483.47175 15.298437
+L 493.47175 15.298437
 " style="fill: none; stroke: #ff7f0e; stroke-width: 1.8; stroke-linecap: square"/>
     <g>
-     <use xlink:href="#m80381fa35f" x="497.456125" y="15.298437" style="fill: #ff7f0e; stroke: #ff7f0e"/>
+     <use xlink:href="#m80381fa35f" x="483.47175" y="15.298437" style="fill: #ff7f0e; stroke: #ff7f0e"/>
     </g>
    </g>
    <g id="text_49">
-    <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start" x="515.456125" y="18.798437" transform="rotate(-0 515.456125 18.798437)">AutoResearch 171M</text>
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start" x="501.47175" y="18.798437" transform="rotate(-0 501.47175 18.798437)">nanop-best-171m-round1</text>
    </g>
   </g>
  </g>

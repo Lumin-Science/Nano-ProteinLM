@@ -312,11 +312,11 @@ def documents() -> dict[str, str]:
             "```bash\ngit clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 \\\n  https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch\ncd nano-protein-autoresearch\ngit remote remove origin\nbash runs/setup.sh\nbash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml trial-001 42\n```",
             "The measurement command trains from scratch for 20 minutes on four H100s or one hour on four L40S GPUs, saves the final checkpoint and evaluates all 12,288 validation proteins plus all 20,775 contact chains. The seed is an argument supplied by the caller. Running this command once consumes one search round. It does not implement a search policy.",
             "## Optional sequential search",
-            "[autoresearch/program.md](autoresearch/program.md) supplies a Karpathy-style sequential method with one training seed per candidate and an evidence-based keep/discard decision. The agent must explain its decisions; one seed does not establish statistical significance. The benchmark protocol does not require this method.",
+            "Two optional Karpathy-style sequential programs differ only in how they decide what to keep: [autoresearch/karpathy_ar_reward_gate.md](autoresearch/karpathy_ar_reward_gate.md) keeps a candidate by a fixed two-seed reward rule, and [autoresearch/karpathy_ar_agent_gate.md](autoresearch/karpathy_ar_agent_gate.md) leaves the decision to the agent's reasoning. The benchmark protocol does not require either program.",
             "Install the loop-and-sleep skill before starting the agent. Run Codex inside tmux on the allocated compute node so the skill can wake the same pane after training and evaluation. The command below enables automatic review of execution approvals, including GPU access outside the workspace sandbox.",
             "```bash\nnpx skills add Lumin-Science/Nano-AutoResearch-Skills --skill ar-loop-n-sleep -g -a codex\nnpx skills list -g  # confirm ar-loop-n-sleep is installed for Codex\ntmux new-session -s nanoprotein-ar\n# Inside tmux, in the prepared workspace:\ncodex --approve-for-me\n```",
-            "```text\nUse $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/program.md. Use the allocated four H100 GPUs, verify the live allocation, and run sequential AutoResearch with one seed per candidate. Preserve the full task evaluation, explain every keep/discard decision, and stop after the agreed round allowance.\n```",
-            "Change the resource description to the actual allocation and state a smaller round limit for a qualification run. Other AutoResearch methods may use the same task without this program or skill.",
+            "```text\nUse $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/karpathy_ar_reward_gate.md. Use the allocated four H100 GPUs, verify the live allocation, and run sequential AutoResearch. Preserve the full task evaluation, explain every keep/discard decision, and stop after the agreed round allowance.\n```",
+            "Change the resource description to the actual allocation and state a smaller round limit for a qualification run. Name the agent-gate program instead to let the agent decide. Other AutoResearch methods may use the same task without these programs or the skill.",
             "## Protocol and usage",
             "[AUTORESEARCH.md](docs/AUTORESEARCH.md) defines the 72-round search budget, permitted changes and final evaluation. [DATA.md](docs/DATA.md) describes the corpus and preparation. [EVALUATION.md](docs/EVALUATION.md) fixes the rewards. [USAGE.md](docs/USAGE.md) covers ordinary training and owner-run final evaluation. [ORGANIZER.md](docs/ORGANIZER.md) describes how to distribute identical workspaces and keep scoring under organizer control.",
             "## Checks",
@@ -416,10 +416,8 @@ def build(destination: Path) -> Path:
     for name in ("171m-validation-loss_ar.sh", "171m-p-at-l_ar.sh"):
         copy(f"tasks/{name}")
     copy("runs/setup.sh")
-    write(
-        "autoresearch/program.md",
-        (ROOT / "autoresearch/program.md").read_text(),
-    )
+    for name in ("karpathy_ar_reward_gate.md", "karpathy_ar_agent_gate.md"):
+        copy(f"autoresearch/{name}")
     for name in TESTS:
         copy(f".dev/tests/{name}.py")
     for name in ("test_plain_baseline", "test_asset_installation"):
