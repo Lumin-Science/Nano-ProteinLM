@@ -15,7 +15,7 @@ Training source/configs remain frozen at `253c3ea`.
 
 All full runs initialize from scratch for 100,000 steps, batch 1,024, warmup
 1,000, base LR 5e-4 and base WD 0.01, with preserved R02 Muon groups, RoPE10k,
-FFN2048, BF16 and FA3. [Full recipes and semantics](../../../docs/AUTORESEARCH_SCALEUP.md).
+FFN2048, BF16 and FA3. [Full recipes and semantics](../../../docs/leaderboard/nanop-best-171m-round1.md).
 R22 narrowing remains deferred in [TODO](../../../TODO.md).
 
 ## Completed production results (four of four)

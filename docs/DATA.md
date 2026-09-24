@@ -62,19 +62,19 @@ For the default mixture at 100k steps and batch 1,024, use `bash runs/setup.sh -
 **Stored residues are not the training token budget.** Stage 1 crops proteins
 to at most 510 residues and adds BOS/EOS; padding is excluded from model tokens.
 The completed 100k-step, batch-1,024 default-recipe run sampled 102.4M proteins and
-processed 24,200,224,761 model tokens. This defines the 24.20B-token Test of
-Progress endpoint; actual steps can differ with another sequence-length mix.
+processed 24,200,224,761 model tokens. This defines the <span class="ai">24.20B-token final-evaluation
+target</span>; actual steps can differ with another sequence-length mix.
 Data can be reused across seeds and recipes without downloading it again.
 
 <div class="ai">
 
-Historical campaigns retain their seven-shard corpus. Use `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` to reproduce those records. The current [AutoResearch protocol](autoresearch.md#design-space) permits data selection and source-mixture changes within the provided corpus; record the selected shards, mixture and source exposure for each recipe. Existing prepared roots retain their saved shard count, so select a fresh root to change it.
+Historical campaigns retain their seven-shard corpus. Use `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` to reproduce those records. The current [AutoResearch protocol](AUTORESEARCH.md#design-space) permits data selection and source-mixture changes within the provided corpus; record the selected shards, mixture and source exposure for each recipe. Existing prepared roots retain their saved shard count, so select a fresh root to change it.
 
 </div>
 
 ## Nano-ESMC production funnel
 
-The following table mirrors Table 5 of the technical report and is the central
+The following table mirrors Table 5 of the <span class="ai">[technical report](../.dev/report/main.pdf)</span> and is the central
 ledger for the complete path from pinned upstream objects to the public
 Hugging Face commit. Rejection columns are disjoint accounting categories.
 For OMG/IMG, source assignment occurs before the length and ambiguity filters.
@@ -123,8 +123,6 @@ sequence identity and 80% shorter-sequence coverage
 “Distinct sequences in source” means distinct normalized sequence strings that
 carry that source membership after global exact deduplication. The source rows
 are not mutually exclusive: the same sequence may occur in more than one arm.
-There are 1,661,993,387 globally distinct normalized sequences, compared with
-1,741,345,608 source memberships in the table.
 
 The final column removes 21,653 exact evaluation matches and 78,439,147
 additional homologs against the final 317,000-sequence protected union. These

@@ -20,9 +20,9 @@ from pathlib import Path
 args = sys.argv[1:]
 with Path(os.environ['TASK_TEST_LOG']).open('a') as log:
     log.write(json.dumps(args) + '\n')
-assert args[:3] == ['run', '--frozen', 'python'], args
-assert os.environ.get('UV_NO_DEV') == '1', 'prepared measurements must not fetch dev tools'
-args = args[3:]
+# Measurements must not fetch dev tools.
+assert args[:4] == ['run', '--frozen', '--no-dev', 'python'], args
+args = args[4:]
 if args[:2] == ['-m', 'nanoprotein.check_environment']:
     if os.environ.get('TASK_TEST_QUALIFY_FAIL'):
         sys.exit(1)
@@ -58,10 +58,6 @@ class TaskMeasurementTests(unittest.TestCase):
         self.root = Path(temp.name)
         (self.root / "tasks").mkdir()
         (self.root / "runs").mkdir()
-        (self.root / ".bootstrap").mkdir()
-        shutil.copyfile(
-            ROOT / "runs/autoresearch_env.sh", self.root / "runs/autoresearch_env.sh"
-        )
         for name in (SCRIPT, "171m-p-at-l_ar.sh"):
             shutil.copyfile(ROOT / "tasks" / name, self.root / "tasks" / name)
         shutil.copyfile(ROOT / ".env.example", self.root / ".env.example")
@@ -71,7 +67,7 @@ class TaskMeasurementTests(unittest.TestCase):
             f"DATA_ROOT={shlex.quote(str(self.data))}\n"
             f"OUTPUT_ROOT={shlex.quote(str(self.output))}\n"
         )
-        self.recipe = yaml.safe_load((ROOT / "configs/default.yaml").read_text())
+        self.recipe = yaml.safe_load((ROOT / "configs/autoresearch/esmc-171m.yaml").read_text())
         self.recipe.update(
             max_steps=12,
             max_model_tokens=12345,
@@ -95,7 +91,6 @@ class TaskMeasurementTests(unittest.TestCase):
             "TASK_TEST_LOG": str(self.log),
             "CUDA_VISIBLE_DEVICES": "2,3,5,7",
         }
-        self.env.pop("UV_NO_DEV", None)
 
     def run_script(self, *args, script=SCRIPT, success=True):
         result = subprocess.run(
@@ -115,7 +110,7 @@ class TaskMeasurementTests(unittest.TestCase):
         return [
             row
             for line in self.log.read_text().splitlines()
-            if (row := json.loads(line))[3] == "-m"
+            if (row := json.loads(line))[4] == "-m"
         ]
 
     def test_one_caller_seed_and_fixed_budget_preserve_mutable_recipe_settings(self):
@@ -124,14 +119,14 @@ class TaskMeasurementTests(unittest.TestCase):
         config = yaml.safe_load((run / "resolved-test.yaml").read_text())
         self.assertEqual(config["seed"], 47)
         self.assertEqual(config["walltime_seconds"], 1200)
-        self.assertEqual(config["warmup_steps"], 554)
+        self.assertEqual(config["warmup_steps"], 500)
         self.assertEqual(config["attention_backend"], "flash3")
         for key in ("max_steps", "max_model_tokens", "schedule_steps"):
             self.assertIsNone(config[key])
         self.assertEqual(config["checkpoint_interval"], 0)
         self.assertEqual(config["periodic_evaluation_interval"], 0)
         self.assertEqual(config["stages"], self.recipe["stages"])
-        self.assertEqual(config["muon_split_qkv"], self.recipe["muon_split_qkv"])
+        self.assertEqual(config["learning_rate"], self.recipe["learning_rate"])
         self.assertEqual(
             (run / "recipe.yaml").read_bytes(), (self.root / "recipe.yaml").read_bytes()
         )
@@ -143,8 +138,6 @@ class TaskMeasurementTests(unittest.TestCase):
         self.assertIn("--nproc-per-node=4", commands[1])
         self.assertIn("nanoprotein.evaluate", commands[2])
         for option, value in (
-            ("--validation-batches", "1024"),
-            ("--validation-batch-size", "4"),
             ("--validation-context", "512"),
             ("--contact-chains", "20775"),
             ("--contact-bootstrap", "5000"),

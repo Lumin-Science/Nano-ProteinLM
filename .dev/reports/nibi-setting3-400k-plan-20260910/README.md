@@ -61,7 +61,7 @@ record. Setting 3's 40k row is its last audited evaluation, not a 100k result.
 Full earlier curves: [AdamW](../nibi-baseline-b2048-100k-eval10k-20260908/README.md)
 and [Setting 3](../nibi-setting3-b2048-100k-eval10k-20260908/README.md).
 The earlier short-budget AutoResearch search is separately documented in
-[AutoResearch scale-up](../../../docs/AUTORESEARCH_SCALEUP.md) and
+[AutoResearch scale-up](../../../docs/leaderboard/nanop-best-171m-round1.md) and
 [all Program 2 search records](../program2/README.md); those are not 100k runs.
 
 ## Feasibility and required data

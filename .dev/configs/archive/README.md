@@ -1,6 +1,6 @@
 # Historical training configurations
 
-These 27 YAMLs and the scale-up manifest preserve completed and retired
+These 30 YAMLs and the scale-up manifest preserve completed and retired
 experiments. They are retained for provenance and checkpoint compatibility;
 new runs start with the [maintained recipes](../../../configs/README.md). Files were
 moved without changing their contents. Paths inside receipts refer to their
@@ -14,7 +14,7 @@ differ only in training seed.
 
 | Recipe | Configs | Parameters | Role |
 |---|---|---:|---|
-| Original AdamW | [original](../../../configs/esmc/esmc-171m.yaml) | 170,671,168 | Scientific baseline; seed 20260824 |
+| Original AdamW | [original](esmc-171m-original.yaml) | 170,671,168 | Scientific baseline; seed 20260824; moved from `configs/esmc/esmc-171m.yaml` on September 23, 2026 |
 | Paired AdamW baseline | [42](program2/baseline_seed42.yaml), [43](program2/baseline_seed43.yaml) | 170,671,168 | Baseline for the published research history |
 | R01 Muon | [42](program2/r01_muon_seed42.yaml), [43](program2/r01_muon_seed43.yaml) | 170,671,168 | Historical recipe; within the size bound |
 | R04 + rank balance | [42](program2/r04_batchbalance_seed42.yaml), [43](program2/r04_batchbalance_seed43.yaml) | 170,671,168 | Historical recipe; within the size bound |
@@ -39,7 +39,7 @@ parameters; their R29 differs from the narrower one-hour R29 above.
 | + tied embeddings | [setting 4](program2_h100_100k/r29_tied.yaml) | Cumulative change |
 
 The [manifest](program2_h100_100k/manifest.json) records settings and config
-hashes. See the [recipe differences](../../../docs/AUTORESEARCH_SCALEUP.md) and
+hashes. See the [recipe differences](../../../docs/leaderboard/nanop-best-171m-round1.md) and
 [results](../../reports/fir-r02-rope10k-100k-20260906/README.md) for the comparison.
 
 ## Nibi eight-H100 comparisons: 2 presets
@@ -50,16 +50,16 @@ It uses 64 sequences/GPU and four accumulation steps on eight H100s, with a
 24-hour training guard and checkpoint evaluation every 10,000 steps (full
 validation MLM and contact P@L, with evaluation time recorded separately). See the
 [launch record](../../reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md) and
-[four-GPU continuation instructions](../../../docs/checkpoint-resume.md).
+[continuation instructions](../../../docs/USAGE.md#training).
 
 The [batch-2,048 Setting 3](esmc-171m-setting3-nibi-fa3-b2048-stage1-100k.yaml)
 uses the same budget, batch, base LR/WD, warmup and evaluation cadence. It retains
 the winning Fir recipe's Muon group multipliers, RMSNorm, residual routing and
 initialization, batch balance and sqrt loss. Its [queue and qualification
-record](../../.dev/reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md) places it
+record](../../reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md) places it
 after the Nibi baseline and preserves the full final Muon/AdamW checkpoint.
 
-## Older presets and reproduction references: 7 presets
+## Older presets and reproduction references: 9 presets
 
 | Config | Purpose |
 |---|---|
@@ -70,3 +70,5 @@ after the Nibi baseline and preserves the full final Muon/AdamW checkpoint.
 | [300M original](esmc-300m-original.yaml) | Original reproduction recipe; retained by the historical Stage-1 launcher |
 | [300M one-hour autoresearch](autoresearch_300m_4xa100_1h.yaml) | Earlier contact-selected recipe with a final-20% cooldown |
 | [300M current-best alias](esmc-300m-current-best.yaml) | Same configuration values as the preceding preset; compatibility alias |
+| [300M ESMC architecture](esmc-300m.yaml) | Original-size ESMC shape; moved from `configs/esmc/` on September 23, 2026 ([notes](ESMC_REFERENCE_PRESETS.md)) |
+| [600M ESMC architecture](esmc-600m.yaml) | Original-size ESMC shape; moved from `configs/esmc/` on September 23, 2026 ([notes](ESMC_REFERENCE_PRESETS.md)) |

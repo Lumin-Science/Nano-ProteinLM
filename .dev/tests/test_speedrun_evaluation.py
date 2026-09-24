@@ -66,7 +66,6 @@ class SpeedrunEvaluationTests(unittest.TestCase):
         self.assertEqual(args.data_root, self.root / "data/training")
         self.assertEqual(args.contact_root, self.root / "data/evaluation/contact")
         self.assertEqual(args.external_src, self.root / "data/evaluation/source")
-        self.assertEqual(args.validation_batches * args.validation_batch_size, 4096)
         self.assertEqual(args.validation_context, 512)
         self.assertTrue(args.run_contact)
         self.assertEqual(args.contact_chains, 20775)
@@ -86,7 +85,7 @@ class SpeedrunEvaluationTests(unittest.TestCase):
         self.assertEqual(args.contact_mode, "serial")
         self.assertEqual(args.validation_batch_size, 8)
 
-    def test_global_checkpoint_helper_uses_the_same_mlm_sample_settings(self):
+    def test_global_checkpoint_helper_uses_the_same_mlm_settings(self):
         # Stop after capturing the real evaluator command, before the historical contact helper.
         py = self.root / "fake-python"
         py.write_text(
@@ -118,7 +117,6 @@ class SpeedrunEvaluationTests(unittest.TestCase):
         self.assertEqual(result.returncode, 17, result.stderr)
         command = json.loads(self.capture.read_text())
         args = parse_args(command[2:])
-        self.assertEqual((args.validation_batches, args.validation_batch_size), (1024, 4))
         self.assertEqual(args.validation_context, 512)
 
     def test_omitted_run_name_and_invalid_run_name(self):

@@ -90,7 +90,7 @@ Training averaged **0.555 seconds per update** since the launch audit. Including
 
 <div class="ai">
 
-The [recipe](../../configs/nibi/setting3-nibi-stage2-b2048-300k.yaml), [transition methods](../../../docs/stage2-continuation.md), and [launcher](../../../runs/nibi_setting3_stage2.sh) are preserved on main. The production source is pinned separately at **f4b672d0a3a70e15740ee3876c202e535f727d3c**, so later report updates do not change running code.
+The [recipe](../../configs/nibi/setting3-nibi-stage2-b2048-300k.yaml), [transition methods](../../../docs/USAGE.md#training), and [launcher](../../../runs/nibi_setting3_stage2.sh) are preserved on main. The production source is pinned separately at **f4b672d0a3a70e15740ee3876c202e535f727d3c**, so later report updates do not change running code.
 
 </div>
 

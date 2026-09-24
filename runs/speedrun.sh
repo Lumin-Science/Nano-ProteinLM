@@ -23,13 +23,13 @@ if [[ "${1:-}" == "--evaluate" ]]; then
   exec "${UV_BIN:-uv}" run --frozen python -m nanoprotein.evaluate \
     --checkpoint "$OUTPUT_ROOT/$run_name/checkpoint-final.pt" \
     --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/$run_name/evaluation" \
-    --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
+    --validation-context 512 \
     --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
     --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source" \
     "$@"
 fi
 
-recipe="${1:-configs/default.yaml}"
+recipe="${1:-configs/test-100k/nanop-best-171m-round2.yaml}"
 run_name="${2:-default-100k}"
 if [[ $# -gt 0 ]]; then shift; fi
 if [[ $# -gt 0 ]]; then shift; fi

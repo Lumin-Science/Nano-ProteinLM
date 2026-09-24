@@ -6,7 +6,7 @@
 
 <div class="ai">
 
-Our sequential-search method proposes one change, measures it, keeps or discards it and continues from the retained recipe. The current version uses one training seed per candidate and lets the agent judge whether the measured improvement is useful enough to retain. The shared [protocol](autoresearch.md) fixes the scientific boundaries and budgets; historical two-seed results below keep their original settings.
+Our sequential-search method proposes one change, measures it, keeps or discards it and continues from the retained recipe. The current version uses one training seed per candidate and lets the agent judge whether the measured improvement is useful enough to retain; [program.md](../autoresearch/program.md) defines it. The [AutoResearch protocol](AUTORESEARCH.md) fixes the scientific boundaries and budgets. Two rounds of this method, together with human effort, produced [nanop-best-171m-round2](leaderboard/nanop-best-171m-round2.md).
 
 </div>
 
@@ -18,15 +18,54 @@ Our sequential-search method proposes one change, measures it, keeps or discards
 
 <div class="ai">
 
-Prepare a fresh workspace from the released `autoresearch` branch using [the preparation instructions](autoresearch.md#preparation). The clean branch includes [autoresearch/program.md](../autoresearch/program.md) as an optional method. Start Codex inside tmux on the allocated compute node so the loop skill can wake the same pane. The launch command enables automatic review of execution approvals, including GPU access outside the workspace sandbox. For our current Fir deployment, verify the active allocation on `fc10219` and use its four H100 GPUs; never run training on a login node.
+Prepare a fresh workspace from the `autoresearch-v0` release using [the preparation instructions](AUTORESEARCH.md#preparation). The release includes [autoresearch/program.md](../autoresearch/program.md) as an optional method. Run the steps below on the allocated compute node; never run training on a login node.
+
+</div>
+
+<div class="ai">
+
+### Install the loop skill
+
+</div>
+
+<div class="ai">
+
+[`ar-loop-n-sleep`](https://github.com/Lumin-Science/Nano-AutoResearch-Skills) lets Codex sleep while training or evaluation runs and wake the same tmux pane at the next useful check, instead of spending model turns on polling. It keeps the original prompt in `.ar/PROMPT.md` and one row per check in `.ar/events.tsv`. The node needs Node.js for `npx`, tmux, Python 3 and the Codex CLI.
 
 </div>
 
 <div class="ai">
 
 ```bash
+# Install the skill globally (-g) for Codex (-a codex):
 npx skills add Lumin-Science/Nano-AutoResearch-Skills --skill ar-loop-n-sleep -g -a codex
-# In the prepared workspace on the allocated node:
+# Confirm that ar-loop-n-sleep is listed for Codex:
+npx skills list -g
+```
+
+</div>
+
+<div class="ai">
+
+Omit `-g` to install the skill only for the current project, and run `npx skills update ar-loop-n-sleep` to update it later. `npx skills add Lumin-Science/Nano-AutoResearch-Skills --list` shows the collection's other skills.
+
+</div>
+
+<div class="ai">
+
+### Start Codex
+
+</div>
+
+<div class="ai">
+
+Start Codex inside tmux in the prepared workspace, so the skill can wake the same pane. `--approve-for-me` routes execution approvals, including GPU access outside the workspace sandbox, through Codex's automatic review.
+
+</div>
+
+<div class="ai">
+
+```bash
 tmux new-session -s nanoprotein-ar
 codex --approve-for-me
 ```
@@ -42,14 +81,14 @@ Give Codex the task, method, resources and stopping condition together:
 <div class="ai">
 
 ```text
-Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/program.md. Use my allocated four H100 GPUs on Fir fc10219 and verify the current Slurm allocation. Run the baseline and one candidate, with seed 42 and the complete task evaluation for each. Explain the keep/discard decision, then stop without another wakeup.
+Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/program.md. Use the allocated four H100 GPUs and verify the current allocation. Run the baseline and one candidate, with seed 42 and the complete task evaluation for each. Explain the keep/discard decision, then stop without another wakeup.
 ```
 
 </div>
 
 <div class="ai">
 
-This two-round qualification tests launch, sleeping, continuation, evaluation and a candidate decision. A full campaign may use the 72-round allowance; each invocation consumes one round. For contact P@L, select tasks/171m-p-at-l.md. The skill controls when Codex wakes; program.md defines this method, while task Markdown remains independent of its seed and acceptance choices.
+This two-round qualification tests launch, sleeping, continuation, evaluation and a candidate decision. A full campaign may use the 72-round allowance. For contact P@L, select `tasks/171m-p-at-l.md`.
 
 </div>
 
@@ -60,7 +99,7 @@ This two-round qualification tests launch, sleeping, continuation, evaluation an
 | Replication | One common seed, 42 by default |
 | Task measurement | 20 minutes on four H100 GPUs with FA3 |
 | Candidate cost | One round; 4/3 H100 GPU-hours of training |
-| Search evaluation | 4,096 validation proteins and all 20,775 contact chains |
+| Search evaluation | All 12,288 validation proteins and all 20,775 contact chains |
 | Acceptance | Agent judges the measured gain and records its evidence and reasoning |
 | Optional repeats | Matched repeats only when justified; each run consumes another round |
 
@@ -68,97 +107,49 @@ This two-round qualification tests launch, sleeping, continuation, evaluation an
 
 <div class="ai">
 
-Without failures or extra repeats, 72 rounds cover the baseline and 71 candidates. Read each completed run's TRAINING_COMPLETE.json and evaluation/EVALUATION.json directly. The multi-run summary utility requires two distinct seeds and is unnecessary for a one-seed comparison.
+Without failures or extra repeats, 72 rounds cover the baseline and 71 candidates. [program.md](../autoresearch/program.md#acceptance-decision) states the keep/discard rule and the records to keep for each run.
 
 </div>
 
 <div class="ai">
 
-Keep a candidate only when the primary metric improves and the agent gives a concrete reason to retain the gain. Discard ties and regressions. A small or ambiguous gain may be discarded or investigated with declared matched repeats within the budget. One seed cannot establish statistical significance: record seed-level SD and confidence intervals as unavailable, and do not use contact-chain bootstrap intervals as estimates of training-seed uncertainty.
+## Two rounds under the previous search setting
 
 </div>
 
 <div class="ai">
 
-Before each run, record the hypothesis and the result that would support keeping it. Afterwards, record the absolute and relative gap, diagnostics, stability, decision and next idea. Preserve every attempt and any change to the decision standard. The owner-run 24B-token evaluation is separate from this search loop and starts only when requested.
+Both rounds ran before the current search setting, so their numbers are reported in a different setting from the current configs and the [leaderboard](LEADERBOARD.md). Each candidate trained for one hour on four L40S GPUs per seed, with seeds 42 and 43, the seven-shard corpus, 554 warmup steps and 32 MLM validation proteins. Round 1 used global batch 256 and started from plain ESMC at LR 3.27e-4 and WD 0.0184; round 2 used global batch 1,024. Compare numbers only within a round.
 
 </div>
 
 <div class="ai">
 
-## Historical 38-round example
+### Round 1: validation loss
 
 </div>
 
 <div class="ai">
 
-The completed campaign evaluated a baseline and 38 candidate recipes, each with seeds 42 and 43 and one training hour on four L40S GPUs per seed: **78 runs, or 312 L40S GPU-hours**, excluding setup and evaluation. The historical records call each two-seed candidate comparison a round; this campaign predates the current 72-round H100 protocol. Its earlier acceptance rule kept a candidate when its mean validation-loss reduction exceeded that candidate's own two-seed sample SD. Preserve those recorded decisions when reproducing the curve; they were not generated by the current single-seed rule.
+Round 1 optimized MLM validation loss from the plain ESMC recipe. It evaluated a baseline and 38 candidate recipes, each with seeds 42 and 43: **78 runs, or 312 L40S GPU-hours**, excluding setup and evaluation. It kept a candidate when its mean validation-loss reduction exceeded that candidate's own two-seed sample SD.
 
 </div>
 
 <div class="ai">
 
-The [improvement figure in the README](../README.md#autoresearch-baselines-sequential-agentic-search) shows trial means and sample-SD error bars in orange and the retained recipe in blue. Numbers 1–5 mark the accepted changes: Muon, batch balance, sqrt loss, narrower FFNs and tied embeddings. R30–R38 were discarded, leaving R29 as the final retained historical recipe. See the [historical search table](#detailed-search-results) and [full campaign record](../.dev/reports/program2/README.md#numbered-improvements).
+![Round-1 validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](../.dev/reports/readme-figures-20260914/validation-loss.png)
 
 </div>
 
 <div class="ai">
 
-Changes 4–5 use roughly 142M parameters and predate the current ±5% size bound. Their original rules remain in the [archived instructions](archive/program2.md). The later 171M scale-up comparison skips the FFN reduction and applies tied embeddings directly to Setting 3. Its Muon recipe also includes RMSNorm, residual routing and depth-scaled initialization, so the search-time and scale-up rows are not identical single-component ablations. See the [historical test table](#detailed-scale-up-results).
+Numbers 1–5 mark the accepted changes: Muon, batch balance, sqrt loss, narrower FFNs and tied embeddings. R30–R38 were discarded, leaving R29 as the final retained recipe. Values are mean ± sample SD over seeds 42 and 43, from the [method statistics](../.dev/reports/program2/methods.tsv); see the [full campaign record](../.dev/reports/program2/README.md#numbered-improvements).
 
 </div>
 
 <div class="ai">
 
-## Understanding the three scale-up improvements
-
-</div>
-
-<div class="ai">
-
-<aitofix resolved>Here add quick understanding of all 3 improvement with related works listed, I want some brief level of intros here and referred to a more comprehensive documents. Fixed: Added the three brief method introductions below, primary related-work links and links to the full method guide; moved them here with the sequential-search example.</aitofix>
-
-</div>
-
-<div class="ai">
-
-**1. Muon recipe.** Transformer matrices use Muon while embeddings and the MLM head retain AdamW, following the optimizer partition described in the [Muon implementation](https://github.com/KellerJordan/Muon). The tested package also changes transformer normalization to parameter-free RMSNorm, mixes the current hidden stream with the original embeddings at each layer, and scales residual-projection initialization with depth. [RMSNorm (Zhang and Sennrich, 2019)](https://arxiv.org/abs/1910.07467) motivates normalization by root mean square without mean subtraction. The experiment measures the combined package, so it cannot assign the gain to Muon alone. See [the full component and optimizer settings](leaderboard/CURRENT_DEFAULT_20260921.md#2-exactly-what-differs-from-the-baseline).
-
-</div>
-
-<div class="ai">
-
-**2. Batch balance.** Proteins have different lengths, so equal protein counts can leave GPUs with unequal token workloads. Redistributing already-masked examples balances non-padding token counts while preserving the sampled examples, labels and number of examples per rank. This can reduce time spent waiting at gradient synchronization; [PyTorch's DDP discussion of skewed processing speeds](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html#skewed-processing-speeds) describes the underlying workload-balancing problem. Token count is a proxy for work, not an exact FLOP estimate. See [the partitioning procedure and loss normalization](leaderboard/CURRENT_DEFAULT_20260921.md#3-batch-balance-equalize-work-across-gpus).
-
-</div>
-
-<div class="ai">
-
-**3. Sqrt loss.** Weight each protein's mean masked-token loss by the square root of its number of masked targets, then normalize by the sum of those weights. Proteins with more targets contribute more than under equal-protein weighting, but less than under equal-target weighting. [BERT (Devlin et al., 2019)](https://arxiv.org/abs/1810.04805) is related background for masked-language-model pretraining; the sqrt weighting is the recipe studied here, not a result attributed to BERT. Validation retains equal-protein weighting, so the evaluation metric stays fixed. See [the formula, worked example and distributed normalization](leaderboard/CURRENT_DEFAULT_20260921.md#4-sqrt-loss-change-protein-weighting-not-the-validation-metric).
-
-</div>
-
-<div class="ai">
-
-These three historical steps describe the earlier scale-up comparison. The present default additionally uses separate Q/K/V Muon updates following later P@L optimization and the [three-arm CCK study](../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md). Historical measurements keep their original recipes; they are not retroactively scores for the current default.
-
-</div>
-
-<div class="ai">
-
-## Detailed search results
-
-</div>
-
-<div class="ai">
-
-The earlier sequential campaign completed 38 candidate rounds plus a baseline, with two one-hour runs on four L40S GPUs per candidate: **78 runs and 312 L40S GPU-hours**. Each two-seed candidate therefore cost 8 GPU-hours. Values are mean ± sample SD over seeds 42 and 43, from the [method statistics](../.dev/reports/program2/methods.tsv); the [historical example above](#historical-38-round-example) explains its acceptance rule and figure.
-
-</div>
-
-<div class="ai">
-
-| Historical retained recipe | Search validation loss ↓ | Approximate parameters |
+| Round-1 retained recipe | Search validation loss ↓ | Approximate parameters |
 |---|---:|---:|
 | AdamW baseline | 2.638680 ± 0.013025 | 171M |
 | 1: Muon | 2.618073 ± 0.009455 | 171M |
@@ -171,55 +162,43 @@ The earlier sequential campaign completed 38 candidate rounds plus a baseline, w
 
 <div class="ai">
 
-The 142M endpoints predate the current ±5% parameter rule and are outside that rule. Historical search and scale-up recipes also differ: the scale-up Muon row includes RMSNorm, routing and initialization changes, and its tied-embedding row applies tying directly to the 171M sqrt-loss recipe, skipping FFN narrowing. Preserve these distinctions when attributing improvements.
+Changes 4–5 use roughly 142M parameters and predate the current ±5% size bound; their original rules remain in the [archived instructions](archive/program2.md). A human-run 100k-step H100 scale-up then kept the Muon package, batch balance and sqrt loss as [nanop-best-171m-round1](leaderboard/nanop-best-171m-round1.md). It skipped the FFN reduction, and tied embeddings regressed. The scale-up's Muon package also includes RMSNorm, residual routing and depth-scaled initialization, so its rows are not single-component ablations of the search rows; the [round-1 page](leaderboard/nanop-best-171m-round1.md#1-the-complete-comparison) gives the comparison.
 
 </div>
 
 <div class="ai">
 
-## Detailed scale-up results
+#### Round-1 changes in brief
 
 </div>
 
 <div class="ai">
 
-These are completed **100k-step, single-seed** comparisons. Each run used four H100s, seed 20260824, batch 1,024, context 512, base LR 5e-4, weight decay 0.01 and 1,000 warmup steps, consuming **24,200,224,761 model tokens**. Times exclude evaluation. The P@L intervals bootstrap 20,775 contact chains and do not estimate training-seed uncertainty.
+**1. Muon recipe.** Transformer matrices use Muon while embeddings and the MLM head retain AdamW, following the optimizer partition described in the [Muon implementation](https://github.com/KellerJordan/Muon). The tested package also changes transformer normalization to parameter-free RMSNorm, mixes the current hidden stream with the original embeddings at each layer, and scales residual-projection initialization with depth. [RMSNorm (Zhang and Sennrich, 2019)](https://arxiv.org/abs/1910.07467) motivates normalization by root mean square without mean subtraction. The experiment measures the combined package, so it cannot assign the gain to Muon alone. See [the full component and optimizer settings](leaderboard/nanop-best-171m-round1.md#2-exactly-what-differs-from-the-baseline).
 
 </div>
 
 <div class="ai">
 
-| Historical recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
-|---|---:|---:|---:|---:|
-| Baseline: ESMC-like AdamW | 2.47436 | 26.505% | 26.295–26.719% | 12h 01m |
-| 1: + Muon recipe | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
-| 2: + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
-| **3: + sqrt loss (historical default)** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
-| 5: + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
+**2. Batch balance.** Proteins have different lengths, so equal protein counts can leave GPUs with unequal token workloads. Redistributing already-masked examples balances non-padding token counts while preserving the sampled examples, labels and number of examples per rank. This can reduce time spent waiting at gradient synchronization; [PyTorch's DDP discussion of skewed processing speeds](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html#skewed-processing-speeds) describes the underlying workload-balancing problem. Token count is a proxy for work, not an exact FLOP estimate. See [the partitioning procedure and loss normalization](leaderboard/nanop-best-171m-round1.md#3-batch-balance-equalize-work-across-gpus).
 
 </div>
 
 <div class="ai">
 
-The first improvement row adds the full Muon/RMSNorm/routing/initialization recipe, so it is not a Muon-only ablation. Subsequent rows are cumulative. See [recipe details](leaderboard/CURRENT_DEFAULT_20260921.md) and [run records](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md). The current default additionally uses separate Q/K/V Muon updates; that later change is supported by the [September 2026 CCK comparison](../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md) and is not included in this historical table.
+**3. Sqrt loss.** Weight each protein's mean masked-token loss by the square root of its number of masked targets, then normalize by the sum of those weights. Proteins with more targets contribute more than under equal-protein weighting, but less than under equal-target weighting. [BERT (Devlin et al., 2019)](https://arxiv.org/abs/1810.04805) introduced the masked-language-model objective that this weighting modifies. Validation retains equal-protein weighting, so the evaluation metric stays fixed. See [the formula, worked example and distributed normalization](leaderboard/nanop-best-171m-round1.md#4-sqrt-loss-change-protein-weighting-not-the-validation-metric).
 
 </div>
 
 <div class="ai">
 
-### L40S 100k-step component ablations
+### Round 2: contact P@L
 
 </div>
 
 <div class="ai">
 
-<aitofix resolved>Here probably you need to add the follow up data of p@l search. Fixed: Added the audited contact-search progression and linked the later three-seed confirmations of the promoted recipe, alongside the completed component ablations.</aitofix>
-
-</div>
-
-<div class="ai">
-
-The [contact-search audit](../.dev/reports/cck-contact-ablations-100k-20260919/STATUS.md) records 38 audited candidates through trial 039 and two accepted additions. Search used the historical one-hour L40S budget per training seed. Trial 031 remained the accepted incumbent at that audit; trial 040's training workers finished, but its campaign audit and ledger entry were incomplete.
+Round 2 optimized contact P@L, starting from nanop-best-171m-round1. The [search audit](../.dev/reports/cck-contact-ablations-100k-20260919/STATUS.md) records 38 audited candidates through trial 039 and two accepted additions: trial 011 added query centering with RMS restoration in the final eight layers, and trial 031 added separate Q/K/V Muon updates. Trial 040's training finished, but its audit and ledger entry were incomplete, so trial 031 remained the incumbent.
 
 </div>
 
@@ -227,7 +206,7 @@ The [contact-search audit](../.dev/reports/cck-contact-ablations-100k-20260919/S
 
 | Search result | Mean contact P@L | Recorded status |
 |---|---:|---|
-| Starting improved recipe | 10.977610% | Baseline |
+| nanop-best-171m-round1 (start) | 10.977610% | Baseline |
 | Trial 011 | 11.447751% | Accepted |
 | Trial 031 | 11.826297% | Accepted incumbent |
 | Trial 040 | 11.760089% | Worker results only; not accepted in the audited ledger |
@@ -236,57 +215,13 @@ The [contact-search audit](../.dev/reports/cck-contact-ablations-100k-20260919/S
 
 <div class="ai">
 
-After the component study, the owner promoted separate Q/K/V updates without query centering or RMS restoration. Subsequent three-seed confirmations of that recipe reached **11.771370% ± 0.256263 pp P@L** at the one-hour L40S budget and **11.207152% ± 0.253026 pp** at the 20-minute H100 budget. Both used 32 MLM validation proteins. The [current-default guide](leaderboard/CURRENT_DEFAULT_20260921.md#search-budget-measurements) retains the paired validation-loss results, per-run records and exact settings. These historical scores precede the current 4,096-protein search evaluation. The [September 23 re-evaluation](leaderboard/CURRENT_DEFAULT_20260921.md#reward-re-evaluation-on-4096-proteins) adds the new MLM rewards for the same six checkpoints while retaining these original measurements.
+A 100k-step three-arm study then removed each addition from the trial-031 recipe. The owner kept separate Q/K/V updates without query centering, giving [nanop-best-171m-round2](leaderboard/nanop-best-171m-round2.md); that page reports the study.
 
 </div>
 
 <div class="ai">
 
-The later P@L search added separate Q/K/V Muon updates and query centering with RMS restoration in the final eight layers to the previous default. Its three-arm comparison trained each setting from scratch for **100,000 updates on four L40S GPUs**, using FA2, seed 42, global batch 1,024, context 512, 170,559,856 parameters, base LR 5e-4 and 1,000 warmup steps followed by constant LR. Each run consumed **102,400,000 sequences and 24,196,983,520 non-padding model tokens** from the expanded 111-shard corpus, with no repeated source epochs. This historical endpoint differs from the manual scale-up procedure's 24,200,224,761-token target.
-
-</div>
-
-<div class="ai">
-
-| Recipe | Separate Q/K/V Muon | Query centering + RMS restoration | Validation loss ↓ | P@L ↑ | P@L chain-bootstrap 95% CI | Training hours on 4 L40S |
-|---|---|---|---:|---:|---:|---:|
-| **Current default / human+ai baseline-09-26** | On | Off | **2.410035** | **33.449770%** | 33.214952–33.679334% | 35.4727 |
-| Full P@L search recipe | On | On | 2.413881 | 33.485122% | 33.251392–33.716149% | 37.7056 |
-| No separate Q/K/V ablation | Off | On | 2.416150 | 32.767462% | 32.535210–32.998056% | 37.2700 |
-
-</div>
-
-<div class="ai">
-
-Final-checkpoint evaluation used the same 4,096 MLM validation sequences and all 20,775 contact chains, with 5,000 chain-bootstrap replicates. Each run completed all ten scheduled P@L evaluations at 10k-step intervals; its final checkpoint also had its highest observed P@L. The intervals above measure variation across contact chains, while training-seed SD is unavailable because each setting used only seed 42. Training times exclude setup and evaluation. See the [comparison receipt](../.dev/reports/cck-contact-ablations-100k-20260919/COMPARISON.json), [completion receipt](../.dev/reports/cck-contact-ablations-100k-20260919/COMPLETION_SUMMARY.json) and [study report](../.dev/reports/cck-contact-ablations-100k-20260919/STATUS.md).
-
-</div>
-
-<div class="ai">
-
-With query centering and RMS restoration enabled, separate Q/K/V updates improved observed P@L by **0.717660 percentage points**. Adding centering and RMS restoration to the split-Q/K/V recipe changed P@L by **+0.035352 points** and validation loss by **+0.003846**. The owner selected the split-Q/K/V recipe without centering or RMS restoration as the current default; see the [promotion decision](../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md). There is no matched arm with both additions disabled, so this study cannot isolate the standalone split-Q/K/V gain over the previous default. These are single-seed observations; paired significance was not evaluated.
-
-</div>
-
-<div class="ai">
-
-### Longer-training reference
-
-</div>
-
-<div class="ai">
-
-| Model | P@L ↑ | Estimated training FLOPs |
-|---|---:|---:|
-| ESMC-600M | 58.031% | 2.491 × 10²² |
-| ESMC-300M | 53.867% | 1.480 × 10²² |
-| **AutoResearch 171M** | **46.264%** | **2.334 × 10²¹** |
-
-</div>
-
-<div class="ai">
-
-The longer-trained 171M recipe reaches **46.264% P@L**; see its [run record](../.dev/reports/nibi-setting3-stage2-b2048-300k-20260911/README.md). All three models use the same frozen 20,775-chain contact evaluation, but their training corpora and compute budgets differ. These are capability references, not entries in the iso-token agent leaderboard. FLOPs are [estimates with stated token and context assumptions](../.dev/reports/readme-figures-20260914/README.md#training-compute-estimates).
+**4. Separate Q/K/V Muon updates.** Muon orthogonalizes each weight-matrix update, so a fused QKV matrix is treated as one matrix. Round 2 gives Muon three views of that matrix, so the query, key and value updates are orthogonalized and scaled separately without changing the model or its parameters. See [the round-2 page](leaderboard/nanop-best-171m-round2.md#separate-qkv-muon-updates).
 
 </div>
 
@@ -298,19 +233,13 @@ The longer-trained 171M recipe reaches **46.264% P@L**; see its [run record](../
 
 <div class="ai">
 
-The [78-run TSV through R38](../.dev/reports/program2/runs-through-r38.tsv), [per-method statistics through R29](../.dev/reports/program2/methods.tsv), and [original import and audit](../.dev/reports/program2/README.md) preserve the campaign. The [scale-up run records](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md) and [best-versus-baseline guide](leaderboard/CURRENT_DEFAULT_20260921.md) explain the subsequent comparison. The [detailed scale-up results](#detailed-scale-up-results) include the longer-training reference; [LEADERBOARD.md](LEADERBOARD.md) collects the recorded measurements.
+The [78-run TSV through R38](../.dev/reports/program2/runs-through-r38.tsv), [per-method statistics through R29](../.dev/reports/program2/methods.tsv) and [original import and audit](../.dev/reports/program2/README.md) preserve round 1; the [scale-up run records](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md) preserve its H100 comparison. The [search audit](../.dev/reports/cck-contact-ablations-100k-20260919/STATUS.md) and [promotion decision](../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md) preserve round 2. The [batch-2,048 comparison](../.dev/reports/readme-figures-20260914/README.md) of round 1 against AdamW is a separate experiment with its own records.
 
 </div>
 
 <div class="ai">
 
-The [matched batch-2,048 comparison](../.dev/reports/readme-figures-20260914/README.md), its [AdamW training records](../.dev/reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md) and [improved-recipe records](../.dev/reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md) are separate from the batch-1,024 comparison above.
-
-</div>
-
-<div class="ai">
-
-To regenerate the campaign curve from the repository root without changing the training environment:
+To regenerate the round-1 curve from the repository root without changing the training environment:
 
 </div>
 
@@ -326,6 +255,6 @@ python3 -m venv /tmp/nano-esmc-plot
 
 <div class="ai">
 
-The script validates seed means, sample SDs and historical keep/discard decisions, then writes PNG and SVG files to `.dev/reports/program2/`. It reads `.dev/reports/program2/runs-through-r38.tsv` by default; pass `--input path/to/results.tsv` for another supported per-run or per-method log. Its retained-recipe line is teal, trial points have sample-SD bars, and amber labels flag the two roughly 142M changes. The README uses the separately styled [README figure and source record](../.dev/reports/readme-figures-20260914/README.md).
+The script validates seed means, sample SDs and historical keep/discard decisions, then writes PNG and SVG files to `.dev/reports/program2/`. It reads `.dev/reports/program2/runs-through-r38.tsv` by default; pass `--input path/to/results.tsv` for another supported per-run or per-method log. The figure above uses the separately styled [README figure and source record](../.dev/reports/readme-figures-20260914/README.md).
 
 </div>

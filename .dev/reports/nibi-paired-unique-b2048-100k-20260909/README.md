@@ -116,7 +116,7 @@ Their sequence counters counted presentations, with the completed baseline
 averaging 28.8 exposures per record. The user explicitly requested stopping
 old Setting 3 step 12162637.14 at approximately 43,250 updates; those artifacts
 remain available as repeated-data experiments. See
-[data coverage and continuation](../../../docs/data-coverage.md).
+[data coverage and continuation](../../../docs/DATA.md#sizing-a-training-download).
 
 ## Locations and recovery
 

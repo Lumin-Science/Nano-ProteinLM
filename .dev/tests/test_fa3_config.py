@@ -10,7 +10,9 @@ from nanoprotein.model import build_model, count_parameters
 class FA3ConfigTests(unittest.TestCase):
     def test_h100_preset_preserves_original_recipe(self):
         root = Path(__file__).resolve().parents[2] / "configs"
-        original = yaml.safe_load((root / "esmc/esmc-171m.yaml").read_text())
+        original = yaml.safe_load(
+            (root.parent / ".dev/configs/archive/esmc-171m-original.yaml").read_text()
+        )
         hopper = yaml.safe_load(
             (
                 root.parent / ".dev/configs/archive/esmc-171m-original-h100-fa3-12h.yaml"

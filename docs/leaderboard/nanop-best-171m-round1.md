@@ -1,114 +1,36 @@
 <div class="ai">
 
-# Current default: separate Q/K/V Muon updates
+# nanop-best-171m-round1
 
 </div>
 
 <div class="ai">
 
-The default selected on September 21, 2026 adds separate Q/K/V Muon updates to the earlier improved recipe. Query centering and RMS restoration are disabled. The remaining architecture, normalization, residual routing, initialization, batch balancing, sqrt-mask-count loss and optimizer-group settings are unchanged. [Current preset](../../configs/default.yaml) · [Promotion decision and component evidence](../../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md).
+Round 1 of our [sequential AutoResearch](../AUTORESEARCH_BASELINE.md#round-1-validation-loss) changed plain ESMC in three ways, which a human-run scale-up then kept: a Muon package (Muon for transformer matrices with AdamW for embeddings and the MLM head, parameter-free RMSNorm, learned residual routing and depth-scaled initialization), batch balancing across GPUs, and sqrt-mask-count loss weighting. [Round 2](nanop-best-171m-round2.md) adds separate Q/K/V Muon updates.
 
 </div>
 
 <div class="ai">
 
-## Reward re-evaluation on 4,096 proteins
+Configs: [search setting](../../configs/autoresearch/nanop-best-171m-round1.yaml) · [final evaluation](../../configs/test-100k/nanop-best-171m-round1.yaml). [LEADERBOARD.md](../LEADERBOARD.md) holds results under the current protocol.
 
 </div>
 
 <div class="ai">
 
-The six saved best-recipe checkpoints were re-evaluated on September 23, 2026 with the current MLM settings: 1,024 batches of four proteins at context 512. The trained weights are unchanged. Values are mean ± sample SD over seeds 42, 43 and 44. Contact P@L below is reused from the original checkpoint-matched full-contact evaluations; only MLM loss was recomputed.
+## H100 100k-step comparison under the previous protocol
 
 </div>
 
 <div class="ai">
 
-| Original training profile | MLM loss ↓, 4,096 proteins | P@L ↑, reused |
-|---|---:|---:|
-| Fir: 4 H100, 20 minutes, FA3 | **2.667656 ± 0.000482** | 11.207152% ± 0.253026 pp |
-| CCK: 4 L40S, 1 hour, FA2 | **2.660151 ± 0.001316** | 11.771370% ± 0.256263 pp |
+This six-run comparison ran before the current final-evaluation protocol. It used seed 20260824, the seven-shard corpus with repeated source epochs, and a different 4,096-protein MLM sample (256 batches of 16). Its numbers explain how round 1 was selected; they are not leaderboard entries.
 
 </div>
 
 <div class="ai">
 
-The [re-evaluation report](../../.dev/reports/best-recipe-reward-4096-20260923/README.md) records per-seed rewards, timings and independent verification against the original checkpoint hashes. MLM evaluation took 18–21 seconds per checkpoint; full evaluator time was 22–25 seconds, excluding environment setup and contact inference. All six evaluations used the same 4,096-protein sample and 140,009 masked residues. The original 32-protein measurements below remain unchanged and should not be compared directly with these new losses.
-
-</div>
-
-<div class="ai">
-
-## Search-budget measurements
-
-</div>
-
-<div class="ai">
-
-Both studies repeated the same frozen recipe from source revision `43f2996729e6b41a998de92674340217afacfd5b` across seeds 42, 43 and 44. They used the original seven-shard corpus, global batch 1,024, context 512 and 554 warmup steps followed by constant learning rate. Final evaluation used 32 MLM validation sequences and all 20,775 contact chains. Values are mean ± sample SD across training seeds; P@L SD is in percentage points.
-
-</div>
-
-<div class="ai">
-
-| Hardware and training time per seed | MLM validation loss ↓ | P@L ↑ | Training GPU-hours | Run records |
-|---|---:|---:|---:|---|
-| 4 L40S, 1 hour, FA2 | 2.589492 ± 0.009195 | 11.771370% ± 0.256263 pp | 12.001692 | [CCK study](../../.dev/reports/cck-human-ai-baseline-09-26-20260921/README.md) |
-| 4 H100, 20 minutes, FA3 | 2.601592 ± 0.012375 | 11.207152% ± 0.253026 pp | 4.000974 | [Fir study](../../.dev/reports/fir-human-ai-baseline-09-26-20260921/README.md) |
-
-</div>
-
-<div class="ai">
-
-Training GPU-hours exclude setup and evaluation. The studies' final evaluations used another 1.350473 allocated L40S GPU-hours and 0.820892 allocated H100 GPU-hours, respectively. The linked reports retain per-seed metrics, configuration details and completion checks.
-
-</div>
-
-<div class="ai">
-
-## Completed 100k-step result
-
-</div>
-
-<div class="ai">
-
-The current recipe completed 100,000 updates on four L40S GPUs with FA2, seed 42 and global batch 1,024, processing 24,196,983,520 non-padding model tokens without source resampling. Its final checkpoint achieved **MLM validation loss 2.410035** and **contact P@L 33.449770%**, using 4,096 validation sequences and all 20,775 contact chains. Training consumed 141.8907 L40S GPU-hours. This study has one training seed, so across-seed SD is unavailable.
-
-</div>
-
-<div class="ai">
-
-The [component comparison](../AUTORESEARCH_BASELINE.md#l40s-100k-step-component-ablations) retains all three recipes and their uncertainty estimates. The matched [H100 baseline-versus-best comparison](#1-the-complete-comparison) predates the Q/K/V update. Its H100 results belong to the earlier recipe; this L40S result does not provide a matched H100 comparison against AdamW.
-
-</div>
-
-<div class="ai">
-
-## Separate Q/K/V updates
-
-</div>
-
-<div class="ai">
-
-With `muon_split_qkv: true`, the fused QKV weight keeps its shape and checkpoint parameter name, while Muon receives three square, storage-sharing views. Momentum, orthogonalization and matrix-shape scaling are applied separately to Q, K and V. The forward pass, parameter count and DDP synchronization still use the fused tensor. The component explanations below describe the inherited Muon/RMSNorm/routing, batch-balancing and sqrt-loss recipe; the current default adds this optimizer partition. [Implementation](../../src/nanoprotein/train.py) · [Verified promotion](../../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md).
-
-</div>
-
-<div class="ai">
-
-## Historical H100 baseline comparison
-
-</div>
-
-<div class="ai">
-
-This section records the six-run H100 comparison completed before the September 21, 2026 default update. Its uses of "default" refer to that historical recipe, which did not use separate Q/K/V Muon updates. The current default adds those updates; see the [promotion decision and matched CCK evidence](../../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md). The measurements below retain their original configurations and protocol.
-
-</div>
-
-<div class="ai">
-
-**The default recipe is best in this completed six-run comparison.** It reduces validation loss from **2.47436 to 2.41872** and increases long-range contact P@L from **26.505% to 32.682%**. Training takes **12h 34m 40s**, compared with **12h 00m 42s** for the baseline: 2.25% lower loss, 6.18 percentage points higher P@L, and 4.71% longer training.
+**The round-1 recipe is best in this completed six-run comparison.** It reduces validation loss from **2.47436 to 2.41872** and increases long-range contact P@L from **26.505% to 32.682%**. Training takes **12h 34m 40s**, compared with **12h 00m 42s** for the baseline: 2.25% lower loss, 6.18 percentage points higher P@L, and 4.71% longer training.
 
 </div>
 
@@ -120,7 +42,7 @@ The complete change is **hybrid Muon/AdamW + parameter-free transformer RMSNorm 
 
 <div class="ai">
 
-This is our ESMC-like project baseline, not a released ESMC checkpoint or an exact reproduction of all paper settings. The models have approximately 171M parameters and target small-budget training, using the backbone from [ESMC Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29). For the original-size architectures, see the [300M/600M reference configs](../../configs/esmc/README.md). The eight-H100 batch-2,048 Nibi run is a separate experiment; the results below all use batch 1,024.
+This is our ESMC-like project baseline, not a released ESMC checkpoint or an exact reproduction of all paper settings. The models have approximately 171M parameters and target small-budget training, using the backbone from [ESMC Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29). For the original-size architectures, see the archived [300M/600M presets](../../.dev/configs/archive/ESMC_REFERENCE_PRESETS.md). The eight-H100 batch-2,048 Nibi run is a separate experiment; the results below all use batch 1,024.
 
 </div>
 
@@ -138,14 +60,14 @@ This is our ESMC-like project baseline, not a released ESMC checkpoint or an exa
 | Muon recipe — RoPE20k | 2.43698 | 30.310% | 30.079–30.547% | 12h 57m |
 | Muon recipe — RoPE10k | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
 | + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
-| **+ sqrt loss (default)** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
+| **+ sqrt loss (round 1)** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
 | + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
 
 </div>
 
 <div class="ai">
 
-![Six completed recipes, comparing held-out MLM loss and contact P@L with chain-bootstrap intervals. The default recipe is best on both metrics.](../figures/best-recipe/scaleup-results.png)
+![Six completed recipes, comparing held-out MLM loss and contact P@L with chain-bootstrap intervals. The round-1 recipe is best on both metrics.](../figures/best-recipe/scaleup-results.png)
 
 </div>
 
@@ -181,7 +103,7 @@ Source: [audited full results](../../.dev/reports/fir-r02-rope10k-100k-20260906/
 
 <div class="ai">
 
-| Component | AdamW baseline | Default recipe |
+| Component | AdamW baseline | Round-1 recipe |
 |---|---|---|
 | Transformer matrix optimizer | AdamW | Muon for attention and FFN matrices |
 | Embedding / MLM-head optimizer | AdamW | AdamW retained |
@@ -219,7 +141,7 @@ Muon owns two-dimensional parameters inside transformer blocks: the QKV and atte
 
 <div class="ai">
 
-| Parameter group | Baseline peak LR / WD | Default configured peak LR / WD |
+| Parameter group | Baseline peak LR / WD | Round-1 configured peak LR / WD |
 |---|---|---|
 | Attention matrices | AdamW: `5e-4 / 0.01` | Muon: `4.5e-4 / 0.0075` |
 | FFN matrices | AdamW: `5e-4 / 0.01` | Muon: `3.75e-4 / 0.0075` |
@@ -282,7 +204,7 @@ There is one learned `a_l` and `b_l` per layer, shared across tokens and hidden 
 
 <div class="ai">
 
-The default recipe also reinitializes only the attention-output and FFN-down projection weights with `std = 0.02 / sqrt(48)`. Other linear and embedding weights retain the normal 0.02 initialization. This changes the initial size of those residual branch outputs. The present runs do not isolate its individual contribution from Muon, RMSNorm or routing.
+The round-1 recipe also reinitializes only the attention-output and FFN-down projection weights with `std = 0.02 / sqrt(48)`. Other linear and embedding weights retain the normal 0.02 initialization. This changes the initial size of those residual branch outputs. The present runs do not isolate its individual contribution from Muon, RMSNorm or routing.
 
 </div>
 
@@ -431,7 +353,7 @@ $$
 
 <div class="ai">
 
-Every protein receives equal total weight, even if one supplies many more supervised targets. The default recipe instead uses
+Every protein receives equal total weight, even if one supplies many more supervised targets. The round-1 recipe instead uses
 
 </div>
 
@@ -606,7 +528,7 @@ These runs isolate the latter increments along this particular recipe path. The 
 
 <div class="ai">
 
-Use the [baseline preset](../../.dev/configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml) and [default-recipe snapshot](../../.dev/configs/archive/program2_h100_100k/r10_sqrtloss.yaml). The exact executed configs are archived alongside their results: [baseline](../../.dev/reports/fir-171m-100k-20260906/default/config.yaml) and [default-recipe snapshot](../../.dev/reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml). For the same frozen corpus and evaluation, follow the [GPU plan](../../.dev/reports/archive/h100-100k-training-plan.md) and [evaluation instructions](../EVALUATION.md).
+Use the [baseline preset](../../.dev/configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml) and [round-1 snapshot](../../.dev/configs/archive/program2_h100_100k/r10_sqrtloss.yaml). The exact executed configs are archived alongside their results: [baseline](../../.dev/reports/fir-171m-100k-20260906/default/config.yaml) and [round-1 snapshot](../../.dev/reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml). For the same frozen corpus and evaluation, follow the [GPU plan](../../.dev/reports/archive/h100-100k-training-plan.md) and [evaluation instructions](../EVALUATION.md).
 
 </div>
 
@@ -633,5 +555,27 @@ python .dev/scripts/plot_best_recipe_explainer.py
 <div class="ai">
 
 Vector versions: [comparison](../figures/best-recipe/scaleup-results.svg), [batch balancing](../figures/best-recipe/batch-balance-example.svg), and [sqrt weighting](../figures/best-recipe/sqrt-loss-example.svg).
+
+</div>
+
+<div class="ai">
+
+## 7. Longer-training reference
+
+</div>
+
+<div class="ai">
+
+| Model | P@L ↑ | Estimated training FLOPs |
+|---|---:|---:|
+| ESMC-600M | 58.031% | 2.491 × 10²² |
+| ESMC-300M | 53.867% | 1.480 × 10²² |
+| **nanop-best-171m-round1, longer training** | **46.264%** | **2.334 × 10²¹** |
+
+</div>
+
+<div class="ai">
+
+The round-1 recipe trained longer at batch 2,048 reaches **46.264% P@L**; see its [run record](../../.dev/reports/nibi-setting3-stage2-b2048-300k-20260911/README.md). All three models use the same frozen 20,775-chain contact evaluation, but their training corpora and compute budgets differ, so this is a capability reference rather than a leaderboard entry. FLOPs are [estimates with stated token and context assumptions](../../.dev/reports/readme-figures-20260914/README.md#training-compute-estimates).
 
 </div>

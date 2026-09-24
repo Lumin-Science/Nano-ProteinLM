@@ -5,7 +5,7 @@ The original table, numbers, discussion and numbering are retained below; relati
 
 <div class="ai">
 
-In the reorganized [historical scale-up table](../AUTORESEARCH_BASELINE.md#detailed-scale-up-results), tied embeddings are **Setting 5**, corresponding to the historical **Setting 4** below. Current change 4 denotes FFN narrowing and is excluded from the fixed-size tests. The previous RoPE20k R02 row remains a historical reference.
+In the reorganized [historical scale-up table](../leaderboard/nanop-best-171m-round1.md#1-the-complete-comparison), tied embeddings are **Setting 5**, corresponding to the historical **Setting 4** below. Current change 4 denotes FFN narrowing and is excluded from the fixed-size tests. The previous RoPE20k R02 row remains a historical reference.
 
 </div>
 
@@ -46,7 +46,7 @@ Training times exclude evaluation and are approximate to the minute.
 
 <div class="ai">
 
-See **[best recipe versus baseline: differences, figures, and worked examples](../leaderboard/CURRENT_DEFAULT_20260921.md)**, the [complete results and adjacent comparisons](../../.dev/reports/fir-r02-rope10k-100k-20260906/README.md), and the [historical baseline/R02 records](../../.dev/reports/fir-171m-100k-20260906/README.md). The narrower-FFN change remains deferred in [TODO](../../TODO.md).
+See **[best recipe versus baseline: differences, figures, and worked examples](../leaderboard/nanop-best-171m-round1.md)**, the [complete results and adjacent comparisons](../../.dev/reports/fir-r02-rope10k-100k-20260906/README.md), and the [historical baseline/R02 records](../../.dev/reports/fir-171m-100k-20260906/README.md). The narrower-FFN change remains deferred in [TODO](../../TODO.md).
 
 </div>
 

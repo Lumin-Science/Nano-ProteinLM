@@ -21,7 +21,8 @@ import tarfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-NAME = "esmc-autoresearch-starter-20260923"
+# Also the release tag; bump it for each published starter.
+NAME = "autoresearch-v0"
 MODULES = """
 __init__ build_contact_scoring_cache check_environment contact_cache contact_parallel
 data data_budget data_migration evaluate fit_contact_probe flash_attention global_sampling
@@ -32,7 +33,7 @@ summarize_training_runs tokenizer train verify_contact_scoring_cache
 TESTS = """
 test_contact_cache test_evaluation_setup test_fast_contact_scoring test_parallel_contact_evaluation
 test_shard_selection test_training_budgets test_task_measurement test_model_configs
-test_autoresearch_preparation test_autoresearch_hardware
+test_autoresearch_hardware test_validation_mlm
 """.split()
 REMOVED_FIELDS = {
     "learned_residual_routing",
@@ -284,19 +285,15 @@ def wrap(*blocks: str) -> str:
 
 
 def preparation_blocks() -> list[str]:
-    return [
-        "## Preparation",
-        "Use the released `autoresearch` branch for benchmark attempts. It contains the plain ESMC implementation and one independent root commit. Allocate four matching H100 GPUs or four matching L40S GPUs on Linux with a working CUDA driver. A search round provides 20 minutes on H100 with FlashAttention-3 or one hour on L40S with FlashAttention-2; these budgets are roughly equivalent. Declare one hardware profile before search and fix the GPU model and backend across every method in a comparison.",
-        "The organizer prepares the workspace before giving it to an agent. From an existing checkout, run the command below on the allocated node. The destination must be new and outside all existing Git checkouts.",
-        "```bash\nbash runs/setup_autoresearch.sh ../nano-protein-autoresearch\ncd ../nano-protein-autoresearch\n```",
-        "While the repository is private, use an authenticated organizer checkout and the command above. If Git access uses an SSH key, add `--repository git@github.com:Lumin-Science/Nano-ProteinLM.git`; the default URL uses HTTPS credentials. Once the repository is public, you can download the preparation script directly and run it with system Python 3.9 or newer. The script installs the locked Python 3.11 environment and installs a compatible uv locally if the system version is missing or too old.",
-        "```bash\ncurl -fL https://raw.githubusercontent.com/Lumin-Science/Nano-ProteinLM/autoresearch/.dev/scripts/prepare_autoresearch.py -o /tmp/nanoprotein-setup.py\npython3 /tmp/nanoprotein-setup.py ~/nano-protein-autoresearch\ncd ~/nano-protein-autoresearch\n```",
-        "The script clones only `autoresearch`, verifies the release manifest and root commit, and removes the remote. It creates no local `main` branch and refuses to overwrite an existing directory. An ordinary checkout in a research clone retains old Git objects; use the fresh directory for the agent. The original research checkout stays with the organizer, outside agent access.",
-        "Preparation qualifies the four GPUs, installs the pinned dependencies, downloads 30 training shards and all MLM validation/contact assets, and verifies their checksums. Allow roughly 20 GB for data plus space for dependencies, checkpoints and run outputs. Use `--training-shards N` to change the initial corpus size; provision enough data for the selected source mixture and budget. Data and outputs default to `data/` and `outputs/` inside the new workspace.",
-        "Keep `.autoresearch/PROVISIONING.json`, `.autoresearch/ENVIRONMENT.json` and `RELEASE_MANIFEST.json` with the organizer records. Pass `--revision FULL_COMMIT_SHA` to require the same released commit for every participant. `--clone-only` defers environment and data setup; rerun with `--resume` on the GPU node to finish an unchanged workspace after deferred or interrupted preparation.",
-        "```bash\n# After preparation, one invocation consumes one search round:\nbash tasks/171m-validation-loss_ar.sh configs/default.yaml trial-001 42\n```",
-        "Start the agent in this directory with a fresh conversation, the selected task and its own AutoResearch method. The task information-access rules prohibit inspecting other branches or searching for this repository and its previous findings online. The organizer enforces that policy, keeps other research workspaces inaccessible and uses a trusted evaluator; a Git branch and written rules alone cannot block online access.",
+    """Reuse the main protocol's preparation steps so both releases give the same commands."""
+    text = (ROOT / "docs/AUTORESEARCH.md").read_text()
+    section = text[
+        text.index("## Preparation") + len("## Preparation") : text.index("## Design Space")
     ]
+    blocks = re.findall(r'<div class="ai">\n\n(.*?)\n\n</div>', section, re.S)
+    if not blocks:
+        raise ValueError("source drift: missing preparation section in docs/AUTORESEARCH.md")
+    return ["## Preparation", *blocks]
 
 
 def information_rules() -> str:
@@ -309,41 +306,41 @@ def documents() -> dict[str, str]:
             "# ESMC AutoResearch starter",
             "This release provides a plain ESMC training recipe and a fixed benchmark protocol for comparing AutoResearch algorithms. Every participant starts from the same files, training corpus and evaluation procedure. The package includes training, checkpointing, data preparation, evaluation and measurement commands; participants supply their own search algorithm.",
             "## Starting recipe",
-            "The starting model has 24 transformer layers, width 768, 12 attention heads and 170,671,168 trainable parameters. It uses the ESMC tokenizer, LayerNorm, RoPE with base 10,000, SwiGLU and an MLM head. AdamW uses learning rate 0.000326599, weight decay 0.0183712, betas (0.9, 0.95) and gradient clipping at 1.0. Context is 512 tokens and the global batch is 256 proteins on four GPUs. The complete recipe is [configs/default.yaml](configs/default.yaml).",
+            "The starting model has 24 transformer layers, width 768, 12 attention heads and 170,671,168 trainable parameters. It uses the ESMC tokenizer, LayerNorm, RoPE with base 10,000, SwiGLU and an MLM head. AdamW uses learning rate 0.0005, weight decay 0.01, betas (0.9, 0.95) and gradient clipping at 1.0, with 500 warmup steps followed by constant learning rate. Context is 512 tokens and the global batch is 256 proteins on four GPUs. The search recipe is [configs/autoresearch/esmc-171m.yaml](configs/autoresearch/esmc-171m.yaml); its final-evaluation version, [configs/test-100k/esmc-171m.yaml](configs/test-100k/esmc-171m.yaml), uses global batch 1,024 and 1,000 warmup steps.",
             "## Preparation",
-            "Use Linux with four matching H100 or four matching L40S GPUs and a working CUDA driver. The organizer prepares a fresh workspace from the released `autoresearch` branch before starting the agent. [Preparation instructions](docs/AUTORESEARCH.md#preparation) cover the one-command installer, release pin and data sizing.",
-            "```bash\n# From an organizer checkout, create a separate workspace:\nbash runs/setup_autoresearch.sh ../nano-protein-autoresearch\ncd ../nano-protein-autoresearch\nbash tasks/171m-validation-loss_ar.sh configs/default.yaml trial-001 42\n```",
-            "The measurement command trains from scratch for 20 minutes on four H100s or one hour on four L40S GPUs, saves the final checkpoint and evaluates 4,096 validation proteins plus all 20,775 contact chains. The seed is an argument supplied by the caller. Running this command once consumes one search round. It does not implement a search policy.",
+            "Use Linux with four matching H100 or four matching L40S GPUs and a working CUDA driver. The organizer prepares a fresh workspace from the `autoresearch-v0` release before starting the agent. [Preparation instructions](docs/AUTORESEARCH.md#preparation) cover private-repository access and data sizing.",
+            "```bash\ngit clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 \\\n  https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch\ncd nano-protein-autoresearch\ngit remote remove origin\nbash runs/setup.sh\nbash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml trial-001 42\n```",
+            "The measurement command trains from scratch for 20 minutes on four H100s or one hour on four L40S GPUs, saves the final checkpoint and evaluates all 12,288 validation proteins plus all 20,775 contact chains. The seed is an argument supplied by the caller. Running this command once consumes one search round. It does not implement a search policy.",
             "## Optional sequential search",
             "[autoresearch/program.md](autoresearch/program.md) supplies a Karpathy-style sequential method with one training seed per candidate and an evidence-based keep/discard decision. The agent must explain its decisions; one seed does not establish statistical significance. The benchmark protocol does not require this method.",
             "Install the loop-and-sleep skill before starting the agent. Run Codex inside tmux on the allocated compute node so the skill can wake the same pane after training and evaluation. The command below enables automatic review of execution approvals, including GPU access outside the workspace sandbox.",
-            "```bash\nnpx skills add Lumin-Science/Nano-AutoResearch-Skills --skill ar-loop-n-sleep -g -a codex\ntmux new-session -s nanoprotein-ar\n# Inside tmux, in the prepared workspace:\ncodex --approve-for-me\n```",
-            "```text\nUse $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/program.md. Use my allocated four H100 GPUs on Fir fc10219, verify the live allocation, and run sequential AutoResearch with one seed per candidate. Preserve the full task evaluation, explain every keep/discard decision, and stop after the agreed round allowance.\n```",
+            "```bash\nnpx skills add Lumin-Science/Nano-AutoResearch-Skills --skill ar-loop-n-sleep -g -a codex\nnpx skills list -g  # confirm ar-loop-n-sleep is installed for Codex\ntmux new-session -s nanoprotein-ar\n# Inside tmux, in the prepared workspace:\ncodex --approve-for-me\n```",
+            "```text\nUse $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/program.md. Use the allocated four H100 GPUs, verify the live allocation, and run sequential AutoResearch with one seed per candidate. Preserve the full task evaluation, explain every keep/discard decision, and stop after the agreed round allowance.\n```",
             "Change the resource description to the actual allocation and state a smaller round limit for a qualification run. Other AutoResearch methods may use the same task without this program or skill.",
             "## Protocol and usage",
             "[AUTORESEARCH.md](docs/AUTORESEARCH.md) defines the 72-round search budget, permitted changes and final evaluation. [DATA.md](docs/DATA.md) describes the corpus and preparation. [EVALUATION.md](docs/EVALUATION.md) fixes the rewards. [USAGE.md](docs/USAGE.md) covers ordinary training and owner-run final evaluation. [ORGANIZER.md](docs/ORGANIZER.md) describes how to distribute identical workspaces and keep scoring under organizer control.",
             "## Checks",
-            "```bash\nsource runs/autoresearch_env.sh\nuv sync --frozen\nuv run --frozen python -m unittest discover -s .dev/tests -p 'test_*.py'\n```",
+            "```bash\nuv sync --frozen\nuv run --frozen python -m unittest discover -s .dev/tests -p 'test_*.py'\n```",
             "Code is distributed under the [MIT license](LICENSE). Dataset and kernel attribution is in [DATA.md](docs/DATA.md). Large datasets, dependencies and pretrained weights are not included in the released code.",
         ),
         "docs/AUTORESEARCH.md": wrap(
             "# AutoResearch benchmark protocol",
             "The benchmark compares algorithms that discover protein-model training recipes. Publish the objective, permitted design space, search allowance, final evaluation budget and infrastructure-failure policy before any method starts. Every method receives the same starting release and data access.",
-            '```mermaid\nflowchart LR\n    B["72 rounds<br/>20 min on 4×H100 or 1 h on 4×L40S"] --> A["Participant search algorithm"]\n    A --> R["Selected recipe"]\n    R --> E["Owner-run evaluation<br/>24B tokens per recipe"]\n```',
+            '```mermaid\nflowchart LR\n    B["72 rounds<br/>20 min on 4×H100 or 1 h on 4×L40S"] --> A["Participant search algorithm"]\n    A --> R["Selected recipe"]\n    R --> E["Owner-run evaluation<br/>24.2B tokens per recipe"]\n```',
             *preparation_blocks(),
             "## Information-access rules",
             *information_rules().split("\n\n")[1:],
             "## Immutable contract",
-            "Use only the provided training corpus and train from scratch. Keep the tokenizer, maximum context of 512 tokens and linear-warmup/constant-LR schedule fixed. Use 554 warmup steps. Actual trainable parameters must remain within ±5% of 170,671,168; do not add unused parameters to meet this bound. Preserve evaluation data, sampling, masking, probe fitting, metric definitions, dependency pins and data-verification records. Do not train on held-out evaluation sequences or labels.",
-            "Architecture, training objective, optimizer, batch size, implementation, source mixture and data selection within the supplied corpus may change within that contract. Declare the task objective before search: MLM validation loss is the default reward; contact P@L is an optional task objective. Report both measurements for every round.",
+            "Use only the provided training corpus and train from scratch. Keep the tokenizer, maximum context of 512 tokens, global batch of 256 sequences and schedule of 500 linear warmup steps followed by constant learning rate, with no decay, fixed. Actual trainable parameters must remain within ±5% of 170,671,168; do not add unused parameters to meet this bound. Preserve evaluation data, sampling, masking, probe fitting, metric definitions, dependency pins and data-verification records. Do not train on held-out evaluation sequences or labels.",
+            "Architecture, training objective, optimizer, learning rate, weight decay, implementation, source mixture and data selection within the supplied corpus may change within that contract. Declare the task objective before search: MLM validation loss is the default reward; contact P@L is an optional task objective. Report both measurements for every round.",
             "## Search allowance",
-            "| Item | Fixed setting |\n|---|---|\n| Rounds | 72 |\n| Hardware per round | 4×H100 with FA3 or 4×L40S with FA2; fixed profile within a comparison |\n| Training time per round | 1,200 seconds on H100 or 3,600 seconds on L40S |\n| Total training allowance | 24 node-hours / 96 H100 GPU-hours, or 72 node-hours / 288 L40S GPU-hours |\n| Scored checkpoint | Final checkpoint at the training-time limit |\n| Validation | 1,024 batches of four proteins; context 512 |\n| Contact evaluation | All 20,775 frozen chains; 5,000 bootstrap replicates |",
+            "| Item | Fixed setting |\n|---|---|\n| Rounds | 72 |\n| Hardware per round | 4×H100 with FA3 or 4×L40S with FA2; fixed profile within a comparison |\n| Training time per round | 1,200 seconds on H100 or 3,600 seconds on L40S |\n| Global batch and schedule | 256 sequences; 500 linear warmup steps, then constant learning rate |\n| Total training allowance | 24 node-hours / 96 H100 GPU-hours, or 72 node-hours / 288 L40S GPU-hours |\n| Scored checkpoint | Final checkpoint at the training-time limit |\n| Validation | All 12,288 validation proteins; context 512 |\n| Contact evaluation | All 20,775 frozen chains; 5,000 bootstrap replicates |",
             "A round is one training run and its evaluation. Each seed repeat or participant-run reference measurement consumes another round. A method decides how to propose candidates, assign training seeds, reuse observations and choose its final recipe. No acceptance threshold, number of seeds per candidate or search order is prescribed here.",
             "The training clock includes batch loading, computation and synchronization. Setup, final checkpoint saving and evaluation are outside that clock; record their duration separately. Prepare inputs before timing and use the same storage arrangement across methods. Keep failed attempts and consumed compute in the ledger; apply only the replacement policy published before the comparison.",
             "Record the code snapshot, resolved configuration, training seed, data receipts, actual optimizer steps, non-padding model tokens, source exposure, elapsed time and both metrics for each round. Include time-limit overrun from the final optimizer update. The measurement scripts provide execution commands; the organizer verifies compliance and the complete round ledger.",
             "## Final evaluation",
-            "Freeze the selected recipe before final evaluation. The owner trains the submitted recipe and the plain reference from scratch for 24 billion non-padding model tokens each on the same declared four-GPU hardware. Use one common training seed declared before the comparison. Count BOS/EOS and exclude padding. Stop at the first optimizer update reaching the token target and report actual tokens and overrun. This compute is separate from the search allowance.",
-            "Score each final checkpoint using the same 4,096-protein MLM validation and full contact evaluation used during search. Report loss, P@L and its chain-bootstrap 95% interval. One training seed does not estimate training-seed variability. These evaluation assets are available during search, so final evaluation tests transfer to a longer training budget rather than performance on a blind holdout.",
+            "Freeze the selected recipe before final evaluation. The owner trains the submitted recipe and the reference, [configs/test-100k/esmc-171m.yaml](../configs/test-100k/esmc-171m.yaml), from scratch to 24,200,224,761 non-padding model tokens each, using one common training seed: 42 unless another seed is declared before the comparison. Final training uses global batch 1,024 and 1,000 linear warmup steps followed by constant learning rate, with no decay; learning rate, weight decay and every other setting come from the submitted recipe. Hardware is not fixed because the token target defines the budget; the reference takes about 12 hours on four H100 GPUs. Count BOS/EOS and exclude padding. Stop at the first optimizer update reaching the token target and report actual tokens and overrun. This compute is separate from the search allowance.",
+            "Score each final checkpoint using the same full MLM validation and contact evaluation used during search. Report loss, P@L and its chain-bootstrap 95% interval. One training seed does not estimate training-seed variability. These evaluation assets are available during search, so final evaluation tests transfer to a longer training budget rather than performance on a blind holdout.",
         ),
         "docs/DATA.md": wrap(
             "# Data and setup",
@@ -360,34 +357,34 @@ def documents() -> dict[str, str]:
         "docs/EVALUATION.md": wrap(
             "# Evaluation",
             "## MLM validation loss",
-            "Compute masked-token negative log-likelihood within each protein, then average over proteins. Lower is better. Use exactly 1,024 batches of four proteins, maximum context 512 and sampling/masking seed 20260821. The source mixture and masking procedure are defined by the frozen evaluator. Batch grouping is fixed because changing it can change random-number consumption and the masked targets.",
-            "The evaluation covers 4,096 sampled validation proteins from the held-out source shards. This is a fixed diagnostic sample; it is not the entire validation pool and it does not estimate variability across training seeds. Each receipt records the batch count, batch size, context and seed. Compare only receipts with identical settings.",
+            "Compute masked-token negative log-likelihood within each protein, then average over proteins. Lower is better. The evaluator scores every protein in the three held-out validation shards once: 12,288 proteins, 4,096 per source, at maximum context 512. Each protein's crop offset and mask positions come from mask seed 20260821 and the protein's SHA-256, so batch size and order do not change the score.",
+            "Each receipt records the protocol, settings, a SHA-256 of the evaluated protein digests and per-source mean losses. Compare only receipts with identical protocol and settings. The score does not estimate variability across training seeds.",
             "## Contact P@L",
             "Contact P@L is the mean, over 20,775 frozen chains, of precision among the top L predicted long-range residue contacts. L is the evaluated chain length. Higher is better. Fit one contact probe per checkpoint using the frozen probe split and procedure, then evaluate all chains. Use 5,000 chain-bootstrap replicates for a 95% interval. The interval describes variation over chains.",
             "## Evaluate a checkpoint",
-            "```bash\nsource runs/autoresearch_env.sh\nuv run --frozen python -m nanoprotein.evaluate \\\n  --checkpoint outputs/trial-001/checkpoint-final.pt \\\n  --data-root data/training --output-root outputs/trial-001/evaluation \\\n  --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \\\n  --run-contact --contact-mode parallel --contact-chains 20775 --contact-bootstrap 5000 \\\n  --contact-gpus 0,1,2,3 --contact-workers 32 \\\n  --contact-root data/evaluation/contact --external-src data/evaluation/source\n```",
+            "```bash\nuv run --frozen python -m nanoprotein.evaluate \\\n  --checkpoint outputs/trial-001/checkpoint-final.pt \\\n  --data-root data/training --output-root outputs/trial-001/evaluation \\\n  --validation-context 512 \\\n  --run-contact --contact-mode parallel --contact-chains 20775 --contact-bootstrap 5000 \\\n  --contact-gpus 0,1,2,3 --contact-workers 32 \\\n  --contact-root data/evaluation/contact --external-src data/evaluation/source\n```",
             "Adjust only the file paths and visible GPU identifiers to match the provisioned workspace. Use the final checkpoint from the declared training budget. The organizer evaluates with a trusted copy of the scoring code and records checkpoint and evaluator hashes.",
         ),
         "docs/USAGE.md": wrap(
             "# Training commands",
             "## Search round",
-            "```bash\nbash tasks/171m-validation-loss_ar.sh configs/default.yaml trial-001 42\n```",
+            "```bash\nbash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml trial-001 42\n```",
             "The command requires prepared data and four matching H100 or L40S GPUs. It selects 1,200 seconds on H100 or 3,600 seconds on L40S. It refuses to overwrite a run directory and evaluates only after training succeeds. `tasks/171m-p-at-l_ar.sh` runs the same measurement for the P@L task. Each invocation is one round; the search algorithm owns its candidate and seed choices.",
             "## Ordinary training",
-            "The commands below assume Hopper GPUs and FlashAttention-3. For the one-hour L40S search budget, use `--attention-backend flash --walltime-seconds 3600` in the ordinary training command below. Set `--peak-bf16-tflops-per-gpu` to the value recorded in `.autoresearch/ENVIRONMENT.json` for hardware-specific utilization reporting. The benchmark task reads these settings automatically.",
-            "```bash\nsource runs/autoresearch_env.sh\nuv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \\\n  -m nanoprotein.train --config configs/default.yaml \\\n  --data-root data/training --output-root outputs/training-001 \\\n  --walltime-seconds 1200 --seed 42\n```",
+            "The commands below assume Hopper GPUs and FlashAttention-3. For the one-hour L40S search budget, use `--attention-backend flash --walltime-seconds 3600` in the ordinary training command below. Set `--peak-bf16-tflops-per-gpu` to the value recorded in a task run's `ENVIRONMENT.json` for hardware-specific utilization reporting. The benchmark task reads these settings automatically.",
+            "```bash\nuv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \\\n  -m nanoprotein.train --config configs/autoresearch/esmc-171m.yaml \\\n  --data-root data/training --output-root outputs/training-001 \\\n  --walltime-seconds 1200 --seed 42\n```",
             "Ordinary training and benchmark measurements use the same API. Read the resolved recipe, run_contract.json, DATA_COVERAGE.json and TRAINING_COMPLETE.json to confirm the effective settings and stop reason. Successful training writes checkpoint-final.pt. The trainer supports time, step and token limits; the measurement command clears step and token caps so the round uses its training-time allowance.",
             "## Owner-run final evaluation",
-            "Prepare enough data for the selected mixture and 24B-token target before starting. The example uses a generous seven-day safety time cap; completion is determined by the token target, not this cap. Set the common seed and the attention backend recorded in .autoresearch/ENVIRONMENT.json before comparing recipes. The example below uses Hopper/FlashAttention-3; use flash on L40S and keep hardware fixed across the comparison.",
-            "```bash\nsource runs/autoresearch_env.sh\nuv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \\\n  -m nanoprotein.train --config configs/default.yaml --seed 42 \\\n  --data-root data/training --output-root outputs/final-reference \\\n  --max-model-tokens 24000000000 --max-steps none --schedule-steps none \\\n  --walltime-seconds 604800 --attention-backend flash3 --warmup-steps 554 \\\n  --checkpoint-interval 0 --periodic-evaluation-interval 0\n```",
-            "Verify that TRAINING_COMPLETE.json reports the token target as the stop reason and at least 24B model tokens. Record the final update's overrun. Repeat for the frozen submitted recipe with the same seed, then use the [evaluation command](EVALUATION.md#evaluate-a-checkpoint) on each final checkpoint. This owner-run comparison does not consume search rounds.",
+            "Prepare enough data for the selected mixture and the 24,200,224,761-token target before starting. The example trains the reference on four Hopper GPUs with FlashAttention-3, where it takes about 12 hours. On other GPUs, use `--attention-backend flash` and raise the 16-hour safety time cap; completion is determined by the token target, not this cap. Keep the global batch at 1,024 and use the same seed for every recipe.",
+            "```bash\nuv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \\\n  -m nanoprotein.train --config configs/test-100k/esmc-171m.yaml --seed 42 \\\n  --data-root data/training --output-root outputs/final-reference \\\n  --max-steps none --max-model-tokens 24200224761 --schedule-steps 100000 \\\n  --walltime-seconds 57600 --attention-backend flash3 --warmup-steps 1000 \\\n  --micro-batch-size 64 --gradient-accumulation 4 \\\n  --checkpoint-interval 0 --periodic-evaluation-interval 0\n```",
+            "Verify that TRAINING_COMPLETE.json reports the token target as the stop reason and at least 24,200,224,761 model tokens. Record the final update's overrun. Repeat for the frozen submitted recipe with the same seed, then use the [evaluation command](EVALUATION.md#evaluate-a-checkpoint) on each final checkpoint. This owner-run comparison does not consume search rounds.",
         ),
         "docs/ORGANIZER.md": wrap(
             "# Organizing a comparison",
-            "Provision every participant from the same released `autoresearch` commit and retain its file-hash manifest. The preparation script creates a standalone clone containing one clean root commit and removes its remote. Give each agent a fresh context, prepared data and the same compute allowance. Keep prior experiments, checkpoint stores, private notes, shell history and other checkouts outside the agent workspace.",
-            "Prepare dependencies and verified data before agent access. For a closed comparison, restrict network access after provisioning; an independent branch and written rules do not block online access. Declare the external-information policy, agent/model version and proposal-generation budget before the comparison, and use the same policy for every method.",
+            "Provision every participant from the same `autoresearch-v0` release tag and record its commit. The documented clone downloads only that root commit, and the remote is removed afterwards. Give each agent a fresh context, prepared data and the same compute allowance. Keep prior experiments, checkpoint stores, private notes, shell history and other checkouts outside the agent workspace.",
+            "Prepare dependencies and verified data before agent access. For a closed comparison, restrict network access after provisioning; an independent release commit and written rules do not block online access. Declare the external-information policy, agent/model version and proposal-generation budget before the comparison, and use the same policy for every method.",
             "Keep an organizer-owned copy of the protocol, evaluator, evaluation assets and release manifest outside the agent's writable workspace. Run candidate training and model code in an isolated process with only the required data and permissions. Score submitted checkpoints using the trusted evaluation procedure, and independently check architecture changes, data boundaries, parameter counts and the compute ledger. A manifest inside an editable workspace is a reference, not an enforcement mechanism.",
-            "The released branch excludes previous research findings from its code and commit ancestry. It does not by itself prevent metric tampering or adaptation to repeatedly observed validation results. The published final evaluation shares the search evaluation assets; any blind generalization study needs a separately declared held-out set.",
+            "The release excludes previous research findings from its code and commit ancestry. It does not by itself prevent metric tampering or adaptation to repeatedly observed validation results. The published final evaluation shares the search evaluation assets; any blind generalization study needs a separately declared held-out set.",
         ),
     }
 
@@ -418,14 +415,10 @@ def build(destination: Path) -> Path:
         copy(f"src/{name}")
     for name in ("171m-validation-loss_ar.sh", "171m-p-at-l_ar.sh"):
         copy(f"tasks/{name}")
-    for name in ("setup.sh", "setup_autoresearch.sh", "autoresearch_env.sh"):
-        copy(f"runs/{name}")
-    copy(".dev/scripts/prepare_autoresearch.py")
+    copy("runs/setup.sh")
     write(
         "autoresearch/program.md",
-        (ROOT / "autoresearch/program.md")
-        .read_text()
-        .replace("../docs/autoresearch.md", "../docs/AUTORESEARCH.md"),
+        (ROOT / "autoresearch/program.md").read_text(),
     )
     for name in TESTS:
         copy(f".dev/tests/{name}.py")
@@ -434,13 +427,6 @@ def build(destination: Path) -> Path:
             f".dev/tests/{name}.py",
             (ROOT / f".dev/scripts/clean_starter_templates/{name}.py.txt").read_text(),
         )
-    test = (package / ".dev/tests/test_task_measurement.py").read_text()
-    test = replace(
-        test,
-        'self.assertEqual(config["muon_split_qkv"], self.recipe["muon_split_qkv"])',
-        'self.assertEqual(config["learning_rate"], self.recipe["learning_rate"])',
-    )
-    write(".dev/tests/test_task_measurement.py", test)
     write(
         "src/nanoprotein/model.py",
         clean_model((package / "src/nanoprotein/model.py").read_text()),
@@ -495,14 +481,10 @@ def build(destination: Path) -> Path:
         "Immutable whole shards are cached locally; individual rows are not\nstreamed over the network inside the training loop.",
     )
     write("src/nanoprotein/sharded_data.py", sharded)
-    config = (ROOT / "configs/esmc/esmc-171m.yaml").read_text()
-    config = replace(config, "attention_backend: flash\n", "attention_backend: flash3\n")
-    config = replace(config, "walltime_seconds: 3600", "walltime_seconds: 1200")
-    config = replace(
-        config, "peak_bf16_tflops_per_gpu: 312.0", "peak_bf16_tflops_per_gpu: 989.5"
-    )
-    config = replace(config, "learning_rate:", "optimizer: adamw\nlearning_rate:")
-    write("configs/default.yaml", config)
+    # Ship the plain reference configs as-is, minus internal provenance comments.
+    for name in ("configs/autoresearch/esmc-171m.yaml", "configs/test-100k/esmc-171m.yaml"):
+        lines = (ROOT / name).read_text().splitlines(keepends=True)
+        write(name, "".join(line for line in lines if not line.startswith("# Source:")))
     write(
         "AGENTS.md",
         """# Working in the ESMC benchmark
@@ -516,7 +498,7 @@ Keep each prose paragraph on one source line when writing Markdown. Existing AI 
     )
     write(
         ".gitignore",
-        ".venv/\n.env\ndata/\noutputs/\n.bootstrap/\n.autoresearch/\n.ar/\n__pycache__/\n*.pyc\n*.egg-info/\n.ruff_cache/\n",
+        ".venv/\n.env\ndata/\noutputs/\n.ar/\n__pycache__/\n*.pyc\n*.egg-info/\n.ruff_cache/\n",
     )
     for path, value in documents().items():
         write(path, value)
@@ -565,7 +547,7 @@ def audit(package: Path) -> dict:
         r"query.center|rms.restor|best.recipe|CURRENT_DEFAULT|BEST_RECIPE|"
         r"kn0[89]\d|ar-260913|human-ai-baseline|program2_h100|"
         r"62faec9|current.best|"
-        r"canonical.incumbent|24200224761|\.dev/configs/archive|\.dev/reports",
+        r"canonical.incumbent|nanop-best|\.dev/configs/archive|\.dev/reports",
         re.I,
     )
     violations = []

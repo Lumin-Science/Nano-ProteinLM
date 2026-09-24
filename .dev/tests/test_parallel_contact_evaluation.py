@@ -114,9 +114,8 @@ class ParallelContactEvaluationTests(unittest.TestCase):
         self.assertEqual(self.args.contact_mode, "parallel")
         self.assertEqual(self.args.contact_chains, 20775)
         self.assertEqual(self.args.contact_bootstrap, 5000)
-        self.assertEqual(self.args.validation_batches * self.args.validation_batch_size, 4096)
         self.assertEqual(self.args.validation_context, 512)
-        validation = {"sequence_mean_nll": 2.5, "sequences": 4096}
+        validation = {"sequence_mean_nll": 2.5, "sequences": 12288}
         with (
             patch("nanoprotein.evaluate.parse_args", return_value=self.args),
             patch("torch.cuda.is_available", return_value=True),
@@ -158,10 +157,10 @@ class ParallelContactEvaluationTests(unittest.TestCase):
             evaluate.write_json(root / "evaluation/EVALUATION.json", report)
             runs.append(root)
         self.assertEqual(
-            summarize(runs, 4096)["metrics"]["p_at_l"]["mean"], float(values.mean())
+            summarize(runs, 12288)["metrics"]["p_at_l"]["mean"], float(values.mean())
         )
 
-    def test_mlm_resume_rejects_old_sample_count_and_reuses_matching_count(self):
+    def test_mlm_resume_rejects_sampled_receipts_and_ignores_batch_size(self):
         self.args.run_contact = False
         self.args.resume_components = True
         validation_path = self.args.output_root / "VALIDATION_MLM.json"
@@ -174,28 +173,35 @@ class ParallelContactEvaluationTests(unittest.TestCase):
             patch("nanoprotein.evaluate.validation_mlm") as score,
         ):
             evaluate.write_json(validation_path, {"sequence_mean_nll": 2.5, "sequences": 32})
-            with self.assertRaisesRegex(ValueError, "cached MLM sample count differs"):
+            with self.assertRaisesRegex(ValueError, "different protocol or settings"):
                 evaluate.main()
             self.assertFalse((self.args.output_root / "EVALUATION.json").exists())
-            validation = {"sequence_mean_nll": 2.5, "sequences": 4096}
-            evaluate.write_json(validation_path, validation)
-            with self.assertRaisesRegex(ValueError, "settings differ or are undocumented"):
+            sampled = {
+                "protocol": "heldout-cluster-representative-mlm-v1",
+                "settings": {
+                    "sampling_seed": 20260821,
+                    "context_length": 512,
+                    "batch_size": 4,
+                    "batches": 1024,
+                },
+                "sequences": 4096,
+            }
+            evaluate.write_json(validation_path, sampled)
+            with self.assertRaisesRegex(ValueError, "different protocol or settings"):
                 evaluate.main()
-            validation["settings"] = {
-                "sampling_seed": 20260821,
-                "context_length": 512,
-                "batch_size": 16,
-                "batches": 256,
+            validation = {
+                "protocol": evaluate.VALIDATION_MLM_PROTOCOL,
+                "settings": evaluate.validation_settings(512),
+                "sequences": 12288,
+                "sequence_mean_nll": 2.5,
+                "batch_size": 64,
             }
             evaluate.write_json(validation_path, validation)
-            with self.assertRaisesRegex(ValueError, "settings differ or are undocumented"):
-                evaluate.main()
-            validation["settings"].update(batch_size=4, batches=1024)
-            evaluate.write_json(validation_path, validation)
+            self.args.validation_batch_size = 8
             evaluate.main()
         score.assert_not_called()
         report = json.loads((self.args.output_root / "EVALUATION.json").read_text())
-        self.assertEqual(report["validation_mlm"]["sequences"], 4096)
+        self.assertEqual(report["validation_mlm"]["sequences"], 12288)
         self.assertEqual(report["resumed_components"], ["validation_mlm"])
 
     def test_resume_reuses_probe_and_shards_and_rejects_changed_request(self):
@@ -352,7 +358,6 @@ class ParallelContactEvaluationTests(unittest.TestCase):
             self.assertEqual(args.contact_workers, 32)
             self.assertEqual(args.contact_chains, 20775)
             self.assertEqual(args.contact_bootstrap, 5000)
-            self.assertEqual(args.validation_batches * args.validation_batch_size, 4096)
             self.assertEqual(args.checkpoint.parent.name, "trial")
         training = next(command for command in commands if "nanoprotein.train" in command)
         self.assertEqual(training[training.index("--seed") + 1], "47")

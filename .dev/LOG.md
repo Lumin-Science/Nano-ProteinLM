@@ -1,11 +1,11 @@
 # Development log
 
 This is the public development log. It records what was tried, what worked,
-what did not work, and what remains open. This log and the canonical technical
-report are tracked; detailed working notes, raw receipts, cluster launchers,
-and local paths remain gitignored under `.dev/`.
+what did not work, and what remains open. This log, the canonical technical
+report and curated receipts under `.dev/reports/` are tracked; detailed working
+notes, cluster launchers and local paths stay untracked.
 
-Results here are fixed-checkpoint measurements, not claims about training-seed uncertainty unless explicitly stated. Public documentation lives in [`DATA.md`](../docs/DATA.md), [`EVALUATION.md`](../docs/EVALUATION.md), the [current-default recipe guide](../docs/leaderboard/CURRENT_DEFAULT_20260921.md), and [`autoresearch.md`](../docs/autoresearch.md).
+Results here are fixed-checkpoint measurements, not claims about training-seed uncertainty unless explicitly stated. Public documentation lives in [`DATA.md`](../docs/DATA.md), [`EVALUATION.md`](../docs/EVALUATION.md), the recipe pages for [round 1](../docs/leaderboard/nanop-best-171m-round1.md) and [round 2](../docs/leaderboard/nanop-best-171m-round2.md), and [`AUTORESEARCH.md`](../docs/AUTORESEARCH.md).
 
 ## 2026-08-28 — Public/private development boundary
 

@@ -16,20 +16,20 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class PlainBaselineTests(unittest.TestCase):
     def test_full_model_count_and_recipe(self):
-        config = yaml.safe_load((ROOT / "configs/default.yaml").read_text())
+        config = yaml.safe_load((ROOT / "configs/autoresearch/esmc-171m.yaml").read_text())
         with torch.device("meta"):
             model = build_model(config["model"])
         self.assertEqual(count_parameters(model), 170671168)
         self.assertEqual(count_parameters(model), config["expected_parameter_count"])
         self.assertEqual(config["optimizer"], "adamw")
-        self.assertEqual(config["learning_rate"], 0.000326599)
+        self.assertEqual(config["learning_rate"], 0.0005)
         stage = config["stages"][0]
         self.assertEqual(4 * stage["micro_batch_size"] * stage["gradient_accumulation"], 256)
 
     def test_optimizer_update_and_checkpoint_roundtrip(self):
         torch.manual_seed(19)
         model = build_model("tiny", attention_backend="math")
-        config = {"learning_rate": 0.000326599, "weight_decay": 0.0183712}
+        config = {"learning_rate": 0.0005, "weight_decay": 0.01}
         optimizer = build_optimizer(model, config)
         tokens = torch.tensor([[0, 4, 5, 6, 2], [0, 7, 8, 9, 2]])
         before = model.embedding.weight.detach().clone()
@@ -51,7 +51,7 @@ class PlainBaselineTests(unittest.TestCase):
     def test_evaluation_defaults(self):
         args = parse_args(["--checkpoint", "model.pt", "--data-root", "data",
                            "--output-root", "output"])
-        self.assertEqual((args.validation_batches, args.validation_batch_size), (1024, 4))
+        self.assertFalse(hasattr(args, "validation_batches"))
         self.assertEqual(args.validation_context, 512)
         self.assertEqual(args.contact_chains, 20775)
         self.assertEqual(args.contact_bootstrap, 5000)

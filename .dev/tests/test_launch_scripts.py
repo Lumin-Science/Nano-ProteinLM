@@ -65,11 +65,14 @@ class LaunchScriptTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         (self.root / "runs").mkdir()
-        (self.root / "configs").mkdir()
+        (self.root / "configs/test-100k").mkdir(parents=True)
         for name in ("setup.sh", "speedrun.sh"):
             shutil.copy(ROOT / "runs" / name, self.root / "runs" / name)
         shutil.copy(ROOT / ".env.example", self.root / ".env.example")
-        shutil.copy(ROOT / "configs/default.yaml", self.root / "configs/default.yaml")
+        shutil.copy(
+            ROOT / "configs/test-100k/nanop-best-171m-round2.yaml",
+            self.root / "configs/test-100k/nanop-best-171m-round2.yaml",
+        )
         self.data = self.root / "data with spaces"
         self.output = self.root / "outputs with spaces"
         (self.root / ".env").write_text(
@@ -150,7 +153,7 @@ class LaunchScriptTests(unittest.TestCase):
 
         self.run_script(
             "speedrun.sh",
-            "configs/default.yaml",
+            "configs/test-100k/nanop-best-171m-round2.yaml",
             "custom-run",
             "--attention-backend",
             "flash",

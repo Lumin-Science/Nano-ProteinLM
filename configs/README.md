@@ -1,23 +1,33 @@
+<div class="ai">
+
 # Training configurations
 
-| Recipe | File | Parameters | Role |
-|---|---|---:|---|
-| Improved 171M default | [default.yaml](default.yaml) | 170,559,856 | <span class="ai">Muon with separate Q/K/V updates, RMSNorm, residual routing and initialization, batch balance, sqrt loss</span> |
-| ESMC-style 171M | [esmc-171m.yaml](esmc/esmc-171m.yaml) | 170,671,168 | AdamW reference for small-budget experiments |
-| ESMC-style 300M | [esmc-300m.yaml](esmc/esmc-300m.yaml) | 332,997,184 | Original-size architecture reference |
-| ESMC-style 600M | [esmc-600m.yaml](esmc/esmc-600m.yaml) | 575,036,992 | Original-size architecture reference |
+</div>
 
-The default uses RoPE 10k, base LR 5e-4, base WD 0.01, 1,000 warmup steps and a
-four-H100 batch layout of 1,024 with FA3. ESMC presets retain their own LR/WD,
-warmup and batch settings; see [esmc/README.md](esmc/README.md) for architecture
-sources and training assumptions. Selecting a preset does not align its budget
-or hyperparameters with another recipe.
+<div class="ai">
 
-[runs/speedrun.sh](../runs/speedrun.sh) calls setup and trains the default for
-100k steps with a 16-hour guard. Supply a preset, fresh run name and ordinary
-training options to customize it. The direct API is documented in
-[USAGE.md](../docs/USAGE.md#training); every run saves its resolved configuration.
+Recipes come in two settings. [autoresearch/](autoresearch/) holds the search setting used by the task commands: global batch 256 and 500 warmup steps. [test-100k/](test-100k/) holds the final-evaluation setting: global batch 1,024 and 1,000 warmup steps. Both use 64 sequences per GPU on four GPUs, constant learning rate after warmup with no decay, and no stopping budget in the YAML; the command sets the time or token target.
 
-The [171m-validation-loss.md](../tasks/171m-validation-loss.md) task defines the
-fixed-time comparison and ±5% parameter bound. Retired presets and their original
-hashes are preserved in [.dev/configs/archive/README.md](../.dev/configs/archive/README.md).
+</div>
+
+<div class="ai">
+
+| Recipe | Search setting | Final evaluation | Parameters | Description |
+|---|---|---|---:|---|
+| Plain ESMC reference | [esmc-171m.yaml](autoresearch/esmc-171m.yaml) | [esmc-171m.yaml](test-100k/esmc-171m.yaml) | 170,671,168 | AdamW, LR 5e-4, WD 0.01; the AutoResearch starting recipe |
+| [nanop-best-171m-round1](../docs/leaderboard/nanop-best-171m-round1.md) | [yaml](autoresearch/nanop-best-171m-round1.yaml) | [yaml](test-100k/nanop-best-171m-round1.yaml) | 170,559,856 | Muon with RMSNorm, residual routing and depth-scaled init, batch balance, sqrt loss |
+| [nanop-best-171m-round2](../docs/leaderboard/nanop-best-171m-round2.md) | [yaml](autoresearch/nanop-best-171m-round2.yaml) | [yaml](test-100k/nanop-best-171m-round2.yaml) | 170,559,856 | Round 1 plus separate Q/K/V Muon updates; our current best recipe |
+
+</div>
+
+<div class="ai">
+
+All three use the paper's 170M scaling backbone (24 layers, width 768, 12 heads), context 512 and base LR 5e-4 / WD 0.01. [runs/speedrun.sh](../runs/speedrun.sh) trains `test-100k/nanop-best-171m-round2.yaml` for 100k steps by default; the task commands in [tasks/](../tasks/) take an `autoresearch/` recipe. [AUTORESEARCH.md](../docs/AUTORESEARCH.md) defines both settings, and [USAGE.md](../docs/USAGE.md#training) documents the training API; every run saves its resolved configuration.
+
+</div>
+
+<div class="ai">
+
+Retired presets, including the original 171M preset and the 300M and 600M ESMC architecture presets, are preserved with their original hashes in [.dev/configs/archive/](../.dev/configs/archive/README.md).
+
+</div>

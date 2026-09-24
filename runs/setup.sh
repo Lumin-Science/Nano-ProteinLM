@@ -44,7 +44,6 @@ if [[ -n "$training_shards" && -n "$training_samples" ]]; then
   echo "Choose either --training-shards or --training-samples." >&2
   exit 1
 fi
-if [[ -f runs/autoresearch_env.sh ]]; then source runs/autoresearch_env.sh; fi
 uv_bin="${UV_BIN:-uv}"
 if ! command -v "$uv_bin" >/dev/null 2>&1; then
   echo "Install uv >=0.11.31,<0.12, then rerun this script." >&2

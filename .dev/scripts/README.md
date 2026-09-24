@@ -16,5 +16,39 @@ analysis. Training and autoresearch runtime commands live in
   payload and evaluator with checksums for installation.
 - [Historical round summary](summarize_autoresearch_round.py): reads the older
   campaign's output layout.
+- <span class="ai">[Clean starter](build_clean_starter.py): builds and audits the history-free AutoResearch starter from the plain reference. Maintainers only; it is never shipped to agents.</span>
 
 Run plotting tools from a separate Matplotlib environment, as documented in [sequential-search plot guide](../../docs/AUTORESEARCH_BASELINE.md#evidence-and-plot-regeneration). The training dependency lock is unchanged.
+
+<div class="ai">
+
+## Publishing an AutoResearch starter release
+
+</div>
+
+<div class="ai">
+
+Each release is a single root commit published as a tag; participants clone it with the command in [AUTORESEARCH.md](../../docs/AUTORESEARCH.md#preparation). Commit the source changes first, set `NAME` in the builder to the new tag, then build, audit and publish from the repository root:
+
+</div>
+
+<div class="ai">
+
+```bash
+release=autoresearch-v0
+.venv/bin/python .dev/scripts/build_clean_starter.py --output /tmp/nano-starter
+git -C "/tmp/nano-starter/$release" init -q
+git -C "/tmp/nano-starter/$release" add -A
+git -C "/tmp/nano-starter/$release" commit -q -m "Release plain ESMC AutoResearch starter $release"
+git fetch /tmp/nano-starter/$release HEAD
+git tag -a "$release" FETCH_HEAD -m "AutoResearch starter $release"
+git push origin "$release"
+```
+
+</div>
+
+<div class="ai">
+
+Before pushing, clone the tag with the documented command from a local `file://` URL and run the starter's `.dev/tests` in the clone. Publish a new tag for every change instead of moving an existing one.
+
+</div>

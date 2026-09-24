@@ -31,7 +31,9 @@ class TrainingCLITests(unittest.TestCase):
         return yaml.safe_load(result.stdout)
 
     def test_default_adds_split_qkv_to_previous_winner_without_old_stopping_budget(self):
-        default = yaml.safe_load((ROOT / "configs/default.yaml").read_text())
+        default = yaml.safe_load(
+            (ROOT / "configs/test-100k/nanop-best-171m-round2.yaml").read_text()
+        )
         historical = yaml.safe_load(
             (ROOT / ".dev/configs/archive/program2_h100_100k/r10_sqrtloss.yaml").read_text()
         )
@@ -74,7 +76,7 @@ class TrainingCLITests(unittest.TestCase):
         self.assertEqual(config["optimizer"], "muon")
         self.assertEqual(config["training_loss_reduction"], "sqrt_mask_count")
 
-    def test_manual_transfer_matches_baseline_and_candidate_execution_settings(self):
+    def test_final_evaluation_matches_reference_and_candidate_execution_settings(self):
         flags = (
             "--seed",
             "42",
@@ -90,17 +92,15 @@ class TrainingCLITests(unittest.TestCase):
             "24200224761",
             "--walltime-seconds",
             "57600",
-            "--learning-rate",
-            "0.0005",
-            "--weight-decay",
-            "0.01",
             "--micro-batch-size",
             "64",
             "--gradient-accumulation",
             "4",
         )
-        baseline = self.print_config(ROOT / "configs/esmc/esmc-171m.yaml", *flags)
-        candidate = self.print_config(ROOT / "configs/default.yaml", *flags)
+        baseline = self.print_config(ROOT / "configs/test-100k/esmc-171m.yaml", *flags)
+        candidate = self.print_config(
+            ROOT / "configs/test-100k/nanop-best-171m-round2.yaml", *flags
+        )
         for key in (
             "seed",
             "attention_backend",
@@ -118,8 +118,21 @@ class TrainingCLITests(unittest.TestCase):
         self.assertEqual(candidate["muon_ffn_lr_scale"], 0.75)
         self.assertEqual(candidate["muon_weight_decay_scale"], 0.75)
 
+    def test_search_and_final_evaluation_configs_differ_only_in_batch_and_warmup(self):
+        for name in ("esmc-171m", "nanop-best-171m-round1", "nanop-best-171m-round2"):
+            search = yaml.safe_load((ROOT / f"configs/autoresearch/{name}.yaml").read_text())
+            final = yaml.safe_load((ROOT / f"configs/test-100k/{name}.yaml").read_text())
+            self.assertEqual((search["warmup_steps"], final["warmup_steps"]), (500, 1000), name)
+            for config, accumulation in ((search, 1), (final, 4)):
+                (stage,) = config.pop("stages")
+                self.assertEqual(stage.pop("micro_batch_size"), 64, name)
+                self.assertEqual(stage.pop("gradient_accumulation"), accumulation, name)
+                config.pop("warmup_steps")
+                config["stage"] = stage
+            self.assertEqual(search, final, name)
+
     def test_omitted_cli_arguments_preserve_legacy_recipe(self):
-        path = ROOT / "configs/esmc/esmc-171m.yaml"
+        path = ROOT / ".dev/configs/archive/esmc-171m-original.yaml"
         self.assertEqual(self.print_config(path), yaml.safe_load(path.read_text()))
 
     def test_batch_override_rejects_ambiguous_multistage_target(self):
@@ -128,7 +141,9 @@ class TrainingCLITests(unittest.TestCase):
             resolve_config_overrides(config, {"micro_batch_size": 64})
 
     def test_override_does_not_mutate_nested_source_settings(self):
-        config = yaml.safe_load((ROOT / "configs/default.yaml").read_text())
+        config = yaml.safe_load(
+            (ROOT / "configs/test-100k/nanop-best-171m-round2.yaml").read_text()
+        )
         before = copy.deepcopy(config)
         resolved = resolve_config_overrides(config, {"gradient_accumulation": 8})
         self.assertEqual(config, before)

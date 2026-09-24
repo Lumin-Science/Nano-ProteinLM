@@ -36,7 +36,7 @@ of an undisclosed paper optimizer calibration.
 | Checkpoints | Rolling latest every 10,000 steps; final retained on project storage |
 
 Configuration: [`esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml`](../../configs/archive/esmc-171m-default-nibi-fa3-b2048-stage1-100k.yaml).
-Continuation instructions: [`checkpoint-resume.md`](../../../docs/checkpoint-resume.md).
+Continuation instructions: [`checkpoint-resume.md`](../../../docs/USAGE.md#training).
 
 Scratch root: `/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-20260908`.
 Frozen source checkout: the scratch root with `-run` appended.

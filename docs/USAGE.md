@@ -72,19 +72,21 @@ uv run --frozen python -m nanoprotein.setup_evaluation \
 
 The default 171M model targets small-budget experiments and follows the paper's
 170M scaling backbone ([Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-For larger models, select a [300M or 600M reference config](../configs/esmc/README.md);
-their local training assumptions are documented alongside the presets.
+<span class="ai">[configs/README.md](../configs/README.md) lists the search-setting and final-evaluation recipes. Archived [300M and 600M presets](../.dev/configs/archive/ESMC_REFERENCE_PRESETS.md) record the original ESMC architecture shapes.</span>
 
 The speedrun is a readable shell script that calls the ordinary Python API:
 
+<div class="ai">
+
 ```bash
 # Same best recipe, fresh output directory, different seed.
-bash runs/speedrun.sh configs/default.yaml default-seed42 --seed 42
+bash runs/speedrun.sh configs/test-100k/nanop-best-171m-round2.yaml round2-seed42 --seed 42
 
-# Original AdamW recipe with its original one-hour budget and no step cap.
-bash runs/speedrun.sh configs/esmc-171m.yaml adamw-1h \
-  --max-steps none --walltime-seconds 3600
+# Plain ESMC reference with the same 100k-step budget.
+bash runs/speedrun.sh configs/test-100k/esmc-171m.yaml esmc-171m-100k
 ```
+
+</div>
 
 It uses four GPUs. Arguments after the recipe and run name pass through to
 `nanoprotein.train`, overriding the default 100k-step/16-hour limits. For
@@ -94,26 +96,34 @@ not these execution settings. Each output directory must be fresh.
 
 For other GPU counts or full control, call the training API directly:
 
+<div class="ai">
+
 ```bash
 set -a
 if [ -f .env ]; then source .env; fi
 source .env.example
 set +a
 uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
-  -m nanoprotein.train --config configs/default.yaml \
+  -m nanoprotein.train --config configs/test-100k/nanop-best-171m-round2.yaml \
   --max-steps 100000 --walltime-seconds 57600 \
   --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-direct"
 ```
+
+</div>
 
 The recipe owns model and optimizer settings. CLI options select the execution
 budget and can override seed, attention, warmup and batch layout. Every run
 records the source config hash and saves its effective `config.yaml`. To inspect
 the resolved recipe without GPUs or training:
 
+<div class="ai">
+
 ```bash
-uv run --frozen python -m nanoprotein.train --config configs/default.yaml \
+uv run --frozen python -m nanoprotein.train --config configs/test-100k/nanop-best-171m-round2.yaml \
   --seed 42 --max-steps 100000 --walltime-seconds 57600 --print-config
 ```
+
+</div>
 
 <div class="ai">
 
@@ -125,7 +135,7 @@ Budget arguments accept `none` to clear inherited step/token limits. Batch-layou
 
 <div class="ai">
 
-[171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) each contain the complete scientific task definition for any AutoResearch method. Each task command trains for 20 minutes on four H100 GPUs or one hour on four L40S GPUs, then evaluates the final checkpoint. The [shared protocol](autoresearch.md) describes these roughly equivalent budgets; fix one hardware profile across methods in a comparison. [autoresearch/program.md](../autoresearch/program.md) defines our sequential-search method. To start that method, select the task to optimize and give your agent the following instruction.
+[171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) each contain the complete scientific task definition for any AutoResearch method, and [AUTORESEARCH.md](AUTORESEARCH.md) defines the shared search budget and final evaluation. [autoresearch/program.md](../autoresearch/program.md) defines our sequential-search method. To start that method, select the task to optimize and give your agent the following instruction.
 
 </div>
 
@@ -138,16 +148,16 @@ After setup and GPU allocation, run one research measurement:
 <div class="ai">
 
 ```bash
-bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001 42
+bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml experiment-001 42
 # Or use P@L as the reward with the same measurements:
-bash tasks/171m-p-at-l_ar.sh configs/default.yaml experiment-p-at-l-001 42
+bash tasks/171m-p-at-l_ar.sh configs/autoresearch/esmc-171m.yaml experiment-p-at-l-001 42
 ```
 
 </div>
 
 <div class="ai">
 
-The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports loss on 4,096 validation proteins and P@L over all 20,775 contact chains. The validation-loss task scores `validation_mlm.sequence_mean_nll` (lower is better); the P@L task scores `contact.precision_at_l` (higher is better). Replication, aggregation and acceptance belong to the caller; [our sequential method](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents those choices and commands. The agent reviews task boundaries and run completion.
+The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports loss on all 12,288 validation proteins and P@L over all 20,775 contact chains. The validation-loss task scores `validation_mlm.sequence_mean_nll` (lower is better); the P@L task scores `contact.precision_at_l` (higher is better). Replication, aggregation and acceptance belong to the caller; [our sequential method](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents those choices and commands. The agent reviews task boundaries and run completion.
 
 </div>
 
@@ -155,7 +165,7 @@ The third argument supplies the training seed. Each task script loads `.env`, qu
 
 <div class="ai">
 
-After setup, `bash runs/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint with 4,096 MLM validation sequences and parallel contact P@L over all 20,775 chains. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
+After setup, `bash runs/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint on all 12,288 MLM validation proteins and parallel contact P@L over all 20,775 chains. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
 
 </div>
 
@@ -171,18 +181,22 @@ With the two roots loaded in your shell, evaluate a saved checkpoint. Contact P@
 
 </div>
 
+<div class="ai">
+
 ```bash
 uv run --frozen python -m nanoprotein.evaluate \
   --checkpoint "$OUTPUT_ROOT/default-100k/checkpoint-final.pt" \
   --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-100k/evaluation" \
-  --validation-batches 1024 --validation-batch-size 4 --validation-context 512 \
+  --validation-context 512 \
   --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
   --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
 ```
 
+</div>
+
 <div class="ai">
 
-Omit `--run-contact` and the contact arguments for MLM alone. Use `--contact-mode serial` for one-process contact evaluation, or `--contact-gpus` and `--contact-workers` to select devices and concurrency. Both research tasks use the standard parallel evaluator automatically. [EVALUATION.md](EVALUATION.md#evaluation-execution) documents caching, resuming and the compatibility launcher. Test of Progress remains owner-run using the [manual commands](EVALUATION.md#manual-test-of-progress).
+Omit `--run-contact` and the contact arguments for MLM alone. Use `--contact-mode serial` for one-process contact evaluation, or `--contact-gpus` and `--contact-workers` to select devices and concurrency. Both research tasks use the standard parallel evaluator automatically. [EVALUATION.md](EVALUATION.md#evaluation-execution) documents caching, resuming and the compatibility launcher. Final evaluation is owner-run; [AUTORESEARCH.md](AUTORESEARCH.md#final-evaluation) gives its command.
 
 </div>
 
@@ -190,9 +204,12 @@ Omit `--run-contact` and the contact arguments for MLM alone. Use `--contact-mod
 
 See [AGENTS.md](../AGENTS.md) for concise layout and modification guidance.
 
+<div class="ai">
+
 ```text
 src/nanoprotein/   # Training, models, data, evaluation and runtime CLI modules
 src/*.sh          # Optional parallel evaluation launchers
+configs/          # Search-setting (autoresearch/) and final-evaluation (test-100k/) recipes
 runs/             # Public setup and speedrun scripts
 tasks/            # Autoresearch definition and measurement command
 autoresearch/     # Agent research-loop guidance
@@ -200,6 +217,8 @@ autoresearch/     # Agent research-loop guidance
 .dev/tests/       # Developer regression tests
 .dev/reports/     # Published experiment records and figures
 ```
+
+</div>
 
 The package uses a standard src layout. Run setup after updating an existing
 checkout to refresh the installed package. Direct commands now use

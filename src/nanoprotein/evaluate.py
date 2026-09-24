@@ -21,7 +21,7 @@ import torch
 import torch.nn.functional as F
 
 from .contact_cache import ContactScoringCache
-from .data import MixtureBatcher, file_sha256
+from .data import SOURCES, TokenStore, file_sha256
 from .model import ESMCConfig, ESMCForMaskedLM
 from .tokenizer import ProteinTokenizer, mask_tokens
 
@@ -198,6 +198,38 @@ def load_checkpoint(path: Path, device: torch.device) -> tuple[ESMCForMaskedLM, 
     return model.eval().to(device), packet
 
 
+VALIDATION_MLM_PROTOCOL = "heldout-cluster-representative-mlm-v2"
+VALIDATION_MLM_SEED = 20260821
+
+
+def validation_settings(context_length: int) -> dict[str, object]:
+    """Settings that define the MLM score; batch size only changes throughput."""
+    return {
+        "population": "all-validation",
+        "context_length": context_length,
+        "mask_seed": VALIDATION_MLM_SEED,
+    }
+
+
+def validation_example(
+    residues: np.ndarray, digest: bytes, *, residue_limit: int, tokenizer: ProteinTokenizer
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Crop and mask one protein using randomness derived only from its sequence digest."""
+    seed = hashlib.sha256(VALIDATION_MLM_SEED.to_bytes(8, "big") + digest).digest()
+    generator = torch.Generator().manual_seed(int.from_bytes(seed[:8], "big"))
+    excess = int(residues.size) - residue_limit
+    offset = int(torch.randint(excess + 1, (1,), generator=generator)) if excess > 0 else 0
+    kept = residues[offset : offset + residue_limit]
+    kept = torch.from_numpy(np.asarray(kept, dtype=np.int64))
+    tokens = torch.cat(
+        (torch.tensor([tokenizer.bos_id]), kept, torch.tensor([tokenizer.eos_id]))
+    ).unsqueeze(0)
+    corrupted, labels = mask_tokens(
+        tokens, torch.ones_like(tokens, dtype=torch.bool), tokenizer, generator=generator
+    )
+    return corrupted[0], labels[0]
+
+
 def validation_mlm(
     model: ESMCForMaskedLM,
     *,
@@ -205,29 +237,50 @@ def validation_mlm(
     device: torch.device,
     context_length: int,
     batch_size: int,
-    batches: int,
-    seed: int,
 ) -> dict[str, object]:
+    """Score every held-out validation protein once, with protein-fixed crops and masks."""
+    if context_length < 4 or batch_size <= 0:
+        raise ValueError("invalid validation context or batch size")
     tokenizer = ProteinTokenizer.esmc()
-    batcher = MixtureBatcher(
-        data_root,
-        "validation",
-        {"uniref90": 1.0, "mgnify": 1.0, "omg_img": 1.0},
-        seed=seed,
-    )
-    losses: list[float] = []
-    masked = 0
-    with torch.inference_mode():
-        for _ in range(batches):
-            input_ids, attention_mask = batcher.batch(
-                batch_size, context_length=context_length, tokenizer=tokenizer
+    sources: list[str] = []
+    examples: list[tuple[torch.Tensor, torch.Tensor]] = []
+    manifest = hashlib.sha256()
+    for source in SOURCES:
+        store = TokenStore.open(data_root / source / "validation")
+        for row in range(store.index.size):
+            digest = bytes(store.index[row]["digest"])
+            manifest.update(digest)
+            sources.append(source)
+            examples.append(
+                validation_example(
+                    store.sequence(row),
+                    digest,
+                    residue_limit=context_length - 2,
+                    tokenizer=tokenizer,
+                )
             )
-            input_ids = input_ids.to(device)
+    losses = np.zeros(len(examples), dtype=np.float64)
+    masked = 0
+    # Group similar lengths to reduce padding; each protein's loss is stored by position.
+    order = sorted(range(len(examples)), key=lambda index: examples[index][0].numel())
+    with torch.inference_mode():
+        for start in range(0, len(order), batch_size):
+            rows = order[start : start + batch_size]
+            width = max(examples[index][0].numel() for index in rows)
+            corrupted = torch.full((len(rows), width), tokenizer.pad_id, dtype=torch.long)
+            labels = torch.full_like(corrupted, -100)
+            attention_mask = torch.zeros_like(corrupted, dtype=torch.bool)
+            for position, index in enumerate(rows):
+                tokens, targets = examples[index]
+                corrupted[position, : tokens.numel()] = tokens
+                labels[position, : targets.numel()] = targets
+                attention_mask[position, : tokens.numel()] = True
+            corrupted = corrupted.to(device)
+            labels = labels.to(device)
             attention_mask = attention_mask.to(device)
-            corrupted, labels = mask_tokens(input_ids, attention_mask, tokenizer)
-            with torch.autocast("cuda", dtype=torch.bfloat16):
-                output = model(corrupted, attention_mask)
-                logits = output["logits"]
+            use_bf16 = device.type == "cuda"
+            with torch.autocast(device.type, dtype=torch.bfloat16, enabled=use_bf16):
+                logits = model(corrupted, attention_mask)["logits"]
                 per_token = F.cross_entropy(
                     logits.flatten(0, 1),
                     labels.flatten(),
@@ -236,23 +289,23 @@ def validation_mlm(
                 ).view_as(labels)
             selected = labels != -100
             per_sequence = per_token.sum(dim=1) / selected.sum(dim=1).clamp_min(1)
-            losses.extend(per_sequence.float().cpu().tolist())
+            losses[rows] = per_sequence.float().cpu().numpy()
             masked += int(selected.sum())
-    values = np.asarray(losses, dtype=np.float64)
+    names = np.asarray(sources)
     return {
-        "protocol": "heldout-cluster-representative-mlm-v1",
-        "settings": {
-            "sampling_seed": seed,
-            "context_length": context_length,
-            "batch_size": batch_size,
-            "batches": batches,
-        },
-        "sequences": int(values.size),
+        "protocol": VALIDATION_MLM_PROTOCOL,
+        "settings": validation_settings(context_length),
+        "sequences": int(losses.size),
         "masked_residues": masked,
-        "sequence_mean_nll": float(values.mean()),
-        "sequence_median_nll": float(np.median(values)),
-        "perplexity": float(np.exp(values.mean())),
-        "source_counts": dict(batcher.source_counts),
+        "manifest_sha256": manifest.hexdigest(),
+        "sequence_mean_nll": float(losses.mean()),
+        "sequence_median_nll": float(np.median(losses)),
+        "perplexity": float(np.exp(losses.mean())),
+        "source_counts": {source: int((names == source).sum()) for source in SOURCES},
+        "source_sequence_mean_nll": {
+            source: float(losses[names == source].mean()) for source in SOURCES
+        },
+        "batch_size": batch_size,
     }
 
 
@@ -1380,8 +1433,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--external-src", type=Path)
     parser.add_argument("--pcore-root", type=Path)
     parser.add_argument("--contact-root", type=Path)
-    parser.add_argument("--validation-batches", type=int, default=1024)
-    parser.add_argument("--validation-batch-size", type=int, default=4)
+    parser.add_argument(
+        "--validation-batch-size",
+        type=int,
+        default=32,
+        help="Validation proteins per forward pass; does not change the score",
+    )
     parser.add_argument("--validation-context", type=int, default=512)
     parser.add_argument(
         "--contact-chains", type=int, default=20775, help="default: all 20,775 chains"
@@ -1477,21 +1534,12 @@ def main() -> None:
         validation_path = args.output_root / "VALIDATION_MLM.json"
         if args.resume_components and validation_path.exists():
             validation = json.loads(validation_path.read_text())
-            expected_sequences = args.validation_batches * args.validation_batch_size
-            if validation.get("sequences") != expected_sequences:
+            if (validation.get("protocol"), validation.get("settings")) != (
+                VALIDATION_MLM_PROTOCOL,
+                validation_settings(args.validation_context),
+            ):
                 raise ValueError(
-                    "cached MLM sample count differs from the requested evaluation; "
-                    "use a fresh output directory or match the original validation settings"
-                )
-            expected_settings = {
-                "sampling_seed": 20260821,
-                "context_length": args.validation_context,
-                "batch_size": args.validation_batch_size,
-                "batches": args.validation_batches,
-            }
-            if validation.get("settings") != expected_settings:
-                raise ValueError(
-                    "cached MLM settings differ or are undocumented; "
+                    "cached MLM evaluation uses a different protocol or settings; "
                     "use a fresh output directory to re-evaluate"
                 )
             timing_seconds["validation_mlm"] = 0.0
@@ -1504,8 +1552,6 @@ def main() -> None:
                 device=device,
                 context_length=args.validation_context,
                 batch_size=args.validation_batch_size,
-                batches=args.validation_batches,
-                seed=20260821,
             )
             timing_seconds["validation_mlm"] = time.monotonic() - component_started
             write_json(validation_path, validation)
