@@ -86,6 +86,41 @@ class SpeedrunEvaluationTests(unittest.TestCase):
         self.assertEqual(args.contact_mode, "serial")
         self.assertEqual(args.validation_batch_size, 8)
 
+    def test_global_checkpoint_helper_uses_the_same_mlm_sample_settings(self):
+        # Stop after capturing the real evaluator command, before the historical contact helper.
+        py = self.root / "fake-python"
+        py.write_text(
+            f"#!{sys.executable}\n"
+            "import json, os, pathlib, sys\n"
+            "if 'nanoprotein.evaluate' in sys.argv:\n"
+            "    pathlib.Path(os.environ['CAPTURE']).write_text(json.dumps(sys.argv[1:]))\n"
+            "    sys.exit(17)\n"
+        )
+        py.chmod(0o755)
+        result = subprocess.run(
+            [
+                "bash",
+                str(ROOT / "runs/evaluate_global_checkpoint.sh"),
+                str(self.root / "checkpoint.pt"),
+                str(self.root / "eval"),
+            ],
+            env={
+                **self.env,
+                "PAIR_ROOT": str(self.root),
+                "PAIR_REPO": str(ROOT),
+                "TRAIN_PYTHON": str(py),
+                "DATA_ROOT": str(self.root / "data"),
+                "CUDA_VISIBLE_DEVICES": "0,1,2,3",
+            },
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 17, result.stderr)
+        command = json.loads(self.capture.read_text())
+        args = parse_args(command[2:])
+        self.assertEqual((args.validation_batches, args.validation_batch_size), (1024, 4))
+        self.assertEqual(args.validation_context, 512)
+
     def test_omitted_run_name_and_invalid_run_name(self):
         result = self.run_command("--contact-workers", "2")
         self.assertEqual(result.returncode, 0, result.stderr)

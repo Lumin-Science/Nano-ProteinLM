@@ -16,7 +16,49 @@ population protected during training-corpus decontamination.
 
 <div class="ai">
 
-Our [sequential-search implementation](AUTORESEARCH_BASELINE.md) uses the paper's 170M scaling backbone ([architecture and scope](../tasks/171m-validation-loss.md#background)). Its [validation-loss task](../tasks/171m-validation-loss.md) scores held-out sequence-mean MLM loss (lower is better); its [P@L task](../tasks/171m-p-at-l.md) scores full long-range contact P@L (higher is better). Both average the selected metric across two matched training seeds, with sample SD reported separately, and use identical training and evaluation commands. The other metric and training loss remain diagnostics; P-CORE provides additional representation measurements. Diagnostics do not affect this method's research selection. Its two-seed policy and acceptance rule are described in [AUTORESEARCH_BASELINE.md](AUTORESEARCH_BASELINE.md#running-the-example-loop). The shared [AutoResearch protocol](autoresearch.md) defines the design boundaries, fixed round allowance, per-round compute and final evaluation budget. [Historical scale-up results](AUTORESEARCH_BASELINE.md#detailed-scale-up-results) retain their original single-seed protocols.
+The [validation-loss task](../tasks/171m-validation-loss.md) scores a checkpoint's held-out sequence-mean MLM loss (lower is better); the [P@L task](../tasks/171m-p-at-l.md) scores full long-range contact P@L (higher is better). Both use the same training and evaluation APIs within the [171M architecture and scope](../tasks/171m-validation-loss.md#background). Each invocation supplies one run's measurements. The search method chooses repetition and acceptance; [our sequential implementation](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents its two-seed policy. The shared [AutoResearch protocol](autoresearch.md) defines design boundaries, round allowance, per-round compute and final evaluation budget. P-CORE provides optional representation diagnostics. [Historical scale-up results](AUTORESEARCH_BASELINE.md#detailed-scale-up-results) retain their original protocols.
+
+</div>
+
+<div class="ai">
+
+## Validation sample size
+
+</div>
+
+<div class="ai">
+
+The current task, ordinary evaluator and speedrun evaluation use **4,096 validation proteins**, evaluated as **1,024 batches of four**. **512 is the maximum input length in tokens**. Earlier short-run evaluations used eight batches of four, or **32 proteins**. The data release contains 12,288 held-out proteins, with 4,096 per source; the evaluator uses a fixed seed and equal source-sampling weights, so realized source counts need not be exactly equal.
+
+</div>
+
+<div class="ai">
+
+A larger sample reduces dependence on a small set of proteins and mask positions. For independent observations with similar variance, the standard error of a mean decreases as `1 / sqrt(N)` ([NIST](https://www.itl.nist.gov/div898/handbook/eda/section3/eda352.htm)); moving from 512 to 4,096 would reduce it by about 2.8×, and moving from 32 by about 11.3×. These are sampling estimates, not measured improvements in recipe-ranking stability. Protein relatedness, masking and training-seed variation limit what sample count alone establishes.
+
+</div>
+
+<div class="ai">
+
+The [September 23 re-evaluation](../.dev/reports/best-recipe-reward-4096-20260923/README.md) measured the current best recipe on all three saved training seeds on Fir and CCK. Its 4,096-protein MLM component took **18.6–21.1 seconds on H100** and **18.4–18.5 seconds on L40S**, using one GPU per evaluator. Full evaluator time was **22.4–25.5 seconds**, including checkpoint loading and hashing, with environment/data setup and contact inference excluded. All six evaluations used 140,009 masked residues and matching source counts. These measurements support the larger validation sample within the 20-minute H100 or one-hour L40S search budget; record timing for each new run separately.
+
+</div>
+
+<div class="ai">
+
+Keep the sample, crop and masking settings fixed across recipes, including **batch size four**. The batch size affects the sampler's random-number order and mask generation, so 256 batches of 16 do not select the same evaluation as 1,024 batches of four. Current MLM receipts record the sampling seed, context, batch size and batch count. `--resume-components` rejects cached results with different or undocumented settings; use a fresh directory to re-evaluate. The training-run summarizer rejects mixtures of different recorded settings while retaining support for explicitly requested historical 32-protein summaries.
+
+</div>
+
+<div class="ai">
+
+Historical scores remain labeled with their original sample count and settings; re-evaluate their checkpoints before comparing them with the current sample. Training-seed repeats estimate a different source of variation. Reusing this validation set during search and final evaluation also means that the final result is not a blind-holdout estimate.
+
+</div>
+
+<div class="ai">
+
+The [published validation contract](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/blob/5eae416dbb415d2df206b9641dd5ddabe04371dc/evaluation/MLM_VALIDATION_4096.json) records these settings, source-shard hashes and expected source counts. All 12,288 sequence hashes were verified against their stored sequences, and the three validation Parquet files remain unchanged. The contact bundle is published alongside this contract; only its packaging metadata changed.
 
 </div>
 
@@ -190,8 +232,11 @@ Omit `--contact-scoring-cache-root` to read the frozen structure payloads direct
 
 </div>
 
-Baseline training recipes, compute-matched comparisons, and fairness caveats
-are documented in [`BASELINES.md`](BASELINES.md).
+<div class="ai">
+
+The [current-default guide](leaderboard/CURRENT_DEFAULT_20260921.md) combines the recipe details, historical baseline comparison and fairness caveats. [LEADERBOARD.md](LEADERBOARD.md) collects the measured results with their original budgets.
+
+</div>
 
 ## Dataset provenance and split contract
 

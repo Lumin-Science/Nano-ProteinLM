@@ -6,7 +6,7 @@
 
 <div class="ai">
 
-Our implementation of Karpathy-style sequential search proposes one change, trains and evaluates the candidate, keeps or discards it, and repeats from the retained recipe. Candidates are explored sequentially; training and evaluation can use multiple GPUs. This page describes the method's pipeline, two-seed measurements, improvement criteria and historical results. The shared design boundaries, fixed round allowance, per-round compute and final evaluation budget are defined in [the protocol](autoresearch.md); [LEADERBOARD.md](LEADERBOARD.md) collects the recorded measurements.
+Our sequential-search method proposes one change, measures it, keeps or discards it and continues from the retained recipe. The current version uses one training seed per candidate and lets the agent judge whether the measured improvement is useful enough to retain. The shared [protocol](autoresearch.md) fixes the scientific boundaries and budgets; historical two-seed results below keep their original settings.
 
 </div>
 
@@ -18,98 +18,69 @@ Our implementation of Karpathy-style sequential search proposes one change, trai
 
 <div class="ai">
 
-[autoresearch/program.md](../autoresearch/program.md) contains the executable instructions for baseline measurement, iteration, comparison and logging. The included task entry points, [171M validation loss](../tasks/171m-validation-loss.md) and [171M contact P@L](../tasks/171m-p-at-l.md), retain the historical one-hour/four-L40S measurement profile. They measure each candidate with two training seeds through the standard training/evaluation APIs. The current [benchmark protocol](autoresearch.md#search-budget) specifies 20 minutes on four H100s per round; its hardware and time settings must be applied when using this method in that benchmark.
-
-</div>
-
-<div class="ai">
-
-![Example sequential AutoResearch loop: evaluate a baseline, propose a change, train and evaluate two seeds, keep or discard, record and repeat.](../.dev/reports/readme-figures-20260914/autoresearch-loop.png)
-
-</div>
-
-<div class="ai">
-
-The diagram shows our two-seed loop followed by the owner-run scale-up test of the selected recipe. Under the H100 protocol, each candidate comparison uses **two of the 72 rounds**, or **8/3 H100 GPU-hours**; measuring the starting recipe also consumes two rounds. The historical L40S commands below spend **8 L40S GPU-hours** per candidate. Those recorded runs retain their original hardware and budgets.
-
-</div>
-
-<div class="ai">
-
-| Method setting | Included historical L40S implementation |
-|---|---|
-| Training seeds per candidate | **42 and 43**, both trained from scratch |
-| Training per seed | **1 hour on 4 L40S GPUs**, FlashAttention-2 |
-| Schedule | **554 warmup steps**, followed by constant peak learning rate |
-| Cost per complete candidate | **2 training runs = 8 L40S GPU-hours**, excluding setup and evaluation |
-| Checkpoint | Final checkpoint from each run; no periodic checkpointing or evaluation |
-| MLM evaluation | **32 fixed sequences**, context 512 |
-| Contact evaluation | **20,775 chains**, one shared probe per checkpoint, 32 workers across four GPUs, 5,000 chain-bootstrap replicates |
-| Candidate score | Mean of the selected metric across the two seeds, with per-seed values and sample SD retained |
-
-</div>
-
-<div class="ai">
-
-Prepare the frozen corpus with `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT`. The general setup default prepares 30 training shards; these task entry points use the frozen seven-shard selection. From the repository root, choose the measurement command for the selected objective.
+Prepare a fresh workspace from the released `autoresearch` branch using [the preparation instructions](autoresearch.md#preparation). The clean branch includes [autoresearch/program.md](../autoresearch/program.md) as an optional method. Start Codex inside tmux on the allocated compute node so the loop skill can wake the same pane. The launch command enables automatic review of execution approvals, including GPU access outside the workspace sandbox. For our current Fir deployment, verify the active allocation on `fc10219` and use its four H100 GPUs; never run training on a login node.
 
 </div>
 
 <div class="ai">
 
 ```bash
-# Validation-loss objective
-bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001
-
-# Contact-P@L objective
-bash tasks/171m-p-at-l_ar.sh configs/default.yaml experiment-p-at-l-001
+npx skills add Lumin-Science/Nano-AutoResearch-Skills --skill ar-loop-n-sleep -g -a codex
+# In the prepared workspace on the allocated node:
+tmux new-session -s nanoprotein-ar
+codex --approve-for-me
 ```
 
 </div>
 
 <div class="ai">
 
-Each command snapshots the recipe, trains and evaluates both seeds, and writes their aggregate metrics to `summary.json` under the experiment's `OUTPUT_ROOT` directory. Use a fresh experiment name for every candidate. Both seeds must complete training and evaluation before the method compares that candidate with the incumbent. Preserve the source revision, resolved configuration, data receipts, commands, checkpoints, per-seed metrics and keep/discard decision.
-
-</div>
-
-<div class="ai">
-
-To run the included validation-loss example, give your coding agent this instruction:
+Give Codex the task, method, resources and stopping condition together:
 
 </div>
 
 <div class="ai">
 
 ```text
-Read autoresearch/program.md and start autoresearch for tasks/171m-validation-loss.md.
+Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/program.md. Use my allocated four H100 GPUs on Fir fc10219 and verify the current Slurm allocation. Run the baseline and one candidate, with seed 42 and the complete task evaluation for each. Explain the keep/discard decision, then stop without another wakeup.
 ```
 
 </div>
 
 <div class="ai">
 
-For contact P@L as the example objective:
+This two-round qualification tests launch, sleeping, continuation, evaluation and a candidate decision. A full campaign may use the 72-round allowance; each invocation consumes one round. For contact P@L, select tasks/171m-p-at-l.md. The skill controls when Codex wakes; program.md defines this method, while task Markdown remains independent of its seed and acceptance choices.
 
 </div>
 
 <div class="ai">
 
-```text
-Read autoresearch/program.md and start autoresearch for tasks/171m-p-at-l.md.
-```
+| Method setting | Current sequential-search implementation |
+|---|---|
+| Replication | One common seed, 42 by default |
+| Task measurement | 20 minutes on four H100 GPUs with FA3 |
+| Candidate cost | One round; 4/3 H100 GPU-hours of training |
+| Search evaluation | 4,096 validation proteins and all 20,775 contact chains |
+| Acceptance | Agent judges the measured gain and records its evidence and reasoning |
+| Optional repeats | Matched repeats only when justified; each run consumes another round |
 
 </div>
 
 <div class="ai">
 
-The current program averages the task's metric over training seeds and compares seed-level 95% confidence intervals. Orient reward so higher is better, then keep a candidate only when `candidate.ci95_low > incumbent.mean` and `candidate.mean > incumbent.ci95_high`. Use negative validation loss for the loss-task comparison and retain raw loss in reports; P@L already increases with improvement. Record every candidate and keep/discard decision. These are our method's improvement criteria. Seed-level intervals are distinct from contact-chain bootstrap intervals.
+Without failures or extra repeats, 72 rounds cover the baseline and 71 candidates. Read each completed run's TRAINING_COMPLETE.json and evaluation/EVALUATION.json directly. The multi-run summary utility requires two distinct seeds and is unnecessary for a one-seed comparison.
 
 </div>
 
 <div class="ai">
 
-The manual scale-up example in [EVALUATION.md](EVALUATION.md#manual-test-of-progress) trains the selected recipe and reference for 24B model tokens each on four H100s, with one common training seed. Our two-seed candidate comparisons belong to the search method; the [final evaluation](autoresearch.md#final-evaluation) uses one training seed per recipe.
+Keep a candidate only when the primary metric improves and the agent gives a concrete reason to retain the gain. Discard ties and regressions. A small or ambiguous gain may be discarded or investigated with declared matched repeats within the budget. One seed cannot establish statistical significance: record seed-level SD and confidence intervals as unavailable, and do not use contact-chain bootstrap intervals as estimates of training-seed uncertainty.
+
+</div>
+
+<div class="ai">
+
+Before each run, record the hypothesis and the result that would support keeping it. Afterwards, record the absolute and relative gap, diagnostics, stability, decision and next idea. Preserve every attempt and any change to the decision standard. The owner-run 24B-token evaluation is separate from this search loop and starts only when requested.
 
 </div>
 
@@ -121,13 +92,13 @@ The manual scale-up example in [EVALUATION.md](EVALUATION.md#manual-test-of-prog
 
 <div class="ai">
 
-The completed campaign evaluated a baseline and 38 candidate recipes, each with seeds 42 and 43 and one training hour on four L40S GPUs per seed: **78 runs, or 312 L40S GPU-hours**, excluding setup and evaluation. The historical records call each two-seed candidate comparison a round; this campaign predates the current 72-round H100 protocol. Its earlier acceptance rule kept a candidate when its mean validation-loss reduction exceeded that candidate's own two-seed sample SD. Preserve those recorded decisions when reproducing the curve; they were not generated by the current interval-based rule.
+The completed campaign evaluated a baseline and 38 candidate recipes, each with seeds 42 and 43 and one training hour on four L40S GPUs per seed: **78 runs, or 312 L40S GPU-hours**, excluding setup and evaluation. The historical records call each two-seed candidate comparison a round; this campaign predates the current 72-round H100 protocol. Its earlier acceptance rule kept a candidate when its mean validation-loss reduction exceeded that candidate's own two-seed sample SD. Preserve those recorded decisions when reproducing the curve; they were not generated by the current single-seed rule.
 
 </div>
 
 <div class="ai">
 
-The [improvement figure in the README](../README.md#benchmarking-agentic-autoresearch-systems) shows trial means and sample-SD error bars in orange and the retained recipe in blue. Numbers 1–5 mark the accepted changes: Muon, batch balance, sqrt loss, narrower FFNs and tied embeddings. R30–R38 were discarded, leaving R29 as the final retained historical recipe. See the [historical search table](#detailed-search-results) and [full campaign record](../.dev/reports/program2/README.md#numbered-improvements).
+The [improvement figure in the README](../README.md#autoresearch-baselines-sequential-agentic-search) shows trial means and sample-SD error bars in orange and the retained recipe in blue. Numbers 1–5 mark the accepted changes: Muon, batch balance, sqrt loss, narrower FFNs and tied embeddings. R30–R38 were discarded, leaving R29 as the final retained historical recipe. See the [historical search table](#detailed-search-results) and [full campaign record](../.dev/reports/program2/README.md#numbered-improvements).
 
 </div>
 
@@ -151,19 +122,19 @@ Changes 4–5 use roughly 142M parameters and predate the current ±5% size boun
 
 <div class="ai">
 
-**1. Muon recipe.** Transformer matrices use Muon while embeddings and the MLM head retain AdamW, following the optimizer partition described in the [Muon implementation](https://github.com/KellerJordan/Muon). The tested package also changes transformer normalization to parameter-free RMSNorm, mixes the current hidden stream with the original embeddings at each layer, and scales residual-projection initialization with depth. [RMSNorm (Zhang and Sennrich, 2019)](https://arxiv.org/abs/1910.07467) motivates normalization by root mean square without mean subtraction. The experiment measures the combined package, so it cannot assign the gain to Muon alone. See [the full component and optimizer settings](leaderboard/BEST_RECIPE_22_09_26.md#2-exactly-what-differs-from-the-baseline).
+**1. Muon recipe.** Transformer matrices use Muon while embeddings and the MLM head retain AdamW, following the optimizer partition described in the [Muon implementation](https://github.com/KellerJordan/Muon). The tested package also changes transformer normalization to parameter-free RMSNorm, mixes the current hidden stream with the original embeddings at each layer, and scales residual-projection initialization with depth. [RMSNorm (Zhang and Sennrich, 2019)](https://arxiv.org/abs/1910.07467) motivates normalization by root mean square without mean subtraction. The experiment measures the combined package, so it cannot assign the gain to Muon alone. See [the full component and optimizer settings](leaderboard/CURRENT_DEFAULT_20260921.md#2-exactly-what-differs-from-the-baseline).
 
 </div>
 
 <div class="ai">
 
-**2. Batch balance.** Proteins have different lengths, so equal protein counts can leave GPUs with unequal token workloads. Redistributing already-masked examples balances non-padding token counts while preserving the sampled examples, labels and number of examples per rank. This can reduce time spent waiting at gradient synchronization; [PyTorch's DDP discussion of skewed processing speeds](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html#skewed-processing-speeds) describes the underlying workload-balancing problem. Token count is a proxy for work, not an exact FLOP estimate. See [the partitioning procedure and loss normalization](leaderboard/BEST_RECIPE_22_09_26.md#3-batch-balance-equalize-work-across-gpus).
+**2. Batch balance.** Proteins have different lengths, so equal protein counts can leave GPUs with unequal token workloads. Redistributing already-masked examples balances non-padding token counts while preserving the sampled examples, labels and number of examples per rank. This can reduce time spent waiting at gradient synchronization; [PyTorch's DDP discussion of skewed processing speeds](https://docs.pytorch.org/tutorials/intermediate/ddp_tutorial.html#skewed-processing-speeds) describes the underlying workload-balancing problem. Token count is a proxy for work, not an exact FLOP estimate. See [the partitioning procedure and loss normalization](leaderboard/CURRENT_DEFAULT_20260921.md#3-batch-balance-equalize-work-across-gpus).
 
 </div>
 
 <div class="ai">
 
-**3. Sqrt loss.** Weight each protein's mean masked-token loss by the square root of its number of masked targets, then normalize by the sum of those weights. Proteins with more targets contribute more than under equal-protein weighting, but less than under equal-target weighting. [BERT (Devlin et al., 2019)](https://arxiv.org/abs/1810.04805) is related background for masked-language-model pretraining; the sqrt weighting is the recipe studied here, not a result attributed to BERT. Validation retains equal-protein weighting, so the evaluation metric stays fixed. See [the formula, worked example and distributed normalization](leaderboard/BEST_RECIPE_22_09_26.md#4-sqrt-loss-change-protein-weighting-not-the-validation-metric).
+**3. Sqrt loss.** Weight each protein's mean masked-token loss by the square root of its number of masked targets, then normalize by the sum of those weights. Proteins with more targets contribute more than under equal-protein weighting, but less than under equal-target weighting. [BERT (Devlin et al., 2019)](https://arxiv.org/abs/1810.04805) is related background for masked-language-model pretraining; the sqrt weighting is the recipe studied here, not a result attributed to BERT. Validation retains equal-protein weighting, so the evaluation metric stays fixed. See [the formula, worked example and distributed normalization](leaderboard/CURRENT_DEFAULT_20260921.md#4-sqrt-loss-change-protein-weighting-not-the-validation-metric).
 
 </div>
 
@@ -230,13 +201,42 @@ These are completed **100k-step, single-seed** comparisons. Each run used four H
 
 <div class="ai">
 
-The first improvement row adds the full Muon/RMSNorm/routing/initialization recipe, so it is not a Muon-only ablation. Subsequent rows are cumulative. See [recipe details](leaderboard/BEST_RECIPE_22_09_26.md) and [run records](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md). The current default additionally uses separate Q/K/V Muon updates; that later change is supported by the [September 2026 CCK comparison](../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md) and is not included in this historical table.
+The first improvement row adds the full Muon/RMSNorm/routing/initialization recipe, so it is not a Muon-only ablation. Subsequent rows are cumulative. See [recipe details](leaderboard/CURRENT_DEFAULT_20260921.md) and [run records](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md). The current default additionally uses separate Q/K/V Muon updates; that later change is supported by the [September 2026 CCK comparison](../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md) and is not included in this historical table.
 
 </div>
 
 <div class="ai">
 
 ### L40S 100k-step component ablations
+
+</div>
+
+<div class="ai">
+
+<aitofix resolved>Here probably you need to add the follow up data of p@l search. Fixed: Added the audited contact-search progression and linked the later three-seed confirmations of the promoted recipe, alongside the completed component ablations.</aitofix>
+
+</div>
+
+<div class="ai">
+
+The [contact-search audit](../.dev/reports/cck-contact-ablations-100k-20260919/STATUS.md) records 38 audited candidates through trial 039 and two accepted additions. Search used the historical one-hour L40S budget per training seed. Trial 031 remained the accepted incumbent at that audit; trial 040's training workers finished, but its campaign audit and ledger entry were incomplete.
+
+</div>
+
+<div class="ai">
+
+| Search result | Mean contact P@L | Recorded status |
+|---|---:|---|
+| Starting improved recipe | 10.977610% | Baseline |
+| Trial 011 | 11.447751% | Accepted |
+| Trial 031 | 11.826297% | Accepted incumbent |
+| Trial 040 | 11.760089% | Worker results only; not accepted in the audited ledger |
+
+</div>
+
+<div class="ai">
+
+After the component study, the owner promoted separate Q/K/V updates without query centering or RMS restoration. Subsequent three-seed confirmations of that recipe reached **11.771370% ± 0.256263 pp P@L** at the one-hour L40S budget and **11.207152% ± 0.253026 pp** at the 20-minute H100 budget. Both used 32 MLM validation proteins. The [current-default guide](leaderboard/CURRENT_DEFAULT_20260921.md#search-budget-measurements) retains the paired validation-loss results, per-run records and exact settings. These historical scores precede the current 4,096-protein search evaluation. The [September 23 re-evaluation](leaderboard/CURRENT_DEFAULT_20260921.md#reward-re-evaluation-on-4096-proteins) adds the new MLM rewards for the same six checkpoints while retaining these original measurements.
 
 </div>
 
@@ -298,7 +298,7 @@ The longer-trained 171M recipe reaches **46.264% P@L**; see its [run record](../
 
 <div class="ai">
 
-The [78-run TSV through R38](../.dev/reports/program2/runs-through-r38.tsv), [per-method statistics through R29](../.dev/reports/program2/methods.tsv), and [original import and audit](../.dev/reports/program2/README.md) preserve the campaign. The [scale-up run records](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md) and [best-versus-baseline guide](leaderboard/BEST_RECIPE_22_09_26.md) explain the subsequent comparison. The [detailed scale-up results](#detailed-scale-up-results) include the longer-training reference; [LEADERBOARD.md](LEADERBOARD.md) collects the recorded measurements.
+The [78-run TSV through R38](../.dev/reports/program2/runs-through-r38.tsv), [per-method statistics through R29](../.dev/reports/program2/methods.tsv), and [original import and audit](../.dev/reports/program2/README.md) preserve the campaign. The [scale-up run records](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md) and [best-versus-baseline guide](leaderboard/CURRENT_DEFAULT_20260921.md) explain the subsequent comparison. The [detailed scale-up results](#detailed-scale-up-results) include the longer-training reference; [LEADERBOARD.md](LEADERBOARD.md) collects the recorded measurements.
 
 </div>
 

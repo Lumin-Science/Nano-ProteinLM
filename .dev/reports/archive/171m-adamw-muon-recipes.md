@@ -125,7 +125,7 @@ The saved R02 recipe's three-seed contact P@L is **0.1077 ± 0.0017**. Its
 reported +8.06% improvement is relative to a starting recipe that already
 contained Muon and the retained architecture, not the new AdamW default.
 Validation-loss mean/SD is not reported in the saved campaign record.
-See [BASELINES.md](../../../docs/BASELINES.md#validated-esmc-171m-preset).
+See the [baseline comparison](../../../docs/leaderboard/CURRENT_DEFAULT_20260921.md#2-exactly-what-differs-from-the-baseline).
 
 The historical one-hour score cannot serve as the measured outcome of the
 aligned 100k-step comparison. The exact paper run remains a literature

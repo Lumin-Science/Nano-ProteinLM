@@ -41,21 +41,23 @@ also includes all three MLM validation shards.
 | 209 — 100k × 2,048 | 91 / 16 / 102 | 206,909,262 | 56,102,947,191 | 39.09 | 104.30 |
 | 565 — full release | 92 / 229 / 244 | 665,970,495 | 151,304,238,405 | 109.66 | 290.27 |
 
-Storage estimates use decimal GB and include MLM validation: the cache holds
-compressed Parquet, and prepared stores use one byte per residue plus a 44-byte
-index entry per protein (offset, length and digest). Array headers and receipts
-add a small amount. The P@L archive is 167,958,183 bytes and expands to
-663,149,992 bytes; reserve about 0.9 GB with filesystem overhead. Allow roughly
-20 GB for 30 shards, 60 GB for 105, 120 GB for 209 or 320 GB for the full release,
-with separate space for dependencies, checkpoints and evaluation outputs.
+<div class="ai">
 
-At 100k steps, global batches 1,024 and 2,048 sample 102.4M and 204.8M proteins
-respectively. Applying the normalized 36:11:54 source mixture and rounding each
-source up to whole shards gives 105 and 209 shards. Each source then has enough
-rows for its expected sample count, approximately one pass. The loader uses
-rank-disjoint shuffled passes and reshuffles an exhausted source. Thirty shards
-still support either run; at batch 1,024 they receive 3.42 passes overall,
-with different pass counts by source.
+Storage estimates use decimal GB and include MLM validation: the cache holds compressed Parquet, and prepared stores use one byte per residue plus a 44-byte index entry per protein (offset, length and digest). Array headers and receipts add a small amount. The P@L v2 archive is 167,956,554 bytes and expands to 663,147,593 bytes; reserve about 0.9 GB with filesystem overhead. Allow roughly 20 GB for 30 shards, 60 GB for 105, 120 GB for 209 or 320 GB for the full release, with separate space for dependencies, checkpoints and evaluation outputs.
+
+</div>
+
+<div class="ai">
+
+At 100k steps, global batches 1,024 and 2,048 sample 102.4M and 204.8M proteins respectively. The 105- and 209-shard rows cover the expected draws under the normalized 36:11:54 mixture before sampling headroom. Source selection is stochastic. The trainer checks each source with 1% headroom by default and stops on exhaustion unless the recipe explicitly permits resampling; 30 shards are insufficient for either no-repeat run.
+
+</div>
+
+<div class="ai">
+
+For the default mixture at 100k steps and batch 1,024, use `bash runs/setup.sh --training-samples 103424000` in a fresh `DATA_ROOT`; batch 2,048 needs `--training-samples 206848000`. These budgets include the default 1% headroom, and the planner rounds each source up to whole shards. Changed mixtures require their own source-coverage check. `DATA_COVERAGE.json` records the resolved budget and policy. `data_resampling: allow` enables intentional repeated-data experiments, which must report their reuse; headroom alone is not a guarantee against stochastic exhaustion.
+
+</div>
 
 **Stored residues are not the training token budget.** Stage 1 crops proteins
 to at most 510 residues and adds BOS/EOS; padding is excluded from model tokens.
@@ -64,11 +66,11 @@ processed 24,200,224,761 model tokens. This defines the 24.20B-token Test of
 Progress endpoint; actual steps can differ with another sequence-length mix.
 Data can be reused across seeds and recipes without downloading it again.
 
-The research task and historical leaderboard retain their seven-shard corpus.
-Use `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` for that
-contract. A larger-corpus comparison must use the same selected data for both
-reference and candidate, and must be reported separately. Existing prepared
-roots retain their saved shard count; select a fresh root to change it.
+<div class="ai">
+
+Historical campaigns retain their seven-shard corpus. Use `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` to reproduce those records. The current [AutoResearch protocol](autoresearch.md#design-space) permits data selection and source-mixture changes within the provided corpus; record the selected shards, mixture and source exposure for each recipe. Existing prepared roots retain their saved shard count, so select a fresh root to change it.
+
+</div>
 
 ## Nano-ESMC production funnel
 
@@ -237,14 +239,11 @@ pre-clustering context, not the Table S2 pool used for the comparison above.
 Because ESMC does not publish a source-by-source filtering ledger, we do not
 equate those numbers with any specific Nano-ESMC pre-clustering column.
 
-This is a stage-aligned comparison, not a claim of identical processing. The
-public OMG/IMG arm is an open surrogate for the JGI role rather than the
-authors' July 2023 JGI snapshot. Nano-ESMC follows the reported source roles,
-source-wise 70%-identity reduction, and Stage-1 36:11:54 sampling weights. It
-samples one available representative per reconstructed cluster rather than the
-paper's cluster-then-member draw because the transferred cluster-membership
-tables do not contain member sequences. ESMC Stage 2 uses 63:6:31 weights and a
-2,048-token context; it is outside the supported one-hour Nano-ESMC run.
+<div class="ai">
+
+This comparison aligns processing stages; it does not establish identical processing. The public OMG/IMG arm is an open surrogate for the JGI role rather than the authors' July 2023 JGI snapshot. Nano-ESMC follows the reported source roles, source-wise 70%-identity reduction, and Stage-1 36:11:54 sampling weights. It samples one available representative per reconstructed cluster rather than the paper's cluster-then-member draw because the transferred cluster-membership tables do not contain member sequences. ESMC Stage 2 uses 63:6:31 weights and a 2,048-token context, which lies outside the current 171M AutoResearch task's fixed Stage-1 context.
+
+</div>
 
 The source publications are Suzek et al.
 ([UniRef](https://doi.org/10.1093/bioinformatics/btu739)), Richardson et al.
@@ -253,10 +252,11 @@ The source publications are Suzek et al.
 
 ## Frozen contact evaluation data
 
-NanoProteinLM's P@L setup bundle contains the exact normalized chain payloads and
-frozen evaluator used by the [completed 100k-step comparison](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md).
-It includes 16 probe-fit chains, 4 probe-validation chains and 20,775 evaluation
-chains. It does not include P-CORE datasets, model weights or training outputs.
+<div class="ai">
+
+The [P@L setup bundle](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/blob/5eae416dbb415d2df206b9641dd5ddabe04371dc/evaluation/contact-evaluation-v2.tar.gz) contains 16 probe-fit chains, four probe-validation chains, all 20,775 evaluation chains and six frozen evaluator source files. Version 2 removes experiment-report links and machine paths from packaging metadata; chain payloads, splits and numerical source files retain their original hashes. Fresh setup downloads this immutable release. Existing verified research installations remain supported, and historical downloads remain available at their original revision.
+
+</div>
 
 Structures come from the **2024-02-28 RCSB Protein Data Bank snapshot**. Chain
 selection and preprocessing remain unchanged: the benchmark is paper-faithful,
@@ -279,8 +279,8 @@ Its six source files are copied byte-for-byte from the recorded evaluator bundle
 The payload inventory hash is
 `1b73f5f466420c8d0c74be452ebabe46af837482cee357674cad01d99e6f4b70`.
 
-Setup verifies the archive checksum, source files, manifest, inventory and every
-chain payload before reporting success. Both `evaluation/contact/` and
-`evaluation/source/` live beneath `DATA_ROOT`. The
-[packaging utility](../.dev/scripts/package_contact_evaluation.py) reproduces the
-archive from the existing frozen dataset without altering its contents.
+<div class="ai">
+
+Setup verifies the archive checksum, source files, manifest, inventory and every chain payload before reporting success. Both `evaluation/contact/` and `evaluation/source/` live beneath `DATA_ROOT`. The [packaging utility](../.dev/scripts/package_contact_evaluation.py) reproduces the v2 archive from a verified clean evaluation root without changing its scientific payloads.
+
+</div>

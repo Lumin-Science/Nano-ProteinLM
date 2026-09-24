@@ -46,7 +46,7 @@ Training times exclude evaluation and are approximate to the minute.
 
 <div class="ai">
 
-See **[best recipe versus baseline: differences, figures, and worked examples](../leaderboard/BEST_RECIPE_22_09_26.md)**, the [complete results and adjacent comparisons](../../.dev/reports/fir-r02-rope10k-100k-20260906/README.md), and the [historical baseline/R02 records](../../.dev/reports/fir-171m-100k-20260906/README.md). The narrower-FFN change remains deferred in [TODO](../../TODO.md).
+See **[best recipe versus baseline: differences, figures, and worked examples](../leaderboard/CURRENT_DEFAULT_20260921.md)**, the [complete results and adjacent comparisons](../../.dev/reports/fir-r02-rope10k-100k-20260906/README.md), and the [historical baseline/R02 records](../../.dev/reports/fir-171m-100k-20260906/README.md). The narrower-FFN change remains deferred in [TODO](../../TODO.md).
 
 </div>
 

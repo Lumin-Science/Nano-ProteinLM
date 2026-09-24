@@ -20,26 +20,32 @@ $OUTPUT_ROOT/
 
 <div class="ai">
 
-The default pins the release revision and downloads **30 of 565 training Parquet shards**: 13 UniRef90, 3 MGnify and 14 OMG/IMG, containing 29,979,351 training proteins. Downloads including MLM validation occupy 5.62 GB; prepared token stores add 9.38 GB. Allow 20 GB for the complete data setup, excluding the environment and checkpoints. All three MLM validation shards (12,288 proteins) and the frozen [contact evaluation](DATA.md#frozen-contact-evaluation-data) bundle are always prepared; no P-CORE data are downloaded. At 100k steps and batch 1,024, the default corpus is sampled for about 3.4 passes. See [DATA.md](DATA.md#sizing-a-training-download) for larger selections.
+The default pins the release revision and downloads **30 of 565 training Parquet shards**: 13 UniRef90, 3 MGnify and 14 OMG/IMG, containing 29,979,351 training proteins. Downloads including MLM validation occupy 5.62 GB; prepared token stores add 9.38 GB. Allow 20 GB for the complete data setup, excluding the environment and checkpoints. All three MLM validation shards (12,288 proteins) and the frozen [contact evaluation](DATA.md#frozen-contact-evaluation-data) bundle are always prepared; no P-CORE data are downloaded. A 100k-step run at batch 1,024 needs a larger download: the default trainer prevents source resampling. See [DATA.md](DATA.md#sizing-a-training-download) for sample budgets and source coverage.
 
 </div>
 
 For a different training corpus size, choose a fresh `DATA_ROOT` in `.env` and run:
 
+<div class="ai">
+
 ```bash
-bash runs/setup.sh --training-shards 105
+# 100k steps × batch 1,024, with 1% sampling headroom for the default mixture.
+bash runs/setup.sh --training-samples 103424000
 ```
 
-The range is **3–565 total training shards**, with at least one per source.
-Selection extends the source with the least coverage of the 36:11:54 sampling
-mixture; all selections are deterministic source prefixes. `565` selects the
-entire training release. Setup without this option reuses the stored shard count
-on later calls, including calls from speedrun. An explicit different count refuses
-to overwrite existing prepared data; use another root for that experiment.
-The autoresearch task and historical leaderboard retain the original 7-shard
-selection. In a separate `DATA_ROOT`, prepare it explicitly with
-`bash runs/setup.sh --training-shards 7`; changing the general setup default does
-not change the frozen benchmark corpus.
+</div>
+
+<div class="ai">
+
+With `--training-shards N`, the range is **3–565 total training shards**, with at least one per source. Selection extends the source with the least coverage of the 36:11:54 sampling mixture; all selections are deterministic source prefixes. `565` selects the entire training release. Setup without a selection argument reuses the stored shard count on later calls, including calls from speedrun. An explicit different count refuses to overwrite existing prepared data; use another root for that experiment.
+
+</div>
+
+<div class="ai">
+
+Historical campaigns used seven shards; reproduce those records with `bash runs/setup.sh --training-shards 7` in a separate `DATA_ROOT`. The current protocol permits data selection and source-mixture changes within the provided corpus. Prepare enough data for the selected recipe and retain its manifest.
+
+</div>
 
 For full control, the ordinary data API accepts either `--training-shards` or
 `--training-samples`; it always includes all MLM validation shards. Inspect a
@@ -53,10 +59,14 @@ uv run --frozen python -m nanoprotein.sharded_data \
 
 The contact installer can also use an already downloaded bundle offline:
 
+<div class="ai">
+
 ```bash
 uv run --frozen python -m nanoprotein.setup_evaluation \
-  --data-root data --archive /path/to/contact-evaluation-v1.tar.gz
+  --data-root data --archive /path/to/contact-evaluation-v2.tar.gz
 ```
+
+</div>
 
 ## Training
 
@@ -115,7 +125,7 @@ Budget arguments accept `none` to clear inherited step/token limits. Batch-layou
 
 <div class="ai">
 
-[autoresearch/program.md](../autoresearch/program.md) defines our sequential-search method; [171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) retain its historical one-hour/four-L40S measurement profile with different rewards. The current [benchmark protocol](autoresearch.md) uses 20-minute/four-H100 rounds. The commands below reproduce the historical profile. To start an agent, select the task to optimize and give it the following instruction.
+[171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) each contain the complete scientific task definition for any AutoResearch method. Each task command trains for 20 minutes on four H100 GPUs or one hour on four L40S GPUs, then evaluates the final checkpoint. The [shared protocol](autoresearch.md) describes these roughly equivalent budgets; fix one hardware profile across methods in a comparison. [autoresearch/program.md](../autoresearch/program.md) defines our sequential-search method. To start that method, select the task to optimize and give your agent the following instruction.
 
 </div>
 
@@ -125,13 +135,21 @@ Use `tasks/171m-p-at-l.md` in that instruction to optimize contact P@L instead.
 
 After setup and GPU allocation, run one research measurement:
 
+<div class="ai">
+
 ```bash
-bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001
+bash tasks/171m-validation-loss_ar.sh configs/default.yaml experiment-001 42
 # Or use P@L as the reward with the same measurements:
-bash tasks/171m-p-at-l_ar.sh configs/default.yaml experiment-p-at-l-001
+bash tasks/171m-p-at-l_ar.sh configs/default.yaml experiment-p-at-l-001 42
 ```
 
-Each task script loads `.env`, saves the candidate recipe, runs seeds 42 and 43 through the standard training/evaluation APIs, and reports both metrics' means and sample SDs in `$OUTPUT_ROOT/<experiment-name>/summary.json`. The validation-loss task uses `metrics.validation_loss` as its reward (lower is better); the P@L task uses `metrics.p_at_l` (higher is better). The other metric remains a diagnostic. The agent reviews task boundaries and run completion. Ordinary trainer/evaluator integrity checks and the summary utility remain in place; the shell script contains no separate boundary checker or keep/discard logic.
+</div>
+
+<div class="ai">
+
+The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports loss on 4,096 validation proteins and P@L over all 20,775 contact chains. The validation-loss task scores `validation_mlm.sequence_mean_nll` (lower is better); the P@L task scores `contact.precision_at_l` (higher is better). Replication, aggregation and acceptance belong to the caller; [our sequential method](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents those choices and commands. The agent reviews task boundaries and run completion.
+
+</div>
 
 ## Evaluation
 

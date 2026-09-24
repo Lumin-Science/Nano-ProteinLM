@@ -16,12 +16,15 @@ from .data import file_sha256
 # Immutable evaluation release; independent of the pinned training-data revision.
 BUNDLE_URL = (
     "https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/resolve/"
-    "cc548944b9caaf8b4f40ba49b316cc6f477a6031/evaluation/contact-evaluation-v1.tar.gz"
+    "5eae416dbb415d2df206b9641dd5ddabe04371dc/evaluation/contact-evaluation-v2.tar.gz"
 )
-BUNDLE_SHA256 = "0a9f19e60643114ee98db1b89d3b9611a9e55f6c876a18b1d951e6f16e389eb6"
+BUNDLE_SHA256 = "5d901bb6fbde8face23be3e7bc84d776d4c73eecee6b5e852f86c3e3c9e82154"
 MANIFEST_SHA256 = "c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3"
 INVENTORY_SHA256 = "1b73f5f466420c8d0c74be452ebabe46af837482cee357674cad01d99e6f4b70"
-SOURCE_MANIFEST_SHA256 = "2fad51df6f4f2586b6648b9e4f575058f1999eba60175cba9fd7834f36951e55"
+SOURCE_MANIFEST_SHA256 = "295d82b3ad1ed95769659bd2ba52902cc8c260aaee06ae3c91c68c472c65e012"
+LEGACY_SOURCE_MANIFEST_SHA256 = (
+    "2fad51df6f4f2586b6648b9e4f575058f1999eba60175cba9fd7834f36951e55"
+)
 
 
 def _inside(root: Path, name: str) -> Path:
@@ -36,11 +39,15 @@ def verify_evaluation(root: Path) -> dict[str, object]:
     for path, digest in [
         (contact / "CONTACT_MANIFEST.jsonl", MANIFEST_SHA256),
         (contact / "PAYLOAD_INVENTORY.json", INVENTORY_SHA256),
-        (source / "SOURCE_MANIFEST.json", SOURCE_MANIFEST_SHA256),
     ]:
         if file_sha256(path) != digest:
             raise ValueError(f"frozen evaluation checksum mismatch: {path}")
-    sources = json.loads((source / "SOURCE_MANIFEST.json").read_text())
+    source_manifest = source / "SOURCE_MANIFEST.json"
+    source_manifest_sha = file_sha256(source_manifest)
+    # Existing research installations retain their original metadata and receipt.
+    if source_manifest_sha not in {SOURCE_MANIFEST_SHA256, LEGACY_SOURCE_MANIFEST_SHA256}:
+        raise ValueError(f"frozen evaluation checksum mismatch: {source_manifest}")
+    sources = json.loads(source_manifest.read_text())
     for name, digest in sources["files"].items():
         if file_sha256(_inside(source, name)) != digest:
             raise ValueError(f"frozen evaluator source changed: {name}")
@@ -61,7 +68,7 @@ def verify_evaluation(root: Path) -> dict[str, object]:
     return {
         "status": "verified",
         "manifest_sha256": MANIFEST_SHA256,
-        "source_manifest_sha256": SOURCE_MANIFEST_SHA256,
+        "source_manifest_sha256": source_manifest_sha,
         "probe_fit_chains": len(dataset.train_ids[:16]),
         "probe_validation_chains": len(dataset.train_ids[16:]),
         "evaluation_chains": len(dataset.eval_ids),
@@ -90,7 +97,7 @@ def prepare_evaluation(data_root: Path, archive: Path | None = None) -> dict[str
     if archive is None:
         cache = data_root / "cache"
         cache.mkdir(parents=True, exist_ok=True)
-        archive = cache / "contact-evaluation-v1.tar.gz"
+        archive = cache / "contact-evaluation-v2.tar.gz"
         if not archive.exists() or file_sha256(archive) != BUNDLE_SHA256:
             temporary = archive.with_suffix(".gz.partial")
             print("Downloading frozen contact P@L data and evaluator", flush=True)

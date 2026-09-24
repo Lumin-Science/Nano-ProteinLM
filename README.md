@@ -23,7 +23,7 @@ Our goal is to help researchers train better protein embeddings for downstream b
 
 <div class="ai">
 
-GPT-6 found this improved 171M training recipe using our [sequential-search setup](docs/AUTORESEARCH_BASELINE.md) and its [historical protocol](docs/AUTORESEARCH_BASELINE.md#historical-38-round-example). Against our ESMC-like AdamW baseline, it improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. Both recipes use the same data, batch size of 2,048 and 100k updates on four H100s, with one training seed each. [Recipe details](docs/leaderboard/BEST_RECIPE_22_09_26.md) · [Figure data and methods](.dev/reports/readme-figures-20260914/README.md).
+GPT-6 found this improved 171M training recipe using our [sequential-search setup](docs/AUTORESEARCH_BASELINE.md) and its [historical protocol](docs/AUTORESEARCH_BASELINE.md#historical-38-round-example). Against our ESMC-like AdamW baseline, it improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. Both recipes use the same data, batch size of 2,048 and 100k updates on four H100s, with one training seed each. [Recipe details](docs/leaderboard/CURRENT_DEFAULT_20260921.md) · [Figure data and methods](.dev/reports/readme-figures-20260914/README.md).
 
 </div>
 
@@ -44,7 +44,7 @@ The same setup supports ordinary research and the fixed autoresearch task.
 
 - **Environment:** Linux, a compatible NVIDIA driver and
   `uv >=0.11.31,<0.12`. Setup installs Python and dependencies from the repository lock.
-- <span class="ai">**Training:** You would ideadly need GPU with memory > 40GB. There is no restriction to types of GPUs, but you might need to adjust the receipe accordingly. The default speedrun and current AutoResearch benchmark use **four H100 GPUs with FA3**. The historical one-hour sequential-search profile uses **four L40S GPUs with FA2**. See [USAGE.md](docs/USAGE.md#training) for other configurations.</span>
+- <span class="ai">**Training:** Use GPUs with more than 40 GB of memory and adjust the recipe for your hardware. The default speedrun uses **four H100 GPUs with FA3**. AutoResearch provides **20 minutes on four H100 GPUs with FA3** or **one hour on four L40S GPUs with FA2** per round; fix the selected GPU model and backend across methods in a comparison. The historical one-hour sequential-search profile uses **four L40S GPUs with FA2**. See [USAGE.md](docs/USAGE.md#training) for other configurations.</span>
 - **Data preparation:** Allow space for both downloaded Parquet
   files and their prepared token stores—**allow 20 GB for the default 30-shard
   data setup**, plus separate space for the environment and training checkpoints.
@@ -94,13 +94,17 @@ bash runs/setup.sh
 ```
 The default downloads **30/565 training shards (29.98M proteins; 5.62 GB compressed, including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. For a larger training set:
 
-```bash
-bash runs/setup.sh --training-shards $number_of_shards
-# Use 30 for one-hour research trials, 209 for larger-data scale-up tests.
-```
 <div class="ai">
 
-The [historical sequential-search task](tasks/171m-validation-loss.md) fixes a seven-shard selection. The current [AutoResearch protocol](docs/autoresearch.md#design-space) permits data selection and source-mixture changes within the provided training corpus.
+```bash
+# In a fresh DATA_ROOT: 100k steps × batch 1,024, with 1% sampling headroom.
+bash runs/setup.sh --training-samples 103424000
+```
+
+</div>
+<div class="ai">
+
+The [historical sequential-search campaign](docs/AUTORESEARCH_BASELINE.md#historical-38-round-example) used a seven-shard selection. The current [AutoResearch protocol](docs/autoresearch.md#design-space) permits data selection and source-mixture changes within the provided training corpus. Size the download for the run before training; [DATA.md](docs/DATA.md#sizing-a-training-download) explains source coverage and the default no-resampling policy.
 
 </div>
 
@@ -183,21 +187,75 @@ Use NanoProteinLM to compare AutoResearch methods under a fixed number of search
 |---|---|
 | Objective | Find better training recipes for protein embedding models. Declare the primary comparison metric before search. |
 | Design space | **Fixed:** use only the provided training corpus; keep the tokenizer, context 512, linear-warmup/constant-LR schedule, evaluation and compute settings unchanged. Keep trainable parameters within **±5% of the original 171M model**, with no pretrained weights or held-out training. **Mutable:** data selection and source mixture within that corpus, architecture, training loss, optimizer and training implementation. |
-| Search budget | **72 rounds**, each providing **20 minutes on four H100 GPUs** for one training run: **24 node-hours, or 96 H100 GPU-hours**, in total. Repeated seeds consume additional rounds. Setup, final checkpoint saving and evaluation are timed separately. |
-| Hill-climbing evaluation | Default reward: **MLM validation loss ↓** on **32 fixed sequences**. Report P@L over **all 20,775 contact chains** as a diagnostic, with a chain-bootstrap 95% interval. Each method decides how to use this feedback. |
-| Final evaluation budget | Train the selected recipe and reference for **24B model tokens each** on four H100s, using **one common training seed**. The reference takes roughly **12 hours per recipe**. Report loss on **4,096 MLM validation sequences** and P@L over **all 20,775 contact chains**. |
+| Search budget | **72 rounds**, each providing **20 minutes on 4×H100** or **1 hour on 4×L40S** for one training run. These are roughly equivalent search budgets: **24 node-hours / 96 H100 GPU-hours**, or **72 node-hours / 288 L40S GPU-hours**, in total. Fix one hardware profile across methods in a comparison. Repeated seeds consume additional rounds. Setup, final checkpoint saving and evaluation are timed separately. |
+| Hill-climbing evaluation | Default reward: **MLM validation loss ↓** on **4,096 fixed sequences**, each at context 512. Report P@L over **all 20,775 contact chains** as a diagnostic, with a chain-bootstrap 95% interval. Each method decides how to use this feedback. |
+| Final evaluation budget | Train the selected recipe and reference for **24B model tokens each** on the same declared four-GPU hardware, using **one common training seed**. The H100 reference takes roughly **12 hours per recipe**. Report loss on **4,096 MLM validation sequences** and P@L over **all 20,775 contact chains**. |
 
 </div>
 
 <div class="ai">
 
-[Full AutoResearch protocol](docs/autoresearch.md) · [Our Karpathy-style sequential method](docs/AUTORESEARCH_BASELINE.md), including its pipeline, two-seed settings, improvement criteria and commands.
+### Prepare an AutoResearch workspace
 
 </div>
 
-## Benchmarking Agentic AutoResearch Systems
+<div class="ai">
+
+Benchmark agents start from the released `autoresearch` branch, which contains the plain ESMC implementation and an independent root commit. On Linux with four matching H100 or four matching L40S GPUs, run the setup command below to create a fresh workspace, install the locked environment and download verified data. The new clone contains no `main` branch or research ancestry, and its remote is removed. [Preparation and information-access rules](docs/autoresearch.md#preparation) explain release pinning, GPU qualification and the prohibition on looking up prior findings.
+
+</div>
+
+<div class="ai">
+
+```bash
+bash runs/setup_autoresearch.sh ../nano-protein-autoresearch
+```
+
+</div>
+
+<div class="ai">
+
+[Full AutoResearch protocol](docs/autoresearch.md)
+
+</div>
+
+<div class="ai">
+
+The [current best recipe has been re-scored on 4,096 validation proteins](docs/leaderboard/CURRENT_DEFAULT_20260921.md#reward-re-evaluation-on-4096-proteins), using all three saved training seeds on Fir and CCK. The leaderboard keeps these rewards separate from the original 32-protein measurements.
+
+</div>
+
+## Autoresearch Baselines: Sequential Agentic Search
+
+Here we provide a baseline of autoresearch, see [AUTORESEARCH_BASELINE.md](docs/AUTORESEARCH_BASELINE.md) for more details, including its pipeline, current one-seed policy, acceptance decisions and commands.
 
 ![Validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](.dev/reports/readme-figures-20260914/validation-loss.png)
+
+<div class="ai">
+
+<aitofix resolved>Here tell people how to start karpathy style auto research we used to have that part. Fixed: Restored the agent instruction and linked the method's runnable commands.</aitofix>
+
+</div>
+
+<div class="ai">
+
+Prepare the clean workspace above, install `ar-loop-n-sleep` and start Codex inside tmux on the allocated compute node. The released branch includes `autoresearch/program.md`; it uses one seed per candidate and requires the agent to explain each keep/discard decision. See [the launch instructions](docs/AUTORESEARCH_BASELINE.md#running-the-example-loop) for the Fir four-H100 example and a two-round qualification.
+
+</div>
+
+<div class="ai">
+
+```text
+Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/program.md. Use the allocated four GPUs, run the baseline and one candidate, explain the decision, then stop.
+```
+
+</div>
+
+<div class="ai">
+
+Use `tasks/171m-p-at-l.md` to optimize contact P@L instead. The [sequential-search commands](docs/AUTORESEARCH_BASELINE.md#running-the-example-loop) show how this method makes one-seed comparisons within the shared round budget.
+
+</div>
 
 <div class="ai">
 

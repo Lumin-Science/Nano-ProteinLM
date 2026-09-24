@@ -5,7 +5,7 @@ what did not work, and what remains open. This log and the canonical technical
 report are tracked; detailed working notes, raw receipts, cluster launchers,
 and local paths remain gitignored under `.dev/`.
 
-Results here are fixed-checkpoint measurements, not claims about training-seed uncertainty unless explicitly stated. The public contracts remain [`DATA.md`](../docs/DATA.md), [`EVALUATION.md`](../docs/EVALUATION.md), [`BASELINES.md`](../docs/BASELINES.md), and [`autoresearch.md`](../docs/autoresearch.md).
+Results here are fixed-checkpoint measurements, not claims about training-seed uncertainty unless explicitly stated. Public documentation lives in [`DATA.md`](../docs/DATA.md), [`EVALUATION.md`](../docs/EVALUATION.md), the [current-default recipe guide](../docs/leaderboard/CURRENT_DEFAULT_20260921.md), and [`autoresearch.md`](../docs/autoresearch.md).
 
 ## 2026-08-28 — Public/private development boundary
 

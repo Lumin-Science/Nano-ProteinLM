@@ -1167,6 +1167,8 @@ def train(
             peak_bf16_tflops = float(config.get("peak_bf16_tflops_per_gpu", 312.0))
             mfu_6n = (
                 6 * parameter_count * tokens_per_second / (peak_bf16_tflops * 1e12 * world_size)
+                if peak_bf16_tflops > 0
+                else None
             )
             record = {
                 "event": "train",
@@ -1187,6 +1189,8 @@ def train(
                 "mfu_denominator": (
                     f"6 * parameters * model_tokens / ({peak_bf16_tflops}e12 "
                     f"BF16 FLOP/s * {world_size} GPUs)"
+                    if peak_bf16_tflops > 0
+                    else None
                 ),
                 "estimated_training_flops": 6 * parameter_count * model_tokens,
                 "source_counts_rank0": dict(batchers[stage.name].source_counts),

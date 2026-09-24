@@ -1,37 +1,63 @@
 # 171M contact P@L
 
-This is the historical contact-P@L measurement profile for [our Karpathy-style sequential-search method](../docs/AUTORESEARCH_BASELINE.md). It evaluates each candidate over two seeds, with one hour on four L40S GPUs per seed. The current [AutoResearch protocol](../docs/autoresearch.md) uses 72 rounds of 20 minutes on four H100s and allows data selection and mixture changes within the provided corpus. This task retains its original measurement settings and boundaries for reproduction.
+Improve protein-model training recipes for long-range contact prediction. This task defines the scientific objective, design boundaries and measurement for a budgeted run. It can be used by any search method.
 
 ## Background
 
-Improve protein-embedding training recipes under a small compute budget. The 171M baseline follows the paper's 170M scaling model: 24 layers, width 768, and 170.7M parameters ([Appendix A.1.4.1, Table S4, p. 29](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)). Runtime code lives in [src/nanoprotein](../src/nanoprotein), with public decontaminated data and frozen evaluations.
+The starting recipe is a plain ESMC model with 24 transformer layers, width 768, 12 attention heads and 170,671,168 trainable parameters, using AdamW. Start from `configs/default.yaml` in the released `autoresearch` branch. The benchmark workspace must contain only this independent starting commit and changes made during your own search.
 
-[default.yaml](../configs/default.yaml) is the starting recipe; [esmc-171m.yaml](../configs/esmc/esmc-171m.yaml) is the reference. The larger presets in [configs/esmc/README.md](../configs/esmc/README.md) support separate experiments and are outside this task's size bound.
+Training uses the provided processed `LuminScience/LuminBench-Nano-ESMC` corpus at revision `bd38448d50d8f426d7b9bd4410b53159ea001259`, containing UniRef90, MGnify and OMG/IMG proteins. Use its verified training splits; all validation sequences and contact-evaluation data are held out from model training.
 
-This task uses the same measurement procedure as [171m-validation-loss.md](171m-validation-loss.md), with contact P@L as the research reward instead of MLM validation loss.
+## Score and budget
 
-## Sequential-search measurement
+- **Score:** contact P@L, **higher is better**. Read `contact.precision_at_l` from the run's `evaluation/EVALUATION.json`. MLM validation loss is a diagnostic.
+- **Training:** **20 minutes (1,200 seconds) on 4×H100 with FlashAttention-3**, or **1 hour (3,600 seconds) on 4×L40S with FlashAttention-2**, starting from scratch. These are roughly equivalent search budgets. Declare one profile before search and keep the GPU model and backend fixed across methods in a comparison. Use 554 linear warmup steps followed by constant peak learning rate. The training clock includes batch loading, computation and synchronization; setup, final checkpoint saving and evaluation are outside it.
+- **Search allowance:** 72 rounds: **24 node-hours / 96 H100 GPU-hours** with the H100 profile, or **72 node-hours / 288 L40S GPU-hours** with the L40S profile. Each reference measurement, candidate run or seed repeat consumes one round. Retain failed attempts and their consumed compute; the organizer declares any infrastructure-failure replacement policy before search.
+- **MLM evaluation:** 4,096 fixed validation proteins, evaluated as 1,024 batches of four at context 512, with sampling and masking seed 20260821. Compute masked-token negative log-likelihood within each protein, then average equally over proteins. Preserve the frozen validation source mixture and masking procedure.
+- **Contact evaluation:** all 20,775 frozen chains, one fitted probe per checkpoint using the fixed probe split and fitting procedure, and 32 workers across the four GPUs. P@L is precision among the top L predicted long-range contacts, where L is the evaluated chain length, averaged equally over chains. Values are fractions from 0 to 1. Report the 5,000-replicate chain-bootstrap 95% interval from `contact.precision_at_l_uncertainty`; this measures variation over chains, not training seeds.
+- **Checkpoint:** score the final checkpoint at the training-time limit. A run must complete training and both evaluations to supply a task score. Report the actual training duration and any overrun from the final optimizer update.
 
-Compare mean contact P@L after time-limited training of approximately fixed-size models on the same data and hardware.
+## Design boundaries
 
-- **Score:** mean contact P@L across training seeds 42 and 43; higher is better. Each seed's P@L is precision among the top L predicted long-range contacts, where L is chain length, averaged over all 20,775 frozen evaluation chains. Report per-seed values and sample SD across seeds. MLM validation loss is recorded as a diagnostic and does not determine the research score. Chain-bootstrap confidence intervals are separate from the across-seed sample SD used by the research loop.
-- **Compute:** one hour of training on four L40S GPUs per seed, starting from scratch. The clock excludes setup, final checkpoint saving and evaluation.
-- **Boundaries:** keep data, tokenizer, evaluation, hardware and budget accounting fixed; keep actual trainable parameters within ±5% of the original 171M model. No held-out training, pretrained weights, dummy parameters or altered scores. Preserve Stage-1 context and source mixture; use the script's linear warmup followed by constant peak LR, with no post-warmup decay. Recipe and training implementation changes are permitted within these limits. The task scripts, evaluation implementation, dependencies and input receipts are protected. The agent reviews these boundaries and the completed run records; a successful command alone does not establish compliance.
+Use only the provided training corpus; data selection and source mixture may change within it. Keep the ESMC tokenizer, maximum context of 512 tokens and 554-step linear-warmup/constant-LR schedule fixed. Actual trainable parameters must stay within ±5% of 170,671,168. Train from scratch: do not use pretrained weights, train on held-out evaluation sequences or labels, or add unused parameters to satisfy the size bound.
 
-Configure the two local roots using [.env.example](../.env.example) and the [README.md](../README.md#setting-up-data--environments). In a dedicated `DATA_ROOT`, run `bash runs/setup.sh --training-shards 7` to prepare the frozen benchmark corpus and all MLM validation and contact P@L assets. The general setup default is now 30 shards; it does not change this task's data contract. Then run:
+Preserve the declared hardware, compute budget, evaluation code and data, dependency lock and input-verification records. The task measurement scripts are protected during search. Architecture, training loss, optimizer settings, batch size and training implementation may change within these limits. Review the resolved configuration and completed run records against these boundaries; a successful command alone does not establish compliance.
+
+## Measurement command
+
+The organizer prepares the environment and data before agent access. Use Linux with a working CUDA driver and an allocation exposing exactly four matching H100 or four matching L40S GPUs. From an organizer checkout containing the preparation helper, create a fresh destination outside existing Git checkouts:
 
 ```bash
-bash tasks/171m-p-at-l_ar.sh configs/default.yaml experiment-p-at-l-001
+bash runs/setup_autoresearch.sh ../nano-protein-autoresearch
+cd ../nano-protein-autoresearch
 ```
 
-The [171m-p-at-l_ar.sh](171m-p-at-l_ar.sh) script delegates to the same [measurement command](171m-validation-loss_ar.sh) as the validation-loss task. It loads local paths, snapshots the recipe, trains/evaluates both seeds through the standard APIs and summarizes both metrics in `$OUTPUT_ROOT/experiment-p-at-l-001/summary.json`. Use `metrics.p_at_l.mean` as the reward, `metrics.p_at_l.sample_sd` as its sample SD and each entry's `p_at_l` in `runs` as the per-seed score. P@L is stored as a fraction from 0 to 1; use the same units for all score comparisons.
+If repository access uses an SSH key, add `--repository git@github.com:Lumin-Science/Nano-ProteinLM.git` to the setup command. Use `--revision FULL_COMMIT_SHA` to pin the same released starting point for every participant. The helper clones only `autoresearch`, checks the release manifest, removes the remote, installs the locked environment, qualifies the GPUs and prepares the data. An ordinary branch checkout retains old Git objects and is not a clean benchmark workspace.
 
-The standard evaluator runs accelerated P@L by default: one shared probe, 32 workers across the four allocated GPUs, all 20,775 frozen chains and the same 5,000-replicate global chain bootstrap. MLM validation retains its 32 sequences and existing masking protocol. Evaluation remains outside the one-hour training clock; no separate fast-evaluation command is needed.
+The prepared workspace sets `DATA_ROOT` and `OUTPUT_ROOT` in `.env`, defaulting to `data/` and `outputs/` inside that workspace. Training stores are under `$DATA_ROOT/training`; frozen contact assets and evaluator sources are under `$DATA_ROOT/evaluation/contact` and `$DATA_ROOT/evaluation/source`. Setup defaults to 30 training shards containing 29,979,351 proteins and includes all MLM validation and contact assets. Allow roughly 20 GB for data plus space for dependencies, checkpoints and outputs. Set `--training-shards N` during preparation to change the initial corpus size. Provision enough records from each source for the chosen mixture and budget; retain `DATA_COVERAGE.json` and report source exposure and any permitted data reuse.
 
-Use a fresh experiment name for each candidate. Setup and GPU allocation happen before this command. Incomplete runs cannot supply a benchmark score. Loop policy lives in [autoresearch/program.md](../autoresearch/program.md); apply its higher-is-better comparison rule to P@L.
+Run the measurement from the prepared workspace, supplying a recipe, a fresh run name and an explicit training seed. The example seed 42 is a caller choice, not a task-imposed replication policy:
 
-## Test of Progress
+```bash
+bash tasks/171m-p-at-l_ar.sh configs/default.yaml experiment-p-at-l-001 42
+```
 
-The benchmark owner manually verifies a selected recipe with a fixed 24.20B-token training budget on four H100s per seed, then compares full validation loss and P@L against the reference. This is separate from the agent's research loop.
+The command qualifies the GPU model and attention backend, selects the matching 1,200-second or 3,600-second training limit, snapshots the recipe, trains a checkpoint and evaluates it through the standard APIs. It writes `recipe.yaml`, the effective `config.yaml`, `run_contract.json`, `TRAINING_COMPLETE.json`, `checkpoint-final.pt` and `evaluation/EVALUATION.json` under `$OUTPUT_ROOT/experiment-p-at-l-001/`. Verify that the training and evaluation receipts identify the same final checkpoint and the full evaluation populations. The command performs no replication, score aggregation or acceptance decision; every additional invocation consumes another budgeted round.
 
-Use the manual training/evaluation commands in [EVALUATION.md](../docs/EVALUATION.md#manual-test-of-progress) and preserve the full final optimizer checkpoint for continuation. See the shared [benchmark protocol](../docs/autoresearch.md) for evaluation budgets and [the method's historical results](../docs/AUTORESEARCH_BASELINE.md#detailed-scale-up-results) for their original settings.
+Record the release and code revisions, resolved recipe, training seed, GPU model and backend, data receipts, actual optimizer steps, non-padding model tokens, source exposure, metrics and elapsed training/evaluation times with the run ledger. Proposal generation, seed allocation and candidate selection belong to the search method.
+
+## Final evaluation
+
+After search, freeze the selected recipe. The owner trains that recipe and the plain starting reference from scratch for **24 billion non-padding model tokens each**, on the same declared four-GPU hardware, using **one common training seed declared before the comparison**. Count BOS/EOS tokens and exclude padding. Stop at the first optimizer update reaching the token target, and report the actual token count and overrun. This final evaluation budget is separate from the 72 search rounds; do not launch it as part of an agent's search unless the owner requests it.
+
+Prepare enough of the provided corpus for each final recipe's selected source mixture and token budget. Retain the same tokenizer, context, schedule, parameter-size and evaluation boundaries. Score each final checkpoint with the same 4,096-protein MLM evaluation and full 20,775-chain contact evaluation specified above. Report both metrics and the 5,000-replicate chain-bootstrap 95% interval for P@L. One training seed does not estimate training-seed variability. Because search uses these same evaluation assets, this test measures transfer to longer training rather than performance on a blind holdout.
+
+## Information-access rules
+
+Start from the released `autoresearch` branch in a fresh workspace and a fresh agent context. Use only this starting code, the supplied data and observations produced within your allocated search budget. Keep the release commit and provisioning receipt with the run ledger.
+
+Do not inspect, check out, fetch or restore `main`, other repository branches, tags, earlier commits, reflogs, Git objects, backups or other research workspaces. Local commits created during your own search are allowed. Do not add a remote to recover excluded material.
+
+Do not search online for `https://github.com/Lumin-Science/Nano-ProteinLM`, its source code, mirrors, forks, issues, pull requests, reports or previous experimental findings. Do not obtain those findings through another agent, person, cached page or saved conversation. The organizer may download the released `autoresearch` branch and its pinned dependencies and datasets during preparation; this exception does not permit browsing the research repository during search.
+
+General language/library documentation and scientific references are allowed only under the external-information policy declared by the organizer for every method. Record any accidental exposure to excluded material and notify the organizer before continuing. Do not use exposed findings to select a recipe. The organizer determines whether the attempt remains comparable.

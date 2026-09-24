@@ -14,7 +14,7 @@ mkdir -p "$out"
 test ! -e "$out/RESULT_VERIFIED.json"
 "$py" -m nanoprotein.checkpoint_audit --checkpoint "$checkpoint" --data-root "$DATA_ROOT" --output "$out/TRAINING_VERIFIED.json"
 CUDA_VISIBLE_DEVICES="${gpu_ids[0]}" "$py" -m nanoprotein.evaluate --checkpoint "$checkpoint" --data-root "$DATA_ROOT" \
-  --output-root "$out/eval-validation" --validation-batches 256 --validation-batch-size 16 --validation-context 512 > "$out/validation.log" 2>&1
+  --output-root "$out/eval-validation" --validation-batches 1024 --validation-batch-size 4 --validation-context 512 > "$out/validation.log" 2>&1
 export OUTPUT_ROOT="$out" CHECKPOINT="$checkpoint" EVAL_OUTPUT_ROOT="$out/eval-p-at-l"
 export EXTERNAL_SRC="${EXTERNAL_SRC:?}"
 export EVAL_GPUS="${gpu_ids[0]},${gpu_ids[1]},${gpu_ids[2]},${gpu_ids[3]}" CONTACT_CHAINS=20775 CONTACT_SHARDS=16 OMP_NUM_THREADS=1
@@ -28,7 +28,8 @@ v=json.loads((out/'eval-validation/VALIDATION_MLM.json').read_text())
 e=json.loads((out/'eval-validation/EVALUATION.json').read_text())
 p=json.loads((out/'eval-p-at-l/P_AT_L_UNCERTAINTY.json').read_text())
 assert e['checkpoint_sha256']==p['checkpoint_sha256']==receipt['checkpoint_sha256']
-assert v['sequences']==4096 and v['masked_residues']==139963 and math.isfinite(v['sequence_mean_nll'])
+assert v['sequences']==4096 and v['masked_residues']>0 and math.isfinite(v['sequence_mean_nll'])
+assert v['settings']==dict(sampling_seed=20260821,context_length=512,batch_size=4,batches=1024)
 assert p['uncertainty']['unit_count']==20775 and p['uncertainty']['replicates']==5000
 receipt.update(validation=v,p_at_l=p['p_at_l'],uncertainty=p['uncertainty'])
 (out/'RESULT_VERIFIED.json').write_text(json.dumps(receipt,indent=2)+'\n')

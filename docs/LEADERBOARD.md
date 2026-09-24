@@ -12,13 +12,40 @@ Recorded measurements are grouped by training budget and hardware. Each entry li
 
 <div class="ai">
 
+## Current best: 4,096-protein reward re-evaluation
+
+</div>
+
+<div class="ai">
+
+These are fresh MLM evaluations of the six existing best-recipe checkpoints, completed September 23, 2026. Each profile reports mean ± sample SD over seeds 42, 43 and 44, using 1,024 batches of four at context 512. Training was not repeated. The original 32-protein baseline/reference results remain in the sections below.
+
+</div>
+
+<div class="ai">
+
+| Recipe and original training profile | MLM validation loss ↓, mean ± SD |
+|---|---:|
+| [Current best, Fir: 4 H100 × 20 minutes](leaderboard/CURRENT_DEFAULT_20260921.md#reward-re-evaluation-on-4096-proteins) | **2.667656 ± 0.000482** |
+| [Current best, CCK: 4 L40S × 1 hour](leaderboard/CURRENT_DEFAULT_20260921.md#reward-re-evaluation-on-4096-proteins) | **2.660151 ± 0.001316** |
+
+</div>
+
+<div class="ai">
+
+Only the MLM reward was recomputed. The [re-evaluation report](../.dev/reports/best-recipe-reward-4096-20260923/README.md) retains the existing full-contact scores with explicit reuse provenance, per-seed losses and timings. Checkpoint identities and sample settings were independently verified across both clusters.
+
+</div>
+
+<div class="ai">
+
 ## One-hour L40S reference
 
 </div>
 
 <div class="ai">
 
-The current-default reference uses one hour on four L40S GPUs per seed, FlashAttention-2, 32 MLM validation sequences and all 20,775 contact chains. This study repeats the recipe over seeds 42, 43 and 44; the example task command uses seeds 42 and 43. Values below are the mean and sample SD across the study's three seeds. P@L is shown as a percentage, with its SD in percentage points. Training GPU-hours exclude setup and evaluation.
+The recorded current-default reference uses one hour on four L40S GPUs per seed, FlashAttention-2, 32 MLM validation sequences and all 20,775 contact chains. This study repeats the recipe over seeds 42, 43 and 44. Values below are the mean and sample SD across the study's three seeds. P@L is shown as a percentage, with its SD in percentage points. Training GPU-hours exclude setup and evaluation.
 
 </div>
 
@@ -72,13 +99,13 @@ This matched comparison trained the ESMC-like AdamW baseline and our best recipe
 
 | Recipe | MLM validation loss ↓ | P@L ↑ |
 |---|---:|---:|
-| [ESMC-like AdamW baseline](leaderboard/BEST_RECIPE_22_09_26.md#1-the-complete-comparison) | 2.474360 | 26.504938% |
-| [Our best recipe in this matched H100 study, before separate Q/K/V updates](leaderboard/BEST_RECIPE_22_09_26.md#2-exactly-what-differs-from-the-baseline) | **2.418720** | **32.682480%** |
+| [ESMC-like AdamW baseline](leaderboard/CURRENT_DEFAULT_20260921.md#1-the-complete-comparison) | 2.474360 | 26.504938% |
+| [Our best recipe in this matched H100 study, before separate Q/K/V updates](leaderboard/CURRENT_DEFAULT_20260921.md#2-exactly-what-differs-from-the-baseline) | **2.418720** | **32.682480%** |
 
 </div>
 
 <div class="ai">
 
-The [current default](leaderboard/CURRENT_DEFAULT_20260921.md#completed-100k-step-result) adds separate Q/K/V Muon updates and has a completed 100k-step L40S result. The H100 table above retains the earlier recipe actually measured against AdamW. Recipe pages contain configuration details, training costs, confidence intervals and source records. The scale-up losses use 4,096 validation sequences; the search-budget references above use 32.
+The [current default](leaderboard/CURRENT_DEFAULT_20260921.md#completed-100k-step-result) adds separate Q/K/V Muon updates and has a completed 100k-step L40S result. The H100 table above retains the earlier recipe actually measured against AdamW. Recipe pages contain configuration details, training costs, confidence intervals and source records. The scale-up losses use 4,096 validation sequences; the historical search-budget references above use 32. New task measurements use 4,096, so re-evaluate historical checkpoints on that sample before comparing their losses with new results.
 
 </div>

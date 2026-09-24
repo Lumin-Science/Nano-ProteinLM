@@ -241,6 +241,12 @@ def validation_mlm(
     values = np.asarray(losses, dtype=np.float64)
     return {
         "protocol": "heldout-cluster-representative-mlm-v1",
+        "settings": {
+            "sampling_seed": seed,
+            "context_length": context_length,
+            "batch_size": batch_size,
+            "batches": batches,
+        },
         "sequences": int(values.size),
         "masked_residues": masked,
         "sequence_mean_nll": float(values.mean()),
@@ -1374,7 +1380,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--external-src", type=Path)
     parser.add_argument("--pcore-root", type=Path)
     parser.add_argument("--contact-root", type=Path)
-    parser.add_argument("--validation-batches", type=int, default=8)
+    parser.add_argument("--validation-batches", type=int, default=1024)
     parser.add_argument("--validation-batch-size", type=int, default=4)
     parser.add_argument("--validation-context", type=int, default=512)
     parser.add_argument(
@@ -1471,6 +1477,23 @@ def main() -> None:
         validation_path = args.output_root / "VALIDATION_MLM.json"
         if args.resume_components and validation_path.exists():
             validation = json.loads(validation_path.read_text())
+            expected_sequences = args.validation_batches * args.validation_batch_size
+            if validation.get("sequences") != expected_sequences:
+                raise ValueError(
+                    "cached MLM sample count differs from the requested evaluation; "
+                    "use a fresh output directory or match the original validation settings"
+                )
+            expected_settings = {
+                "sampling_seed": 20260821,
+                "context_length": args.validation_context,
+                "batch_size": args.validation_batch_size,
+                "batches": args.validation_batches,
+            }
+            if validation.get("settings") != expected_settings:
+                raise ValueError(
+                    "cached MLM settings differ or are undocumented; "
+                    "use a fresh output directory to re-evaluate"
+                )
             timing_seconds["validation_mlm"] = 0.0
             resumed_components.append("validation_mlm")
         else:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -14,12 +15,45 @@ from .flash_attention import prepare_attention
 from .model import _varlen_flash_attention, build_model
 
 
+def autoresearch_hardware(devices: list[dict]) -> dict:
+    """Qualify a four-GPU benchmark profile and select its kernel and round duration."""
+    if len(devices) != 4 or len({d["name"] for d in devices}) != 1:
+        raise ValueError("AutoResearch requires exactly four GPUs of the same model")
+    name = devices[0]["name"]
+    if not re.search(r"\b(L40S|H100)\b", name):
+        raise ValueError(f"no declared AutoResearch round budget for {name}; use H100 or L40S")
+    if any(d["memory_bytes"] < 44 * 1024**3 for d in devices):
+        raise ValueError("AutoResearch requires at least nominal 48 GB VRAM per GPU")
+    capabilities = {tuple(d["capability"]) for d in devices}
+    if len(capabilities) != 1 or min(capabilities) < (8, 0):
+        raise ValueError("AutoResearch requires matching BF16-capable CUDA devices")
+    backend = "flash3" if devices[0]["capability"][0] == 9 else "flash"
+    # Dense BF16 peaks: NVIDIA L40S datasheet and H100 SXM specifications.
+    # https://www.nvidia.com/en-us/data-center/l40s/
+    # https://www.nvidia.com/en-us/data-center/h100/
+    peak = 0.0  # Omit MFU when the exact board's denominator is not declared.
+    if re.search(r"\bL40S\b", name):
+        peak = 362.05
+    elif "H100" in name and ("HBM3" in name or "SXM" in name):
+        peak = 989.5
+    l40s = bool(re.search(r"\bL40S\b", name))
+    return {
+        "attention_backend": backend,
+        "peak_bf16_tflops_per_gpu": peak,
+        "autoresearch_profile": "l40s-60m" if l40s else "h100-20m",
+        "training_walltime_seconds": 3600 if l40s else 1200,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--require-gpus", type=int, default=1)
     parser.add_argument("--gpu-name", help="Require this substring in every visible GPU name")
     parser.add_argument("--output", type=Path)
-    parser.add_argument("--attention-backend", choices=("flash", "flash3"), default="flash")
+    parser.add_argument("--autoresearch", action="store_true")
+    parser.add_argument(
+        "--attention-backend", choices=("auto", "flash", "flash3"), default="flash"
+    )
     args = parser.parse_args()
     if sys.version_info[:2] != (3, 11):
         raise RuntimeError(f"expected Python 3.11, found {sys.version.split()[0]}")
@@ -38,6 +72,19 @@ def main() -> None:
         for index in range(torch.cuda.device_count())
     ):
         raise RuntimeError(f"every visible GPU must match {args.gpu_name!r}")
+    devices = [
+        {
+            "name": torch.cuda.get_device_name(i),
+            "capability": list(torch.cuda.get_device_capability(i)),
+            "memory_bytes": torch.cuda.get_device_properties(i).total_memory,
+        }
+        for i in range(torch.cuda.device_count())
+    ]
+    hardware = autoresearch_hardware(devices) if args.autoresearch else {}
+    if args.attention_backend == "auto":
+        if not hardware:
+            raise ValueError("automatic backend selection requires --autoresearch")
+        args.attention_backend = hardware["attention_backend"]
 
     device = torch.device("cuda", 0)
     attention = prepare_attention(args.attention_backend, device)
@@ -103,12 +150,20 @@ def main() -> None:
         "cuda": torch.version.cuda,
         "visible_gpus": torch.cuda.device_count(),
         "gpu": torch.cuda.get_device_name(device),
+        "devices": devices,
+        "attention_backend": args.attention_backend,
+        "peak_bf16_tflops_per_gpu": hardware.get("peak_bf16_tflops_per_gpu", 0.0),
         "attention": attention,
         "attention_events": attention_events,
         "fa2_numerical_comparison": fa2_comparison,
         "forward_backward": True,
         "packed_transformer_forward_backward": True,
     }
+    if hardware:
+        receipt.update(
+            autoresearch_profile=hardware["autoresearch_profile"],
+            training_walltime_seconds=hardware["training_walltime_seconds"],
+        )
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         temporary = args.output.with_suffix(args.output.suffix + ".partial")

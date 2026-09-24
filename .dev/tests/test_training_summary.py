@@ -66,12 +66,42 @@ class TrainingSummaryTests(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             summarize(self.runs, 4096)
 
+    def test_preserves_explicit_legacy_32_sequence_summaries(self):
+        for root in self.runs:
+            path = root / "evaluation/EVALUATION.json"
+            value = json.loads(path.read_text())
+            value["validation_mlm"]["sequences"] = 32
+            self.write(path, value)
+        report = summarize(self.runs, 32)
+        self.assertEqual(report["metrics"]["validation_loss"]["mean"], 2.5)
+        self.assertEqual(report["validation_sequences"], 32)
+        self.assertIsNone(report["validation_settings"])
+
     def test_rejects_early_token_stop_even_with_evaluation(self):
         path = self.runs[1] / "TRAINING_COMPLETE.json"
         value = json.loads(path.read_text())
         value["stop_reason"] = "walltime"
         self.write(path, value)
         with self.assertRaisesRegex(ValueError, "token budget"):
+            summarize(self.runs, 4096)
+
+    def test_rejects_mixed_sample_settings_with_the_same_sequence_count(self):
+        settings = dict(sampling_seed=20260821, context_length=512, batch_size=4, batches=1024)
+        for root in self.runs:
+            path = root / "evaluation/EVALUATION.json"
+            value = json.loads(path.read_text())
+            value["validation_mlm"]["settings"] = settings
+            self.write(path, value)
+        self.assertEqual(summarize(self.runs, 4096)["validation_settings"], settings)
+        path = self.runs[1] / "evaluation/EVALUATION.json"
+        value = json.loads(path.read_text())
+        value["validation_mlm"]["settings"].update(batch_size=16, batches=256)
+        self.write(path, value)
+        with self.assertRaisesRegex(ValueError, "same MLM evaluation settings"):
+            summarize(self.runs, 4096)
+        del value["validation_mlm"]["settings"]
+        self.write(path, value)
+        with self.assertRaisesRegex(ValueError, "same MLM evaluation settings"):
             summarize(self.runs, 4096)
 
     def test_rejects_wrong_checkpoint_and_nonfinite_score(self):

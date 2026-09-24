@@ -18,6 +18,7 @@ def summarize(runs: list[Path], validation_sequences: int) -> dict:
         raise ValueError("provide at least two distinct completed runs")
     rows = []
     reference_config = None
+    reference_validation_settings = None
     seeds = set()
     for root in runs:
         config = yaml.safe_load((root / "config.yaml").read_text())
@@ -46,6 +47,10 @@ def summarize(runs: list[Path], validation_sequences: int) -> dict:
             raise ValueError("evaluation does not match the final training checkpoint")
         if evaluation["validation_mlm"]["sequences"] != validation_sequences:
             raise ValueError("incomplete MLM evaluation sample")
+        validation_settings = evaluation["validation_mlm"].get("settings")
+        if rows and validation_settings != reference_validation_settings:
+            raise ValueError("runs must use the same MLM evaluation settings")
+        reference_validation_settings = validation_settings
         contact = evaluation["contact"]
         if contact["evaluation_chains"] != 20775:
             raise ValueError("incomplete contact evaluation population")
@@ -64,7 +69,12 @@ def summarize(runs: list[Path], validation_sequences: int) -> dict:
         if not all(math.isfinite(value) for value in values):
             raise ValueError(f"non-finite {name}")
         metrics[name] = {"mean": statistics.mean(values), "sample_sd": statistics.stdev(values)}
-    return {"runs": rows, "metrics": metrics}
+    return {
+        "runs": rows,
+        "metrics": metrics,
+        "validation_sequences": validation_sequences,
+        "validation_settings": reference_validation_settings,
+    }
 
 
 def main() -> None:

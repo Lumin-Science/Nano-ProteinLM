@@ -114,7 +114,9 @@ class ParallelContactEvaluationTests(unittest.TestCase):
         self.assertEqual(self.args.contact_mode, "parallel")
         self.assertEqual(self.args.contact_chains, 20775)
         self.assertEqual(self.args.contact_bootstrap, 5000)
-        validation = {"sequence_mean_nll": 2.5, "sequences": 32}
+        self.assertEqual(self.args.validation_batches * self.args.validation_batch_size, 4096)
+        self.assertEqual(self.args.validation_context, 512)
+        validation = {"sequence_mean_nll": 2.5, "sequences": 4096}
         with (
             patch("nanoprotein.evaluate.parse_args", return_value=self.args),
             patch("torch.cuda.is_available", return_value=True),
@@ -155,7 +157,46 @@ class ParallelContactEvaluationTests(unittest.TestCase):
             )
             evaluate.write_json(root / "evaluation/EVALUATION.json", report)
             runs.append(root)
-        self.assertEqual(summarize(runs, 32)["metrics"]["p_at_l"]["mean"], float(values.mean()))
+        self.assertEqual(
+            summarize(runs, 4096)["metrics"]["p_at_l"]["mean"], float(values.mean())
+        )
+
+    def test_mlm_resume_rejects_old_sample_count_and_reuses_matching_count(self):
+        self.args.run_contact = False
+        self.args.resume_components = True
+        validation_path = self.args.output_root / "VALIDATION_MLM.json"
+        with (
+            patch("nanoprotein.evaluate.parse_args", return_value=self.args),
+            patch("torch.cuda.is_available", return_value=True),
+            patch("torch.cuda.manual_seed_all"),
+            patch("torch.cuda.max_memory_allocated", return_value=0),
+            patch("nanoprotein.evaluate.load_checkpoint", self.load_model),
+            patch("nanoprotein.evaluate.validation_mlm") as score,
+        ):
+            evaluate.write_json(validation_path, {"sequence_mean_nll": 2.5, "sequences": 32})
+            with self.assertRaisesRegex(ValueError, "cached MLM sample count differs"):
+                evaluate.main()
+            self.assertFalse((self.args.output_root / "EVALUATION.json").exists())
+            validation = {"sequence_mean_nll": 2.5, "sequences": 4096}
+            evaluate.write_json(validation_path, validation)
+            with self.assertRaisesRegex(ValueError, "settings differ or are undocumented"):
+                evaluate.main()
+            validation["settings"] = {
+                "sampling_seed": 20260821,
+                "context_length": 512,
+                "batch_size": 16,
+                "batches": 256,
+            }
+            evaluate.write_json(validation_path, validation)
+            with self.assertRaisesRegex(ValueError, "settings differ or are undocumented"):
+                evaluate.main()
+            validation["settings"].update(batch_size=4, batches=1024)
+            evaluate.write_json(validation_path, validation)
+            evaluate.main()
+        score.assert_not_called()
+        report = json.loads((self.args.output_root / "EVALUATION.json").read_text())
+        self.assertEqual(report["validation_mlm"]["sequences"], 4096)
+        self.assertEqual(report["resumed_components"], ["validation_mlm"])
 
     def test_resume_reuses_probe_and_shards_and_rejects_changed_request(self):
         self.args.contact_chains = 9
@@ -263,7 +304,7 @@ class ParallelContactEvaluationTests(unittest.TestCase):
                 self.args.output_root / "CONTACT_SCORING_CACHE_PREFLIGHT.json",
             )
 
-    def test_task_entry_point_evaluates_both_seeds_on_the_training_gpus(self):
+    def test_task_entry_point_evaluates_one_run_on_the_training_gpus(self):
         repo = Path(__file__).resolve().parents[2]
         checkout = self.root / "checkout"
         (checkout / "tasks").mkdir(parents=True)
@@ -279,10 +320,11 @@ class ParallelContactEvaluationTests(unittest.TestCase):
             f"#!{sys.executable}\nimport json,os,sys\n"
             "with open(os.environ['COMMAND_LOG'], 'a') as output:\n"
             "    output.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            "if '-c' in sys.argv: print('flash3 989.5')\n"
         )
         uv.chmod(0o755)
         subprocess.run(
-            ["bash", "tasks/171m-p-at-l_ar.sh", "recipe.yaml", "trial"],
+            ["bash", "tasks/171m-p-at-l_ar.sh", "recipe.yaml", "trial", "47"],
             cwd=checkout,
             check=True,
             capture_output=True,
@@ -290,7 +332,7 @@ class ParallelContactEvaluationTests(unittest.TestCase):
             env={
                 **os.environ,
                 "PATH": f"{binary}:{os.environ['PATH']}",
-                "CUDA_VISIBLE_DEVICES": "2,3,5,7,8,9",
+                "CUDA_VISIBLE_DEVICES": "2,3,5,7",
                 "EVAL_GPUS": "8,9",
                 "DATA_ROOT": str(self.root / "data"),
                 "OUTPUT_ROOT": str(self.root / "runs"),
@@ -303,16 +345,18 @@ class ParallelContactEvaluationTests(unittest.TestCase):
             for command in commands
             if "nanoprotein.evaluate" in command
         ]
-        self.assertEqual(len(evaluations), 2)
-        for seed, args in zip((42, 43), evaluations, strict=True):
+        self.assertEqual(len(evaluations), 1)
+        for args in evaluations:
             self.assertEqual(args.contact_mode, "parallel")
             self.assertEqual(args.contact_gpus, "2,3,5,7")
             self.assertEqual(args.contact_workers, 32)
             self.assertEqual(args.contact_chains, 20775)
             self.assertEqual(args.contact_bootstrap, 5000)
-            self.assertEqual(args.validation_batches * args.validation_batch_size, 32)
-            self.assertEqual(args.checkpoint.parent.name, f"seed-{seed}")
-        self.assertIn("nanoprotein.summarize_training_runs", commands[-1])
+            self.assertEqual(args.validation_batches * args.validation_batch_size, 4096)
+            self.assertEqual(args.checkpoint.parent.name, "trial")
+        training = next(command for command in commands if "nanoprotein.train" in command)
+        self.assertEqual(training[training.index("--seed") + 1], "47")
+        self.assertFalse(any("nanoprotein.summarize_training_runs" in row for row in commands))
 
 
 if __name__ == "__main__":
