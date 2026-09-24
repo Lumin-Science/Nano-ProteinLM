@@ -14,65 +14,25 @@ All structures and structural contact labels for the P@L evaluation come from
 the frozen 2024-02-28 RCSB Protein Data Bank snapshot. This is also the PDB
 population protected during training-corpus decontamination.
 
-<div class="ai">
-
 The [validation-loss task](../tasks/171m-validation-loss.md) scores a checkpoint's held-out sequence-mean MLM loss (lower is better); the [P@L task](../tasks/171m-p-at-l.md) scores full long-range contact P@L (higher is better). Both use the training and evaluation APIs described here. The [AutoResearch protocol](AUTORESEARCH.md) defines the search budget and final evaluation. P-CORE provides optional representation diagnostics.
-
-</div>
-
-<div class="ai">
 
 ## Validation set
 
-</div>
-
-<div class="ai">
-
 MLM validation scores every protein in the three held-out validation shards: **12,288 proteins, exactly 4,096 per source**. They are the first 4,096 eligible cluster representatives per source in SHA-256 order ([DATA.md step 6](DATA.md#6-select-validation-and-write-deterministic-shards)) and are excluded from training. Each protein is scored once, and the sequence-mean NLL averages over proteins, so each source carries one third of the score.
-
-</div>
-
-<div class="ai">
 
 Proteins longer than 510 residues are cropped to fit the 512-token context with BOS and EOS. Each protein's crop offset and 15% mask positions come from a random generator seeded by the fixed mask seed 20260821 and the protein's SHA-256. They do not depend on batch size, protein order, GPU count or the global random state, so `--validation-batch-size` changes only throughput. The receipt records the protocol, settings, a SHA-256 of the evaluated protein digests (`manifest_sha256`), per-source mean losses and the batch size used.
 
-</div>
-
-<div class="ai">
-
 The earlier 4,096-protein evaluation took about **20 seconds on one H100 or L40S GPU**, excluding environment setup and contact inference ([timing record](../.dev/reports/best-recipe-reward-4096-20260923/README.md)); the full set is three times larger. This fits within the 20-minute H100 or one-hour L40S search round.
-
-</div>
-
-<div class="ai">
 
 Earlier results used a sampled evaluation: 4,096 proteins drawn by a seeded sampler (1,024 batches of four, or 256 batches of 16 in older runs), or 32 proteins in the earlier search rounds. Their crops and masks depended on the batch layout. Historical scores keep their original labels; re-evaluate their checkpoints before comparing them with the current evaluation. `--resume-components` rejects cached receipts from the sampled protocol, and the training-run summarizer rejects mixtures of different recorded settings.
 
-</div>
-
-<div class="ai">
-
 Training-seed repeats estimate a different source of variation. Reusing this validation set during search and final evaluation also means that the final result is not a blind-holdout estimate.
-
-</div>
-
-<div class="ai">
 
 The [published contract for the earlier sampled evaluation](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/blob/5eae416dbb415d2df206b9641dd5ddabe04371dc/evaluation/MLM_VALIDATION_4096.json) records the source-shard hashes of the same three validation Parquet files. All 12,288 sequence hashes were verified against their stored sequences, and the files remain unchanged. The contact bundle is published alongside this contract; only its packaging metadata changed.
 
-</div>
-
-<div class="ai">
-
 ## Final evaluation
 
-</div>
-
-<div class="ai">
-
 The owner-run final evaluation trains each frozen recipe and the reference to a fixed token target and scores the final checkpoints with the evaluator below. [AUTORESEARCH.md](AUTORESEARCH.md#final-evaluation) defines its settings, command and completion checks.
-
-</div>
 
 ## Released ESMC checkpoint P@L
 
@@ -96,11 +56,7 @@ measurement; the 1,024-chain diagnostic remains an execution check only.
 
 ## Evaluation execution
 
-<div class="ai">
-
 For a run created by the speedrun, use `bash runs/speedrun.sh --evaluate default-100k` after setup. It loads `.env`, measures MLM loss on all 12,288 validation proteins and runs parallel P@L over all 20,775 chains with 5,000 bootstrap replicates. Replace the run name or append options such as `--contact-gpus 0,1 --contact-workers 16`; the ordinary evaluation API below remains available for other checkpoints.
-
-</div>
 
 `EVAL_PROFILE=full` runs all six frozen representation-probe contracts and
 aggregates the four trusted tasks into P-CORE. It embeds protein means for all
@@ -110,17 +66,9 @@ subprocesses with bounded parallelism, followed by a digest-checked reduction.
 Secondary structure performs four full-residue LBFGS fits and is not suitable
 for a short training gate.
 
-<div class="ai">
-
 The standard `python -m nanoprotein.evaluate --run-contact` command runs parallel P@L by default, including both task measurement scripts and the final-evaluation command. It fits the frozen probe once, shares the checkpoint- and manifest-bound receipt across eight workers per visible GPU (32 workers on four GPUs), and scores only nonzero L1-probe channels. It restores the global SHA-ranked chain order and performs the same 5,000-replicate chain bootstrap over all 20,775 chains. `EVALUATION.json` retains the ordinary combined MLM/contact format used by the seed summarizer.
 
-</div>
-
-<div class="ai">
-
 Use `--contact-gpus 0,1,2,3` to select GPU identifiers and `--contact-workers 16` to adjust worker concurrency. By default, GPU selection follows `EVAL_GPUS`, then `CUDA_VISIBLE_DEVICES`, then all detected GPUs. Use `--contact-mode serial` for one-process evaluation. The default contact population is 20,775; a smaller `--contact-chains` value is an explicit diagnostic subset. Worker shard arguments and shared probe receipts remain supported for existing launchers.
-
-</div>
 
 Static contact labels and eligible-pair geometry may also be cached once. The
 optional cache is bound to the source payload and contact-manifest digests and
@@ -128,11 +76,7 @@ must pass a complete preflight hash check before inference. Without a cache,
 the same fast probe-reuse and sparse-scoring path reads the frozen source
 payloads directly.
 
-<div class="ai">
-
 Component receipts (`VALIDATION_MLM.json`, `CONTACT.json`, diagnostic embedding, and per-task JSON) are written atomically. A later failure preserves completed work. Use `--resume-components` with the same output directory and arguments to reuse completed parallel contact shards; the saved request binds the checkpoint digest and execution settings. Use a fresh output directory for a different checkpoint or evaluation request. The parallel contact workers finish before MLM/P-CORE runs in the parent process, so its model does not occupy GPU memory during contact inference.
-
-</div>
 
 Execution improvements retained on `main` include cross-protein residue-budget
 batching, secondary-structure-only residue caches, bounded parallel probe
@@ -150,13 +94,7 @@ uv run --frozen python -m nanoprotein.build_contact_scoring_cache \
   --output-root "$CONTACT_SCORING_CACHE_ROOT"
 ```
 
-<div class="ai">
-
 Run contact-only evaluation through the same standard command, optionally using the prepared static cache:
-
-</div>
-
-<div class="ai">
 
 ```bash
 uv run --frozen python -m nanoprotein.evaluate \
@@ -169,19 +107,9 @@ uv run --frozen python -m nanoprotein.evaluate \
   --contact-scoring-cache-root "$CONTACT_SCORING_CACHE_ROOT"
 ```
 
-</div>
-
-<div class="ai">
-
 Omit `--contact-scoring-cache-root` to read the frozen structure payloads directly. Probe reuse, sparse scoring, deterministic sharding and exact aggregation remain enabled. When a cache root is supplied, the evaluator performs its hash preflight automatically. The older `src/evaluate_p_at_l_parallel.sh` entry point delegates to this evaluator and preserves its environment-variable interface and `P_AT_L.json` output.
 
-</div>
-
-<div class="ai">
-
 The recipe pages for [round 1](leaderboard/nanop-best-171m-round1.md) and [round 2](leaderboard/nanop-best-171m-round2.md) explain each recipe change and its earlier measurements. [LEADERBOARD.md](LEADERBOARD.md) collects results under the current protocol.
-
-</div>
 
 ## Dataset provenance and split contract
 
@@ -199,14 +127,14 @@ how the repository uses it.
 
 | Evaluation | Dataset lineage and publication | Probe fit | Validation | Final test | Metric and role |
 |---|---|---|---|---|---|
-| Held-out MLM | SHA-partitioned representatives from the post-exclusion UniRef90, MGnify, and OMG/IMG reservoirs. Sources: Suzek et al., [UniRef](https://doi.org/10.1093/bioinformatics/btu739); Richardson et al., [MGnify](https://doi.org/10.1093/nar/gkac1080); Cornman et al., [OMG](https://doi.org/10.1101/2024.08.14.607850). | Training corpus only | 4,096 representatives per source; 12,288 total | None | <span class="ai">Sequence-mean NLL: reward for the validation-loss task; diagnostic for the P@L task</span> |
+| Held-out MLM | SHA-partitioned representatives from the post-exclusion UniRef90, MGnify, and OMG/IMG reservoirs. Sources: Suzek et al., [UniRef](https://doi.org/10.1093/bioinformatics/btu739); Richardson et al., [MGnify](https://doi.org/10.1093/nar/gkac1080); Cornman et al., [OMG](https://doi.org/10.1101/2024.08.14.607850). | Training corpus only | 4,096 representatives per source; 12,288 total | None | Sequence-mean NLL: reward for the validation-loss task; diagnostic for the P@L task |
 | Remote homology | TAPE-distributed SCOP 1.75 fold classification from DeepSF. Sources: Hou et al., [DeepSF](https://doi.org/10.1093/bioinformatics/btx780); Rao et al., [TAPE](https://proceedings.neurips.cc/paper/2019/hash/37f65c068b7723cd7809ee2d31d7861c-Abstract.html). | 12,312 proteins | 736 proteins | 718 fold-holdout proteins | Balanced accuracy; family-group bootstrap; **P-CORE** |
 | Secondary structure | TAPE/NetSurfP-2.0 train and validation payloads with CB513 as test. Sources: Klausen et al., [NetSurfP-2.0](https://doi.org/10.1002/prot.25674); Cuff and Barton, [CB513](https://pubmed.ncbi.nlm.nih.gov/10081963/); Rao et al., [TAPE](https://proceedings.neurips.cc/paper/2019/hash/37f65c068b7723cd7809ee2d31d7861c-Abstract.html). | 8,678 proteins | 2,170 proteins | CB513: 513 records; 434 unique sequences | Residue macro-F1; protein bootstrap; **P-CORE** |
 | Enzyme Commission | Sequence-only adaptation of the TorchDrug/TorchProtein `EnzymeCommission` artifact and its `<30%` identity test column. Sources: Gligorijević et al., [DeepFRI](https://doi.org/10.1038/s41467-021-23303-9); Zhang and Xu, [TorchProtein record](https://doi.org/10.5281/zenodo.6622158). | 15,551 proteins | 1,729 proteins | 720 proteins | Macro average precision; Bayesian label/group bootstrap; **quarantined** |
 | DeepLoc2 | Official `multisub_5_partitions_unique.csv` with all five homology-aware partitions. Source: Thumuluri et al., [DeepLoc 2.0](https://doi.org/10.1093/nar/gkac278). | Three of five partitions per fold | Partition after the test partition | One of five partitions; every protein is test once | Macro average precision pooled over five folds; **P-CORE** |
 | Human PPI | PEER release of Pan's HPRD-derived human interaction set with released negatives and redundancy-filtered split. Sources: Pan et al., [human PPI](https://doi.org/10.1021/pr100618t); Xu et al., [PEER](https://proceedings.neurips.cc/paper_files/paper/2022/hash/e467582d42d9c13fa9603df16f31de6d-Abstract-Datasets_and_Benchmarks.html). | 35,669 pairs; 6,844 proteins | 315 pairs; 277 proteins | 237 pairs; 227 proteins | Average precision; connected-component bootstrap; **quarantined** |
 | FLIP2 Hydro low-to-high | Official Hydrophobic Core `low_to_high` fitness split pooling variants of three wild types. Source: Didi et al., [FLIP2](https://doi.org/10.64898/2026.02.23.707496). | 9,974 variants | 2,493 variants within the training set | 12,468 high-fitness variants | Spearman correlation; variant-group bootstrap; **P-CORE** |
-| Long-range contact | Experimentally determined structures from the frozen 2024-02-28 RCSB PDB snapshot, adapted to the ESM attention-to-contact protocol and ESMC long-range definition. Sources: Berman et al., [PDB](https://doi.org/10.1093/nar/28.1.235); Rao et al., [ESM contacts](https://openreview.net/forum?id=fylclEqgvgd); Candido et al., [ESMC](https://doi.org/10.64898/2026.06.03.729735). | 16 chains | 4 chains | 20,775 chains; 20,758 unique sequences | <span class="ai">Mean precision at L; chain bootstrap; reward for the P@L task; diagnostic for the validation-loss task</span> |
+| Long-range contact | Experimentally determined structures from the frozen 2024-02-28 RCSB PDB snapshot, adapted to the ESM attention-to-contact protocol and ESMC long-range definition. Sources: Berman et al., [PDB](https://doi.org/10.1093/nar/28.1.235); Rao et al., [ESM contacts](https://openreview.net/forum?id=fylclEqgvgd); Candido et al., [ESMC](https://doi.org/10.64898/2026.06.03.729735). | 16 chains | 4 chains | 20,775 chains; 20,758 unique sequences | Mean precision at L; chain bootstrap; reward for the P@L task; diagnostic for the validation-loss task |
 
 Source-paper headline metrics are not substituted for repository measurements.
 Every released-checkpoint P@L value is recomputed with the frozen payload,

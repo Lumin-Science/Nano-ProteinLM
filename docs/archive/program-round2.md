@@ -1,8 +1,4 @@
-<div class="ai">
-
 > Archived copy of `autoresearch/program.md` as used by AutoResearch round 2 (commit `28b742c`, September 13, 2026), which ran each candidate with `N=2` training seeds. The text below is unchanged. The current programs are [karpathy_ar_reward_gate.md](../../autoresearch/karpathy_ar_reward_gate.md) and [karpathy_ar_agent_gate.md](../../autoresearch/karpathy_ar_agent_gate.md); both rounds are described in [AUTORESEARCH_BASELINE.md](../AUTORESEARCH_BASELINE.md#previous-two-seed-pipeline).
-
-</div>
 
 # AutoResearch loop
 

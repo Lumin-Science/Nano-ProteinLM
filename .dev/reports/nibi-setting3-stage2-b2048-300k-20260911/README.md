@@ -1,24 +1,10 @@
 # Nibi Setting 3 Stage 2 — batch 2,048, 300k additional updates
 
-<div class="ai">
-
 Production completed **300,000 Stage 2 updates, global 400k → 700k**, on eight Nibi H100 GPUs. The [final verification](FINAL_VERIFIED.json) passed: all **30 production evaluations** are verified and the durable 700k checkpoint passed exact model and optimizer restoration. The production launcher finished September 13, 2026 at **17:52:59 Toronto**; the complete workflow finished at **17:53:59**. Production took **48h 00m 39s** including evaluations and checkpoint handling, with **46h 13m 23s** recorded in the training loop. The user-owned allocation remains retained.
-
-</div>
-
-<div class="ai">
 
 ## Production evaluation results
 
-</div>
-
-<div class="ai">
-
 The final **700k** checkpoint has validation loss **2.248124** and P@L **46.264%** (95% CI **46.016–46.523%**), the best measured values on both metrics in this Stage 2 run. Each [independent endpoint audit](full/evaluations/step-700000/LOCAL_AUDIT.json) checks checkpoint bindings, all 16 contact shards, all 20,775 historical chain identities, the unchanged MLM/probe protocols and an independently recomputed 5,000-replicate bootstrap. The [complete machine-readable curve](learning-curve.json) excludes qualification trials.
-
-</div>
-
-<div class="ai">
 
 | Checkpoint | Stage 2 updates | Validation loss ↓ | P@L ↑ | 95% chain-bootstrap CI |
 |---|---:|---:|---:|---:|
@@ -54,31 +40,13 @@ The final **700k** checkpoint has validation loss **2.248124** and P@L **46.264%
 | Stage 2, 690k | 290,000 | 2.248952 | 46.207% | 45.957–46.465% |
 | Stage 2, 700k | 300,000 | 2.248124 | 46.264% | 46.016–46.523% |
 
-</div>
-
-<div class="ai">
-
 Relative to 400k, validation loss changed by **-0.060768**, and P@L improved by **4.023 percentage points**. The paired chain-bootstrap 95% interval for this gain is **3.958–4.089 points**. These intervals quantify uncertainty across evaluation chains, not variation across training seeds.
-
-</div>
-
-<div class="ai">
 
 ## Final training and storage checks
 
-</div>
-
-<div class="ai">
-
 Training stopped at the requested **700,000** global updates with no production failure. The source checkout remained clean at the frozen commit, and the final metrics followed the original Stage 2 decay clock. The completed run retains **zero MGnify repeats** and **4,635,828 unused MGnify records**. UniRef90 and OMG continued their permitted complete global passes.
 
-</div>
-
-<div class="ai">
-
 The [durable final checkpoint](milestones/checkpoint-700000.json) and [independent restoration audit](milestones/checkpoint-700000-restore-verified.json) bind the evaluated 700k weights to the saved full model, optimizer and global sampler state. Checkpoint SHA-256: `69f9f07ae0462834029fa2ccbbb05b93034097bfc540157385fb362ad7a7abeb`. The [host receipt](monitoring/final-storage-check.json) confirms production step 12162637.44 ended while allocation 12162637 remains running on g27, with **12.64 hours remaining** at the **September 13, 18:45 Toronto** check.
-
-</div>
 
 ## Earlier monitoring check
 
@@ -88,11 +56,7 @@ Training averaged **0.555 seconds per update** since the launch audit. Including
 
 ## Frozen recipe
 
-<div class="ai">
-
 The [recipe](../../configs/nibi/setting3-nibi-stage2-b2048-300k.yaml), [transition methods](../../../docs/USAGE.md#training), and [launcher](../../../runs/nibi_setting3_stage2.sh) are preserved on main. The production source is pinned separately at **f4b672d0a3a70e15740ee3876c202e535f727d3c**, so later report updates do not change running code.
-
-</div>
 
 | Setting | Value |
 |---|---|
@@ -139,18 +103,10 @@ The qualification checkpoint is a diagnostic trial, not a production endpoint or
 
 Run artifacts are under `/scratch/muchenli/Nano-Protein-LM-nibi-setting3-stage2-b2048-300k-20260911`, with production in `full/` and frozen source in the sibling directory ending `-run`. Prepared data is available both at `data/` under the run root and at `/localscratch/muchenli.12162637.0/nano-nibi-setting3-stage2-20260911` during the allocation. The original Stage 1 run and checkpoint remain separate.
 
-<div class="ai">
-
 The durable destination is `/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-setting3-stage2-b2048-300k-20260911`. It contains the recipe, source bundle, transition and qualification records, full model/optimizer checkpoints at 500k, 600k and 700k, and the final report under `run-record/`. The final checkpoint is `checkpoint-700000.pt`; scratch `full/checkpoint-final.pt` contains the same evaluated state. Later four-GPU continuation uses microbatch 128 per GPU with accumulation 4 to retain batch 2,048; memory and throughput on that layout still require qualification.
-
-</div>
 
 The durable **500k** full model/optimizer checkpoint is [preserved and checksum verified](milestones/checkpoint-500000.json). An [independent restoration audit](milestones/checkpoint-500000-restore-verified.json) on allocated CPUs confirmed exact model and optimizer tensor restoration, finite state, and matching global source history. Its SHA-256 is `020dc374ff438da6a38656def5aa3fc72aca6ee2a3bc174349d1d88b3ad2a072`; it contains the full replicated optimizer state for future continuation.
 
 The durable **600k** full model/optimizer checkpoint is also [preserved and checksum verified](milestones/checkpoint-600000.json). Its [independent restoration audit](milestones/checkpoint-600000-restore-verified.json) passed on allocated CPUs after access was restored, confirming exact model and optimizer restoration, finite state, and the same source history as the evaluated 600k checkpoint. Its SHA-256 is `585edf8c0188c25f3ca6b9e513a917b129e0475e6d08ac9bbf767e782cbf1d0b`.
 
-<div class="ai">
-
 The requested 700k training, evaluation and checkpoint-verification scope is complete. The two-hour monitor is to be paused after final publication; the allocation remains retained. [status.py](status.py) reads state, [launch.py](launch.py) records the gated workflow, and [verify_launch.py](verify_launch.py) checks the launch. Checkpoints and large raw contact components remain remote; this report retains small receipts, per-chain summaries and compressed metrics.
-
-</div>

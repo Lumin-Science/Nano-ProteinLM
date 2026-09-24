@@ -60,11 +60,7 @@ The [resume investigation](resume-diagnostics/README.md) examines the 90k–120k
 
 The measured speed is **0.447 seconds/update**, projecting about **39.4 hours from launch**, including 30 evaluations and an overhead allowance. The initial finish estimate is **September 11 around 4 p.m. Toronto**, with roughly two hours uncertainty. Monitoring ran every two hours through completion. This launch snapshot predates the evaluated checkpoints above.
 
-<div class="ai">
-
 The [recipe](../../configs/nibi/setting3-nibi-b2048-400k.yaml) continues the verified 100k checkpoint with 300k additional optimizer steps. It preserves global batch 2,048 as **64 sequences/GPU × 8 GPUs × 4 accumulation**, context 512, FA3/BF16, the full Setting 3 architecture/optimizer, batch balance and sqrt loss. Base LR is 5e-4 and base WD is 0.01; Muon attention/FFN LRs remain 4.5e-4/3.75e-4 and WD 0.0075. Warmup remains 1,000 steps already completed; Stage 1 continues at constant LR without decay. The total endpoint is 400,000, not 400,000 additional.
-
-</div>
 
 Parent checkpoint: `/project/def-lsigal/muchenli/Nano-Protein-LM/checkpoints/nibi-paired-unique-b2048-100k-20260909/setting3/checkpoint-final.pt`
 

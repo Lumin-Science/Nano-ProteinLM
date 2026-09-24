@@ -15,11 +15,7 @@ whose independently verified manifest contains 665,970,495 training proteins:
 | OMG/IMG | 262,845,186 | 65,256,646,612 | 244 |
 | **Total** | **665,970,495** | **151,304,238,405** | **565** |
 
-<div class="ai">
-
 Each source also has one 4,096-protein validation shard, for 12,288 validation proteins in total. The complete artifact contains 568 train/validation shards and occupies 109,661,312,410 compressed bytes. Setup downloads 30 training shards by default (29,979,351 proteins), plus all validation shards. `bash runs/setup.sh --training-shards N` selects 3–565 whole training shards; choose a fresh `DATA_ROOT` for another selection. The direct data API also supports a requested sample budget. Both routes use checksum-bound source prefixes and always include complete MLM validation. The setup command separately installs the [frozen P@L bundle](#frozen-contact-evaluation-data).
-
-</div>
 
 The companion [raw clustering release](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
 preserves the source-specific 70%-identity representative FASTAs and cluster
@@ -35,46 +31,30 @@ also includes all three MLM validation shards.
 
 | Training shards | Source allocation | Training proteins | Stored training residues | Parquet GB | Parquet + prepared stores GB |
 |---|---|---:|---:|---:|---:|
-| <span class="ai">7 — historical sequential-search corpus</span> | 3 / 1 / 3 | 7,109,469 | 1,879,045,806 | 1.32 | 3.51 |
+| 7 — historical sequential-search corpus | 3 / 1 / 3 | 7,109,469 | 1,879,045,806 | 1.32 | 3.51 |
 | 30 — setup default | 13 / 3 / 14 | 29,979,351 | 8,053,052,338 | 5.62 | 15.00 |
 | 105 — 100k × 1,024 | 46 / 8 / 51 | 103,867,089 | 28,185,691,687 | 19.64 | 52.40 |
 | 209 — 100k × 2,048 | 91 / 16 / 102 | 206,909,262 | 56,102,947,191 | 39.09 | 104.30 |
 | 565 — full release | 92 / 229 / 244 | 665,970,495 | 151,304,238,405 | 109.66 | 290.27 |
 
-<div class="ai">
-
 Storage estimates use decimal GB and include MLM validation: the cache holds compressed Parquet, and prepared stores use one byte per residue plus a 44-byte index entry per protein (offset, length and digest). Array headers and receipts add a small amount. The P@L v2 archive is 167,956,554 bytes and expands to 663,147,593 bytes; reserve about 0.9 GB with filesystem overhead. Allow roughly 20 GB for 30 shards, 60 GB for 105, 120 GB for 209 or 320 GB for the full release, with separate space for dependencies, checkpoints and evaluation outputs.
-
-</div>
-
-<div class="ai">
 
 At 100k steps, global batches 1,024 and 2,048 sample 102.4M and 204.8M proteins respectively. The 105- and 209-shard rows cover the expected draws under the normalized 36:11:54 mixture before sampling headroom. Source selection is stochastic. The trainer checks each source with 1% headroom by default and stops on exhaustion unless the recipe explicitly permits resampling; 30 shards are insufficient for either no-repeat run.
 
-</div>
-
-<div class="ai">
-
 For the default mixture at 100k steps and batch 1,024, use `bash runs/setup.sh --training-samples 103424000` in a fresh `DATA_ROOT`; batch 2,048 needs `--training-samples 206848000`. These budgets include the default 1% headroom, and the planner rounds each source up to whole shards. Changed mixtures require their own source-coverage check. `DATA_COVERAGE.json` records the resolved budget and policy. `data_resampling: allow` enables intentional repeated-data experiments, which must report their reuse; headroom alone is not a guarantee against stochastic exhaustion.
-
-</div>
 
 **Stored residues are not the training token budget.** Stage 1 crops proteins
 to at most 510 residues and adds BOS/EOS; padding is excluded from model tokens.
 The completed 100k-step, batch-1,024 default-recipe run sampled 102.4M proteins and
-processed 24,200,224,761 model tokens. This defines the <span class="ai">24.20B-token final-evaluation
-target</span>; actual steps can differ with another sequence-length mix.
+processed 24,200,224,761 model tokens. This defines the 24.20B-token final-evaluation
+target; actual steps can differ with another sequence-length mix.
 Data can be reused across seeds and recipes without downloading it again.
-
-<div class="ai">
 
 Historical campaigns retain their seven-shard corpus. Use `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` to reproduce those records. The current [AutoResearch protocol](AUTORESEARCH.md#design-space) permits data selection and source-mixture changes within the provided corpus; record the selected shards, mixture and source exposure for each recipe. Existing prepared roots retain their saved shard count, so select a fresh root to change it.
 
-</div>
-
 ## Nano-ESMC production funnel
 
-The following table mirrors Table 5 of the <span class="ai">[technical report](../.dev/report/main.pdf)</span> and is the central
+The following table mirrors Table 5 of the [technical report](../.dev/report/main.pdf) and is the central
 ledger for the complete path from pinned upstream objects to the public
 Hugging Face commit. Rejection columns are disjoint accounting categories.
 For OMG/IMG, source assignment occurs before the length and ambiguity filters.
@@ -237,11 +217,7 @@ pre-clustering context, not the Table S2 pool used for the comparison above.
 Because ESMC does not publish a source-by-source filtering ledger, we do not
 equate those numbers with any specific Nano-ESMC pre-clustering column.
 
-<div class="ai">
-
 This comparison aligns processing stages; it does not establish identical processing. The public OMG/IMG arm is an open surrogate for the JGI role rather than the authors' July 2023 JGI snapshot. Nano-ESMC follows the reported source roles, source-wise 70%-identity reduction, and Stage-1 36:11:54 sampling weights. It samples one available representative per reconstructed cluster rather than the paper's cluster-then-member draw because the transferred cluster-membership tables do not contain member sequences. ESMC Stage 2 uses 63:6:31 weights and a 2,048-token context, which lies outside the current 171M AutoResearch task's fixed Stage-1 context.
-
-</div>
 
 The source publications are Suzek et al.
 ([UniRef](https://doi.org/10.1093/bioinformatics/btu739)), Richardson et al.
@@ -250,11 +226,7 @@ The source publications are Suzek et al.
 
 ## Frozen contact evaluation data
 
-<div class="ai">
-
 The [P@L setup bundle](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/blob/5eae416dbb415d2df206b9641dd5ddabe04371dc/evaluation/contact-evaluation-v2.tar.gz) contains 16 probe-fit chains, four probe-validation chains, all 20,775 evaluation chains and six frozen evaluator source files. Version 2 removes experiment-report links and machine paths from packaging metadata; chain payloads, splits and numerical source files retain their original hashes. Fresh setup downloads this immutable release. Existing verified research installations remain supported, and historical downloads remain available at their original revision.
-
-</div>
 
 Structures come from the **2024-02-28 RCSB Protein Data Bank snapshot**. Chain
 selection and preprocessing remain unchanged: the benchmark is paper-faithful,
@@ -277,8 +249,4 @@ Its six source files are copied byte-for-byte from the recorded evaluator bundle
 The payload inventory hash is
 `1b73f5f466420c8d0c74be452ebabe46af837482cee357674cad01d99e6f4b70`.
 
-<div class="ai">
-
 Setup verifies the archive checksum, source files, manifest, inventory and every chain payload before reporting success. Both `evaluation/contact/` and `evaluation/source/` live beneath `DATA_ROOT`. The [packaging utility](../.dev/scripts/package_contact_evaluation.py) reproduces the v2 archive from a verified clean evaluation root without changing its scientific payloads.
-
-</div>

@@ -3,11 +3,7 @@
 Preserved from the [README at `0bba9f3`](https://github.com/Lumin-Science/Nano-Protein-LM/blob/0bba9f30efdadc9c53ef549d6236226e38c03b7c/README.md#scale-up-leaderboard) before its reorganization.
 The original table, numbers, discussion and numbering are retained below; relative links are adjusted for this archive directory. This is a historical snapshot, not live training status.
 
-<div class="ai">
-
 In the reorganized [historical scale-up table](../leaderboard/nanop-best-171m-round1.md#1-the-complete-comparison), tied embeddings are **Setting 5**, corresponding to the historical **Setting 4** below. Current change 4 denotes FFN narrowing and is excluded from the fixed-size tests. The previous RoPE20k R02 row remains a historical reference.
-
-</div>
 
 ## Original leaderboard
 
@@ -44,9 +40,5 @@ and P@L uses the same 20,775 chains. Intervals are 5,000-resample chain-bootstra
 95% CIs, not training-seed uncertainty; each recipe has one training seed.
 Training times exclude evaluation and are approximate to the minute.
 
-<div class="ai">
-
 See **[best recipe versus baseline: differences, figures, and worked examples](../leaderboard/nanop-best-171m-round1.md)**, the [complete results and adjacent comparisons](../../.dev/reports/fir-r02-rope10k-100k-20260906/README.md), and the [historical baseline/R02 records](../../.dev/reports/fir-171m-100k-20260906/README.md). The narrower-FFN change remains deferred in [TODO](../../TODO.md).
-
-</div>
 

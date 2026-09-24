@@ -16,23 +16,13 @@ analysis. Training and autoresearch runtime commands live in
   payload and evaluator with checksums for installation.
 - [Historical round summary](summarize_autoresearch_round.py): reads the older
   campaign's output layout.
-- <span class="ai">[Clean starter](build_clean_starter.py): builds and audits the history-free AutoResearch starter from the plain reference. Maintainers only; it is never shipped to agents.</span>
+- [Clean starter](build_clean_starter.py): builds and audits the history-free AutoResearch starter from the plain reference. Maintainers only; it is never shipped to agents.
 
 Run plotting tools from a separate Matplotlib environment, as documented in [sequential-search plot guide](../../docs/AUTORESEARCH_BASELINE.md#evidence-and-plot-regeneration). The training dependency lock is unchanged.
 
-<div class="ai">
-
 ## Publishing an AutoResearch starter release
 
-</div>
-
-<div class="ai">
-
 Each release is a single root commit published as a tag; participants clone it with the command in [AUTORESEARCH.md](../../docs/AUTORESEARCH.md#preparation). Commit the source changes first, set `NAME` in the builder to the new tag, then build, audit and publish from the repository root:
-
-</div>
-
-<div class="ai">
 
 ```bash
 release=autoresearch-v0
@@ -45,10 +35,4 @@ git tag -a "$release" FETCH_HEAD -m "AutoResearch starter $release"
 git push origin "$release"
 ```
 
-</div>
-
-<div class="ai">
-
 Before pushing, clone the tag with the documented command from a local `file://` URL and run the starter's `.dev/tests` in the clone. To update an existing release, keep a local backup tag of its old commit, re-create the tag with `git tag -f -a` and push it with `git push -f origin "$release"`; workspaces cloned earlier keep the old commit, so tell participants to re-clone.
-
-</div>
