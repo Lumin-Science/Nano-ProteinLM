@@ -32,10 +32,10 @@ git clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 \
   https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch
 cd nano-protein-autoresearch
 git remote remove origin
-bash runs/setup.sh
+bash scripts/setup.sh
 ```
 
-The clone contains one root commit and no other branches, and starts on a detached HEAD; create a branch before committing search changes. While the repository is private, use credentials with read access or the SSH URL `git@github.com:Lumin-Science/Nano-ProteinLM.git`. An ordinary branch checkout in a research clone retains old Git objects and is not a clean benchmark workspace.
+The clone contains one root commit and no other branches, and starts on a detached HEAD; create a branch before committing search changes. An ordinary branch checkout in a research clone retains old Git objects and is not a clean benchmark workspace.
 
 Data and outputs default to `data/` and `outputs/` inside the workspace; set `DATA_ROOT` and `OUTPUT_ROOT` in `.env` to change them. Training stores are under `$DATA_ROOT/training`; frozen contact assets and evaluator sources are under `$DATA_ROOT/evaluation/contact` and `$DATA_ROOT/evaluation/source`. Setup defaults to 30 training shards containing 29,979,351 proteins and includes all MLM validation and contact assets. Allow roughly 20 GB for data plus space for dependencies, checkpoints and outputs. Set `--training-shards N` during preparation to change the initial corpus size. Provision enough records from each source for the chosen mixture and budget; retain `DATA_COVERAGE.json` and report source exposure and any permitted data reuse.
 

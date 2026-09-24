@@ -4,7 +4,7 @@ Settings. Take the task and program from the user's request. Use the defaults be
 - Task (<task>): tasks/171m-validation-loss.md. Alternative: tasks/171m-p-at-l.md optimizes contact P@L.
 - Program (<program>): autoresearch/karpathy_ar_reward_gate.md. Alternative: autoresearch/karpathy_ar_agent_gate.md lets the agent decide what to keep.
 - Workspace (<workspace>): nano-protein-autoresearch in the current folder.
-- Environment: the uv environment that runs/setup.sh installs from the release's lock file.
+- Environment: the uv environment that scripts/setup.sh installs from the release's lock file.
 - Data and outputs: data/ and outputs/ inside the workspace, the default DATA_ROOT and OUTPUT_ROOT, with the default 30 training shards (about 20 GB).
 - Round limit (<round limit>): the full 72-round allowance.
 - tmux session (<session>): nanoprotein-ar
@@ -20,9 +20,8 @@ B. Install the loop skill for the search agent, naming it with -a (for example c
 C. Clone only the release commit into the workspace and remove the remote:
    git clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 https://github.com/Lumin-Science/Nano-ProteinLM.git <workspace>
    cd <workspace> && git remote remove origin
-   If HTTPS asks for credentials, use git@github.com:Lumin-Science/Nano-ProteinLM.git instead.
 
-D. Run `bash runs/setup.sh` in the workspace and let it finish; it installs the environment and downloads and verifies the data. Only if the user's request names other data or output folders, first write DATA_ROOT=<path> and OUTPUT_ROOT=<path> to .env in the workspace.
+D. Run `bash scripts/setup.sh` in the workspace and let it finish; it installs the environment and downloads and verifies the data. Only if the user's request names other data or output folders, first write DATA_ROOT=<path> and OUTPUT_ROOT=<path> to .env in the workspace.
 
 E. Start a detached tmux session named <session> in the workspace, running the search agent. If the agent asks to trust the folder, accept. If it asks for anything else, such as signing in, stop and tell the user. Once its input box is ready, type this prompt into it with `tmux send-keys -l`, single-quoted, and do not press Enter:
    Use the ar-loop-n-sleep skill. Read <task> and <program>. Use the allocated four GPUs. Run sequential AutoResearch for <round limit>, following the program, then stop without another wakeup.

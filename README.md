@@ -13,9 +13,9 @@ Our goal is to help researchers train better protein embeddings for downstream b
 
 ## Discovering better protein-model training recipes
 
-![Matched 171M models: training loss on the left; contact P@L and validation loss on the right. Blue is the ESMC-like AdamW baseline and orange is nanop-best-171m-round1.](.dev/reports/readme-figures-20260914/matched-100k-curves.png)
+![Matched 171M models: training loss on the left; contact P@L and validation loss on the right. Blue is the ESMC-like AdamW baseline and orange is nanop-best-171m-round1.](docs/figures/readme/matched-100k-curves.png)
 
-GPT-6 and human effort produced our current best recipe over two rounds of [sequential AutoResearch](docs/AUTORESEARCH_BASELINE.md): round 1 found the Muon, batch-balancing and sqrt-loss changes, and round 2 added separate Q/K/V Muon updates. The curves compare the round-1 recipe with our ESMC-like AdamW baseline under the previous protocol: the same data, batch size 2,048 and 100k updates on four H100s, with one training seed each. The round-1 recipe improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. [Round-1 recipe](docs/leaderboard/nanop-best-171m-round1.md) · [Figure data and methods](.dev/reports/readme-figures-20260914/README.md).
+GPT-6 and human effort produced our current best recipe over two rounds of [sequential AutoResearch](docs/AUTORESEARCH_BASELINE.md): round 1 found the Muon, batch-balancing and sqrt-loss changes, and round 2 added separate Q/K/V Muon updates. The curves compare the round-1 recipe with our ESMC-like AdamW baseline under the previous protocol: the same data, batch size 2,048 and 100k updates on four H100s, with one training seed each. The round-1 recipe improves contact prediction (**36.567% versus 28.173% P@L**) and lowers MLM validation loss (**2.376 versus 2.415**), with faster learning early in training. [Round-1 recipe](docs/leaderboard/nanop-best-171m-round1.md).
 
 ### Final-evaluation leaderboard
 
@@ -51,7 +51,7 @@ The same setup supports ordinary research and the fixed autoresearch task.
 
 We curate a public protein corpus following the ESMC data recipe, with filtering and evaluation decontamination before training.
 
-![Data preparation: public protein sequences are filtered, deduplicated, clustered, decontaminated against protected evaluations, then split and verified.](.dev/reports/readme-figures-20260914/data-preparation.png)
+![Data preparation: public protein sequences are filtered, deduplicated, clustered, decontaminated against protected evaluations, then split and verified.](docs/figures/readme/data-preparation.png)
 
 <table align="center">
   <tr>
@@ -86,14 +86,14 @@ We open-sourced both the [🤗 Processed data](https://huggingface.co/datasets/L
 ```bash
 git clone https://github.com/Lumin-Science/Nano-ProteinLM.git
 cd Nano-ProteinLM
-bash runs/setup.sh
+bash scripts/setup.sh
 ```
 
 The default downloads **30/565 training shards (29.98M proteins; 5.62 GB compressed, including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. For a larger training set:
 
 ```bash
 # In a fresh DATA_ROOT: 100k steps × batch 1,024, with 1% sampling headroom.
-bash runs/setup.sh --training-samples 103424000
+bash scripts/setup.sh --training-samples 103424000
 ```
 
 The [earlier search rounds](docs/AUTORESEARCH_BASELINE.md#two-rounds-under-the-previous-search-setting) used a seven-shard selection. The current [AutoResearch protocol](docs/AUTORESEARCH.md#design-space) permits data selection and source-mixture changes within the provided training corpus. Size the download for the run before training; [DATA.md](docs/DATA.md#sizing-a-training-download) explains source coverage and the default no-resampling policy.
@@ -123,10 +123,9 @@ Python APIs so you can adapt the commands to your own research.
 
 > [!NOTE]
 > **Our default setting is a 171M variant, designed for small-budget training experiments.** Its baseline backbone follows the paper's 170M scaling model: 24 layers, width 768, and approximately 170.7M parameters ([ESMC Appendix A.1.4.1](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-> Archived [300M and 600M presets](.dev/configs/archive/ESMC_REFERENCE_PRESETS.md) record the original ESMC **300M** and **600M** architectures.
 
 ```bash
-bash runs/speedrun.sh
+bash scripts/speedrun.sh
 ```
 
 This trains [nanop-best-171m-round2](configs/test-100k/nanop-best-171m-round2.yaml) for **100,000 Stage-1 steps on four GPUs**, global batch **1,024**, context **512**, **BF16/FA3**, base learning rate **5e-4**, weight decay **0.01** and **1,000 warmup steps**. A 16-hour training guard stops an overlong run. Checkpoints, the resolved recipe and training records are saved under `$OUTPUT_ROOT/default-100k/`, including the full final optimizer state. See [training and continuation](docs/USAGE.md#training) for the resume option. Repeats require a fresh run name.
@@ -141,7 +140,7 @@ Recipes live in two folders: [configs/autoresearch/](configs/autoresearch/) for 
 After training finishes, evaluate a completed run with:
 
 ```bash
-bash runs/speedrun.sh --evaluate default-100k
+bash scripts/speedrun.sh --evaluate default-100k
 ```
 
 This loads your paths, reports MLM loss on **all 12,288 held-out validation proteins**, and scores P@L over **all 20,775 chains** using the accelerated parallel evaluator. Replace `default-100k` with your run name; additional [evaluation options](docs/EVALUATION.md#evaluation-execution) can follow it. Evaluation is separate from training and keeps the same sample counts for short training trials.
@@ -160,14 +159,14 @@ Use NanoProteinLM to compare AutoResearch methods under a fixed number of search
 
 ### Prepare an AutoResearch workspace
 
-Benchmark agents start from the `autoresearch-v0` release tag, a single root commit with the plain ESMC implementation and no research history. On Linux with four matching H100 or four matching L40S GPUs, clone only that commit, remove the remote, then install the locked environment and verified data. [Preparation and information-access rules](docs/AUTORESEARCH.md#preparation) explain the release tag, private-repository access and the prohibition on looking up prior findings.
+Benchmark agents start from the `autoresearch-v0` release tag, a single root commit with the plain ESMC implementation and no research history. On Linux with four matching H100 or four matching L40S GPUs, clone only that commit, remove the remote, then install the locked environment and verified data. [Preparation and information-access rules](docs/AUTORESEARCH.md#preparation) explain the release tag and the prohibition on looking up prior findings.
 
 ```bash
 git clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 \
   https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch
 cd nano-protein-autoresearch
 git remote remove origin
-bash runs/setup.sh
+bash scripts/setup.sh
 ```
 
 [Full AutoResearch protocol](docs/AUTORESEARCH.md)
@@ -176,7 +175,7 @@ bash runs/setup.sh
 
 Here we provide a baseline of autoresearch, see [AUTORESEARCH_BASELINE.md](docs/AUTORESEARCH_BASELINE.md) for more details, including its pipeline, two acceptance programs, acceptance decisions and commands.
 
-![Validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](.dev/reports/readme-figures-20260914/validation-loss.png)
+![Validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](docs/figures/readme/validation-loss.png)
 
 ### Launch AutoResearch
 
@@ -186,9 +185,9 @@ On your GPU compute node, go to the folder you want to work in, start any coding
 Read https://raw.githubusercontent.com/Lumin-Science/Nano-ProteinLM/autoresearch-v0/autoresearch/setup_karpathy_ar.txt and set up sequential AutoResearch for NanoProteinLM on tasks/171m-validation-loss.md using autoresearch/karpathy_ar_reward_gate.md.
 ```
 
-Name `tasks/171m-p-at-l.md` to optimize contact P@L, or `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep; without them, the agent uses the validation-loss task and the reward gate. Everything else uses the defaults in [setup_karpathy_ar.txt](autoresearch/setup_karpathy_ar.txt): the uv environment from `runs/setup.sh`, data and outputs in the workspace's `data/` and `outputs/`, all 72 rounds, and a tmux session named `nanoprotein-ar`. The agent sets everything up without asking questions and leaves the search agent in that session with its prompt typed. Run `tmux attach -t nanoprotein-ar` and press Enter to start.
+Name `tasks/171m-p-at-l.md` to optimize contact P@L, or `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep; without them, the agent uses the validation-loss task and the reward gate. Everything else uses the defaults in [setup_karpathy_ar.txt](autoresearch/setup_karpathy_ar.txt): the uv environment from `scripts/setup.sh`, data and outputs in the workspace's `data/` and `outputs/`, all 72 rounds, and a tmux session named `nanoprotein-ar`. The agent sets everything up without asking questions and leaves the search agent in that session with its prompt typed. Run `tmux attach -t nanoprotein-ar` and press Enter to start.
 
-The node needs tmux, git and Node.js; the agent installs uv if it is missing. While the repository is private, the agent also needs GitHub access, for example through `gh auth login`. This flow runs our baseline method; a benchmark comparison between methods should use an organizer-prepared workspace and a fresh agent session, as the [protocol](docs/AUTORESEARCH.md#preparation) requires.
+The node needs tmux, git and Node.js; the agent installs uv if it is missing. This flow runs our baseline method; a benchmark comparison between methods should use an organizer-prepared workspace and a fresh agent session, as the [protocol](docs/AUTORESEARCH.md#preparation) requires.
 
 We ran two rounds of this method under an earlier search setting: round 1 optimized validation loss over 38 candidates, and round 2 optimized P@L and contributed separate Q/K/V Muon updates. The figure above shows round 1; each point is a two-seed mean ± sample SD, with one hour on four L40S GPUs per seed. See [the protocol](docs/AUTORESEARCH.md) for the design space, search budget and final evaluation, [the leaderboard](docs/LEADERBOARD.md) for results, and [the sequential-search page](docs/AUTORESEARCH_BASELINE.md) for both rounds and their records.
 

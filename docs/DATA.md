@@ -15,7 +15,7 @@ whose independently verified manifest contains 665,970,495 training proteins:
 | OMG/IMG | 262,845,186 | 65,256,646,612 | 244 |
 | **Total** | **665,970,495** | **151,304,238,405** | **565** |
 
-Each source also has one 4,096-protein validation shard, for 12,288 validation proteins in total. The complete artifact contains 568 train/validation shards and occupies 109,661,312,410 compressed bytes. Setup downloads 30 training shards by default (29,979,351 proteins), plus all validation shards. `bash runs/setup.sh --training-shards N` selects 3–565 whole training shards; choose a fresh `DATA_ROOT` for another selection. The direct data API also supports a requested sample budget. Both routes use checksum-bound source prefixes and always include complete MLM validation. The setup command separately installs the [frozen P@L bundle](#frozen-contact-evaluation-data).
+Each source also has one 4,096-protein validation shard, for 12,288 validation proteins in total. The complete artifact contains 568 train/validation shards and occupies 109,661,312,410 compressed bytes. Setup downloads 30 training shards by default (29,979,351 proteins), plus all validation shards. `bash scripts/setup.sh --training-shards N` selects 3–565 whole training shards; choose a fresh `DATA_ROOT` for another selection. The direct data API also supports a requested sample budget. Both routes use checksum-bound source prefixes and always include complete MLM validation. The setup command separately installs the [frozen P@L bundle](#frozen-contact-evaluation-data).
 
 The companion [raw clustering release](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
 preserves the source-specific 70%-identity representative FASTAs and cluster
@@ -41,7 +41,7 @@ Storage estimates use decimal GB and include MLM validation: the cache holds com
 
 At 100k steps, global batches 1,024 and 2,048 sample 102.4M and 204.8M proteins respectively. The 105- and 209-shard rows cover the expected draws under the normalized 36:11:54 mixture before sampling headroom. Source selection is stochastic. The trainer checks each source with 1% headroom by default and stops on exhaustion unless the recipe explicitly permits resampling; 30 shards are insufficient for either no-repeat run.
 
-For the default mixture at 100k steps and batch 1,024, use `bash runs/setup.sh --training-samples 103424000` in a fresh `DATA_ROOT`; batch 2,048 needs `--training-samples 206848000`. These budgets include the default 1% headroom, and the planner rounds each source up to whole shards. Changed mixtures require their own source-coverage check. `DATA_COVERAGE.json` records the resolved budget and policy. `data_resampling: allow` enables intentional repeated-data experiments, which must report their reuse; headroom alone is not a guarantee against stochastic exhaustion.
+For the default mixture at 100k steps and batch 1,024, use `bash scripts/setup.sh --training-samples 103424000` in a fresh `DATA_ROOT`; batch 2,048 needs `--training-samples 206848000`. These budgets include the default 1% headroom, and the planner rounds each source up to whole shards. Changed mixtures require their own source-coverage check. `DATA_COVERAGE.json` records the resolved budget and policy. `data_resampling: allow` enables intentional repeated-data experiments, which must report their reuse; headroom alone is not a guarantee against stochastic exhaustion.
 
 **Stored residues are not the training token budget.** Stage 1 crops proteins
 to at most 510 residues and adds BOS/EOS; padding is excluded from model tokens.
@@ -50,7 +50,7 @@ processed 24,200,224,761 model tokens. This defines the 24.20B-token final-evalu
 target; actual steps can differ with another sequence-length mix.
 Data can be reused across seeds and recipes without downloading it again.
 
-Historical campaigns retain their seven-shard corpus. Use `bash runs/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` to reproduce those records. The current [AutoResearch protocol](AUTORESEARCH.md#design-space) permits data selection and source-mixture changes within the provided corpus; record the selected shards, mixture and source exposure for each recipe. Existing prepared roots retain their saved shard count, so select a fresh root to change it.
+Historical campaigns retain their seven-shard corpus. Use `bash scripts/setup.sh --training-shards 7` in a dedicated `DATA_ROOT` to reproduce those records. The current [AutoResearch protocol](AUTORESEARCH.md#design-space) permits data selection and source-mixture changes within the provided corpus; record the selected shards, mixture and source exposure for each recipe. Existing prepared roots retain their saved shard count, so select a fresh root to change it.
 
 ## Nano-ESMC production funnel
 
@@ -249,4 +249,4 @@ Its six source files are copied byte-for-byte from the recorded evaluator bundle
 The payload inventory hash is
 `1b73f5f466420c8d0c74be452ebabe46af837482cee357674cad01d99e6f4b70`.
 
-Setup verifies the archive checksum, source files, manifest, inventory and every chain payload before reporting success. Both `evaluation/contact/` and `evaluation/source/` live beneath `DATA_ROOT`. The [packaging utility](../.dev/scripts/package_contact_evaluation.py) reproduces the v2 archive from a verified clean evaluation root without changing its scientific payloads.
+Setup verifies the archive checksum, source files, manifest, inventory and every chain payload before reporting success. Both `evaluation/contact/` and `evaluation/source/` live beneath `DATA_ROOT`.

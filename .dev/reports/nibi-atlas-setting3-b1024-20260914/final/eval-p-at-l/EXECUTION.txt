@@ -1,7 +1,0 @@
-started_at_utc=2026-09-14T11:04:33Z
-checkpoint=/scratch/muchenli/Nano-Protein-LM-nibi-atlas-setting3-b1024-20260914/full-training/checkpoint-final.pt
-visible_gpus=0,1,2,3
-contact_chains=20775
-contact_shards=16
-finished_at_utc=2026-09-14T11:07:40Z
-evaluation_wall_seconds=187

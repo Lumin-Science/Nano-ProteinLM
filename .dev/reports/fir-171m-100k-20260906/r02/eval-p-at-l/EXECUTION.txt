@@ -1,7 +1,0 @@
-started_at_utc=2026-09-06T20:41:26Z
-checkpoint=/scratch/muchenli/Nano-Protein-LM-paired-100k-20260906/r02-fc10212/checkpoint-final.pt
-visible_gpus=0,1,2,3
-contact_chains=20775
-contact_shards=16
-finished_at_utc=2026-09-06T20:44:52Z
-evaluation_wall_seconds=206

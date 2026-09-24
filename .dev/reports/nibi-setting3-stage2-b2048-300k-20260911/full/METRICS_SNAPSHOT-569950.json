@@ -1,6 +1,0 @@
-{
-  "snapshot_file": "metrics-through-569950.jsonl.gz",
-  "last_logged_step": 569950,
-  "sha256": "fd8d60d2fdc65087cbb870441edea268fd37f9bcddcf6b5e7432b7459e565728",
-  "description": "Metric snapshot used in the one-time independent 560k endpoint audit."
-}

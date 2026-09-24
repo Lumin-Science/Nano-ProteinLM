@@ -1,7 +1,0 @@
-{
-  "cause": "Queue replaced PATH and hid the compute Git executable. Both recipes exited before configuration or training.",
-  "fix": "Preserve inherited runtime PATH after prepending system and Slurm paths. Frozen source and qualified recipes unchanged.",
-  "source_commit": "bc54124abe193623abf64b44e65b881cded65f48",
-  "time_utc": "2026-09-09T03:01:23.896612+00:00",
-  "archive": "/scratch/muchenli/Nano-Protein-LM-nibi-paired-unique-b2048-100k-20260909/queue-attempts/attempt-1-path-cleared"
-}

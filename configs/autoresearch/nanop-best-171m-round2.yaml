@@ -1,6 +1,5 @@
 # nanop-best-171m-round2: round 1 plus separate Q/K/V Muon updates.
 # Backbone: paper 170M scaling architecture, Appendix A.1.4.1, Table S4.
-# Q/K/V update: .dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md
 # Search setting: global batch 256 (64 x 1 accumulation x 4 GPUs), 500 warmup steps, then constant LR.
 # The task command sets the training time, seed and attention backend.
 schema_version: 1

@@ -28,9 +28,9 @@ balancing, and square-root masked-target weighting. RoPE remains 10k, FFN
 width remains 2048, and its embeddings are untied.
 
 The next scale-up comparison uses **eight H100s, batch 2,048, 100,000 steps,
-and full evaluation every 10,000 steps** on Nibi. The [AdamW baseline
-learning curve](../../.dev/reports/nibi-baseline-b2048-100k-eval10k-20260908/README.md)
-is followed by [Setting 3](../../.dev/reports/nibi-setting3-b2048-100k-eval10k-20260908/README.md).
+and full evaluation every 10,000 steps** on Nibi. The AdamW baseline
+learning curve
+is followed by Setting 3.
 Both preserve their full final optimizer checkpoints for continuation. These
 runs have twice the sequence exposure of the four-GPU table above.
 
@@ -40,5 +40,5 @@ and P@L uses the same 20,775 chains. Intervals are 5,000-resample chain-bootstra
 95% CIs, not training-seed uncertainty; each recipe has one training seed.
 Training times exclude evaluation and are approximate to the minute.
 
-See **[best recipe versus baseline: differences, figures, and worked examples](../leaderboard/nanop-best-171m-round1.md)**, the [complete results and adjacent comparisons](../../.dev/reports/fir-r02-rope10k-100k-20260906/README.md), and the [historical baseline/R02 records](../../.dev/reports/fir-171m-100k-20260906/README.md). The narrower-FFN change remains deferred in [TODO](../../TODO.md).
+See **[best recipe versus baseline: differences, figures, and worked examples](../leaderboard/nanop-best-171m-round1.md)**, the complete results and adjacent comparisons, and the historical baseline/R02 records. The narrower-FFN change remains deferred in [TODO](../../.dev/TODO.md).
 

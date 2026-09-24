@@ -3,8 +3,8 @@
 ## Setup
 
 The [README](../README.md#setting-up-data--environments) contains the supported setup and training
-quickstart. Run `bash runs/setup.sh` to prepare the environment and
-training data and both MLM/P@L evaluation assets, or `bash runs/speedrun.sh` to perform setup and train the default
+quickstart. Run `bash scripts/setup.sh` to prepare the environment and
+training data and both MLM/P@L evaluation assets, or `bash scripts/speedrun.sh` to perform setup and train the default
 recipe in one call. The only local settings are `DATA_ROOT` and `OUTPUT_ROOT`
 in an optional `.env`; defaults are the repository's `data/` and `outputs/`.
 
@@ -24,12 +24,12 @@ For a different training corpus size, choose a fresh `DATA_ROOT` in `.env` and r
 
 ```bash
 # 100k steps × batch 1,024, with 1% sampling headroom for the default mixture.
-bash runs/setup.sh --training-samples 103424000
+bash scripts/setup.sh --training-samples 103424000
 ```
 
 With `--training-shards N`, the range is **3–565 total training shards**, with at least one per source. Selection extends the source with the least coverage of the 36:11:54 sampling mixture; all selections are deterministic source prefixes. `565` selects the entire training release. Setup without a selection argument reuses the stored shard count on later calls, including calls from speedrun. An explicit different count refuses to overwrite existing prepared data; use another root for that experiment.
 
-Historical campaigns used seven shards; reproduce those records with `bash runs/setup.sh --training-shards 7` in a separate `DATA_ROOT`. The current protocol permits data selection and source-mixture changes within the provided corpus. Prepare enough data for the selected recipe and retain its manifest.
+Historical campaigns used seven shards; reproduce those records with `bash scripts/setup.sh --training-shards 7` in a separate `DATA_ROOT`. The current protocol permits data selection and source-mixture changes within the provided corpus. Prepare enough data for the selected recipe and retain its manifest.
 
 For full control, the ordinary data API accepts either `--training-shards` or
 `--training-samples`; it always includes all MLM validation shards. Inspect a
@@ -52,16 +52,16 @@ uv run --frozen python -m nanoprotein.setup_evaluation \
 
 The default 171M model targets small-budget experiments and follows the paper's
 170M scaling backbone ([Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
-[configs/README.md](../configs/README.md) lists the search-setting and final-evaluation recipes. Archived [300M and 600M presets](../.dev/configs/archive/ESMC_REFERENCE_PRESETS.md) record the original ESMC architecture shapes.
+[configs/README.md](../configs/README.md) lists the search-setting and final-evaluation recipes.
 
 The speedrun is a readable shell script that calls the ordinary Python API:
 
 ```bash
 # Same best recipe, fresh output directory, different seed.
-bash runs/speedrun.sh configs/test-100k/nanop-best-171m-round2.yaml round2-seed42 --seed 42
+bash scripts/speedrun.sh configs/test-100k/nanop-best-171m-round2.yaml round2-seed42 --seed 42
 
 # Plain ESMC reference with the same 100k-step budget.
-bash runs/speedrun.sh configs/test-100k/esmc-171m.yaml esmc-171m-100k
+bash scripts/speedrun.sh configs/test-100k/esmc-171m.yaml esmc-171m-100k
 ```
 
 It uses four GPUs. Arguments after the recipe and run name pass through to
@@ -115,7 +115,7 @@ The third argument supplies the training seed. Each task script loads `.env`, qu
 
 ## Evaluation
 
-After setup, `bash runs/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint on all 12,288 MLM validation proteins and parallel contact P@L over all 20,775 chains. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
+After setup, `bash scripts/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint on all 12,288 MLM validation proteins and parallel contact P@L over all 20,775 chains. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
 
 Setup installs all MLM validation data plus the frozen contact payload and evaluator under `$DATA_ROOT/evaluation/{contact,source}`. The installer checks all frozen hashes before reporting success and verifies existing installations on reuse. See [contact data provenance](DATA.md#frozen-contact-evaluation-data) and [evaluation provenance](EVALUATION.md#dataset-provenance-and-split-contract).
 
@@ -140,21 +140,13 @@ See [AGENTS.md](../AGENTS.md) for concise layout and modification guidance.
 src/nanoprotein/   # Training, models, data, evaluation and runtime CLI modules
 src/*.sh          # Optional parallel evaluation launchers
 configs/          # Search-setting (autoresearch/) and final-evaluation (test-100k/) recipes
-runs/             # Public setup and speedrun scripts
+scripts/          # Setup and speedrun scripts
 tasks/            # Autoresearch definition and measurement command
 autoresearch/     # Agent research-loop guidance
-.dev/scripts/     # Plotting, release preparation and historical analysis tools
-.dev/tests/       # Developer regression tests
-.dev/reports/     # Published experiment records and figures
+.dev/             # Development log, TODO list and technical report
 ```
 
 The package uses a standard src layout. Run setup after updating an existing
 checkout to refresh the installed package. Direct commands now use
 `python -m nanoprotein.train` and `python -m nanoprotein.evaluate`.
 Existing checkpoints remain loadable; saved recipe values and model names are unchanged.
-
-After setup, run the developer tests from the repository root:
-
-```bash
-.venv/bin/python -m unittest discover -s .dev/tests -q
-```

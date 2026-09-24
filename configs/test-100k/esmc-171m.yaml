@@ -2,7 +2,6 @@
 # Backbone: paper 170M scaling architecture, Appendix A.1.4.1, Table S4
 # (24 layers, width 768, 12 attention heads).
 # https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29
-# Source: .dev/configs/archive/esmc-171m-default-h100-fa3-b1024-stage1-100k.yaml, without its stopping budget.
 # Final evaluation: global batch 1,024 (64 x 4 accumulation x 4 GPUs), 1,000 warmup steps, then constant LR.
 # The token target and seed are set in the training command; see docs/AUTORESEARCH.md#final-evaluation.
 schema_version: 1

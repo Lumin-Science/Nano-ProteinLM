@@ -1,9 +1,0 @@
-{
-  "filled_residues": 43191517851,
-  "model_tokens": 43560157851,
-  "optimizer_step": 90000,
-  "path": "/scratch/muchenli/Nano-Protein-LM-nibi-b2048-100k-eval10k-20260908/full/checkpoint-latest.pt",
-  "sequences_seen": 184320000,
-  "sha256": "1729c864c15c5fd6fe655689a4bfbe2624381b355a39280b9586804383a50f14",
-  "training_seconds": 39134.42123640957
-}

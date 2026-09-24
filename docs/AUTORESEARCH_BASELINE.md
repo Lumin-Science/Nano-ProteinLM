@@ -22,7 +22,7 @@ Both rounds ran before the current search setting, so their numbers are reported
 
 ### Previous two-seed pipeline
 
-![Previous sequential AutoResearch loop: evaluate a baseline, propose one change, train and evaluate two seeds, keep or discard, record the result and repeat; the retained recipe then goes to a scale-up test.](../.dev/reports/readme-figures-20260914/autoresearch-loop.png)
+![Previous sequential AutoResearch loop: evaluate a baseline, propose one change, train and evaluate two seeds, keep or discard, record the result and repeat; the retained recipe then goes to a scale-up test.](figures/readme/autoresearch-loop.png)
 
 Both rounds ran this loop. The agent measured the starting recipe, proposed one change, trained and evaluated it with seeds 42 and 43, kept or discarded it, recorded the result, and proposed the next change from the retained recipe. After search, a human-run 100k-step scale-up tested the retained changes. Round 1 launched each seed with its [one-hour launcher](archive/runs/README.md); round 2's task command trained both seeds and wrote their mean, per-seed values and sample SD to `summary.json`.
 
@@ -46,9 +46,9 @@ Each campaign ran in its own worktree on a branch named `ar-YYMMDD-<name>`. It a
 
 Round 1 optimized MLM validation loss from the plain ESMC recipe. It evaluated a baseline and 38 candidate recipes, each with seeds 42 and 43: **78 runs, or 312 L40S GPU-hours**, excluding setup and evaluation. It kept a candidate when its mean validation-loss reduction exceeded that candidate's own two-seed sample SD.
 
-![Round-1 validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](../.dev/reports/readme-figures-20260914/validation-loss.png)
+![Round-1 validation-loss search across 38 rounds: orange trial means with sample-SD error bars and the retained recipe in blue.](figures/readme/validation-loss.png)
 
-Numbers 1–5 mark the accepted changes: Muon, batch balance, sqrt loss, narrower FFNs and tied embeddings. R30–R38 were discarded, leaving R29 as the final retained recipe. Values are mean ± sample SD over seeds 42 and 43, from the [method statistics](../.dev/reports/program2/methods.tsv); see the [full campaign record](../.dev/reports/program2/README.md#numbered-improvements).
+Numbers 1–5 mark the accepted changes: Muon, batch balance, sqrt loss, narrower FFNs and tied embeddings. R30–R38 were discarded, leaving R29 as the final retained recipe. Values are mean ± sample SD over seeds 42 and 43.
 
 | Round-1 retained recipe | Search validation loss ↓ | Approximate parameters |
 |---|---:|---:|
@@ -71,7 +71,7 @@ Changes 4–5 use roughly 142M parameters and predate the current ±5% size boun
 
 ### Round 2: contact P@L
 
-Round 2 optimized contact P@L, starting from nanop-best-171m-round1. The [search audit](../.dev/reports/cck-contact-ablations-100k-20260919/STATUS.md) records 38 audited candidates through trial 039 and two accepted additions: trial 011 added query centering with RMS restoration in the final eight layers, and trial 031 added separate Q/K/V Muon updates. Trial 040's training finished, but its audit and ledger entry were incomplete, so trial 031 remained the incumbent.
+Round 2 optimized contact P@L, starting from nanop-best-171m-round1. The search audit records 38 audited candidates through trial 039 and two accepted additions: trial 011 added query centering with RMS restoration in the final eight layers, and trial 031 added separate Q/K/V Muon updates. Trial 040's training finished, but its audit and ledger entry were incomplete, so trial 031 remained the incumbent.
 
 | Search result | Mean contact P@L | Recorded status |
 |---|---:|---|
@@ -83,17 +83,3 @@ Round 2 optimized contact P@L, starting from nanop-best-171m-round1. The [search
 A 100k-step three-arm study then removed each addition from the trial-031 recipe. The owner kept separate Q/K/V updates without query centering, giving [nanop-best-171m-round2](leaderboard/nanop-best-171m-round2.md); that page reports the study.
 
 **4. Separate Q/K/V Muon updates.** Muon orthogonalizes each weight-matrix update, so a fused QKV matrix is treated as one matrix. Round 2 gives Muon three views of that matrix, so the query, key and value updates are orthogonalized and scaled separately without changing the model or its parameters. See [the round-2 page](leaderboard/nanop-best-171m-round2.md#separate-qkv-muon-updates).
-
-## Evidence and plot regeneration
-
-The [78-run TSV through R38](../.dev/reports/program2/runs-through-r38.tsv), [per-method statistics through R29](../.dev/reports/program2/methods.tsv) and [original import and audit](../.dev/reports/program2/README.md) preserve round 1; the [scale-up run records](../.dev/reports/fir-r02-rope10k-100k-20260906/README.md) preserve its H100 comparison. The [search audit](../.dev/reports/cck-contact-ablations-100k-20260919/STATUS.md) and [promotion decision](../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md) preserve round 2. The [batch-2,048 comparison](../.dev/reports/readme-figures-20260914/README.md) of round 1 against AdamW is a separate experiment with its own records.
-
-To regenerate the round-1 curve from the repository root without changing the training environment:
-
-```bash
-python3 -m venv /tmp/nano-esmc-plot
-/tmp/nano-esmc-plot/bin/python -m pip install 'matplotlib==3.11.1'
-/tmp/nano-esmc-plot/bin/python .dev/scripts/plot_autoresearch_history.py
-```
-
-The script validates seed means, sample SDs and historical keep/discard decisions, then writes PNG and SVG files to `.dev/reports/program2/`. It reads `.dev/reports/program2/runs-through-r38.tsv` by default; pass `--input path/to/results.tsv` for another supported per-run or per-method log. The figure above uses the separately styled [README figure and source record](../.dev/reports/readme-figures-20260914/README.md).

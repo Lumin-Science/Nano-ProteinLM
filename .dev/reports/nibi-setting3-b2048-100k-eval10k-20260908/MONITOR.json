@@ -1,9 +1,0 @@
-{
-  "id": "launch-r02-rope10k-on-fir-at-4-am",
-  "kind": "heartbeat",
-  "name": "Monitor Fir and Nibi training every 2 hours",
-  "status": "ACTIVE",
-  "rrule": "FREQ=HOURLY;INTERVAL=2;BYMINUTE=0;BYSECOND=0",
-  "target_thread_id": "01a074b8-1cc2-7c81-9b5c-49e0d5f616fc",
-  "updated_at": 1788919565590
-}

@@ -1,9 +1,0 @@
-/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/runtime/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:1429: UserWarning: Inconsistent values: penalty=l1 with l1_ratio=0.0. penalty is deprecated. Please use l1_ratio only.
-  warnings.warn(
-/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/runtime/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:1403: FutureWarning: 'penalty' was deprecated in version 1.8 and will be removed in 1.10. To avoid this warning, leave 'penalty' set to its default value and use 'l1_ratio' or 'C' instead. Use l1_ratio=0 instead of penalty='l2', l1_ratio=1 instead of penalty='l1', l1_ratio set to a float between 0 and 1 instead of penalty='elasticnet', and C=np.inf instead of penalty=None.
-  warnings.warn(
-/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/runtime/lib/python3.12/site-packages/sklearn/linear_model/_logistic.py:1457: FutureWarning: 'n_jobs' has no effect since 1.8 and will be removed in 1.10. You provided 'n_jobs=1', please leave it unspecified.
-  warnings.warn(msg, category=FutureWarning)
-/scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/runtime/lib/python3.12/site-packages/sklearn/linear_model/_sag.py:348: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
-  warnings.warn(
-COMPLETED esm2 fit /scratch/muchenli/Nano-Protein-LM-released-150m-contact-20260913/esm2/PROBE.json

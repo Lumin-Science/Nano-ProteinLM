@@ -24,7 +24,7 @@ Both recipes keep the tokenizer, context 512, 24 layers of width 768 with 12 hea
 
 ## Separate Q/K/V Muon updates
 
-With `muon_split_qkv: true`, the fused QKV weight keeps its shape and checkpoint parameter name, while Muon receives three square, storage-sharing views. Momentum, orthogonalization and matrix-shape scaling are applied separately to Q, K and V. The forward pass, parameter count and DDP synchronization still use the fused tensor, so the change affects only the optimizer update. [Implementation](../../src/nanoprotein/split_qkv_muon.py) · [Promotion decision](../../.dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md).
+With `muon_split_qkv: true`, the fused QKV weight keeps its shape and checkpoint parameter name, while Muon receives three square, storage-sharing views. Momentum, orthogonalization and matrix-shape scaling are applied separately to Q, K and V. The forward pass, parameter count and DDP synchronization still use the fused tensor, so the change affects only the optimizer update. [Implementation](../../src/nanoprotein/split_qkv_muon.py).
 
 ## 100k-step component study under the previous protocol
 
@@ -36,4 +36,4 @@ Each arm trained from scratch for **100,000 updates on four L40S GPUs** with FA2
 | Full round-2 search recipe | On | On | 2.413881 | 33.485122% | 33.251392–33.716149% | 37.7056 |
 | No separate Q/K/V | Off | On | 2.416150 | 32.767462% | 32.535210–32.998056% | 37.2700 |
 
-With query centering and RMS restoration enabled, separate Q/K/V updates improved P@L by **0.717660 percentage points**. Adding centering and RMS restoration to the split-Q/K/V recipe changed P@L by **+0.035352 points** and validation loss by **+0.003846**, so the owner kept the simpler recipe with the lower validation loss. There is no arm with both additions disabled, so the study cannot isolate the standalone Q/K/V gain over round 1. Each arm used one training seed; the intervals measure variation across contact chains, not training seeds. See the [comparison receipt](../../.dev/reports/cck-contact-ablations-100k-20260919/COMPARISON.json) and [study report](../../.dev/reports/cck-contact-ablations-100k-20260919/STATUS.md).
+With query centering and RMS restoration enabled, separate Q/K/V updates improved P@L by **0.717660 percentage points**. Adding centering and RMS restoration to the split-Q/K/V recipe changed P@L by **+0.035352 points** and validation loss by **+0.003846**, so the owner kept the simpler recipe with the lower validation loss. There is no arm with both additions disabled, so the study cannot isolate the standalone Q/K/V gain over round 1. Each arm used one training seed; the intervals measure variation across contact chains, not training seeds.

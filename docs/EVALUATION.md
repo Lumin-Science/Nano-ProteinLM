@@ -22,7 +22,7 @@ MLM validation scores every protein in the three held-out validation shards: **1
 
 Proteins longer than 510 residues are cropped to fit the 512-token context with BOS and EOS. Each protein's crop offset and 15% mask positions come from a random generator seeded by the fixed mask seed 20260821 and the protein's SHA-256. They do not depend on batch size, protein order, GPU count or the global random state, so `--validation-batch-size` changes only throughput. The receipt records the protocol, settings, a SHA-256 of the evaluated protein digests (`manifest_sha256`), per-source mean losses and the batch size used.
 
-The earlier 4,096-protein evaluation took about **20 seconds on one H100 or L40S GPU**, excluding environment setup and contact inference ([timing record](../.dev/reports/best-recipe-reward-4096-20260923/README.md)); the full set is three times larger. This fits within the 20-minute H100 or one-hour L40S search round.
+The earlier 4,096-protein evaluation took about **20 seconds on one H100 or L40S GPU**, excluding environment setup and contact inference; the full set is three times larger. This fits within the 20-minute H100 or one-hour L40S search round.
 
 Earlier results used a sampled evaluation: 4,096 proteins drawn by a seeded sampler (1,024 batches of four, or 256 batches of 16 in older runs), or 32 proteins in the earlier search rounds. Their crops and masks depended on the batch layout. Historical scores keep their original labels; re-evaluate their checkpoints before comparing them with the current evaluation. `--resume-components` rejects cached receipts from the sampled protocol, and the training-run summarizer rejects mixtures of different recorded settings.
 
@@ -56,7 +56,7 @@ measurement; the 1,024-chain diagnostic remains an execution check only.
 
 ## Evaluation execution
 
-For a run created by the speedrun, use `bash runs/speedrun.sh --evaluate default-100k` after setup. It loads `.env`, measures MLM loss on all 12,288 validation proteins and runs parallel P@L over all 20,775 chains with 5,000 bootstrap replicates. Replace the run name or append options such as `--contact-gpus 0,1 --contact-workers 16`; the ordinary evaluation API below remains available for other checkpoints.
+For a run created by the speedrun, use `bash scripts/speedrun.sh --evaluate default-100k` after setup. It loads `.env`, measures MLM loss on all 12,288 validation proteins and runs parallel P@L over all 20,775 chains with 5,000 bootstrap replicates. Replace the run name or append options such as `--contact-gpus 0,1 --contact-workers 16`; the ordinary evaluation API below remains available for other checkpoints.
 
 `EVAL_PROFILE=full` runs all six frozen representation-probe contracts and
 aggregates the four trusted tasks into P-CORE. It embeds protein means for all

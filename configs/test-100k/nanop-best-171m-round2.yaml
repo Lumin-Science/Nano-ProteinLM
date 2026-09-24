@@ -1,7 +1,5 @@
 # nanop-best-171m-round2: round 1 plus separate Q/K/V Muon updates.
 # Backbone: paper 170M scaling architecture, Appendix A.1.4.1, Table S4.
-# Source: .dev/reports/fir-r02-rope10k-100k-20260906/full/r10_sqrtloss/config.yaml, without its stopping budget.
-# Q/K/V update: .dev/reports/cck-contact-ablations-100k-20260919/DEFAULT_PROMOTION.md
 # Final evaluation: global batch 1,024 (64 x 4 accumulation x 4 GPUs), 1,000 warmup steps, then constant LR.
 # The token target and seed are set in the training command; see docs/AUTORESEARCH.md#final-evaluation.
 schema_version: 1

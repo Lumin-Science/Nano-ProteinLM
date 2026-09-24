@@ -1,5 +1,0 @@
-index, uuid, name, memory.total [MiB], memory.used [MiB], utilization.gpu [%]
-0, GPU-fe01031a-a369-9d07-53a9-8047ef44e72c, NVIDIA H100 80GB HBM3, 81559 MiB, 5 MiB, 0 %
-1, GPU-c9225266-649e-a9eb-10c5-9fe5bd6d079c, NVIDIA H100 80GB HBM3, 81559 MiB, 5 MiB, 0 %
-2, GPU-88c2fb21-2ac0-21b6-57db-073102731288, NVIDIA H100 80GB HBM3, 81559 MiB, 5 MiB, 0 %
-3, GPU-151feb64-2916-c08f-f4fd-6bf0c6b4e681, NVIDIA H100 80GB HBM3, 81559 MiB, 5 MiB, 0 %

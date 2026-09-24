@@ -24,12 +24,12 @@ git clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 \
   https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch
 cd nano-protein-autoresearch
 git remote remove origin
-bash runs/setup.sh
+bash scripts/setup.sh
 ```
 
-`--depth 1 --single-branch --no-tags` downloads only the tagged commit, so the workspace has no `main` branch, other tags or research history. The tag pins the same starting point for every participant; record `git rev-parse HEAD` with the organizer records. Removing the remote prevents fetching other branches by accident. The clone starts on a detached HEAD at the release commit; a search method creates its own branch before committing. While the repository is private, use credentials with read access or the SSH URL `git@github.com:Lumin-Science/Nano-ProteinLM.git`. Do not reuse an existing research clone, which retains old Git objects.
+`--depth 1 --single-branch --no-tags` downloads only the tagged commit, so the workspace has no `main` branch, other tags or research history. The tag pins the same starting point for every participant; record `git rev-parse HEAD` with the organizer records. Removing the remote prevents fetching other branches by accident. The clone starts on a detached HEAD at the release commit; a search method creates its own branch before committing. Do not reuse an existing research clone, which retains old Git objects.
 
-`runs/setup.sh` needs uv `>=0.11.31,<0.12`; it installs the locked Python 3.11 environment, downloads 30 training shards and all MLM validation and contact assets, and verifies their checksums. Allow roughly 20 GB for data plus space for dependencies, checkpoints and run outputs. Use `--training-shards N` or `--training-samples N` to change the corpus size, and provision enough data for the selected source mixture and budget. Data and outputs default to `data/` and `outputs/` inside the workspace. Each task run checks the four GPUs and records them in its `ENVIRONMENT.json`.
+`scripts/setup.sh` needs uv `>=0.11.31,<0.12`; it installs the locked Python 3.11 environment, downloads 30 training shards and all MLM validation and contact assets, and verifies their checksums. Allow roughly 20 GB for data plus space for dependencies, checkpoints and run outputs. Use `--training-shards N` or `--training-samples N` to change the corpus size, and provision enough data for the selected source mixture and budget. Data and outputs default to `data/` and `outputs/` inside the workspace. Each task run checks the four GPUs and records them in its `ENVIRONMENT.json`.
 
 ```bash
 # After preparation, one invocation consumes one search round:
@@ -107,7 +107,7 @@ The reference takes roughly **12 hours on four H100 GPUs**, or about **48 H100 G
 
 ### Final-evaluation command
 
-Prepare enough of the provided corpus for the recipe's source mixture at this token target; `bash runs/setup.sh --training-samples 103424000` in a fresh `DATA_ROOT` covers the default mixture at 100,000 updates of batch 1,024 ([data sizing](DATA.md#sizing-a-training-download)). Run the procedure once per recipe with a fresh run name and the same seed. The example uses the round-2 recipe on four H100 GPUs. On other GPUs, use `--attention-backend flash` and raise the 16-hour `--walltime-seconds` guard as needed. If a recipe needs a different micro-batch size for memory, keep the global batch at 1,024 and record the layout.
+Prepare enough of the provided corpus for the recipe's source mixture at this token target; `bash scripts/setup.sh --training-samples 103424000` in a fresh `DATA_ROOT` covers the default mixture at 100,000 updates of batch 1,024 ([data sizing](DATA.md#sizing-a-training-download)). Run the procedure once per recipe with a fresh run name and the same seed. The example uses the round-2 recipe on four H100 GPUs. On other GPUs, use `--attention-backend flash` and raise the 16-hour `--walltime-seconds` guard as needed. If a recipe needs a different micro-batch size for memory, keep the global batch at 1,024 and record the layout.
 
 ```bash
 set -a

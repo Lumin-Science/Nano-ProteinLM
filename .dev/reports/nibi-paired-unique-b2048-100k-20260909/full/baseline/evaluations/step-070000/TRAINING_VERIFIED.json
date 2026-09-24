@@ -1,8 +1,0 @@
-{
-  "status": "passed",
-  "scope": "checkpoint_at_step",
-  "full_training_complete": false,
-  "checkpoint_sha256": "e3999030492af4d5d4266afdda2f7e23816fc2f8bd564ab350438277cc0cfe66",
-  "optimizer_steps": 70000,
-  "sequences_seen": 143360000
-}
