@@ -8,6 +8,6 @@
 
 ## Writing docs
 
-- Wrap each paragraph, heading, table or code block you write or edit in `README.md` and `docs/` in its own `<div class="ai">` block, with blank lines inside and the tags outside code fences; use `<span class="ai">` for an inline edit. The owner removes them after review.
+- Write README and docs edits as plain Markdown, without review tags.
 - Treat unresolved `<aitofix>` notes as fix requests; once a fix is verified, add `resolved` and append `Fixed:` with what changed.
-- The local `.dev/AI_REVIEW.md` has the full conventions. Keep each Markdown or LaTeX prose paragraph on one source line.
+- Keep each Markdown or LaTeX prose paragraph on one source line.
