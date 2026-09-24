@@ -189,29 +189,27 @@ Here we provide a baseline of autoresearch, see [AUTORESEARCH_BASELINE.md](docs/
 
 <div class="ai">
 
-On your GPU compute node, go to the folder you want to work in, start any coding agent (Codex, Claude Code or another) and paste the prompt below. The agent installs the loop skill, clones and sets up the release, and leaves a tmux session with Codex open in the workspace and the search prompt already typed. Run `tmux attach -t nanoprotein-ar` and press Enter to start. The node needs tmux, Node.js and Python 3.
+On your GPU compute node, go to the folder you want to work in, start any coding agent (for example Codex or Claude Code) and give it this prompt:
 
 </div>
 
 <div class="ai">
 
 ```text
-Set up NanoProteinLM AutoResearch in this folder, then hand it over to me. Run everything on this GPU node.
-1. Install the loop skill for Codex: npx skills add Lumin-Science/Nano-AutoResearch-Skills --skill ar-loop-n-sleep -g -a codex -y
-2. Clone and prepare the release (about 20 GB of data; let setup finish):
-   git clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch
-   cd nano-protein-autoresearch && git remote remove origin && bash runs/setup.sh
-   If HTTPS asks for credentials, use git@github.com:Lumin-Science/Nano-ProteinLM.git instead.
-3. Start a detached tmux session named nanoprotein-ar in nano-protein-autoresearch running `codex --approve-for-me`. If Codex asks to trust the folder, accept; if it asks for anything else, such as signing in, stop and tell me. Once its input box is ready, type the following prompt into it with `tmux send-keys -l` (single-quoted) and do not press Enter:
-   Use $ar-loop-n-sleep. Read tasks/171m-validation-loss.md and autoresearch/karpathy_ar_reward_gate.md. Use the allocated four GPUs. Run sequential AutoResearch for the full 72-round allowance, following the program's keep rule, then stop without another wakeup.
-4. Tell me to run `tmux attach -t nanoprotein-ar` and press Enter. Do not start the research yourself.
+Read https://raw.githubusercontent.com/Lumin-Science/Nano-ProteinLM/autoresearch-v0/autoresearch/setup_karpathy_ar.txt and set up AutoResearch for NanoProteinLM.
 ```
 
 </div>
 
 <div class="ai">
 
-By default this runs the [reward-gate program](autoresearch/karpathy_ar_reward_gate.md) on the [validation-loss task](tasks/171m-validation-loss.md) for all 72 rounds. Before pressing Enter, you can edit the typed prompt: name `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep, name `tasks/171m-p-at-l.md` to optimize contact P@L, or ask for the baseline and one candidate for a short qualification run. This flow runs our baseline method; a benchmark comparison between methods should use an organizer-prepared workspace and a fresh agent session, as the [protocol](docs/AUTORESEARCH.md#preparation) requires.
+The agent follows [setup_karpathy_ar.txt](autoresearch/setup_karpathy_ar.txt). It first asks where to put the workspace, data and outputs, which agent should run the search, and which task, program and round limit to use; accepting the defaults gives the reward gate on the validation-loss task for all 72 rounds. It then installs the loop skill, clones and sets up the release, and leaves a tmux session with your agent open in the workspace and the search prompt typed. Run `tmux attach -t nanoprotein-ar` and press Enter to start.
+
+</div>
+
+<div class="ai">
+
+The node needs tmux, git, Node.js and uv. While the repository is private, the agent also needs GitHub access, for example through `gh auth login`. This flow runs our baseline method; a benchmark comparison between methods should use an organizer-prepared workspace and a fresh agent session, as the [protocol](docs/AUTORESEARCH.md#preparation) requires.
 
 </div>
 

@@ -6,7 +6,7 @@ Read the user-selected task and `AGENTS.md`. If no task is selected, stop. Read 
 
 ## Start or resume
 
-Work inside the organizer-prepared clone of the AutoResearch release tag. Do not create a worktree from the research checkout, fetch another branch or consult previous repository findings. You may create a campaign branch such as `codex/ar-YYMMDD-<name>` from this clean starting point and commit your own changes. Resume the same workspace and journals after sleeping or interruption.
+Work inside the organizer-prepared clone of the AutoResearch release tag. Do not create a worktree from the research checkout, fetch another branch or consult previous repository findings. You may create a campaign branch such as `ar-YYMMDD-<name>` from this clean starting point and commit your own changes. Resume the same workspace and journals after sleeping or interruption.
 
 Choose a short campaign name. Keep `results.tsv`, `research.log`, candidate diffs and measurement receipts under `$OUTPUT_ROOT/autoresearch/<campaign>/`. Record the release commit, task, reward, hardware, data receipts, round limit and any user-imposed stopping condition before training. Read the TSV header and recent journal entries before every trial; retain failures and discarded results.
 
@@ -64,6 +64,6 @@ Append timestamped events to `research.log`: campaign settings, hypothesis, exac
 
 ## Loop and sleep
 
-When invoked with `ar-loop-n-sleep`, start Codex inside tmux. The skill owns `.ar/PROMPT.md`, `.ar/events.tsv` and the delayed wakeup of the same pane; this program owns the search decisions and round ledger. Retain the original prompt and stopping condition across wakeups. A background training or evaluation command must survive the end of a Codex turn, record its exit status and expose a log and process handle for the next check.
+When invoked with `ar-loop-n-sleep`, run inside tmux. The skill owns `.ar/PROMPT.md`, `.ar/events.tsv` and the delayed wakeup of the same pane; this program owns the search decisions and round ledger. Retain the original prompt and stopping condition across wakeups. A background training or evaluation command must survive the end of your turn, record its exit status and expose a log and process handle for the next check.
 
 After launching a run, confirm that its process is live and its log shows progress before sleeping. On wakeup, inspect the actual process and complete artifacts before taking the next step. Include evaluation in the continuation plan, even when training has finished. Stop at the user limit or exhausted round allowance, leave the selected recipe and decision record clear, and schedule no further wakeup after completion.
