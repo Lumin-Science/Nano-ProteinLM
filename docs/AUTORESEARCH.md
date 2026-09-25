@@ -63,7 +63,7 @@ A budgeted round consists of one training run and its evaluation. Each method re
 | Measurement after each round | Final checkpoint; all 12,288 MLM validation proteins and all 20,775 contact chains |
 | Outside the training clock | Environment/data setup, final checkpoint saving and evaluation; report their time separately |
 
-Methods may spend rounds exploring new recipes or repeating earlier recipes. Every training run, including a seed repeat or an agent-run reference measurement, consumes a round. Retain failed attempts and their consumed compute; declare any infrastructure-failure replacement policy before the benchmark. A method's internal iteration may contain several budgeted rounds.
+Methods may spend rounds exploring new recipes or repeating earlier recipes. Two baseline runs of the untouched starting recipe, with seeds 42 and 43 on the allocated hardware, are free and calibrate the setup; every other training run, including a seed repeat or a further reference measurement, consumes a round. Retain failed attempts and their consumed compute; declare any infrastructure-failure replacement policy before the benchmark. A method's internal iteration may contain several budgeted rounds.
 
 The training clock includes batch loading and synchronization. Prepare the inputs before timing a run and keep data placement consistent across methods. Record the code revision, resolved recipe, data receipts, seed, actual steps and non-padding model tokens for each run, together with its metrics and elapsed training time.
 

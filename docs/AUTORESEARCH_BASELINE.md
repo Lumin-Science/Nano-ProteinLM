@@ -14,7 +14,7 @@ Give any coding agent on your GPU compute node the [one-line launch prompt](../R
 | Task measurement | 20 minutes on four H100 GPUs with FA3; 4/3 H100 GPU-hours per round | Same |
 | Search evaluation | All 12,288 validation proteins and all 20,775 contact chains | Same |
 
-Under the reward gate, each candidate takes one or two rounds, so 72 rounds cover 36–72 candidates when the baseline reuses the owner's four-H100 reference measurement, or 35–70 when it is measured. Under the agent gate, the count depends on how many rounds the agent spends on repeats and refinements. Each program lists the records to keep for every run.
+The two baseline runs, seeds 42 and 43 of the starting recipe on the allocated GPUs, do not count toward the allowance. Under the reward gate each candidate then takes one or two rounds, so 72 rounds cover 36–72 candidates; under the agent gate, the count depends on how many rounds the agent spends on repeats and refinements. Each program lists the records to keep for every run.
 
 ## Two rounds under the previous search setting
 

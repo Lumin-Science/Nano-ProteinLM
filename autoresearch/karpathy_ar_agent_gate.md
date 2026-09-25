@@ -10,7 +10,7 @@ Work inside the organizer-prepared clone of the AutoResearch release tag. Do not
 
 Choose a short campaign name. Keep `results.tsv`, `research.log`, candidate diffs and measurement receipts under `$OUTPUT_ROOT/autoresearch/<campaign>/`. Record the release commit, task, primary metric, hardware, data receipts, round limit and any user-imposed stopping condition before training. Read the TSV header and recent journal entries before every trial; retain failures and discarded results.
 
-Establish the incumbent first, by measuring the untouched starting recipe or reusing the reference measurement below. Do not launch owner-run final evaluation unless it was requested.
+Start by measuring the untouched starting recipe on the allocated GPUs with seeds 42 and 43. These two baseline runs do not count toward the round allowance; they establish the incumbent and give a first view of the seed-to-seed spread. Do not launch owner-run final evaluation unless it was requested.
 
 ## Resources and measurement
 
@@ -26,7 +26,7 @@ bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml trial-
 
 Use the selected task's entry point for other objectives. Read the completed run's `TRAINING_COMPLETE.json` and `evaluation/EVALUATION.json`, and verify that evaluation matches the final checkpoint and covers the task's full evaluation population. A missing, failed or non-finite measurement cannot support a keep.
 
-## Reference measurement
+## Baseline check
 
 The owner measured the untouched starting recipe, `configs/autoresearch/esmc-171m.yaml`, with this release's task command on the four-H100 profile, using seeds 42, 43 and 44:
 
@@ -35,13 +35,13 @@ The owner measured the untouched starting recipe, `configs/autoresearch/esmc-171
 | `validation_mlm.sequence_mean_nll` | 2.70552 ± 0.00245 |
 | `contact.precision_at_l` | 0.09841 ± 0.00250 |
 
-On that profile you may use these values as the baseline instead of measuring it; its three seeds also show the starting recipe's seed-to-seed spread. Reusing them runs nothing, so it consumes no round; record a `baseline` row with `reused` in `decision_reason`. Measure the baseline yourself on the L40S profile or if your starting recipe differs from the release.
+On that profile, your two baseline runs should land close to these values. A clearly different result points to a setup problem: check the environment, data and GPUs, and tell the user before continuing. On other hardware the scores will differ.
 
 ## Goal and budget
 
 The recipe you finally select goes to the owner-run [final evaluation](../docs/AUTORESEARCH.md#final-evaluation): training from scratch to 24,200,224,761 non-padding tokens at global batch 1,024, with 1,000 warmup steps and a constant learning rate afterwards, then scoring the task's metric. A search round is a much shorter proxy for that test: 20 minutes of training at global batch 256. Aim for changes that will still help in the final evaluation, not only in the proxy.
 
-Every task invocation consumes one round of the task's search allowance: the baseline, each candidate, each extra seed or repeat, and each failed attempt. How you spend the allowance is your decision. Weigh each new idea against checking or refining one you already have, and note the rounds used and remaining in every decision.
+Apart from the two baseline runs, every task invocation consumes one round of the task's search allowance: each candidate, each extra seed or repeat, and each failed attempt. How you spend the allowance is your decision. Weigh each new idea against checking or refining one you already have, and note the rounds used and remaining in every decision.
 
 ## Evidence from each run
 
@@ -70,13 +70,13 @@ The examples below show the kind of reasoning that can help. They are illustrati
 
 ## Research records
 
-Append one row per task invocation, and one for a reused baseline, to `results.tsv`, using tab-separated cells on one line and `NA` for unavailable values. Suggested columns are:
+Append one row per task invocation to `results.tsv`, using tab-separated cells on one line and `NA` for unavailable values. Suggested columns are:
 
 ```tsv
 timestamp_utc	round_id	trial_id	idea_id	seed	code_revision	incumbent_id	score	primary_gap	decision	decision_reason	artifacts
 ```
 
-Use `baseline`, `keep`, `discard`, `repeat`, `iterate`, `revert` or `failed` for the decision, and `pending` when a declared repeat defers it. `idea_id` groups the rounds spent on one idea. Define the sign of `primary_gap` so that positive means improvement.
+Use `baseline`, `keep`, `discard`, `repeat`, `iterate`, `revert` or `failed` for the decision, and `pending` when a declared repeat defers it. `idea_id` groups the rounds spent on one idea. Give the two baseline rows `round_id` 0, since they do not count toward the allowance. Define the sign of `primary_gap` so that positive means improvement.
 
 Append timestamped events to `research.log`: campaign settings, hypothesis and prediction, exact command, resolved configuration, failure diagnosis, evidence, decision with its reasoning and next idea. Save a candidate's diff before training. Commit kept changes and update the incumbent; restore only the discarded candidate's edits, preserving journals, evidence and unrelated files. Inspect a live process or Slurm step before deciding whether an interrupted run needs recovery; a stale log or observation timeout alone is not proof that training stopped.
 
