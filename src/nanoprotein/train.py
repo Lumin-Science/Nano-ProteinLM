@@ -24,7 +24,7 @@ import yaml
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from .batch_balance import rebalance_masked_batch
-from .data import MixtureBatcher, file_sha256, warm_page_cache
+from .data import BatchPrefetcher, MixtureBatcher, file_sha256
 from .data_budget import data_coverage
 from .flash_attention import prepare_attention
 from .global_sampling import GlobalMixtureBatcher, portable_batcher_states, row_state_exposure
@@ -950,6 +950,16 @@ def train(
                 batcher.row_samplers[name] = shared_samplers.setdefault(name, sampler)
     if saved_runtime is not None:
         restore_runtime(saved_runtime, batchers)
+    feeds = {
+        stage.name: BatchPrefetcher(
+            batchers[stage.name],
+            int(config.get("prefetch_batches", 0)),
+            batch_size=stage.micro_batch_size,
+            context_length=stage.context_length,
+            tokenizer=tokenizer,
+        )
+        for stage in stages
+    }
     walltime_seconds = float(
         walltime_override if walltime_override is not None else config["walltime_seconds"]
     )
@@ -964,6 +974,7 @@ def train(
     prior_training_seconds = float(resumed["training_seconds"]) if resumed else 0.0
     training_seconds = 0.0
     compute_seconds_total = 0.0
+    data_seconds_total = 0.0
     model_tokens = int(resumed["model_tokens"]) if resumed else 0
     last_step_model_tokens = 0
     filled_residues = int(resumed["filled_residues"]) if resumed else 0
@@ -1001,27 +1012,8 @@ def train(
         )
     del resumed
     stage_checkpoint: dict[str, object] | None = None
-    # Random training reads are fast only from memory, so fill the page cache before the clock.
-    warm_started = time.perf_counter()
-    data_cache: dict[str, object] = {"status": "disabled"}
-    if config.get("warm_data_cache", False):
-        store_files = sorted(
-            {
-                data_root / source / "train" / name
-                for stage in stages
-                for source, weight in stage.mixture.items()
-                if weight > 0
-                for name in ("tokens.bin", "index.npy")
-            }
-        )
-        data_cache = warm_page_cache(
-            store_files, part=local_rank, parts=int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
-        )
     if world_size > 1:
         dist.barrier()
-    if rank == 0:
-        data_cache["seconds"] = time.perf_counter() - warm_started
-        print(json.dumps({"event": "data_cache", **data_cache}), flush=True)
     training_started = time.perf_counter()
     stop_at_unix_time = float(config.get("stop_at_unix_time", 0))
 
@@ -1059,6 +1051,9 @@ def train(
                 stages=stages,
             )
         if current_stage_name is not None and stage.name != current_stage_name:
+            # Stages share source cursors; continue after the last batch trained on.
+            for feed in feeds.values():
+                feed.rewind()
             runtime = capture_runtime(batchers, data_seed=data_seed)
             if rank == 0:
                 stage_checkpoint = save_checkpoint(
@@ -1099,14 +1094,13 @@ def train(
         step_tokens = 0
         step_filled = 0
         step_sequences = 0
+        data_seconds = 0.0
         torch.cuda.synchronize(device)
         compute_started = time.perf_counter()
         for micro_step in range(stage.gradient_accumulation):
-            input_ids, attention_mask = batchers[stage.name].batch(
-                stage.micro_batch_size,
-                context_length=stage.context_length,
-                tokenizer=tokenizer,
-            )
+            data_started = time.perf_counter()
+            input_ids, attention_mask = feeds[stage.name].batch()
+            data_seconds += time.perf_counter() - data_started
             valid_tokens = int(attention_mask.sum().item())
             step_tokens += valid_tokens
             step_filled += valid_tokens - 2 * stage.micro_batch_size
@@ -1138,10 +1132,13 @@ def train(
         torch.cuda.synchronize(device)
         compute_seconds = time.perf_counter() - compute_started
         if world_size > 1:
-            step_seconds = torch.tensor(compute_seconds, dtype=torch.float64, device=device)
+            step_seconds = torch.tensor(
+                [compute_seconds, data_seconds], dtype=torch.float64, device=device
+            )
             dist.all_reduce(step_seconds, op=dist.ReduceOp.MAX)
-            compute_seconds = float(step_seconds.item())
+            compute_seconds, data_seconds = step_seconds.tolist()
         compute_seconds_total += compute_seconds
+        data_seconds_total += data_seconds
         elapsed = torch.tensor(
             time.perf_counter() - training_started,
             dtype=torch.float64,
@@ -1168,13 +1165,15 @@ def train(
         log_due = optimizer_step == 1 or optimizer_step % log_interval == 0
         if log_due:
             batcher = batchers[stage.name]
+            # The feed's state counts the batches trained on, not those prefetched.
+            data_state = feeds[stage.name].state
             counts = torch.tensor(
-                [batcher.source_counts[name] for name in batcher.names],
+                [data_state["source_counts"].get(name, 0) for name in batcher.names],
                 dtype=torch.int64,
                 device=device,
             )
             epochs = torch.tensor(
-                [batcher.row_samplers[name].epoch for name in batcher.names],
+                [data_state["samplers"][name]["epoch"] for name in batcher.names],
                 dtype=torch.int64,
                 device=device,
             )
@@ -1199,6 +1198,7 @@ def train(
                 "gradient_norm": float(gradient_norm),
                 "training_seconds": training_seconds,
                 "step_compute_seconds": compute_seconds,
+                "step_data_seconds": data_seconds,
                 "step_model_tokens": global_step_tokens,
                 "model_tokens": model_tokens,
                 "filled_residues": filled_residues,
@@ -1212,7 +1212,7 @@ def train(
                     else None
                 ),
                 "estimated_training_flops": 6 * parameter_count * model_tokens,
-                "source_counts_rank0": dict(batchers[stage.name].source_counts),
+                "source_counts_rank0": data_state["source_counts"],
                 "source_counts_global": dict(zip(batcher.names, counts.tolist(), strict=True)),
                 "source_epoch_maxima": dict(zip(batcher.names, epochs.tolist(), strict=True)),
                 "data_resampling": coverage["policy"],
@@ -1220,7 +1220,10 @@ def train(
                 "optimizer": str(config.get("optimizer", "adamw")),
             }
             if global_sampling:
-                record["source_exposure_global"] = batcher.exposure()
+                record["source_exposure_global"] = {
+                    name: row_state_exposure(sampler)
+                    for name, sampler in data_state["samplers"].items()
+                }
             if balance_statistics is not None:
                 record["batch_balance"] = balance_statistics
             if loss_reduction != "sequence_mean":
@@ -1238,6 +1241,8 @@ def train(
             and optimizer_step != max_steps
             and not token_endpoint
         ):
+            for feed in feeds.values():
+                feed.rewind()
             runtime = capture_runtime(batchers, data_seed=data_seed)
             if rank == 0:
                 latest_checkpoint = save_checkpoint(
@@ -1270,6 +1275,8 @@ def train(
                 evaluation_seconds += paused
                 training_started += paused
 
+    for feed in feeds.values():
+        feed.rewind()
     if world_size > 1:
         dist.barrier()
     source_counts: dict[str, dict[str, int]] = {}
@@ -1331,6 +1338,7 @@ def train(
             "periodic_evaluation_seconds": evaluation_seconds,
             "resume_data_mode": resume_data_mode,
             "compute_seconds": compute_seconds_total,
+            "data_seconds": data_seconds_total,
             "walltime_budget_seconds": walltime_seconds,
             "stop_reason": stop_reason,
             "model_tokens": model_tokens,
@@ -1388,12 +1396,6 @@ def training_parser() -> argparse.ArgumentParser:
         "--attention-backend",
         choices=("auto", "math", "flash", "flash3"),
         default=argparse.SUPPRESS,
-    )
-    parser.add_argument(
-        "--warm-data-cache",
-        action="store_true",
-        default=argparse.SUPPRESS,
-        help="Read the training stores into the page cache before the training clock starts",
     )
     parser.add_argument(
         "--resume",

@@ -16,7 +16,7 @@ Start by measuring the untouched starting recipe on the allocated GPUs with seed
 
 The current sequential-search profile uses four H100 GPUs with FlashAttention-3, 1,200 seconds of training per round and the task's complete fixed evaluation. Use the compute allocation named by the user after checking that it is live and exposes four matching GPUs. Run training through that allocation, never on a login node, and leave its allocation-holding processes untouched.
 
-Environment and data must be prepared before timing. Use the same storage placement for every run; prefer node-local prepared data when available. Read the coverage receipt and ensure the selected source mixture can finish each run. Do not shorten training, reduce the evaluation population or change protected task scripts to obtain a score.
+Environment and data must be prepared before timing. The task command copies the prepared training data to node-local storage before its clock starts; keep the same `NANOPROTEIN_STAGE_DIR` for every run. Read the coverage receipt and ensure the selected source mixture can finish each run. Do not shorten training, reduce the evaluation population or change protected task scripts to obtain a score.
 
 The task script takes the training seed as its third argument; use seed 42 unless you decide to run another:
 
@@ -46,7 +46,7 @@ Apart from the two baseline runs, every task invocation consumes one round of th
 ## Evidence from each run
 
 - **Task score:** in `evaluation/EVALUATION.json`. For the validation-loss task, the per-source and median losses (`source_sequence_mean_nll`, `sequence_median_nll`) show where a change helps.
-- **Training curve:** `metrics.jsonl` logs the training loss every 10 optimizer steps, together with the learning rate, gradient norm, tokens per second and MFU.
+- **Training curve:** `metrics.jsonl` logs the training loss every 10 optimizer steps, together with the learning rate, gradient norm, tokens per second, MFU and the time spent waiting for data (`step_data_seconds`).
 - **Run totals:** `TRAINING_COMPLETE.json` records the optimizer steps, model tokens and training seconds reached within the time limit, the peak GPU memory and the parameter count.
 - **The change itself:** the resolved configuration and the candidate's diff.
 

@@ -95,7 +95,9 @@ uv run --frozen python -m nanoprotein.train --config configs/test-100k/nanop-bes
 
 Budget arguments accept `none` to clear inherited step/token limits. Batch-layout overrides require a single-stage recipe. Full final checkpoints include optimizer state. Pass `--resume /path/to/checkpoint-final.pt` to the training API with the original recipe and a fresh output directory to continue training; preserve the global batch size when changing the GPU count.
 
-With `--warm-data-cache`, which the AutoResearch task commands pass, the trainer reads the prepared training stores once before the training clock starts, split across the GPU processes, so that its random batch reads come from memory instead of disk or network storage. This takes seconds for the default 30 shards and is skipped when the stores exceed half of free memory; the log reports it as a `data_cache` event. Longer runs leave it off by default.
+The recipes set `prefetch_batches: 2`: a background thread builds the next two micro-batches while the GPUs compute, in the same order as without prefetching, and checkpoints resume at the first batch not yet trained on. Each training log record reports `step_data_seconds`, the longest time any GPU process waited for data in that step, and `TRAINING_COMPLETE.json` reports the run's total as `data_seconds`.
+
+Before the training clock starts, the AutoResearch task commands copy `$DATA_ROOT/training` (about 10 GB with the default 30 shards) to `/tmp`, or to the folder named by `NANOPROTEIN_STAGE_DIR`, because random batch reads from shared network storage can stall training. Later runs reuse the copy while its manifest is unchanged. If `/tmp` is too small, export `NANOPROTEIN_STAGE_DIR` with another node-local folder.
 
 ## AutoResearch
 

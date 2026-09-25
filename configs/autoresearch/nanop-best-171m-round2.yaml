@@ -31,6 +31,7 @@ transformer_norm: rmsnorm
 depth_scaled_residual_init: true
 compile: false
 compile_mode: default
+prefetch_batches: 2
 log_interval: 10
 peak_bf16_tflops_per_gpu: 989.5
 stages:

@@ -37,12 +37,24 @@ cp "$recipe" "$run_root/recipe.yaml"
 read -r attention_backend peak_tflops training_seconds < <(
   "$uv_bin" run --frozen --no-dev python -c 'import json,sys; r=json.load(open(sys.argv[1])); print(r["attention_backend"], r["peak_bf16_tflops_per_gpu"], r["training_walltime_seconds"])' "$run_root/ENVIRONMENT.json"
 )
+
+# Training reads random records; shared file systems can stall them, so read a local copy.
+# The manifest records every store's hash, so an unchanged manifest means the copy is current.
+data_root="${NANOPROTEIN_STAGE_DIR:-/tmp}/nanoprotein-$(id -u)/training"
+if ! cmp -s "$DATA_ROOT/training/manifest.json" "$data_root/manifest.json"; then
+  echo "Copying $DATA_ROOT/training to $data_root"
+  rm -rf "$data_root" "$data_root.partial"
+  mkdir -p "$(dirname "$data_root")"
+  cp -RL "$DATA_ROOT/training" "$data_root.partial"
+  mv "$data_root.partial" "$data_root"
+fi
+
 "$uv_bin" run --frozen --no-dev python -m torch.distributed.run --standalone --nproc-per-node=4 \
   -m nanoprotein.train --config "$run_root/recipe.yaml" --seed "$seed" \
-  --data-root "$DATA_ROOT/training" --output-root "$run_root" \
+  --data-root "$data_root" --output-root "$run_root" \
   --walltime-seconds "$training_seconds" --max-steps none --max-model-tokens none --schedule-steps none \
   --attention-backend "$attention_backend" --warmup-steps 500 \
-  --checkpoint-interval 0 --periodic-evaluation-interval 0 --warm-data-cache \
+  --checkpoint-interval 0 --periodic-evaluation-interval 0 \
   --peak-bf16-tflops-per-gpu "$peak_tflops"
 
 # Validation loss needs only MLM evaluation; the P@L task's wrapper also requests contact P@L.
@@ -55,5 +67,5 @@ if [[ "${NANOPROTEIN_TASK_CONTACT:-0}" == 1 ]]; then
   )
 fi
 "$uv_bin" run --frozen --no-dev python -m nanoprotein.evaluate \
-  --checkpoint "$run_root/checkpoint-final.pt" --data-root "$DATA_ROOT/training" \
+  --checkpoint "$run_root/checkpoint-final.pt" --data-root "$data_root" \
   --output-root "$run_root/evaluation" "${evaluation_args[@]}"

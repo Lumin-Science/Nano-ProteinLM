@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import os
-import time
+import queue
+import threading
 from collections import Counter
-from collections.abc import Mapping, Sequence
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -88,58 +88,6 @@ class TokenStore:
         record = self.index[int(row)]
         start = int(record["offset"])
         return self.tokens[start : start + int(record["length"])]
-
-
-def _available_memory_bytes() -> int | None:
-    meminfo = Path("/proc/meminfo")
-    if not meminfo.exists():
-        return None
-    for line in meminfo.read_text().splitlines():
-        if line.startswith("MemAvailable:"):
-            return int(line.split()[1]) * 1024
-    return None
-
-
-def warm_page_cache(
-    paths: Sequence[Path],
-    *,
-    part: int = 0,
-    parts: int = 1,
-    memory_fraction: float = 0.5,
-    chunk_bytes: int = 64 << 20,
-) -> dict[str, object]:
-    """Read files once so later random reads come from the page cache.
-
-    Processes on one node share the page cache, so each reads every `parts`-th chunk.
-    Warming is skipped when the files would take more than `memory_fraction` of free memory.
-    """
-    if parts <= 0 or not 0 <= part < parts:
-        raise ValueError("invalid page-cache warm-up partition")
-    total = sum(path.stat().st_size for path in paths)
-    available = _available_memory_bytes()
-    if available is not None and total > memory_fraction * available:
-        return {"status": "skipped", "bytes": total, "available_bytes": available}
-    chunks = [
-        (path, offset)
-        for path in paths
-        for offset in range(0, path.stat().st_size, chunk_bytes)
-    ][part::parts]
-
-    def read(chunk: tuple[Path, int]) -> int:
-        path, offset = chunk
-        with path.open("rb", buffering=0) as handle:
-            handle.seek(offset)
-            return len(handle.read(chunk_bytes))
-
-    started = time.perf_counter()
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        read_bytes = sum(pool.map(read, chunks))
-    return {
-        "status": "warmed",
-        "bytes": total,
-        "read_bytes": read_bytes,
-        "seconds": time.perf_counter() - started,
-    }
 
 
 class _ShuffledRows:
@@ -250,12 +198,14 @@ class MixtureBatcher:
             for key in ("size", "seed", "rank", "world_size"):
                 if saved[key] != getattr(sampler, key):
                     raise ValueError(f"checkpoint sampler differs at {name}/{key}")
-            sampler.epoch = int(saved["epoch"])
-            if sampler.epoch and not sampler.allow_resampling:
+            epoch = int(saved["epoch"])
+            if epoch and not sampler.allow_resampling:
                 raise ValueError(
                     "checkpoint already repeated data; cannot resume as a no-repeat run"
                 )
-            sampler.rows = sampler._epoch_rows()
+            if epoch != sampler.epoch:
+                sampler.epoch = epoch
+                sampler.rows = sampler._epoch_rows()
             sampler.cursor = int(saved["cursor"])
             if not 0 <= sampler.cursor <= sampler.rows.size:
                 raise ValueError("checkpoint sampler cursor is out of bounds")
@@ -289,3 +239,65 @@ class MixtureBatcher:
             mask[row, : stop + 1] = True
             self.source_counts[source] += 1
         return torch.from_numpy(tokens), torch.from_numpy(mask)
+
+
+class BatchPrefetcher:
+    """Build a batcher's next batches in a background thread, in unchanged order.
+
+    The batcher runs ahead of training, so `state` reports the sampling state after the
+    last batch handed out, and `rewind` stops the thread and restores that state; a
+    checkpoint saved after `rewind` resumes at the first batch not yet trained on.
+    """
+
+    def __init__(self, batcher, depth: int, **batch_arguments) -> None:
+        if depth < 0:
+            raise ValueError("prefetch depth must be nonnegative")
+        self.batcher = batcher
+        self.depth = depth
+        self.batch_arguments = batch_arguments
+        self._thread: threading.Thread | None = None
+
+    def _fill(self, ready: queue.Queue, stop: threading.Event) -> None:
+        while not stop.is_set():
+            try:
+                item = (self.batcher.batch(**self.batch_arguments), self.batcher.state_dict())
+            except BaseException as error:
+                item = (error, None)
+            while not stop.is_set():
+                try:
+                    ready.put(item, timeout=0.1)
+                    break
+                except queue.Full:
+                    pass
+            if item[1] is None:
+                return
+
+    def batch(self) -> tuple[torch.Tensor, torch.Tensor]:
+        if not self.depth:
+            return self.batcher.batch(**self.batch_arguments)
+        if self._thread is None:
+            self._state = self.batcher.state_dict()
+            self._ready: queue.Queue = queue.Queue(maxsize=self.depth)
+            self._stop = threading.Event()
+            self._thread = threading.Thread(
+                target=self._fill, args=(self._ready, self._stop), daemon=True
+            )
+            self._thread.start()
+        batch, state = self._ready.get()
+        if state is None:
+            self.rewind()
+            raise batch
+        self._state = state
+        return batch
+
+    @property
+    def state(self) -> dict[str, object]:
+        return self._state if self._thread is not None else self.batcher.state_dict()
+
+    def rewind(self) -> None:
+        if self._thread is None:
+            return
+        self._stop.set()
+        self._thread.join()
+        self._thread = None
+        self.batcher.load_state_dict(self._state)

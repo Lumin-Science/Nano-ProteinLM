@@ -16,7 +16,7 @@ Start by measuring the untouched starting recipe on the allocated GPUs with seed
 
 The current sequential-search profile uses four H100 GPUs with FlashAttention-3, 1,200 seconds of training per round and the task's complete fixed evaluation. Use the compute allocation named by the user after checking that it is live and exposes four matching GPUs. Run training through that allocation, never on a login node, and leave its allocation-holding processes untouched.
 
-Environment and data must be prepared before timing. Use the same storage placement for every run; prefer node-local prepared data when available. Read the coverage receipt and ensure the selected source mixture can finish each run. Do not shorten training, reduce the evaluation population or change protected task scripts to obtain a score.
+Environment and data must be prepared before timing. The task command copies the prepared training data to node-local storage before its clock starts; keep the same `NANOPROTEIN_STAGE_DIR` for every run. Read the coverage receipt and ensure the selected source mixture can finish each run. Do not shorten training, reduce the evaluation population or change protected task scripts to obtain a score.
 
 ## Reward and seeds
 

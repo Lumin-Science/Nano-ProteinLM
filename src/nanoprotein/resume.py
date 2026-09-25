@@ -95,6 +95,8 @@ def validate_resume(
         "walltime_seconds",
         "stop_at_unix_time",
         "log_interval",
+        "prefetch_batches",
+        "warm_data_cache",
         "checkpoint_interval",
         "expected_world_size",
         "periodic_evaluation_interval",
