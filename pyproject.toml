@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nano-protein-embedding"
+version = "0.1.0"
+description = "A minimal, auditable ESMC pretraining and evaluation stack"
+readme = "README.md"
+requires-python = "==3.11.*"
+license = {text = "MIT"}
+authors = [{name = "Lumin Science"}]
+dependencies = [
+  "huggingface-hub==0.35.0",
+  "lmdb==2.3.0",
+  "numpy==2.4.6",
+  "pyarrow==21.0.0",
+  "PyYAML==6.0.3",
+  "scikit-learn==1.9.0",
+  "torch==2.13.0",
+]
+
+[dependency-groups]
+dev = ["ruff==0.12.11"]
+
+[tool.uv]
+required-version = ">=0.11.31,<0.12"
+
+[tool.uv.sources]
+torch = [
+  {index = "pytorch-cu126", marker = "sys_platform == 'linux'"},
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nanoprotein*"]
+
+[tool.ruff]
+line-length = 96
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["nanoprotein"]

@@ -1,0 +1,1633 @@
+"""Checkpoint evaluation: held-out MLM, current P-CORE, and paper-style P@L."""
+
+from __future__ import annotations
+
+import argparse
+import concurrent.futures
+import gc
+import hashlib
+import json
+import math
+import os
+import subprocess
+import sys
+import time
+from collections.abc import Callable, Iterator, Sequence
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+from .contact_cache import ContactScoringCache
+from .data import SOURCES, TokenStore, file_sha256
+from .model import ESMCConfig, ESMCForMaskedLM
+from .tokenizer import ProteinTokenizer, mask_tokens
+
+PCORE_DIAGNOSTIC_TASKS = (
+    "remote_homology",
+    "flip2_hydro_low_to_high",
+)
+PCORE_TASKS = (
+    "remote_homology",
+    "secondary_structure",
+    "enzyme_commission",
+    "deeploc2",
+    "human_ppi",
+    "flip2_hydro_low_to_high",
+)
+
+
+def write_json(path: Path, payload: object) -> str:
+    """Atomically persist a component receipt and return its digest."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".partial")
+    temporary.write_text(json.dumps(payload, allow_nan=False, indent=2, sort_keys=True) + "\n")
+    temporary.replace(path)
+    return file_sha256(path)
+
+
+def bootstrap_mean_interval(
+    values: np.ndarray,
+    *,
+    replicates: int,
+    seed: int,
+) -> dict[str, object]:
+    """Bootstrap a mean in bounded-memory chunks."""
+
+    values = np.asarray(values, dtype=np.float64)
+    if values.ndim != 1 or values.size == 0:
+        raise ValueError("bootstrap values must be a non-empty vector")
+    if replicates < 0:
+        raise ValueError("bootstrap replicates cannot be negative")
+    if replicates == 0:
+        return {"replicates": 0, "confidence_interval_95": None}
+    rng = np.random.default_rng(seed)
+    means = np.empty(replicates, dtype=np.float64)
+    chunk_size = 128
+    for start in range(0, replicates, chunk_size):
+        stop = min(start + chunk_size, replicates)
+        indices = rng.integers(0, values.size, size=(stop - start, values.size))
+        means[start:stop] = values[indices].mean(axis=1)
+    return {
+        "replicates": replicates,
+        "unit_count": int(values.size),
+        "confidence_interval_95": [
+            float(np.quantile(means, 0.025)),
+            float(np.quantile(means, 0.975)),
+        ],
+    }
+
+
+def embed_sequences_packed(
+    model: Any,
+    tokenizer: Any,
+    sequences: Sequence[str],
+    store: Any,
+    *,
+    device: torch.device,
+    batch_residue_budget: int,
+    include_residue: bool,
+    deterministic_windows: Callable[[str, int], list[str]],
+    window_embeddings: Callable[..., tuple[np.ndarray, np.ndarray, list[np.ndarray]]],
+) -> dict[str, int]:
+    """Embed windows from different proteins in the same GPU batch.
+
+    The frozen evaluator batches windows only within each protein, making almost
+    every short protein a batch of one. This keeps its windowing, pooling, cache,
+    and residue semantics while filling a residue-budget batch across proteins.
+    """
+
+    if batch_residue_budget <= 0:
+        raise ValueError("batch_residue_budget must be positive")
+    missing: list[tuple[int, str]] = []
+    resumed = 0
+    for sequence_index, sequence in enumerate(sequences):
+        protein_present = store.load(sequence) is not None
+        residue_present = not include_residue or store.load_residue(sequence) is not None
+        if not protein_present or (include_residue and not residue_present):
+            missing.append((sequence_index, sequence))
+        else:
+            resumed += 1
+
+    records: list[tuple[int, str, str]] = []
+    remaining: dict[int, int] = {}
+    for sequence_index, sequence in missing:
+        windows = deterministic_windows(sequence, store.contract.maximum_residues)
+        remaining[sequence_index] = len(windows)
+        records.extend((sequence_index, sequence, window) for window in windows)
+    # The model preserves sequence independence, so length bucketing is exactly
+    # equivalent while avoiding dense tokenizer padding between unlike windows.
+    records.sort(key=lambda record: (-len(record[2]), record[0]))
+
+    weighted_sums: dict[int, np.ndarray] = {}
+    residue_counts: dict[int, int] = {}
+    residue_chunks: dict[int, list[np.ndarray]] = {}
+    written = 0
+    residue_written = 0
+    cursor = 0
+    while cursor < len(records):
+        batch: list[tuple[int, str, str]] = []
+        batch_residues = 0
+        while cursor < len(records):
+            record = records[cursor]
+            cost = len(record[2]) + 2
+            if batch and batch_residues + cost > batch_residue_budget:
+                break
+            batch.append(record)
+            batch_residues += cost
+            cursor += 1
+        embeddings, counts, batch_residue_embeddings = window_embeddings(
+            model,
+            tokenizer,
+            [window for _, _, window in batch],
+            device=device,
+        )
+        for record, embedding, count, residue_embedding in zip(
+            batch, embeddings, counts, batch_residue_embeddings, strict=True
+        ):
+            sequence_index, sequence, _window = record
+            if sequence_index not in weighted_sums:
+                weighted_sums[sequence_index] = np.zeros(
+                    store.contract.hidden_size, dtype=np.float64
+                )
+                residue_counts[sequence_index] = 0
+                if include_residue:
+                    residue_chunks[sequence_index] = []
+            weighted_sums[sequence_index] += embedding.astype(np.float64) * int(count)
+            residue_counts[sequence_index] += int(count)
+            if include_residue:
+                residue_chunks[sequence_index].append(residue_embedding)
+            remaining[sequence_index] -= 1
+            if remaining[sequence_index] != 0:
+                continue
+            if residue_counts[sequence_index] != len(sequence):
+                raise ValueError(
+                    f"tokenizer residue count differs for item {sequence_index}: "
+                    f"{residue_counts[sequence_index]} != {len(sequence)}"
+                )
+            store.save(
+                sequence,
+                weighted_sums[sequence_index] / residue_counts[sequence_index],
+            )
+            if include_residue:
+                store.save_residue(sequence, np.concatenate(residue_chunks[sequence_index]))
+                residue_written += 1
+                del residue_chunks[sequence_index]
+            del weighted_sums[sequence_index]
+            del residue_counts[sequence_index]
+            del remaining[sequence_index]
+            written += 1
+    if weighted_sums or residue_counts or remaining:
+        raise RuntimeError("incomplete packed embedding state")
+    return {
+        "total": len(sequences),
+        "resumed": resumed,
+        "written": written,
+        "residue_written": residue_written,
+    }
+
+
+def load_checkpoint(path: Path, device: torch.device) -> tuple[ESMCForMaskedLM, dict[str, Any]]:
+    packet = torch.load(path, map_location="cpu", weights_only=False)
+    config = ESMCConfig(**packet["model_config"])
+    model = ESMCForMaskedLM(config)
+    model.load_state_dict(packet["model"], strict=True)
+    return model.eval().to(device), packet
+
+
+VALIDATION_MLM_PROTOCOL = "heldout-cluster-representative-mlm-v2"
+VALIDATION_MLM_SEED = 20260821
+
+
+def validation_settings(context_length: int) -> dict[str, object]:
+    """Settings that define the MLM score; batch size only changes throughput."""
+    return {
+        "population": "all-validation",
+        "context_length": context_length,
+        "mask_seed": VALIDATION_MLM_SEED,
+    }
+
+
+def validation_example(
+    residues: np.ndarray, digest: bytes, *, residue_limit: int, tokenizer: ProteinTokenizer
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Crop and mask one protein using randomness derived only from its sequence digest."""
+    seed = hashlib.sha256(VALIDATION_MLM_SEED.to_bytes(8, "big") + digest).digest()
+    generator = torch.Generator().manual_seed(int.from_bytes(seed[:8], "big"))
+    excess = int(residues.size) - residue_limit
+    offset = int(torch.randint(excess + 1, (1,), generator=generator)) if excess > 0 else 0
+    kept = residues[offset : offset + residue_limit]
+    kept = torch.from_numpy(np.asarray(kept, dtype=np.int64))
+    tokens = torch.cat(
+        (torch.tensor([tokenizer.bos_id]), kept, torch.tensor([tokenizer.eos_id]))
+    ).unsqueeze(0)
+    corrupted, labels = mask_tokens(
+        tokens, torch.ones_like(tokens, dtype=torch.bool), tokenizer, generator=generator
+    )
+    return corrupted[0], labels[0]
+
+
+def validation_mlm(
+    model: ESMCForMaskedLM,
+    *,
+    data_root: Path,
+    device: torch.device,
+    context_length: int,
+    batch_size: int,
+) -> dict[str, object]:
+    """Score every held-out validation protein once, with protein-fixed crops and masks."""
+    if context_length < 4 or batch_size <= 0:
+        raise ValueError("invalid validation context or batch size")
+    tokenizer = ProteinTokenizer.esmc()
+    sources: list[str] = []
+    examples: list[tuple[torch.Tensor, torch.Tensor]] = []
+    manifest = hashlib.sha256()
+    for source in SOURCES:
+        store = TokenStore.open(data_root / source / "validation")
+        for row in range(store.index.size):
+            digest = bytes(store.index[row]["digest"])
+            manifest.update(digest)
+            sources.append(source)
+            examples.append(
+                validation_example(
+                    store.sequence(row),
+                    digest,
+                    residue_limit=context_length - 2,
+                    tokenizer=tokenizer,
+                )
+            )
+    losses = np.zeros(len(examples), dtype=np.float64)
+    masked = 0
+    # Group similar lengths to reduce padding; each protein's loss is stored by position.
+    order = sorted(range(len(examples)), key=lambda index: examples[index][0].numel())
+    with torch.inference_mode():
+        for start in range(0, len(order), batch_size):
+            rows = order[start : start + batch_size]
+            width = max(examples[index][0].numel() for index in rows)
+            corrupted = torch.full((len(rows), width), tokenizer.pad_id, dtype=torch.long)
+            labels = torch.full_like(corrupted, -100)
+            attention_mask = torch.zeros_like(corrupted, dtype=torch.bool)
+            for position, index in enumerate(rows):
+                tokens, targets = examples[index]
+                corrupted[position, : tokens.numel()] = tokens
+                labels[position, : targets.numel()] = targets
+                attention_mask[position, : tokens.numel()] = True
+            corrupted = corrupted.to(device)
+            labels = labels.to(device)
+            attention_mask = attention_mask.to(device)
+            use_bf16 = device.type == "cuda"
+            with torch.autocast(device.type, dtype=torch.bfloat16, enabled=use_bf16):
+                logits = model(corrupted, attention_mask)["logits"]
+                per_token = F.cross_entropy(
+                    logits.flatten(0, 1),
+                    labels.flatten(),
+                    ignore_index=-100,
+                    reduction="none",
+                ).view_as(labels)
+            selected = labels != -100
+            per_sequence = per_token.sum(dim=1) / selected.sum(dim=1).clamp_min(1)
+            losses[rows] = per_sequence.float().cpu().numpy()
+            masked += int(selected.sum())
+    names = np.asarray(sources)
+    return {
+        "protocol": VALIDATION_MLM_PROTOCOL,
+        "settings": validation_settings(context_length),
+        "sequences": int(losses.size),
+        "masked_residues": masked,
+        "manifest_sha256": manifest.hexdigest(),
+        "sequence_mean_nll": float(losses.mean()),
+        "sequence_median_nll": float(np.median(losses)),
+        "perplexity": float(np.exp(losses.mean())),
+        "source_counts": {source: int((names == source).sum()) for source in SOURCES},
+        "source_sequence_mean_nll": {
+            source: float(losses[names == source].mean()) for source in SOURCES
+        },
+        "batch_size": batch_size,
+    }
+
+
+def run_pcore(
+    model: ESMCForMaskedLM,
+    *,
+    checkpoint: Path,
+    output_root: Path,
+    external_src: Path,
+    pcore_root: Path,
+    device: torch.device,
+    batch_residues: int,
+    bootstrap: int,
+    task_parallel: int,
+    probe_threads: int,
+) -> dict[str, object]:
+    """Run exact P-CORE v0.2 as restartable, bounded-parallel task processes."""
+
+    if bootstrap != 10_000:
+        raise ValueError("exact taskwise P-CORE v0.2 requires 10,000 bootstrap replicates")
+    if task_parallel <= 0 or probe_threads <= 0:
+        raise ValueError("task parallelism and probe threads must be positive")
+
+    sys.path.insert(0, str(external_src))
+    try:
+        from autoresearch_esm.pcore_embed import (  # type: ignore[import-not-found]
+            EmbeddingContract,
+            EmbeddingStore,
+            _window_embeddings,
+            deterministic_windows,
+            read_sequence_index,
+        )
+    finally:
+        sys.path.pop(0)
+    digest = file_sha256(checkpoint)
+    contract = EmbeddingContract(
+        schema_version=1,
+        model_id=f"local/{model.config.name}",
+        revision=digest[:12],
+        weights_sha256=digest,
+        hidden_size=model.config.d_model,
+        maximum_residues=2046,
+    )
+    store_root = output_root / "pcore_embeddings" / f"{model.config.name}--{digest[:12]}"
+    store = EmbeddingStore(store_root, contract)
+    index_path = pcore_root / "index.jsonl"
+    sequences = read_sequence_index(index_path)
+    protein_embedding_result = embed_sequences_packed(
+        model,
+        ProteinTokenizer.esmc(),
+        sequences,
+        store,
+        device=device,
+        batch_residue_budget=batch_residues,
+        include_residue=False,
+        deterministic_windows=deterministic_windows,
+        window_embeddings=_window_embeddings,
+    )
+    secondary_sequences = read_sequence_index(index_path, required_task="secondary_structure")
+    residue_embedding_result = embed_sequences_packed(
+        model,
+        ProteinTokenizer.esmc(),
+        secondary_sequences,
+        store,
+        device=device,
+        batch_residue_budget=batch_residues,
+        include_residue=True,
+        deterministic_windows=deterministic_windows,
+        window_embeddings=_window_embeddings,
+    )
+    task_root = output_root / "pcore_tasks_exact"
+    task_root.mkdir(parents=True, exist_ok=True)
+    index_digest = file_sha256(index_path)
+    environment = os.environ.copy()
+    environment["PCORE_PROBE_JOBS"] = str(probe_threads)
+    environment["OMP_NUM_THREADS"] = str(probe_threads)
+    environment["MKL_NUM_THREADS"] = str(probe_threads)
+    environment["OPENBLAS_NUM_THREADS"] = str(probe_threads)
+    existing_pythonpath = environment.get("PYTHONPATH")
+    environment["PYTHONPATH"] = (
+        f"{external_src}{os.pathsep}{existing_pythonpath}"
+        if existing_pythonpath
+        else str(external_src)
+    )
+
+    def run_task(task: str) -> tuple[str, dict[str, object]]:
+        partial_path = task_root / f"{task}.json"
+        log_path = task_root / f"{task}.log"
+        command = [
+            sys.executable,
+            "-m",
+            "autoresearch_esm.pcore_taskwise",
+            "run-task",
+            "--task",
+            task,
+            "--index-jsonl",
+            str(index_path),
+            "--expected-index-sha256",
+            index_digest,
+            "--embedding-store",
+            str(store_root),
+            "--processed-root",
+            str(pcore_root / "processed"),
+            "--raw-root",
+            str(pcore_root / "raw"),
+            "--output",
+            str(partial_path),
+            "--seed",
+            "20260819",
+        ]
+        started = time.monotonic()
+        with log_path.open("w") as log:
+            completed = subprocess.run(
+                command,
+                check=False,
+                env=environment,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+            )
+        if completed.returncode != 0:
+            raise RuntimeError(f"exact P-CORE task {task} failed; see {log_path}")
+        return task, {
+            "seconds": time.monotonic() - started,
+            "partial": str(partial_path.resolve()),
+            "partial_sha256": file_sha256(partial_path),
+            "log": str(log_path.resolve()),
+        }
+
+    task_runs: dict[str, dict[str, object]] = {}
+    workers = min(task_parallel, len(PCORE_TASKS))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(run_task, task) for task in PCORE_TASKS]
+        for future in concurrent.futures.as_completed(futures):
+            task, task_run = future.result()
+            task_runs[task] = task_run
+
+    report_path = output_root / "PCORE_REPORT.json"
+    reduce_log = task_root / "reduce.log"
+    reduce_command = [
+        sys.executable,
+        "-m",
+        "autoresearch_esm.pcore_taskwise",
+        "reduce",
+    ]
+    for task in PCORE_TASKS:
+        reduce_command.extend(("--partial", str(task_root / f"{task}.json")))
+    reduce_command.extend(("--output", str(report_path)))
+    with reduce_log.open("w") as log:
+        reduced = subprocess.run(
+            reduce_command,
+            check=False,
+            env=environment,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+        )
+    if reduced.returncode != 0:
+        raise RuntimeError(f"exact P-CORE reduction failed; see {reduce_log}")
+    report = json.loads(report_path.read_text())
+    trust = report["trust_contract"]
+    return {
+        "protocol": "pcore-v0.3-q4",
+        "probe_protocol": "pcore-v0.2",
+        "execution": {
+            "mode": "restartable_taskwise_subprocesses",
+            "maximum_parallel_tasks": workers,
+            "threads_per_task": probe_threads,
+            "task_runs": {task: task_runs[task] for task in PCORE_TASKS},
+            "reduction_log": str(reduce_log.resolve()),
+        },
+        "embedding": {
+            "protein_all_tasks": protein_embedding_result,
+            "residue_secondary_structure_only": residue_embedding_result,
+        },
+        "pcore": report["pcore"],
+        "legacy_pcore_v0_2": report["legacy_pcore_v0_2"],
+        "tasks": report["tasks"],
+        "report": str(report_path.resolve()),
+        "report_sha256": file_sha256(report_path),
+        "trust_contract": trust,
+        "benchmark_status": trust["tasks"],
+    }
+
+
+def _run_diagnostic_probe(
+    *,
+    task: str,
+    external_src: Path,
+    store_root: Path,
+    pcore_root: Path,
+    output_root: Path,
+    timeout_seconds: int,
+    threads: int,
+) -> tuple[str, dict[str, object]]:
+    output_path = output_root / "pcore_tasks" / f"{task}.json"
+    log_path = output_root / "pcore_tasks" / f"{task}.log"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    command = [
+        sys.executable,
+        "-m",
+        "nanoprotein.pcore_task",
+        "--task",
+        task,
+        "--external-src",
+        str(external_src),
+        "--embedding-store",
+        str(store_root),
+        "--pcore-root",
+        str(pcore_root),
+        "--output",
+        str(output_path),
+    ]
+    environment = os.environ.copy()
+    for variable in (
+        "OMP_NUM_THREADS",
+        "OPENBLAS_NUM_THREADS",
+        "MKL_NUM_THREADS",
+        "VECLIB_MAXIMUM_THREADS",
+    ):
+        environment[variable] = str(threads)
+    environment["PCORE_PROBE_JOBS"] = str(threads)
+    started = time.monotonic()
+    try:
+        with log_path.open("w") as log:
+            completed = subprocess.run(
+                command,
+                check=False,
+                env=environment,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                timeout=timeout_seconds,
+            )
+    except subprocess.TimeoutExpired:
+        return task, {
+            "status": "timed_out",
+            "seconds": time.monotonic() - started,
+            "timeout_seconds": timeout_seconds,
+            "log": str(log_path.resolve()),
+        }
+    seconds = time.monotonic() - started
+    if completed.returncode != 0:
+        return task, {
+            "status": "failed",
+            "seconds": seconds,
+            "returncode": completed.returncode,
+            "log": str(log_path.resolve()),
+        }
+    payload = json.loads(output_path.read_text())
+    return task, {
+        "status": "complete",
+        "seconds": seconds,
+        **payload["result"],
+        "receipt": str(output_path.resolve()),
+        "receipt_sha256": file_sha256(output_path),
+    }
+
+
+def run_pcore_diagnostic(
+    model: ESMCForMaskedLM,
+    *,
+    checkpoint: Path,
+    output_root: Path,
+    external_src: Path,
+    pcore_root: Path,
+    device: torch.device,
+    batch_residues: int,
+    task_timeout_seconds: int,
+    probe_threads: int,
+) -> dict[str, object]:
+    """Run a bounded, non-aggregate representation diagnostic.
+
+    This deliberately is not called P-CORE: it evaluates two trusted P-CORE
+    task metrics without bootstrap, while excluding the expensive or
+    quarantined tasks. Each CPU probe runs in its own time-limited process.
+    """
+
+    sys.path.insert(0, str(external_src))
+    try:
+        from autoresearch_esm.pcore_embed import (  # type: ignore[import-not-found]
+            EmbeddingContract,
+            EmbeddingStore,
+            _window_embeddings,
+            deterministic_windows,
+            read_sequence_index,
+        )
+    finally:
+        sys.path.pop(0)
+    digest = file_sha256(checkpoint)
+    contract = EmbeddingContract(
+        schema_version=1,
+        model_id=f"local/{model.config.name}",
+        revision=digest[:12],
+        weights_sha256=digest,
+        hidden_size=model.config.d_model,
+        maximum_residues=2046,
+    )
+    store_root = output_root / "pcore_embeddings" / f"{model.config.name}--{digest[:12]}"
+    store = EmbeddingStore(store_root, contract)
+    index_path = pcore_root / "index.jsonl"
+    selected_sequences: list[str] = []
+    seen: set[str] = set()
+    task_sequence_counts: dict[str, int] = {}
+    for task in PCORE_DIAGNOSTIC_TASKS:
+        sequences = read_sequence_index(index_path, required_task=task)
+        task_sequence_counts[task] = len(sequences)
+        for sequence in sequences:
+            if sequence not in seen:
+                seen.add(sequence)
+                selected_sequences.append(sequence)
+    embedding_result = embed_sequences_packed(
+        model,
+        ProteinTokenizer.esmc(),
+        selected_sequences,
+        store,
+        device=device,
+        batch_residue_budget=batch_residues,
+        include_residue=False,
+        deterministic_windows=deterministic_windows,
+        window_embeddings=_window_embeddings,
+    )
+    embedding_receipt = {
+        "protocol": "pcore-diagnostic-v1",
+        "task_sequence_counts": task_sequence_counts,
+        "unique_sequences": len(selected_sequences),
+        "embedding": embedding_result,
+        "embedding_store": str(store_root.resolve()),
+    }
+    embedding_path = output_root / "PCORE_DIAGNOSTIC_EMBEDDING.json"
+    write_json(embedding_path, embedding_receipt)
+
+    tasks: dict[str, dict[str, object]] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(PCORE_DIAGNOSTIC_TASKS)) as pool:
+        futures = [
+            pool.submit(
+                _run_diagnostic_probe,
+                task=task,
+                external_src=external_src,
+                store_root=store_root,
+                pcore_root=pcore_root,
+                output_root=output_root,
+                timeout_seconds=task_timeout_seconds,
+                threads=probe_threads,
+            )
+            for task in PCORE_DIAGNOSTIC_TASKS
+        ]
+        for future in concurrent.futures.as_completed(futures):
+            task, result = future.result()
+            tasks[task] = result
+    completed = sorted(task for task, result in tasks.items() if result["status"] == "complete")
+    report = {
+        "schema_version": 1,
+        "protocol": "pcore-diagnostic-v1",
+        "claim_level": "non_comparable_partial_diagnostic",
+        "aggregate_score": None,
+        "bootstrap_replicates": 0,
+        "task_timeout_seconds": task_timeout_seconds,
+        "probe_threads_per_task": probe_threads,
+        "embedding": embedding_receipt,
+        "tasks": {task: tasks[task] for task in sorted(tasks)},
+        "coverage": {
+            "completed_tasks": completed,
+            "completed_count": len(completed),
+            "declared_count": len(PCORE_DIAGNOSTIC_TASKS),
+            "full_pcore_task_count": 6,
+        },
+        "excluded": {
+            "secondary_structure": "full-residue LBFGS exceeds the routine gate budget",
+            "enzyme_commission": "quarantined unresolved cross-scale benchmark anomaly",
+            "deeploc2": "twenty model selections are reserved for release evaluation",
+            "human_ppi": "quarantined weak discrimination on the current 237-pair test",
+        },
+        "fallback_policy": (
+            "timed-out or failed tasks remain explicit; no partial result is promoted "
+            "to a P-CORE aggregate"
+        ),
+    }
+    report_path = output_root / "PCORE_DIAGNOSTIC.json"
+    write_json(report_path, report)
+    return {
+        **report,
+        "report": str(report_path.resolve()),
+        "report_sha256": file_sha256(report_path),
+    }
+
+
+def _attentions(
+    model: ESMCForMaskedLM,
+    tokenizer: ProteinTokenizer,
+    sequence: str,
+    device: torch.device,
+) -> tuple[torch.Tensor, ...]:
+    input_ids, attention_mask = tokenizer.encode_batch([sequence], max_length=len(sequence) + 2)
+    with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+        output = model(
+            input_ids.to(device),
+            attention_mask.to(device),
+            output_attentions=True,
+        )
+    attentions = output["attentions"]
+    if not isinstance(attentions, tuple) or len(attentions) != model.config.n_layers:
+        raise ValueError("attention layer contract changed")
+    return attentions
+
+
+def fit_contact_probe_receipt(
+    model: ESMCForMaskedLM,
+    *,
+    checkpoint_sha256: str,
+    dataset_root: Path,
+    external_src: Path,
+    device: torch.device,
+) -> dict[str, object]:
+    """Fit the frozen probe once so deterministic inference shards can share it."""
+
+    sys.path.insert(0, str(external_src))
+    try:
+        from autoresearch_esm.paper_contact_model import (  # type: ignore[import-not-found]
+            sampled_pair_feature_matrix,
+        )
+        from autoresearch_esm.paper_contact_runtime import (
+            ContactDataset,  # type: ignore[import-not-found]
+        )
+    finally:
+        sys.path.pop(0)
+    dataset = ContactDataset(dataset_root)
+    tokenizer = ProteinTokenizer.esmc()
+    features: list[np.ndarray] = []
+    labels: list[np.ndarray] = []
+    for chain_id in dataset.train_ids:
+        _payload, chain = dataset.load_payload(chain_id)
+        attention = _attentions(model, tokenizer, chain.sequence, device)
+        x, y, _selection = sampled_pair_feature_matrix(
+            attention,
+            chain.cb_distances,
+            chain_id=chain_id,
+            seed=20260819,
+            maximum_per_class=4096,
+        )
+        features.append(x)
+        labels.append(y)
+        del attention
+    coefficients, intercept, selected_c, trace = _fit_logistic_probe_concurrent_exact(
+        features[:16],
+        labels[:16],
+        features[16:],
+        labels[16:],
+        seed=20260819,
+    )
+    if coefficients.size != model.config.n_layers * model.config.n_heads:
+        raise ValueError("frozen probe channel count differs from model attention channels")
+    return {
+        "schema_version": 1,
+        "protocol": "autoresearch-frozen-contact-probe-v1",
+        "checkpoint_sha256": checkpoint_sha256,
+        "dataset_manifest_sha256": dataset.manifest_receipt.manifest_sha256,
+        "probe_train_chain_ids": dataset.train_ids[:16],
+        "probe_validation_chain_ids": dataset.train_ids[16:],
+        "pair_sampling_seed": 20260819,
+        "maximum_pairs_per_class": 4096,
+        "channels": int(coefficients.size),
+        "coefficients": np.asarray(coefficients, dtype=np.float64).tolist(),
+        "intercept": float(intercept),
+        "selected_C": selected_c,
+        "validation_trace": trace,
+    }
+
+
+def _fit_logistic_probe_concurrent_exact(
+    train_features: Sequence[np.ndarray],
+    train_labels: Sequence[np.ndarray],
+    validation_features: Sequence[np.ndarray],
+    validation_labels: Sequence[np.ndarray],
+    *,
+    candidates_c: Sequence[float] = (0.01, 0.1, 1.0, 10.0),
+    seed: int,
+) -> tuple[np.ndarray, float, float, list[dict[str, float]]]:
+    """Parallelize frozen C trials and a speculative canonical C=1 refit.
+
+    Each candidate uses the exact estimator arguments from the paper evaluator. The
+    all-chain refit also uses the exact canonical arguments. If validation selects a
+    different C, its canonical refit runs normally, so this changes scheduling only.
+    """
+
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import average_precision_score
+
+    if not train_features or not validation_features:
+        raise ValueError("probe fitting requires non-empty train and validation chains")
+    x_train = np.concatenate([np.asarray(value, dtype=np.float32) for value in train_features])
+    y_train = np.concatenate([np.asarray(value, dtype=np.int8) for value in train_labels])
+    x_valid = np.concatenate(
+        [np.asarray(value, dtype=np.float32) for value in validation_features]
+    )
+    y_valid = np.concatenate([np.asarray(value, dtype=np.int8) for value in validation_labels])
+    if x_train.ndim != 2 or x_valid.ndim != 2 or x_train.shape[1] != x_valid.shape[1]:
+        raise ValueError("probe feature matrices are not aligned")
+    if np.unique(y_train).size != 2 or np.unique(y_valid).size != 2:
+        raise ValueError("probe train and validation sets both require two classes")
+    candidates = tuple(float(value) for value in candidates_c)
+    if not candidates or any(value <= 0 for value in candidates):
+        raise ValueError("logistic C values must be positive")
+
+    def fit_candidate(value: float) -> tuple[float, float]:
+        model = LogisticRegression(
+            penalty="l1",
+            C=value,
+            solver="saga",
+            class_weight=None,
+            random_state=seed,
+            max_iter=500,
+            n_jobs=1,
+        ).fit(x_train, y_train)
+        score = float(average_precision_score(y_valid, model.decision_function(x_valid)))
+        return value, score
+
+    x_all = np.concatenate((x_train, x_valid), axis=0)
+    y_all = np.concatenate((y_train, y_valid), axis=0)
+
+    def fit_final(value: float) -> tuple[np.ndarray, float]:
+        model = LogisticRegression(
+            penalty="l1",
+            C=value,
+            solver="saga",
+            class_weight=None,
+            random_state=seed,
+            max_iter=1000,
+            n_jobs=1,
+        ).fit(x_all, y_all)
+        return np.asarray(model.coef_[0], dtype=np.float64), float(model.intercept_[0])
+
+    speculative_c = 1.0 if 1.0 in candidates else candidates[0]
+    by_c: dict[float, float] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(candidates) + 1) as pool:
+        futures = [pool.submit(fit_candidate, value) for value in candidates]
+        speculative_final = pool.submit(fit_final, speculative_c)
+        for future in concurrent.futures.as_completed(futures):
+            value, score = future.result()
+            by_c[value] = score
+        speculative_result = speculative_final.result()
+    trace = [{"C": value, "validation_average_precision": by_c[value]} for value in candidates]
+    selected_c = max((by_c[value], -value) for value in candidates)[1] * -1.0
+    coefficients, intercept = (
+        speculative_result if selected_c == speculative_c else fit_final(selected_c)
+    )
+    return coefficients, intercept, selected_c, trace
+
+
+def _score_long_range_pairs_and_digest(
+    attentions: Sequence[Any],
+    coefficients: np.ndarray,
+    intercept: float,
+    *,
+    residue_length: int,
+    sequence_separation: int,
+    attention_planes: Callable[..., Any],
+) -> tuple[np.ndarray, str]:
+    """Apply the exact probe only where the frozen P@L scorer reads scores."""
+
+    coefficients = np.asarray(coefficients, dtype=np.float64)
+    if coefficients.ndim != 1:
+        raise ValueError("probe coefficients must be one-dimensional")
+    i, j = np.triu_indices(residue_length, k=sequence_separation)
+    pair_scores = np.full(i.size, float(intercept), dtype=np.float64)
+    feature_digest = hashlib.sha256(
+        json.dumps(
+            {
+                "dtype": "float32",
+                "residue_length": int(residue_length),
+                "sequence_separation": int(sequence_separation),
+                "transformation": "long_range_upper_triangle_symmetrized_channels",
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    )
+    observed = 0
+    for index, plane in enumerate(attention_planes(attentions, residue_length=residue_length)):
+        if index >= len(coefficients):
+            raise ValueError("probe has fewer coefficients than attention channels")
+        plane = np.asarray(plane, dtype=np.dtype("<f4"), order="C")
+        selected = np.asarray(plane[i, j], dtype=np.dtype("<f4"), order="C")
+        feature_digest.update(memoryview(selected).cast("B"))
+        pair_scores += float(coefficients[index]) * selected
+        observed = index + 1
+    if observed != len(coefficients):
+        raise ValueError("probe/attention channel count differs")
+    scores = np.zeros((residue_length, residue_length), dtype=np.float64)
+    scores[i, j] = pair_scores
+    return scores, feature_digest.hexdigest()
+
+
+def _symmetrized_attention_planes_batched(
+    attentions: Sequence[Any], *, residue_length: int
+) -> Iterator[np.ndarray]:
+    """Transfer and symmetrize one complete layer while preserving plane order."""
+
+    stop = residue_length + 1
+    for layer_index, layer in enumerate(attentions):
+        if hasattr(layer, "detach"):
+            layer = layer.detach().float().cpu().numpy()
+        array = np.asarray(layer)
+        if array.ndim == 4:
+            if array.shape[0] != 1:
+                raise ValueError("contact attention batch size changed")
+            array = array[0]
+        if array.ndim != 3 or array.shape[1] < stop or array.shape[2] < stop:
+            raise ValueError(f"contact attention layer shape changed: {layer_index}")
+        trimmed = np.asarray(array[:, 1:stop, 1:stop], dtype=np.float32)
+        planes = np.asarray(
+            (trimmed + np.swapaxes(trimmed, 1, 2)) * 0.5,
+            dtype=np.float32,
+            order="C",
+        )
+        yield from planes
+
+
+def _score_sparse_long_range_pairs_and_digest(
+    attentions: Sequence[Any],
+    coefficients: np.ndarray,
+    intercept: float,
+    *,
+    residue_length: int,
+    sequence_separation: int,
+) -> tuple[np.ndarray, str]:
+    """Transfer and score only nonzero L1-probe channels in canonical order."""
+
+    coefficients = np.asarray(coefficients, dtype=np.float64)
+    if coefficients.ndim != 1:
+        raise ValueError("probe coefficients must be one-dimensional")
+    i, j = np.triu_indices(residue_length, k=sequence_separation)
+    pair_scores = np.full(i.size, float(intercept), dtype=np.float64)
+    stop = residue_length + 1
+    channel_offset = 0
+    for layer_index, layer in enumerate(attentions):
+        if hasattr(layer, "detach"):
+            if layer.ndim == 4:
+                if int(layer.shape[0]) != 1:
+                    raise ValueError("contact attention batch size changed")
+                layer = layer[0]
+            if layer.ndim != 3 or int(layer.shape[1]) < stop or int(layer.shape[2]) < stop:
+                raise ValueError(f"contact attention layer shape changed: {layer_index}")
+            heads = int(layer.shape[0])
+            layer_coefficients = coefficients[channel_offset : channel_offset + heads]
+            selected_heads = np.flatnonzero(layer_coefficients).tolist()
+            if selected_heads:
+                array = layer[selected_heads, 1:stop, 1:stop].detach().float().cpu().numpy()
+            else:
+                array = np.empty((0, residue_length, residue_length), dtype=np.float32)
+        else:
+            array = np.asarray(layer)
+            if array.ndim == 4:
+                if array.shape[0] != 1:
+                    raise ValueError("contact attention batch size changed")
+                array = array[0]
+            if array.ndim != 3 or array.shape[1] < stop or array.shape[2] < stop:
+                raise ValueError(f"contact attention layer shape changed: {layer_index}")
+            heads = int(array.shape[0])
+            layer_coefficients = coefficients[channel_offset : channel_offset + heads]
+            selected_heads = np.flatnonzero(layer_coefficients).tolist()
+            array = np.asarray(
+                array[selected_heads, 1:stop, 1:stop], dtype=np.float32, order="C"
+            )
+        if layer_coefficients.size != heads:
+            raise ValueError("probe has fewer coefficients than attention channels")
+        if selected_heads:
+            planes = np.asarray(
+                (array + np.swapaxes(array, 1, 2)) * 0.5,
+                dtype=np.float32,
+                order="C",
+            )
+            for local_index, head_index in enumerate(selected_heads):
+                selected = np.asarray(
+                    planes[local_index, i, j], dtype=np.dtype("<f4"), order="C"
+                )
+                pair_scores += float(layer_coefficients[head_index]) * selected
+        channel_offset += heads
+    if channel_offset != len(coefficients):
+        raise ValueError("probe/attention channel count differs")
+    digest = hashlib.sha256(
+        json.dumps(
+            {
+                "dtype": "float64",
+                "residue_length": int(residue_length),
+                "sequence_separation": int(sequence_separation),
+                "transformation": "sparse_probe_long_range_upper_triangle_scores",
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("ascii")
+    )
+    digest.update(memoryview(np.asarray(pair_scores, dtype=np.dtype("<f8"))).cast("B"))
+    scores = np.zeros((residue_length, residue_length), dtype=np.float64)
+    scores[i, j] = pair_scores
+    return scores, digest.hexdigest()
+
+
+def load_contact_probe_receipt(
+    path: Path,
+    *,
+    checkpoint_sha256: str,
+    dataset_manifest_sha256: str,
+    channels: int,
+) -> tuple[np.ndarray, float, float, object]:
+    """Load an exact fitted-probe receipt with checkpoint and dataset binding."""
+
+    receipt = json.loads(path.read_text())
+    if not (
+        receipt.get("schema_version") == 1
+        and receipt.get("protocol") == "autoresearch-frozen-contact-probe-v1"
+        and receipt.get("checkpoint_sha256") == checkpoint_sha256
+        and receipt.get("dataset_manifest_sha256") == dataset_manifest_sha256
+        and receipt.get("pair_sampling_seed") == 20260819
+        and receipt.get("maximum_pairs_per_class") == 4096
+        and receipt.get("channels") == channels
+    ):
+        raise ValueError("fitted contact probe receipt binding changed")
+    coefficients = np.asarray(receipt.get("coefficients"), dtype=np.float64)
+    if coefficients.shape != (channels,) or not np.isfinite(coefficients).all():
+        raise ValueError("fitted contact probe coefficients are invalid")
+    intercept = float(receipt.get("intercept"))
+    selected_c = float(receipt.get("selected_C"))
+    trace = receipt.get("validation_trace")
+    if not np.isfinite(intercept) or not np.isfinite(selected_c) or not isinstance(trace, list):
+        raise ValueError("fitted contact probe scalar contract is invalid")
+    return coefficients, intercept, selected_c, trace
+
+
+def run_contact_lite(
+    model: ESMCForMaskedLM,
+    *,
+    dataset_root: Path,
+    external_src: Path,
+    device: torch.device,
+    evaluation_chains: int,
+    bootstrap: int,
+    shard_index: int = 0,
+    shard_count: int = 1,
+    checkpoint_sha256: str | None = None,
+    probe_receipt: Path | None = None,
+    scoring_cache_root: Path | None = None,
+    scoring_cache_preflight: Path | None = None,
+) -> dict[str, object]:
+    """Fit the frozen 20-chain probe and score a predeclared uniform subset."""
+
+    sys.path.insert(0, str(external_src))
+    try:
+        from autoresearch_esm.paper_contact import (  # type: ignore[import-not-found]
+            SEQUENCE_SEPARATION,
+            score_chain,
+        )
+        from autoresearch_esm.paper_contact_runtime import (
+            ContactDataset,  # type: ignore[import-not-found]
+        )
+    finally:
+        sys.path.pop(0)
+    dataset = ContactDataset(dataset_root)
+    if evaluation_chains <= 0 or shard_count <= 0 or not 0 <= shard_index < shard_count:
+        raise ValueError("invalid contact evaluation/shard contract")
+    tokenizer = ProteinTokenizer.esmc()
+    probe_receipt_sha256: str | None = None
+    if probe_receipt is not None:
+        if checkpoint_sha256 is None:
+            raise ValueError("shared contact probe requires a checkpoint digest")
+        coefficients, intercept, selected_c, trace = load_contact_probe_receipt(
+            probe_receipt,
+            checkpoint_sha256=checkpoint_sha256,
+            dataset_manifest_sha256=dataset.manifest_receipt.manifest_sha256,
+            channels=model.config.n_layers * model.config.n_heads,
+        )
+        probe_receipt_sha256 = file_sha256(probe_receipt)
+    else:
+        fitted = fit_contact_probe_receipt(
+            model,
+            checkpoint_sha256=checkpoint_sha256 or "unbound-legacy-call",
+            dataset_root=dataset_root,
+            external_src=external_src,
+            device=device,
+        )
+        coefficients = np.asarray(fitted["coefficients"], dtype=np.float64)
+        intercept = float(fitted["intercept"])
+        selected_c = float(fitted["selected_C"])
+        trace = fitted["validation_trace"]
+    gc.collect()
+    ranked_all = sorted(
+        dataset.eval_ids,
+        key=lambda chain_id: hashlib.sha256(f"20260820:{chain_id}".encode()).digest(),
+    )[:evaluation_chains]
+    ranked = ranked_all[shard_index::shard_count]
+    scoring_cache: ContactScoringCache | None = None
+    if scoring_cache_root is not None or scoring_cache_preflight is not None:
+        if scoring_cache_root is None or scoring_cache_preflight is None:
+            raise ValueError("contact scoring cache requires root plus preflight")
+        scoring_cache = ContactScoringCache(
+            root=scoring_cache_root,
+            preflight=scoring_cache_preflight,
+            dataset_manifest_sha256=dataset.manifest_receipt.manifest_sha256,
+            expected_chain_ids=dataset.eval_ids,
+        )
+    rows: list[dict[str, object]] = []
+    for chain_id in ranked:
+        if scoring_cache is None:
+            payload, chain = dataset.load_payload(chain_id)
+            sequence = chain.sequence[:510]
+        else:
+            cached = scoring_cache.entries[chain_id]
+            sequence = cached.sequence
+        attention = _attentions(model, tokenizer, sequence, device)
+        scores, score_digest = _score_sparse_long_range_pairs_and_digest(
+            attention,
+            coefficients,
+            intercept,
+            residue_length=len(sequence),
+            sequence_separation=SEQUENCE_SEPARATION,
+        )
+        if scoring_cache is None:
+            result = score_chain(
+                chain_id,
+                scores,
+                chain.cb_distances,
+                source_length=int(payload["source_length"]),
+            )
+            if result is None:
+                raise ValueError(f"frozen eligible contact chain became ineligible: {chain_id}")
+            row = dict(result.__dict__)
+        else:
+            row = scoring_cache.score(chain_id, scores)
+        row["long_range_probe_score_sha256"] = score_digest
+        rows.append(row)
+        del attention
+    precision = np.asarray([float(row["precision_at_l"]) for row in rows])
+    random_precision = np.asarray([float(row["random_precision_at_l"]) for row in rows])
+    uncertainty = bootstrap_mean_interval(
+        precision,
+        replicates=bootstrap,
+        seed=20260820,
+    )
+    return {
+        "protocol": "esmc-paper-contact-lite-v1",
+        "claim_level": "paper_aligned_diagnostic_not_paper_identical",
+        "selection": "sha256_rank_uniform_without_replacement",
+        "selection_seed": 20260820,
+        "selection_total_chains": len(ranked_all),
+        "shard_index": shard_index,
+        "shard_count": shard_count,
+        "probe_train_chains": 16,
+        "probe_validation_chains": 4,
+        "evaluation_chains": len(rows),
+        "precision_at_l": float(precision.mean()),
+        "precision_at_l_uncertainty": uncertainty,
+        "random_precision_at_l": float(random_precision.mean()),
+        "selected_C": selected_c,
+        "validation_trace": trace,
+        "probe_receipt_sha256": probe_receipt_sha256,
+        "rows": rows,
+    }
+
+
+def merge_contact_evaluation(
+    *,
+    contact_paths: list[Path],
+    expected_contact_chains: int,
+    contact_bootstrap: int | None = None,
+) -> dict[str, object]:
+    """Strictly merge exact deterministic P@L shards without P-CORE."""
+
+    if not contact_paths or expected_contact_chains <= 0:
+        raise ValueError("invalid contact-only merge contract")
+    checkpoint_sha256: str | None = None
+    selected_c: object | None = None
+    validation_trace: object | None = None
+    shards: dict[int, tuple[Path, dict[str, object], dict[str, object]]] = {}
+    for path in contact_paths:
+        report = json.loads(path.read_text())
+        contact = report.get("contact") if isinstance(report, dict) else None
+        if not isinstance(contact, dict):
+            raise ValueError(f"missing contact receipt: {path}")
+        if contact.get("protocol") != "esmc-paper-contact-lite-v1":
+            raise ValueError(f"unexpected contact protocol: {path}")
+        observed_checkpoint = str(report.get("checkpoint_sha256"))
+        if checkpoint_sha256 is None:
+            checkpoint_sha256 = observed_checkpoint
+        elif observed_checkpoint != checkpoint_sha256:
+            raise ValueError("contact shards use different checkpoints")
+        shard_index = int(contact["shard_index"])
+        if shard_index in shards:
+            raise ValueError(f"duplicate contact shard {shard_index}")
+        shards[shard_index] = (path, report, contact)
+
+    shard_count = len(shards)
+    if set(shards) != set(range(shard_count)):
+        raise ValueError("contact shard indices are incomplete")
+    rows: list[dict[str, object]] = []
+    shard_ids: dict[int, set[str]] = {}
+    components: list[dict[str, object]] = []
+    for shard_index in range(shard_count):
+        path, _report, contact = shards[shard_index]
+        if (
+            int(contact["shard_count"]) != shard_count
+            or int(contact["selection_total_chains"]) != expected_contact_chains
+            or int(contact["evaluation_chains"])
+            != len(range(shard_index, expected_contact_chains, shard_count))
+        ):
+            raise ValueError(f"shard contract mismatch: {path}")
+        uncertainty = contact.get("precision_at_l_uncertainty")
+        if not isinstance(uncertainty, dict) or int(uncertainty["replicates"]) != 0:
+            raise ValueError("contact shards must defer uncertainty aggregation")
+        if selected_c is None:
+            selected_c = contact["selected_C"]
+            validation_trace = contact["validation_trace"]
+        elif (
+            contact["selected_C"] != selected_c
+            or contact["validation_trace"] != validation_trace
+        ):
+            raise ValueError("frozen probe fit differs between shards")
+        shard_rows = contact.get("rows")
+        if not isinstance(shard_rows, list):
+            raise ValueError(f"missing contact rows: {path}")
+        rows.extend(shard_rows)
+        shard_ids[shard_index] = {str(row["chain_id"]) for row in shard_rows}
+        components.append(
+            {
+                "shard_index": shard_index,
+                "path": str(path.resolve()),
+                "sha256": file_sha256(path),
+                "chains": len(shard_rows),
+            }
+        )
+
+    chain_ids = [str(row["chain_id"]) for row in rows]
+    if len(rows) != expected_contact_chains or len(set(chain_ids)) != len(rows):
+        raise ValueError("merged contact rows are incomplete or duplicated")
+    rows.sort(key=lambda row: hashlib.sha256(f"20260820:{row['chain_id']}".encode()).digest())
+    for position, row in enumerate(rows):
+        if str(row["chain_id"]) not in shard_ids[position % shard_count]:
+            raise ValueError("rows violate the frozen deterministic sharding")
+    precision = [float(row["precision_at_l"]) for row in rows]
+    random_precision = [float(row["random_precision_at_l"]) for row in rows]
+    if not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in precision):
+        raise ValueError("invalid P@L values")
+    if not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in random_precision):
+        raise ValueError("invalid random P@L values")
+    receipt = {
+        "schema_version": 1,
+        "protocol": "autoresearch-frozen-full-contact-merge-v1",
+        "checkpoint_sha256": checkpoint_sha256,
+        "evaluation_chains": len(rows),
+        "p_at_l": float(np.asarray(precision, dtype=np.float64).mean()),
+        "random_p_at_l": float(np.asarray(random_precision, dtype=np.float64).mean()),
+        "selected_C": selected_c,
+        "validation_trace": validation_trace,
+        "selection_seed": 20260820,
+        "components": components,
+    }
+    if contact_bootstrap is not None:
+        contact = dict(shards[0][2])
+        probe_digest = contact.get("probe_receipt_sha256")
+        if any(
+            part.get("probe_receipt_sha256") != probe_digest for _, _, part in shards.values()
+        ):
+            raise ValueError("contact shards use different fitted probe receipts")
+        contact.update(
+            evaluation_chains=len(rows),
+            selection_total_chains=len(rows),
+            shard_index=0,
+            shard_count=1,
+            precision_at_l=receipt["p_at_l"],
+            random_precision_at_l=receipt["random_p_at_l"],
+            precision_at_l_uncertainty=bootstrap_mean_interval(
+                np.asarray(precision), replicates=contact_bootstrap, seed=20260820
+            ),
+            rows=rows,
+        )
+        receipt["contact"] = contact
+    return receipt
+
+
+def merge_full_evaluation(
+    *,
+    contact_paths: list[Path],
+    pcore_path: Path,
+    expected_contact_chains: int,
+    contact_bootstrap: int,
+) -> dict[str, object]:
+    """Validate and merge parallel exact-evaluation component receipts."""
+
+    if not contact_paths or expected_contact_chains <= 0 or contact_bootstrap <= 0:
+        raise ValueError("invalid full-evaluation merge contract")
+    pcore_report = json.loads(pcore_path.read_text())
+    if not isinstance(pcore_report, dict) or not isinstance(pcore_report.get("pcore"), dict):
+        raise ValueError("P-CORE component is absent from its evaluation receipt")
+    if not isinstance(pcore_report.get("validation_mlm"), dict):
+        raise ValueError("held-out MLM component is absent from the P-CORE receipt")
+    checkpoint_sha256 = pcore_report.get("checkpoint_sha256")
+
+    shards: dict[int, tuple[Path, dict[str, object], dict[str, object]]] = {}
+    for path in contact_paths:
+        report = json.loads(path.read_text())
+        if not isinstance(report, dict) or not isinstance(report.get("contact"), dict):
+            raise ValueError(f"contact component is missing from {path}")
+        contact = report["contact"]
+        if report.get("checkpoint_sha256") != checkpoint_sha256:
+            raise ValueError("parallel evaluation components use different checkpoints")
+        shard_index = int(contact["shard_index"])
+        if shard_index in shards:
+            raise ValueError(f"duplicate contact shard {shard_index}")
+        shards[shard_index] = (path, report, contact)
+    shard_count = len(shards)
+    if set(shards) != set(range(shard_count)):
+        raise ValueError("contact shard indices are incomplete")
+
+    rows: list[dict[str, object]] = []
+    shard_chain_ids: dict[int, set[str]] = {}
+    selected_c: object | None = None
+    validation_trace: object | None = None
+    component_receipts: list[dict[str, object]] = []
+    component_totals: list[float] = []
+    for shard_index in range(shard_count):
+        path, report, contact = shards[shard_index]
+        if (
+            int(contact["shard_count"]) != shard_count
+            or int(contact["selection_total_chains"]) != expected_contact_chains
+            or int(contact["evaluation_chains"])
+            != len(range(shard_index, expected_contact_chains, shard_count))
+        ):
+            raise ValueError(f"contact shard {shard_index} has the wrong selection contract")
+        uncertainty = contact.get("precision_at_l_uncertainty")
+        if not isinstance(uncertainty, dict) or int(uncertainty["replicates"]) != 0:
+            raise ValueError("contact shards must defer bootstrap to the exact merger")
+        if selected_c is None:
+            selected_c = contact["selected_C"]
+            validation_trace = contact["validation_trace"]
+        elif (
+            contact["selected_C"] != selected_c
+            or contact["validation_trace"] != validation_trace
+        ):
+            raise ValueError("contact probe fit differs across shards")
+        shard_rows = contact.get("rows")
+        if not isinstance(shard_rows, list):
+            raise ValueError(f"contact rows are missing from shard {shard_index}")
+        rows.extend(shard_rows)
+        shard_chain_ids[shard_index] = {str(row["chain_id"]) for row in shard_rows}
+        component_receipts.append(
+            {
+                "shard_index": shard_index,
+                "path": str(path.resolve()),
+                "sha256": file_sha256(path),
+                "chains": len(shard_rows),
+            }
+        )
+        timing = report.get("timing_seconds", {})
+        component_totals.append(float(timing.get("total", 0.0)))
+
+    chain_ids = [str(row["chain_id"]) for row in rows]
+    if len(rows) != expected_contact_chains or len(set(chain_ids)) != len(rows):
+        raise ValueError("merged contact rows are incomplete or duplicated")
+    rows.sort(key=lambda row: hashlib.sha256(f"20260820:{row['chain_id']}".encode()).digest())
+    for position, row in enumerate(rows):
+        if str(row["chain_id"]) not in shard_chain_ids[position % shard_count]:
+            raise ValueError("contact rows do not follow the frozen deterministic sharding")
+    precision = np.asarray([float(row["precision_at_l"]) for row in rows])
+    random_precision = np.asarray([float(row["random_precision_at_l"]) for row in rows])
+    contact = {
+        "protocol": "esmc-paper-contact-full-parallel-v1",
+        "claim_level": "paper_aligned_diagnostic_not_paper_identical",
+        "selection": "sha256_rank_uniform_without_replacement",
+        "selection_seed": 20260820,
+        "probe_train_chains": 16,
+        "probe_validation_chains": 4,
+        "evaluation_chains": len(rows),
+        "precision_at_l": float(precision.mean()),
+        "precision_at_l_uncertainty": bootstrap_mean_interval(
+            precision,
+            replicates=contact_bootstrap,
+            seed=20260820,
+        ),
+        "random_precision_at_l": float(random_precision.mean()),
+        "selected_C": selected_c,
+        "validation_trace": validation_trace,
+        "execution": {
+            "mode": "deterministic_chain_shards",
+            "shards": shard_count,
+            "component_receipts": component_receipts,
+        },
+        "rows": rows,
+    }
+    pcore_timing = pcore_report.get("timing_seconds", {})
+    pcore_seconds = float(pcore_timing.get("total", 0.0))
+    return {
+        "schema_version": 1,
+        "protocol": "full-parallel-evaluation-v1",
+        "checkpoint": pcore_report["checkpoint"],
+        "checkpoint_sha256": checkpoint_sha256,
+        "checkpoint_training_seconds": pcore_report["checkpoint_training_seconds"],
+        "validation_mlm": pcore_report["validation_mlm"],
+        "contact": contact,
+        "pcore": pcore_report["pcore"],
+        "timing_seconds": {
+            "pcore_component": pcore_seconds,
+            "longest_contact_shard": max(component_totals),
+            "parallel_critical_path": max([pcore_seconds, *component_totals]),
+        },
+        "peak_cuda_memory_bytes": max(
+            [
+                int(pcore_report.get("peak_cuda_memory_bytes", 0)),
+                *[
+                    int(report.get("peak_cuda_memory_bytes", 0))
+                    for _path, report, _contact in shards.values()
+                ],
+            ]
+        ),
+        "component_receipts": {
+            "pcore": {
+                "path": str(pcore_path.resolve()),
+                "sha256": file_sha256(pcore_path),
+            },
+            "contact_shards": component_receipts,
+        },
+    }
+
+
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--checkpoint", type=Path, required=True)
+    parser.add_argument("--data-root", type=Path, required=True)
+    parser.add_argument("--output-root", type=Path, required=True)
+    parser.add_argument("--external-src", type=Path)
+    parser.add_argument("--pcore-root", type=Path)
+    parser.add_argument("--contact-root", type=Path)
+    parser.add_argument(
+        "--validation-batch-size",
+        type=int,
+        default=32,
+        help="Validation proteins per forward pass; does not change the score",
+    )
+    parser.add_argument("--validation-context", type=int, default=512)
+    parser.add_argument(
+        "--contact-chains", type=int, default=20775, help="default: all 20,775 chains"
+    )
+    parser.add_argument("--contact-bootstrap", type=int, default=5000)
+    parser.add_argument(
+        "--contact-mode",
+        choices=("parallel", "serial"),
+        default="parallel",
+        help="parallel (default) shares one probe across workers; serial uses one process",
+    )
+    parser.add_argument(
+        "--contact-gpus", help="GPU identifiers; defaults to visible CUDA devices"
+    )
+    parser.add_argument("--contact-workers", type=int, help="default: eight workers per GPU")
+    parser.add_argument("--contact-shard-index", type=int, default=0)
+    parser.add_argument("--contact-shard-count", type=int, default=1)
+    parser.add_argument("--contact-probe-receipt", type=Path)
+    parser.add_argument("--contact-scoring-cache-root", type=Path)
+    parser.add_argument("--contact-scoring-cache-preflight", type=Path)
+    parser.add_argument("--pcore-batch-residues", type=int, default=8192)
+    parser.add_argument("--pcore-bootstrap", type=int, default=10000)
+    parser.add_argument("--pcore-task-parallel", type=int, default=2)
+    parser.add_argument("--pcore-diagnostic-timeout", type=int, default=600)
+    parser.add_argument("--pcore-probe-threads", type=int, default=4)
+    parser.add_argument("--run-pcore", action="store_true")
+    parser.add_argument("--run-pcore-diagnostic", action="store_true")
+    parser.add_argument("--run-contact", action="store_true")
+    parser.add_argument("--skip-validation-mlm", action="store_true")
+    parser.add_argument("--resume-components", action="store_true")
+    args = parser.parse_args(argv)
+    if args.run_pcore and args.run_pcore_diagnostic:
+        parser.error("choose either --run-pcore or --run-pcore-diagnostic")
+    if args.pcore_diagnostic_timeout <= 0 or args.pcore_probe_threads <= 0:
+        parser.error("diagnostic timeout and probe threads must be positive")
+    if args.run_contact and (args.external_src is None or args.contact_root is None):
+        parser.error("--run-contact requires --external-src and --contact-root")
+    if (args.run_pcore or args.run_pcore_diagnostic) and (
+        args.external_src is None or args.pcore_root is None
+    ):
+        parser.error("P-CORE evaluation requires --external-src and --pcore-root")
+    if args.contact_chains <= 0 or args.contact_bootstrap < 0:
+        parser.error("contact chains must be positive and bootstrap nonnegative")
+    if args.contact_workers is not None and args.contact_workers <= 0:
+        parser.error("contact workers must be positive")
+    if not 0 <= args.contact_shard_index < args.contact_shard_count:
+        parser.error("invalid contact shard index/count")
+    return args
+
+
+def main() -> None:
+    args = parse_args()
+    if not torch.cuda.is_available():
+        raise RuntimeError("evaluation requires CUDA")
+    np.random.seed(20260821)
+    torch.manual_seed(20260821)
+    torch.cuda.manual_seed_all(20260821)
+    evaluation_started = time.monotonic()
+    timing_seconds: dict[str, float] = {}
+    device = torch.device("cuda", 0)
+    args.output_root.mkdir(parents=True, exist_ok=True)
+    resumed_components: list[str] = []
+    report: dict[str, object] = {
+        "schema_version": 1,
+        "checkpoint": str(args.checkpoint.resolve()),
+        "checkpoint_sha256": file_sha256(args.checkpoint),
+        "resumed_components": resumed_components,
+        "timing_seconds": timing_seconds,
+    }
+    parallel_contact = (
+        args.run_contact
+        and args.contact_mode == "parallel"
+        and args.contact_shard_count == 1
+        and args.contact_probe_receipt is None
+    )
+    if parallel_contact:
+        from .contact_parallel import run_contact_parallel
+
+        component_started = time.monotonic()
+        parallel_report = run_contact_parallel(args, str(report["checkpoint_sha256"]))
+        report.update(parallel_report)
+        timing_seconds["contact"] = time.monotonic() - component_started
+    needs_model = (
+        not args.skip_validation_mlm
+        or args.run_pcore
+        or args.run_pcore_diagnostic
+        or (args.run_contact and not parallel_contact)
+    )
+    if needs_model:
+        model, checkpoint_packet = load_checkpoint(args.checkpoint, device)
+        report["checkpoint_training_seconds"] = checkpoint_packet["training_seconds"]
+    if not args.skip_validation_mlm:
+        validation_path = args.output_root / "VALIDATION_MLM.json"
+        if args.resume_components and validation_path.exists():
+            validation = json.loads(validation_path.read_text())
+            if (validation.get("protocol"), validation.get("settings")) != (
+                VALIDATION_MLM_PROTOCOL,
+                validation_settings(args.validation_context),
+            ):
+                raise ValueError(
+                    "cached MLM evaluation uses a different protocol or settings; "
+                    "use a fresh output directory to re-evaluate"
+                )
+            timing_seconds["validation_mlm"] = 0.0
+            resumed_components.append("validation_mlm")
+        else:
+            component_started = time.monotonic()
+            validation = validation_mlm(
+                model,
+                data_root=args.data_root,
+                device=device,
+                context_length=args.validation_context,
+                batch_size=args.validation_batch_size,
+            )
+            timing_seconds["validation_mlm"] = time.monotonic() - component_started
+            write_json(validation_path, validation)
+        report["validation_mlm"] = validation
+    if args.run_contact and not parallel_contact:
+        contact_path = args.output_root / "CONTACT.json"
+        if args.resume_components and contact_path.exists():
+            contact = json.loads(contact_path.read_text())
+            timing_seconds["contact"] = 0.0
+            resumed_components.append("contact")
+        else:
+            component_started = time.monotonic()
+            contact = run_contact_lite(
+                model,
+                dataset_root=args.contact_root,
+                external_src=args.external_src,
+                device=device,
+                evaluation_chains=args.contact_chains,
+                bootstrap=args.contact_bootstrap,
+                shard_index=args.contact_shard_index,
+                shard_count=args.contact_shard_count,
+                checkpoint_sha256=str(report["checkpoint_sha256"]),
+                probe_receipt=args.contact_probe_receipt,
+                scoring_cache_root=args.contact_scoring_cache_root,
+                scoring_cache_preflight=args.contact_scoring_cache_preflight,
+            )
+            timing_seconds["contact"] = time.monotonic() - component_started
+            write_json(contact_path, contact)
+        report["contact"] = contact
+    if args.run_pcore_diagnostic:
+        component_started = time.monotonic()
+        report["pcore_diagnostic"] = run_pcore_diagnostic(
+            model,
+            checkpoint=args.checkpoint,
+            output_root=args.output_root,
+            external_src=args.external_src,
+            pcore_root=args.pcore_root,
+            device=device,
+            batch_residues=args.pcore_batch_residues,
+            task_timeout_seconds=args.pcore_diagnostic_timeout,
+            probe_threads=args.pcore_probe_threads,
+        )
+        timing_seconds["pcore_diagnostic"] = time.monotonic() - component_started
+    if args.run_pcore:
+        component_started = time.monotonic()
+        report["pcore"] = run_pcore(
+            model,
+            checkpoint=args.checkpoint,
+            output_root=args.output_root,
+            external_src=args.external_src,
+            pcore_root=args.pcore_root,
+            device=device,
+            batch_residues=args.pcore_batch_residues,
+            bootstrap=args.pcore_bootstrap,
+            task_parallel=args.pcore_task_parallel,
+            probe_threads=args.pcore_probe_threads,
+        )
+        timing_seconds["pcore"] = time.monotonic() - component_started
+    timing_seconds["total"] = time.monotonic() - evaluation_started
+    report["peak_cuda_memory_bytes"] = max(
+        int(report.get("peak_cuda_memory_bytes", 0)),
+        int(torch.cuda.max_memory_allocated(device)),
+    )
+    report_path = args.output_root / "EVALUATION.json"
+    write_json(report_path, report)
+    print(
+        json.dumps(
+            {
+                "event": "evaluation_complete",
+                "report": str(report_path.resolve()),
+                "report_sha256": file_sha256(report_path),
+            },
+            sort_keys=True,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
