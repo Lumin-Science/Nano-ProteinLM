@@ -28,7 +28,7 @@ With `muon_split_qkv: true`, the fused QKV weight keeps its shape and checkpoint
 
 ## 100k-step component study under the previous protocol
 
-Each arm trained from scratch for **100,000 updates on four L40S GPUs** with FA2, seed 42, global batch 1,024, context 512, base LR 5e-4 and 1,000 warmup steps followed by constant LR. Each consumed 102,400,000 sequences and 24,196,983,520 non-padding model tokens from a 111-shard corpus, with no repeated source epochs. Evaluation used 4,096 MLM validation sequences and all 20,775 contact chains with 5,000 chain-bootstrap replicates. These settings differ from the current final evaluation, so the numbers explain the promotion decision rather than serve as leaderboard entries.
+Each arm trained from scratch for **100,000 updates on four L40S GPUs** with FA2, seed 42, global batch 1,024, context 512, base LR 5e-4 and 1,000 warmup steps followed by constant LR. Each consumed 102,400,000 sequences and 24,196,983,520 non-padding model tokens from a 111-shard corpus, with no repeated source epochs. Evaluation used 4,096 MLM validation sequences and all 20,775 contact chains with 5,000 chain-bootstrap replicates. These settings differ from the current final evaluation; the [leaderboard](../LEADERBOARD.md#final-evaluation) labels the selected recipe's result as a previous-protocol run while its H100 rerun is pending.
 
 | Recipe | Separate Q/K/V Muon | Query centering + RMS restoration | Validation loss ↓ | P@L ↑ | P@L chain-bootstrap 95% CI | Training hours on 4 L40S |
 |---|---|---|---:|---:|---:|---:|

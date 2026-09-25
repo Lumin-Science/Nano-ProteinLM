@@ -19,13 +19,15 @@ GPT-6 and human effort produced our current best recipe over two rounds of [sequ
 
 ### Final-evaluation leaderboard
 
-Final evaluation trains each recipe from scratch to 24.2B non-padding tokens at global batch 1,024 with seed 42, then scores MLM validation loss on all 12,288 validation proteins and contact P@L on 20,775 chains ([protocol](docs/AUTORESEARCH.md#final-evaluation)). Results under this protocol are pending.
+Final evaluation trains each recipe from scratch to 24.2B non-padding tokens at global batch 1,024 with seed 42, then scores MLM validation loss on all 12,288 validation proteins and contact P@L on 20,775 chains ([protocol](docs/AUTORESEARCH.md#final-evaluation)). ESMC and round 1 have completed their H100 reruns. Round 2 shows its previous L40S result while its H100 rerun is pending.
 
-| Recipe | MLM validation loss ↓ | P@L ↑ |
-|---|---:|---:|
-| [ESMC 171M reference](configs/test-100k/esmc-171m.yaml) | — | — |
-| [nanop-best-171m-round1](docs/leaderboard/nanop-best-171m-round1.md) | — | — |
-| [nanop-best-171m-round2](docs/leaderboard/nanop-best-171m-round2.md) | — | — |
+| Recipe | Run / MLM validation proteins | MLM validation loss ↓ | P@L ↑ |
+|---|---|---:|---:|
+| [ESMC 171M reference](configs/test-100k/esmc-171m.yaml) | Current H100 rerun / 12,288 | 2.459574 | 26.088% |
+| [nanop-best-171m-round1](docs/leaderboard/nanop-best-171m-round1.md) | Current H100 rerun / 12,288 | 2.411284 | 32.418% |
+| [nanop-best-171m-round2](docs/leaderboard/nanop-best-171m-round2.md) | Previous L40S run / 4,096 | 2.410035 | 33.450% |
+
+Round 2's previous run used 100,000 steps on four L40S GPUs with FA2 and the earlier 4,096-protein validation protocol. Its MLM loss is not directly comparable with the two reruns' 12,288-protein losses. All three P@L scores use the same 20,775 contact chains; the [full leaderboard](docs/LEADERBOARD.md#final-evaluation) records confidence intervals and training budgets.
 
 [Full leaderboard, including search-budget results](docs/LEADERBOARD.md)
 
