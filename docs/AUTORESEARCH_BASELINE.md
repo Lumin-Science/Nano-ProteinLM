@@ -12,7 +12,7 @@ Give any coding agent on your GPU compute node the [one-line launch prompt](../R
 | Candidate cost | One round if screened out, otherwise two | One round per run the agent chooses |
 | Acceptance | Two-seed mean gain larger than the larger of the two seed SDs | The agent's reasoning about the final evaluation, recorded with its evidence |
 | Task measurement | 20 minutes on four H100 GPUs with FA3; 4/3 H100 GPU-hours per round | Same |
-| Search evaluation | All 12,288 validation proteins and all 20,775 contact chains | Same |
+| Search evaluation | All 12,288 validation proteins; the P@L task adds all 20,775 contact chains | Same |
 
 The two baseline runs, seeds 42 and 43 of the starting recipe on the allocated GPUs, do not count toward the allowance. Under the reward gate each candidate then takes one or two rounds, so 72 rounds cover 36–72 candidates; under the agent gate, the count depends on how many rounds the agent spends on repeats and refinements. Each program lists the records to keep for every run.
 

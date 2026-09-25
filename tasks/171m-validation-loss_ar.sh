@@ -5,7 +5,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 usage() {
   echo "Usage: bash tasks/171m-validation-loss_ar.sh RECIPE RUN_NAME SEED"
-  echo "One run: 20 minutes on 4 H100s or 1 hour on 4 L40S GPUs; evaluate all 12,288 validation proteins and full contact P@L."
+  echo "One run: 20 minutes on 4 H100s or 1 hour on 4 L40S GPUs, then MLM validation on all 12,288 proteins."
 }
 if [[ "${1:-}" == "--help" ]]; then usage; exit 0; fi
 if [[ $# -ne 3 ]]; then usage >&2; exit 2; fi
@@ -45,10 +45,15 @@ read -r attention_backend peak_tflops training_seconds < <(
   --checkpoint-interval 0 --periodic-evaluation-interval 0 \
   --peak-bf16-tflops-per-gpu "$peak_tflops"
 
+# Validation loss needs only MLM evaluation; the P@L task's wrapper also requests contact P@L.
+evaluation_args=(--validation-context 512)
+if [[ "${NANOPROTEIN_TASK_CONTACT:-0}" == 1 ]]; then
+  evaluation_args+=(
+    --run-contact --contact-mode parallel --contact-chains 20775 --contact-bootstrap 5000
+    --contact-gpus "$evaluation_gpus" --contact-workers 32
+    --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
+  )
+fi
 "$uv_bin" run --frozen --no-dev python -m nanoprotein.evaluate \
   --checkpoint "$run_root/checkpoint-final.pt" --data-root "$DATA_ROOT/training" \
-  --output-root "$run_root/evaluation" \
-  --validation-context 512 \
-  --run-contact --contact-mode parallel --contact-chains 20775 --contact-bootstrap 5000 \
-  --contact-gpus "$evaluation_gpus" --contact-workers 32 \
-  --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
+  --output-root "$run_root/evaluation" "${evaluation_args[@]}"

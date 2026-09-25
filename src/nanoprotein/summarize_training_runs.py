@@ -51,21 +51,25 @@ def summarize(runs: list[Path], validation_sequences: int) -> dict:
         if rows and validation_settings != reference_validation_settings:
             raise ValueError("runs must use the same MLM evaluation settings")
         reference_validation_settings = validation_settings
-        contact = evaluation["contact"]
-        if contact["evaluation_chains"] != 20775:
+        contact = evaluation.get("contact")
+        if contact is not None and contact["evaluation_chains"] != 20775:
             raise ValueError("incomplete contact evaluation population")
+        if rows and (contact is None) != (rows[0]["p_at_l"] is None):
+            raise ValueError("runs must all include or all omit contact P@L")
         rows.append(
             {
                 "seed": seed,
                 "run": str(root.resolve()),
                 "validation_loss": evaluation["validation_mlm"]["sequence_mean_nll"],
-                "p_at_l": contact["precision_at_l"],
-                "p_at_l_95_ci": contact["precision_at_l_uncertainty"],
+                "p_at_l": contact and contact["precision_at_l"],
+                "p_at_l_95_ci": contact and contact["precision_at_l_uncertainty"],
             }
         )
     metrics = {}
     for name in ("validation_loss", "p_at_l"):
         values = [row[name] for row in rows]
+        if values[0] is None:
+            continue
         if not all(math.isfinite(value) for value in values):
             raise ValueError(f"non-finite {name}")
         metrics[name] = {"mean": statistics.mean(values), "sample_sd": statistics.stdev(values)}

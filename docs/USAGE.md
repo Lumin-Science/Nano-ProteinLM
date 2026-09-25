@@ -107,11 +107,11 @@ After setup and GPU allocation, run one research measurement:
 
 ```bash
 bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml experiment-001 42
-# Or use P@L as the reward with the same measurements:
+# Or use P@L as the reward; this also runs the contact evaluation:
 bash tasks/171m-p-at-l_ar.sh configs/autoresearch/esmc-171m.yaml experiment-p-at-l-001 42
 ```
 
-The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports loss on all 12,288 validation proteins and P@L over all 20,775 contact chains. The validation-loss task scores `validation_mlm.sequence_mean_nll` (lower is better); the P@L task scores `contact.precision_at_l` (higher is better). Replication, aggregation and acceptance belong to the caller; [our sequential method](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents those choices and commands. The agent reviews task boundaries and run completion.
+The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports loss on all 12,288 validation proteins; the P@L task also scores P@L over all 20,775 contact chains. The validation-loss task scores `validation_mlm.sequence_mean_nll` (lower is better); the P@L task scores `contact.precision_at_l` (higher is better). Replication, aggregation and acceptance belong to the caller; [our sequential method](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents those choices and commands. The agent reviews task boundaries and run completion.
 
 ## Evaluation
 

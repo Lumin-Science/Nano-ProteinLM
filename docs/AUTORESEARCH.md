@@ -60,7 +60,7 @@ A budgeted round consists of one training run and its evaluation. Each method re
 | Total search training allowance | **24 node-hours / 96 H100 GPU-hours**, or **72 node-hours / 288 L40S GPU-hours** |
 | Global batch | **256 sequences**, for example 64 per GPU on four GPUs |
 | Learning-rate schedule | 500 linear warmup steps, then constant peak learning rate with no decay |
-| Measurement after each round | Final checkpoint; all 12,288 MLM validation proteins and all 20,775 contact chains |
+| Measurement after each round | Final checkpoint; all 12,288 MLM validation proteins, plus all 20,775 contact chains for the P@L task |
 | Outside the training clock | Environment/data setup, final checkpoint saving and evaluation; report their time separately |
 
 Methods may spend rounds exploring new recipes or repeating earlier recipes. Two baseline runs of the untouched starting recipe, with seeds 42 and 43 on the allocated hardware, are free and calibrate the setup; every other training run, including a seed repeat or a further reference measurement, consumes a round. Retain failed attempts and their consumed compute; declare any infrastructure-failure replacement policy before the benchmark. A method's internal iteration may contain several budgeted rounds.
@@ -77,12 +77,12 @@ The default hill-climbing reward is **MLM validation loss**, which we use for a 
 |---|---|
 | Default reward | **MLM validation loss ↓** |
 | Validation data | **All 12,288 held-out validation proteins**, context 512, with crops and masks fixed per protein |
-| Contact diagnostic | **P@L over all 20,775 frozen chains**, with a chain-bootstrap 95% interval |
+| Contact P@L | **All 20,775 frozen chains** with a chain-bootstrap 95% interval; evaluated only for the P@L task |
 | Scored checkpoint | Final checkpoint at the round's training-time limit |
 
 Context 512 is the maximum input length in tokens. The evaluator scores every protein in the three validation shards once, and each protein's crop and mask positions derive from its SHA-256, so the score does not depend on batch size. Earlier results used sampled 4,096- or 32-protein evaluations and keep those labels; [EVALUATION.md](EVALUATION.md#validation-set) describes the validation set.
 
-Contact P@L measures precision among the top L predicted long-range contacts, where L is the evaluated chain length, averaged over the frozen chains. Higher is better. Report it alongside validation loss as a diagnostic. A method may repeat training runs within its search allowance; each repeat consumes another round.
+Contact P@L measures precision among the top L predicted long-range contacts, where L is the evaluated chain length, averaged over the frozen chains. Higher is better. It is the P@L task's reward; the validation-loss task skips it during search because the contact evaluation is slow, and the owner reports it in final evaluation. A method may repeat training runs within its search allowance; each repeat consumes another round.
 
 ## Final evaluation
 
