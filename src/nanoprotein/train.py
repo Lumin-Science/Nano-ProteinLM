@@ -1004,7 +1004,7 @@ def train(
     # Random training reads are fast only from memory, so fill the page cache before the clock.
     warm_started = time.perf_counter()
     data_cache: dict[str, object] = {"status": "disabled"}
-    if config.get("warm_data_cache", True):
+    if config.get("warm_data_cache", False):
         store_files = sorted(
             {
                 data_root / source / "train" / name
@@ -1388,6 +1388,12 @@ def training_parser() -> argparse.ArgumentParser:
         "--attention-backend",
         choices=("auto", "math", "flash", "flash3"),
         default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--warm-data-cache",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="Read the training stores into the page cache before the training clock starts",
     )
     parser.add_argument(
         "--resume",

@@ -42,7 +42,7 @@ read -r attention_backend peak_tflops training_seconds < <(
   --data-root "$DATA_ROOT/training" --output-root "$run_root" \
   --walltime-seconds "$training_seconds" --max-steps none --max-model-tokens none --schedule-steps none \
   --attention-backend "$attention_backend" --warmup-steps 500 \
-  --checkpoint-interval 0 --periodic-evaluation-interval 0 \
+  --checkpoint-interval 0 --periodic-evaluation-interval 0 --warm-data-cache \
   --peak-bf16-tflops-per-gpu "$peak_tflops"
 
 # Validation loss needs only MLM evaluation; the P@L task's wrapper also requests contact P@L.
