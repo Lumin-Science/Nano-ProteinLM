@@ -24,7 +24,7 @@ import yaml
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from .batch_balance import rebalance_masked_batch
-from .data import MixtureBatcher, file_sha256
+from .data import MixtureBatcher, file_sha256, warm_page_cache
 from .data_budget import data_coverage
 from .flash_attention import prepare_attention
 from .global_sampling import GlobalMixtureBatcher, portable_batcher_states, row_state_exposure
@@ -1001,8 +1001,27 @@ def train(
         )
     del resumed
     stage_checkpoint: dict[str, object] | None = None
+    # Random training reads are fast only from memory, so fill the page cache before the clock.
+    warm_started = time.perf_counter()
+    data_cache: dict[str, object] = {"status": "disabled"}
+    if config.get("warm_data_cache", True):
+        store_files = sorted(
+            {
+                data_root / source / "train" / name
+                for stage in stages
+                for source, weight in stage.mixture.items()
+                if weight > 0
+                for name in ("tokens.bin", "index.npy")
+            }
+        )
+        data_cache = warm_page_cache(
+            store_files, part=local_rank, parts=int(os.environ.get("LOCAL_WORLD_SIZE", "1"))
+        )
     if world_size > 1:
         dist.barrier()
+    if rank == 0:
+        data_cache["seconds"] = time.perf_counter() - warm_started
+        print(json.dumps({"event": "data_cache", **data_cache}), flush=True)
     training_started = time.perf_counter()
     stop_at_unix_time = float(config.get("stop_at_unix_time", 0))
 

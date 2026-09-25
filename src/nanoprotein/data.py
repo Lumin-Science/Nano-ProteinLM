@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import os
+import time
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -86,6 +88,58 @@ class TokenStore:
         record = self.index[int(row)]
         start = int(record["offset"])
         return self.tokens[start : start + int(record["length"])]
+
+
+def _available_memory_bytes() -> int | None:
+    meminfo = Path("/proc/meminfo")
+    if not meminfo.exists():
+        return None
+    for line in meminfo.read_text().splitlines():
+        if line.startswith("MemAvailable:"):
+            return int(line.split()[1]) * 1024
+    return None
+
+
+def warm_page_cache(
+    paths: Sequence[Path],
+    *,
+    part: int = 0,
+    parts: int = 1,
+    memory_fraction: float = 0.5,
+    chunk_bytes: int = 64 << 20,
+) -> dict[str, object]:
+    """Read files once so later random reads come from the page cache.
+
+    Processes on one node share the page cache, so each reads every `parts`-th chunk.
+    Warming is skipped when the files would take more than `memory_fraction` of free memory.
+    """
+    if parts <= 0 or not 0 <= part < parts:
+        raise ValueError("invalid page-cache warm-up partition")
+    total = sum(path.stat().st_size for path in paths)
+    available = _available_memory_bytes()
+    if available is not None and total > memory_fraction * available:
+        return {"status": "skipped", "bytes": total, "available_bytes": available}
+    chunks = [
+        (path, offset)
+        for path in paths
+        for offset in range(0, path.stat().st_size, chunk_bytes)
+    ][part::parts]
+
+    def read(chunk: tuple[Path, int]) -> int:
+        path, offset = chunk
+        with path.open("rb", buffering=0) as handle:
+            handle.seek(offset)
+            return len(handle.read(chunk_bytes))
+
+    started = time.perf_counter()
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        read_bytes = sum(pool.map(read, chunks))
+    return {
+        "status": "warmed",
+        "bytes": total,
+        "read_bytes": read_bytes,
+        "seconds": time.perf_counter() - started,
+    }
 
 
 class _ShuffledRows:
