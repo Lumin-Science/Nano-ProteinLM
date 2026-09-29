@@ -1,0 +1,1163 @@
+"""Step-, token- and time-budgeted distributed ESMC pretraining loop."""
+
+from __future__ import annotations
+
+import argparse
+import copy
+import json
+import os
+import platform
+import random
+import subprocess
+import time
+from contextlib import nullcontext
+from datetime import timedelta
+from importlib.metadata import version
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+import torch.distributed as dist
+import torch.nn.functional as F
+import yaml
+from torch.nn.parallel import DistributedDataParallel as DDP
+
+from .data import BatchPrefetcher, MixtureBatcher, file_sha256
+from .data_budget import data_coverage
+from .flash_attention import prepare_attention
+from .global_sampling import GlobalMixtureBatcher, portable_batcher_states, row_state_exposure
+from .model import ESMCForMaskedLM, build_model, count_parameters, parameter_groups
+from .periodic_evaluation import run_periodic_evaluation
+from .resume import capture_runtime, restore_runtime, validate_resume
+from .schedule import (
+    Stage,
+    continuation_progress,
+    stage_for_progress,
+    stage_for_time,
+    wsd_multiplier,
+)
+from .sharded_data import validate_search_contracts
+from .tokenizer import ProteinTokenizer, mask_tokens
+
+
+def load_config(path: Path) -> dict[str, Any]:
+    with path.open() as handle:
+        config = yaml.safe_load(handle)
+    if not isinstance(config, dict):
+        raise TypeError("training config must be a mapping")
+    return config
+
+
+def resolve_config_overrides(
+    config: dict[str, Any], overrides: dict[str, Any]
+) -> dict[str, Any]:
+    """Apply explicit CLI settings without changing the source recipe."""
+    resolved = copy.deepcopy(config)
+    stage_keys = {"micro_batch_size", "gradient_accumulation"}
+    for key, value in overrides.items():
+        if key in stage_keys:
+            if len(resolved["stages"]) != 1:
+                raise ValueError(f"--{key.replace('_', '-')} requires a single-stage recipe")
+            resolved["stages"][0][key] = value
+        else:
+            resolved[key] = value
+    resolve_step_budgets(resolved)
+    resolve_token_budget(resolved)
+    return resolved
+
+
+def optional_positive_int(value: str) -> int | None:
+    if value.lower() == "none":
+        return None
+    result = int(value)
+    if result <= 0:
+        raise argparse.ArgumentTypeError("use a positive integer, or 'none' to clear a limit")
+    return result
+
+
+def nonnegative_int(value: str) -> int:
+    result = int(value)
+    if result < 0:
+        raise argparse.ArgumentTypeError("use a nonnegative integer")
+    return result
+
+
+def positive_int(value: str) -> int:
+    result = int(value)
+    if result <= 0:
+        raise argparse.ArgumentTypeError("use a positive integer")
+    return result
+
+
+def resolve_step_budgets(config: dict[str, Any]) -> tuple[int | None, int | None]:
+    """Resolve an emergency stop cap independently from schedule progress.
+
+    Existing configurations remain byte-for-byte compatible: without an
+    explicit ``schedule_steps`` value, ``max_steps`` controls both behaviors.
+    AutoResearch configurations can set a deliberately nonbinding ``max_steps``
+    while keeping warmup and decay bound to the smoke-derived schedule length.
+    """
+
+    max_steps_value = config.get("max_steps")
+    max_steps = int(max_steps_value) if max_steps_value is not None else None
+    if max_steps is not None and max_steps <= 0:
+        raise ValueError("max_steps must be positive")
+    schedule_steps_value = config.get("schedule_steps", max_steps_value)
+    schedule_steps = int(schedule_steps_value) if schedule_steps_value is not None else None
+    if schedule_steps is not None and schedule_steps <= 0:
+        raise ValueError("schedule_steps must be positive")
+    start_step = int(config.get("schedule_start_step", 0))
+    if start_step and (
+        start_step < 0
+        or schedule_steps is None
+        or schedule_steps <= start_step
+        or max_steps is None
+        or max_steps <= start_step
+    ):
+        raise ValueError("continuation budgets must exceed schedule_start_step")
+    if (
+        max_steps is not None
+        and schedule_steps is not None
+        and schedule_steps > max_steps
+        and not start_step
+    ):
+        raise ValueError("schedule_steps cannot exceed max_steps")
+    return max_steps, schedule_steps
+
+
+def resolve_token_budget(config: dict[str, Any]) -> int | None:
+    """An optional total endpoint using the existing global non-padding token meter."""
+    value = config.get("max_model_tokens")
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError("max_model_tokens must be a positive integer")
+    stages = config.get("stages", [])
+    if (
+        len(stages) != 1
+        or stages[0]["name"] != "stage1"
+        or config.get("stage1_cooldown_fraction", 0) != 0
+    ):
+        raise ValueError("token budgets require a single constant-LR Stage 1 after warmup")
+    return value
+
+
+def training_stop_reason(
+    *,
+    model_tokens: int,
+    max_model_tokens: int | None,
+    optimizer_step: int,
+    max_steps: int | None,
+    training_seconds: float,
+    walltime_seconds: float,
+    deadline_reached: bool = False,
+) -> str | None:
+    """Check only optimizer boundaries; a reached token endpoint wins over safety caps."""
+    if max_model_tokens is not None and model_tokens >= max_model_tokens:
+        return "max_model_tokens"
+    if max_steps is not None and optimizer_step >= max_steps:
+        return "max_steps"
+    if deadline_reached:
+        return "allocation_deadline"
+    if training_seconds >= walltime_seconds:
+        return "walltime"
+    return None
+
+
+def validate_data_manifest(
+    data_root: Path,
+) -> dict[str, Any]:
+    """Validate the screened training corpus and verification receipts."""
+
+    manifest_path = data_root / "manifest.json"
+    with manifest_path.open() as handle:
+        manifest = json.load(handle)
+    if not isinstance(manifest, dict):
+        raise TypeError("data manifest must be a mapping")
+    decontamination = manifest.get("decontamination")
+    homology_exclusion = (
+        decontamination.get("homology_exclusion") if isinstance(decontamination, dict) else None
+    )
+    contract = (
+        decontamination.get("homology_contract") if isinstance(decontamination, dict) else None
+    )
+    thresholds = contract.get("thresholds") if isinstance(contract, dict) else None
+    protocol = contract.get("protocol") if isinstance(contract, dict) else None
+    evaluations = contract.get("evaluation_protocols") if isinstance(contract, dict) else None
+    try:
+        validate_search_contracts(
+            contract.get("search_contracts") if isinstance(contract, dict) else None
+        )
+        valid_search_contracts = True
+    except (TypeError, ValueError):
+        valid_search_contracts = False
+    version_specific_contract = (
+        protocol == "mmseqs2-evaluation-homology-exclusion-v2"
+        and isinstance(evaluations, list)
+        and {"contact-p-at-l", "pcore-v0.2", "pcore-v0.5-alpha-q9"} <= set(evaluations)
+        and contract.get("blocked_benchmark_candidates_are_protected") is True
+        and valid_search_contracts
+    )
+    valid_contract = (
+        isinstance(contract, dict)
+        and contract.get("status") == "verified"
+        and version_specific_contract
+        and contract.get("scope_used_for_training") == "all evaluation splits"
+        and isinstance(thresholds, dict)
+        and thresholds.get("minimum_sequence_identity") == 0.3
+        and thresholds.get("minimum_query_coverage") == 0.8
+        and thresholds.get("minimum_target_coverage") == 0.8
+        and thresholds.get("maximum_evalue") == 0.001
+        and thresholds.get("coverage_mode") == 0
+        and isinstance(decontamination.get("homology_exclusion_receipt_sha256"), str)
+    )
+    if homology_exclusion is not True or not valid_contract:
+        raise RuntimeError(
+            "training blocked: every corpus requires a verified MMseqs2 homology "
+            "receipt covering all evaluation splits"
+        )
+    verification_path = data_root / "CORPUS_VERIFICATION.json"
+    if not verification_path.is_file():
+        raise RuntimeError("training blocked: prepared-corpus verification is missing")
+    verification = json.loads(verification_path.read_text())
+    verified_sources = verification.get("sources", {})
+    valid_verification = (
+        verification.get("status") == "verified"
+        and verification.get("protocol")
+        in {
+            "prepared-corpus-decontamination-verification-v1",
+            "prepared-corpus-decontamination-verification-v2",
+        }
+        and verification.get("manifest_sha256") == file_sha256(manifest_path)
+        and verification.get("homology_exclusion_receipt_sha256")
+        == decontamination.get("homology_exclusion_receipt_sha256")
+        and all(
+            isinstance(verified_sources.get(source), dict)
+            and verified_sources[source].get("train_excluded_intersection") == 0
+            and verified_sources[source].get("validation_excluded_intersection") == 0
+            and verified_sources[source].get("train_validation_intersection") == 0
+            for source in ("uniref90", "mgnify", "omg_img")
+        )
+    )
+    if not valid_verification:
+        raise RuntimeError("training blocked: prepared-corpus verification is invalid")
+    return manifest
+
+
+def sequence_mean_loss(logits: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+    per_token = F.cross_entropy(
+        logits.flatten(0, 1), labels.flatten(), ignore_index=-100, reduction="none"
+    ).view_as(labels)
+    selected = labels != -100
+    return (per_token.sum(dim=1) / selected.sum(dim=1).clamp_min(1)).mean()
+
+
+def _distributed() -> tuple[int, int, int]:
+    rank = int(os.environ.get("RANK", "0"))
+    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    if world_size > 1:
+        device = torch.device("cuda", local_rank)
+        torch.cuda.set_device(device)
+        dist.init_process_group("nccl", device_id=device, timeout=timedelta(minutes=5))
+    return rank, local_rank, world_size
+
+
+def _stage(spec: dict[str, Any]) -> Stage:
+    return Stage(
+        name=str(spec["name"]),
+        context_length=int(spec["context_length"]),
+        micro_batch_size=int(spec["micro_batch_size"]),
+        gradient_accumulation=int(spec["gradient_accumulation"]),
+        mixture={name: float(value) for name, value in spec["mixture"].items()},
+    )
+
+
+def _unwrap(model: torch.nn.Module) -> ESMCForMaskedLM:
+    current = model.module if isinstance(model, DDP) else model
+    original = getattr(current, "_orig_mod", current)
+    if not isinstance(original, ESMCForMaskedLM):
+        raise TypeError(f"unexpected wrapped model type {type(original)}")
+    return original
+
+
+def save_checkpoint(
+    path: Path,
+    *,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    config: dict[str, Any],
+    optimizer_step: int,
+    training_seconds: float,
+    model_tokens: int,
+    filled_residues: int,
+    sequences_seen: int,
+    stage: str,
+    parameter_count: int,
+    runtime_states: list[dict[str, Any]] | None = None,
+    data_manifest_sha256: str | None = None,
+) -> dict[str, object]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".partial")
+    raw_model = _unwrap(model)
+    torch.save(
+        {
+            "schema_version": 1,
+            "model_name": raw_model.config.name,
+            "model_config": raw_model.config.to_dict(),
+            "model": raw_model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "optimizer_step": optimizer_step,
+            "training_seconds": training_seconds,
+            "model_tokens": model_tokens,
+            "filled_residues": filled_residues,
+            "sequences_seen": sequences_seen,
+            "stage": stage,
+            "parameter_count": parameter_count,
+            "train_config": config,
+            "torch_rng": torch.get_rng_state(),
+            "cuda_rng": torch.cuda.get_rng_state_all(),
+            "numpy_rng": np.random.get_state(),
+            "python_rng": random.getstate(),
+            "optimizer_layout": "replicated_ddp_full_state",
+            "world_size": dist.get_world_size() if dist.is_initialized() else 1,
+            "runtime_states": runtime_states,
+            "data_manifest_sha256": data_manifest_sha256,
+        },
+        temporary,
+    )
+    temporary.replace(path)
+    return {
+        "path": str(path.resolve()),
+        "sha256": file_sha256(path),
+        "optimizer_step": optimizer_step,
+        "training_seconds": training_seconds,
+        "model_tokens": model_tokens,
+        "filled_residues": filled_residues,
+        "sequences_seen": sequences_seen,
+    }
+
+
+def _write_json(path: Path, value: object) -> None:
+    temporary = path.with_suffix(path.suffix + ".partial")
+    temporary.write_text(json.dumps(value, allow_nan=False, indent=2, sort_keys=True) + "\n")
+    temporary.replace(path)
+
+
+def _git_state(root: Path) -> dict[str, object]:
+    if not (root / ".git").exists():
+        return {"git_commit": None, "git_dirty": None}
+    try:
+        revision = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        dirty = bool(
+            subprocess.run(
+                ["git", "-C", str(root), "status", "--porcelain"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return {"git_commit": None, "git_dirty": None}
+    return {"git_commit": revision, "git_dirty": dirty}
+
+
+def build_optimizer(model: torch.nn.Module, config: dict[str, Any]) -> torch.optim.AdamW:
+    name = str(config.get("optimizer", "adamw")).lower()
+    if name != "adamw":
+        raise ValueError(f"unknown optimizer {name!r}")
+    return torch.optim.AdamW(
+        parameter_groups(model, weight_decay=float(config["weight_decay"])),
+        lr=float(config["learning_rate"]),
+        betas=tuple(config.get("betas", (0.9, 0.95))),
+        eps=1e-8,
+        fused=True,
+    )
+
+
+def train(
+    config_path: Path,
+    *,
+    data_root: Path,
+    output_root: Path,
+    walltime_override: int | None = None,
+    resume_checkpoint: Path | None = None,
+    resume_data_migration: Path | None = None,
+    config_overrides: dict[str, Any] | None = None,
+) -> None:
+    overrides = dict(config_overrides or {})
+    if walltime_override is not None:
+        overrides["walltime_seconds"] = walltime_override
+    config = resolve_config_overrides(load_config(config_path), overrides)
+    if float(config.get("walltime_seconds", 0)) <= 0:
+        raise ValueError(
+            "supply a positive --walltime-seconds or walltime_seconds in the recipe"
+        )
+    max_model_tokens = resolve_token_budget(config)
+    data_manifest = validate_data_manifest(data_root)
+    rank, local_rank, world_size = _distributed()
+    if int(config.get("expected_world_size", world_size)) != world_size:
+        raise ValueError("configured GPU count differs from the distributed world size")
+    manifest_sha = file_sha256(data_root / "manifest.json")
+    coverage = data_coverage(config, data_manifest, world_size=world_size)
+    schedule_start_step = int(config.get("schedule_start_step", 0))
+    if schedule_start_step and (
+        resume_checkpoint is None
+        or len(config["stages"]) != 1
+        or config["stages"][0]["name"] != "stage2"
+        or config.get("schedule_steps", config.get("max_steps")) is None
+    ):
+        raise ValueError(
+            "a Stage 2 continuation requires a checkpoint and explicit step schedule"
+        )
+    allow_resampling = coverage["policy"] == "allow"
+    global_sampling = config.get("data_sampler", "rank") == "global"
+    if config.get("data_sampler", "rank") not in {"rank", "global"}:
+        raise ValueError("unknown data sampler")
+    if global_sampling and len(config["stages"]) != 1:
+        raise ValueError("global source epochs currently require a single training stage")
+    migration = None
+    global_saved = None
+    if resume_data_migration is not None:
+        if resume_checkpoint is None:
+            raise ValueError("data migration requires a parent checkpoint")
+        migration = json.loads(resume_data_migration.read_text())
+    resumed = None
+    if resume_checkpoint is not None:
+        resumed = torch.load(resume_checkpoint, map_location="cpu", weights_only=False)
+        validate_resume(
+            resumed,
+            config,
+            world_size=world_size,
+            data_manifest_sha256=manifest_sha,
+            migration=migration,
+        )
+        if migration is not None:
+            if file_sha256(resume_checkpoint) != migration["parent_checkpoint_sha256"]:
+                raise ValueError("migration parent checkpoint checksum differs")
+            for name, proof in migration["prefix_verification"].items():
+                if proof["new_records"] != data_manifest["sources"][name]["train"]["records"]:
+                    raise ValueError("migration source size differs from expanded corpus")
+        elif global_sampling:
+            global_saved = portable_batcher_states(resumed)
+            saved_stage = next(iter(global_saved.values()))
+            coverage = data_coverage(
+                config,
+                data_manifest,
+                world_size=world_size,
+                resume_step=int(resumed["optimizer_step"]),
+                source_exposure={
+                    k: row_state_exposure(s) for k, s in saved_stage["samplers"].items()
+                },
+            )
+        if (
+            not global_sampling
+            and not allow_resampling
+            and (int(resumed["world_size"]) != world_size or not resumed.get("runtime_states"))
+        ):
+            raise ValueError(
+                "no-repeat continuation requires the saved GPU layout and sampler states; "
+                "a new data stream could repeat proteins already consumed"
+            )
+    if not torch.cuda.is_available():
+        raise RuntimeError("training requires CUDA")
+    device = torch.device("cuda", local_rank)
+    torch.cuda.set_device(device)
+    attention = prepare_attention(str(config.get("attention_backend", "flash")), device)
+    torch.set_float32_matmul_precision("high")
+    seed = int(config.get("seed", 20260821))
+    random.seed(seed + rank)
+    np.random.seed(seed + rank)
+    torch.manual_seed(seed + rank)
+    torch.cuda.manual_seed_all(seed + rank)
+
+    output_root.mkdir(parents=True, exist_ok=True)
+    if any(
+        (output_root / name).exists()
+        for name in ("run_contract.json", "metrics.jsonl", "checkpoint-final.pt")
+    ):
+        raise FileExistsError(
+            "training requires a fresh output directory; preserve the source run"
+        )
+    if world_size > 1:
+        dist.barrier()
+    if rank == 0:
+        project_root = Path(__file__).resolve().parents[2]
+        uv_lock = project_root / "uv.lock"
+        resolved_path = output_root / "config.yaml"
+        if resolved_path.resolve() == config_path.resolve():
+            resolved_path = output_root / "config.resolved.yaml"
+        resolved_path.write_text(yaml.safe_dump(config, sort_keys=False))
+        _write_json(output_root / "DATA_COVERAGE.json", coverage)
+        _write_json(
+            output_root / "run_contract.json",
+            {
+                "config_path": str(config_path.resolve()),
+                "config_sha256": file_sha256(config_path),
+                "config_overrides": overrides,
+                "resolved_config_path": str(resolved_path.resolve()),
+                "resolved_config_sha256": file_sha256(resolved_path),
+                "data_manifest": str((data_root / "manifest.json").resolve()),
+                "data_manifest_sha256": file_sha256(data_root / "manifest.json"),
+                "data_coverage": coverage,
+                "homology_exclusion": data_manifest.get("decontamination", {}).get(
+                    "homology_exclusion"
+                ),
+                "homology_exclusion_receipt_sha256": data_manifest.get(
+                    "decontamination", {}
+                ).get("homology_exclusion_receipt_sha256"),
+                "corpus_verification_sha256": (
+                    file_sha256(data_root / "CORPUS_VERIFICATION.json")
+                    if (data_root / "CORPUS_VERIFICATION.json").is_file()
+                    else None
+                ),
+                "training_budget_semantics": (
+                    "global non-padding model tokens including BOS/EOS; stop at the first "
+                    "completed optimizer update reaching the token endpoint; time/step "
+                    "limits remain independent safety caps"
+                    if max_model_tokens is not None
+                    else "true synchronized training-loop wall time; setup, final checkpoint, "
+                    "and evaluation are outside the training clock"
+                ),
+                "world_size": world_size,
+                "resume_checkpoint": str(resume_checkpoint.resolve())
+                if resume_checkpoint
+                else None,
+                "resume_checkpoint_sha256": file_sha256(resume_checkpoint)
+                if resume_checkpoint
+                else None,
+                "resume_optimizer_step": int(resumed["optimizer_step"]) if resumed else 0,
+                "resume_source_world_size": int(resumed["world_size"]) if resumed else None,
+                "data_migration": migration,
+                "stage_transition": resumed.get("stage_transition") if resumed else None,
+                "python": platform.python_version(),
+                "cuda": torch.version.cuda,
+                "torch": torch.__version__,
+                "visible_gpu": torch.cuda.get_device_name(device),
+                "attention_implementation": f"whole-transformer-packed-{attention['operator']}",
+                "attention_kernel": attention,
+                "python_executable": os.path.realpath(os.sys.executable),
+                "runtime_packages": {
+                    name: version(name)
+                    for name in ("torch", "numpy", "pyarrow", "PyYAML", "huggingface-hub")
+                },
+                "uv_lock": str(uv_lock),
+                "uv_lock_sha256": file_sha256(uv_lock),
+                **_git_state(project_root),
+            },
+        )
+    if world_size > 1:
+        dist.barrier()
+
+    model_options = {
+        "attention_backend": str(config.get("attention_backend", "flash")),
+        "gradient_checkpointing": bool(config.get("gradient_checkpointing", False)),
+        "rotary_base": float(config.get("rotary_base", 10_000.0)),
+    }
+    model = build_model(str(config["model"]), **model_options).to(device)
+    parameter_count = count_parameters(model)
+    expected = int(config["expected_parameter_count"])
+    if parameter_count != expected:
+        raise RuntimeError(
+            f"parameter count drift: expected={expected}, observed={parameter_count}"
+        )
+    if resumed is not None:
+        if model.config.to_dict() != resumed["model_config"]:
+            raise ValueError("checkpoint model architecture differs from the configured model")
+        model.load_state_dict(resumed["model"], strict=True)
+    if bool(config.get("compile", False)):
+        model = torch.compile(
+            model,
+            mode=str(config.get("compile_mode", "default")),
+            dynamic=bool(config.get("compile_dynamic", False)),
+        )
+    if world_size > 1:
+        model = DDP(
+            model,
+            device_ids=[local_rank],
+            forward_sync_buffers=False,
+            gradient_as_bucket_view=True,
+        )
+
+    optimizer = build_optimizer(model, config)
+    if resumed is not None:
+        optimizer.load_state_dict(resumed["optimizer"])
+    tokenizer = ProteinTokenizer.esmc()
+    stages = tuple(_stage(spec) for spec in config["stages"])
+    if not 1 <= len(stages) <= 2:
+        raise ValueError("training requires one or two stages")
+    saved_runtime = None
+    data_seed = seed
+    resume_data_mode = "fresh"
+    if migration is not None:
+        data_seed = int(migration["global_data_seed"])
+        resume_data_mode = "verified_append_only_global_sampler_migration"
+    elif global_saved is not None:
+        data_seed = int(next(iter(global_saved.values()))["seed"])
+        resume_data_mode = "restore_global_sampler_and_repartition"
+        if int(resumed["world_size"]) == world_size:
+            saved_runtime = resumed["runtime_states"][rank]
+            resume_data_mode = "restore_rank_rng_and_global_sampler"
+    elif resumed is not None:
+        if int(resumed["world_size"]) == world_size and resumed.get("runtime_states"):
+            saved_runtime = resumed["runtime_states"][rank]
+            data_seed = int(saved_runtime["data_seed"])
+            resume_data_mode = "restore_rank_rng_and_sampler"
+        else:
+            data_seed = (seed + 1_000_003 * (int(resumed["optimizer_step"]) + 1)) % (
+                2**32 - world_size
+            )
+            random.seed(data_seed + rank)
+            np.random.seed(data_seed + rank)
+            torch.manual_seed(data_seed + rank)
+            torch.cuda.manual_seed_all(data_seed + rank)
+            resume_data_mode = "new_deterministic_stream_for_changed_gpu_layout"
+    batchers = (
+        {}
+        if global_sampling
+        else {
+            stage.name: MixtureBatcher(
+                data_root,
+                "train",
+                stage.mixture,
+                seed=data_seed,
+                rank=rank,
+                world_size=world_size,
+                allow_resampling=allow_resampling,
+            )
+            for stage in stages
+        }
+    )
+    if global_sampling:
+        policies = config.get("data_source_resampling") or {
+            name: coverage["policy"] for name in stages[0].mixture
+        }
+        for stage in stages:
+            saved = global_saved[stage.name] if global_saved else None
+            origins = (
+                migration["origins"]
+                if migration
+                else (
+                    {name: s["origin"] for name, s in saved["samplers"].items()}
+                    if saved
+                    else None
+                )
+            )
+            batchers[stage.name] = GlobalMixtureBatcher(
+                data_root,
+                "train",
+                stage.mixture,
+                seed=data_seed,
+                rank=rank,
+                world_size=world_size,
+                policies=policies,
+                origins=origins,
+                migration=migration if migration else (saved["migration"] if saved else None),
+            )
+            if saved:
+                batchers[stage.name].load_state_dict(
+                    resumed["runtime_states"][rank]["batchers"][stage.name]
+                    if saved_runtime
+                    else saved
+                )
+    if not global_sampling and not allow_resampling:
+        # A stage transition must continue the same per-source permutation,
+        # rather than restart at its beginning under a different mixture.
+        shared_samplers = {}
+        for batcher in batchers.values():
+            for name, sampler in batcher.row_samplers.items():
+                batcher.row_samplers[name] = shared_samplers.setdefault(name, sampler)
+    if saved_runtime is not None:
+        restore_runtime(saved_runtime, batchers)
+    feeds = {
+        stage.name: BatchPrefetcher(
+            batchers[stage.name],
+            int(config.get("prefetch_batches", 0)),
+            batch_size=stage.micro_batch_size,
+            context_length=stage.context_length,
+            tokenizer=tokenizer,
+        )
+        for stage in stages
+    }
+    walltime_seconds = float(
+        walltime_override if walltime_override is not None else config["walltime_seconds"]
+    )
+    max_steps, schedule_steps = resolve_step_budgets(config)
+    stage1_fraction = float(config.get("stage1_fraction", 2.0 / 3.0))
+    warmup_steps = int(config.get("warmup_steps", 10))
+    log_interval = int(config.get("log_interval", 5))
+    clip_norm = float(config.get("gradient_clip_norm", 1.0))
+    peak_learning_rate = float(config["learning_rate"])
+    metrics_path = output_root / "metrics.jsonl"
+    optimizer_step = int(resumed["optimizer_step"]) if resumed else 0
+    prior_training_seconds = float(resumed["training_seconds"]) if resumed else 0.0
+    training_seconds = 0.0
+    compute_seconds_total = 0.0
+    data_seconds_total = 0.0
+    model_tokens = int(resumed["model_tokens"]) if resumed else 0
+    last_step_model_tokens = 0
+    filled_residues = int(resumed["filled_residues"]) if resumed else 0
+    sequences_seen = int(resumed["sequences_seen"]) if resumed else 0
+    current_stage_name: str | None = str(resumed["stage"]) if resumed else None
+    checkpoint_interval = int(config.get("checkpoint_interval", 0))
+    evaluation_interval = int(config.get("periodic_evaluation_interval", 0))
+    evaluation_command = config.get("periodic_evaluation_command")
+    if evaluation_interval < 0 or (
+        evaluation_interval
+        and (
+            not isinstance(evaluation_command, list)
+            or not evaluation_command
+            or not all(isinstance(value, str) and value for value in evaluation_command)
+        )
+    ):
+        raise ValueError("periodic evaluation requires a nonnegative interval and command argv")
+    evaluation_seconds = 0.0
+    if checkpoint_interval < 0:
+        raise ValueError("checkpoint_interval must be nonnegative")
+    if rank == 0 and resumed is not None:
+        _write_json(
+            output_root / "RESUME.json",
+            {
+                "checkpoint": str(resume_checkpoint.resolve()),
+                "optimizer_step": optimizer_step,
+                "optimizer_restored": True,
+                "source_world_size": int(resumed["world_size"]),
+                "world_size": world_size,
+                "data_mode": resume_data_mode,
+                "data_seed": data_seed,
+                "prior_training_seconds": prior_training_seconds,
+                "global_batch_preserved": True,
+            },
+        )
+    del resumed
+    stage_checkpoint: dict[str, object] | None = None
+    if world_size > 1:
+        dist.barrier()
+    training_started = time.perf_counter()
+    stop_at_unix_time = float(config.get("stop_at_unix_time", 0))
+
+    while True:
+        elapsed = torch.tensor(
+            [time.perf_counter() - training_started, time.time()],
+            dtype=torch.float64,
+            device=device,
+        )
+        if world_size > 1:
+            dist.all_reduce(elapsed, op=dist.ReduceOp.MAX)
+        training_seconds = float(elapsed[0].item())
+        stop_reason = training_stop_reason(
+            model_tokens=model_tokens,
+            max_model_tokens=max_model_tokens,
+            optimizer_step=optimizer_step,
+            max_steps=max_steps,
+            training_seconds=training_seconds,
+            walltime_seconds=walltime_seconds,
+            deadline_reached=bool(stop_at_unix_time and elapsed[1].item() >= stop_at_unix_time),
+        )
+        if stop_reason is not None:
+            break
+        if schedule_steps is not None:
+            stage, stage_progress = stage_for_progress(
+                continuation_progress(optimizer_step, schedule_steps, schedule_start_step),
+                stage1_fraction=stage1_fraction,
+                stages=stages,
+            )
+        else:
+            stage, stage_progress = stage_for_time(
+                training_seconds,
+                walltime_seconds=walltime_seconds,
+                stage1_fraction=stage1_fraction,
+                stages=stages,
+            )
+        if current_stage_name is not None and stage.name != current_stage_name:
+            # Stages share source cursors; continue after the last batch trained on.
+            for feed in feeds.values():
+                feed.rewind()
+            runtime = capture_runtime(batchers, data_seed=data_seed)
+            if rank == 0:
+                stage_checkpoint = save_checkpoint(
+                    output_root / "checkpoint-stage1.pt",
+                    model=model,
+                    optimizer=optimizer,
+                    config=config,
+                    optimizer_step=optimizer_step,
+                    training_seconds=prior_training_seconds + training_seconds,
+                    model_tokens=model_tokens,
+                    filled_residues=filled_residues,
+                    sequences_seen=sequences_seen,
+                    stage=current_stage_name,
+                    parameter_count=parameter_count,
+                    runtime_states=runtime,
+                    data_manifest_sha256=manifest_sha,
+                )
+                print(json.dumps({"event": "stage_checkpoint", **stage_checkpoint}), flush=True)
+            if world_size > 1:
+                dist.barrier()
+        current_stage_name = stage.name
+        optimizer_step += 1
+        multiplier = wsd_multiplier(
+            optimizer_step=optimizer_step,
+            warmup_steps=warmup_steps,
+            stage_name=stage.name,
+            stage_progress=stage_progress,
+            minimum_ratio=float(config.get("minimum_lr_ratio", 0.1)),
+            stage1_cooldown_fraction=float(config.get("stage1_cooldown_fraction", 0.0)),
+        )
+        for group in optimizer.param_groups:
+            group["lr"] = peak_learning_rate * multiplier
+
+        optimizer.zero_grad(set_to_none=True)
+        step_loss = 0.0
+        step_tokens = 0
+        step_filled = 0
+        step_sequences = 0
+        data_seconds = 0.0
+        torch.cuda.synchronize(device)
+        compute_started = time.perf_counter()
+        for micro_step in range(stage.gradient_accumulation):
+            data_started = time.perf_counter()
+            input_ids, attention_mask = feeds[stage.name].batch()
+            data_seconds += time.perf_counter() - data_started
+            valid_tokens = int(attention_mask.sum().item())
+            step_tokens += valid_tokens
+            step_filled += valid_tokens - 2 * stage.micro_batch_size
+            step_sequences += stage.micro_batch_size
+            input_ids = input_ids.to(device, non_blocking=True)
+            attention_mask = attention_mask.to(device, non_blocking=True)
+            corrupted, labels = mask_tokens(input_ids, attention_mask, tokenizer)
+            synchronize = micro_step == stage.gradient_accumulation - 1
+            sync_context = nullcontext()
+            if isinstance(model, DDP) and not synchronize:
+                sync_context = model.no_sync()
+            with sync_context, torch.autocast("cuda", dtype=torch.bfloat16):
+                output = model(input_ids=corrupted, attention_mask=attention_mask)
+                if not isinstance(output, dict):
+                    raise TypeError("model output contract changed")
+                loss = sequence_mean_loss(output["logits"], labels)
+                (loss / stage.gradient_accumulation).backward()
+            step_loss += float(loss.detach())
+        gradient_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), clip_norm)
+        optimizer.step()
+        torch.cuda.synchronize(device)
+        compute_seconds = time.perf_counter() - compute_started
+        if world_size > 1:
+            step_seconds = torch.tensor(
+                [compute_seconds, data_seconds], dtype=torch.float64, device=device
+            )
+            dist.all_reduce(step_seconds, op=dist.ReduceOp.MAX)
+            compute_seconds, data_seconds = step_seconds.tolist()
+        compute_seconds_total += compute_seconds
+        data_seconds_total += data_seconds
+        elapsed = torch.tensor(
+            time.perf_counter() - training_started,
+            dtype=torch.float64,
+            device=device,
+        )
+        if world_size > 1:
+            dist.all_reduce(elapsed, op=dist.ReduceOp.MAX)
+        training_seconds = float(elapsed.item())
+        step_counts = torch.tensor(
+            [step_tokens, step_filled, step_sequences],
+            dtype=torch.int64,
+            device=device,
+        )
+        if world_size > 1:
+            dist.all_reduce(step_counts, op=dist.ReduceOp.SUM)
+        global_step_tokens, global_step_filled, global_step_sequences = (
+            int(value) for value in step_counts.tolist()
+        )
+        model_tokens += global_step_tokens
+        last_step_model_tokens = global_step_tokens
+        filled_residues += global_step_filled
+        sequences_seen += global_step_sequences
+
+        log_due = optimizer_step == 1 or optimizer_step % log_interval == 0
+        if log_due:
+            batcher = batchers[stage.name]
+            # The feed's state counts the batches trained on, not those prefetched.
+            data_state = feeds[stage.name].state
+            counts = torch.tensor(
+                [data_state["source_counts"].get(name, 0) for name in batcher.names],
+                dtype=torch.int64,
+                device=device,
+            )
+            epochs = torch.tensor(
+                [data_state["samplers"][name]["epoch"] for name in batcher.names],
+                dtype=torch.int64,
+                device=device,
+            )
+            if world_size > 1:
+                dist.all_reduce(counts, op=dist.ReduceOp.SUM)
+                dist.all_reduce(epochs, op=dist.ReduceOp.MAX)
+        if rank == 0 and log_due:
+            tokens_per_second = global_step_tokens / compute_seconds
+            peak_bf16_tflops = float(config.get("peak_bf16_tflops_per_gpu", 312.0))
+            mfu_6n = (
+                6 * parameter_count * tokens_per_second / (peak_bf16_tflops * 1e12 * world_size)
+                if peak_bf16_tflops > 0
+                else None
+            )
+            record = {
+                "event": "train",
+                "optimizer_step": optimizer_step,
+                "stage": stage.name,
+                "stage_progress": stage_progress,
+                "loss": step_loss / stage.gradient_accumulation,
+                "learning_rate": optimizer.param_groups[0]["lr"],
+                "gradient_norm": float(gradient_norm),
+                "training_seconds": training_seconds,
+                "step_compute_seconds": compute_seconds,
+                "step_data_seconds": data_seconds,
+                "step_model_tokens": global_step_tokens,
+                "model_tokens": model_tokens,
+                "filled_residues": filled_residues,
+                "sequences_seen": sequences_seen,
+                "tokens_per_second": tokens_per_second,
+                "mfu_6n": mfu_6n,
+                "mfu_denominator": (
+                    f"6 * parameters * model_tokens / ({peak_bf16_tflops}e12 "
+                    f"BF16 FLOP/s * {world_size} GPUs)"
+                    if peak_bf16_tflops > 0
+                    else None
+                ),
+                "estimated_training_flops": 6 * parameter_count * model_tokens,
+                "source_counts_rank0": data_state["source_counts"],
+                "source_counts_global": dict(zip(batcher.names, counts.tolist(), strict=True)),
+                "source_epoch_maxima": dict(zip(batcher.names, epochs.tolist(), strict=True)),
+                "data_resampling": coverage["policy"],
+                "attention_backend": model_options["attention_backend"],
+                "optimizer": str(config.get("optimizer", "adamw")),
+            }
+            if global_sampling:
+                record["source_exposure_global"] = {
+                    name: row_state_exposure(sampler)
+                    for name, sampler in data_state["samplers"].items()
+                }
+            with metrics_path.open("a") as handle:
+                handle.write(json.dumps(record, sort_keys=True) + "\n")
+            print(json.dumps(record, sort_keys=True), flush=True)
+
+        evaluation_due = bool(evaluation_interval and optimizer_step % evaluation_interval == 0)
+        checkpoint_due = bool(checkpoint_interval and optimizer_step % checkpoint_interval == 0)
+        token_endpoint = max_model_tokens is not None and model_tokens >= max_model_tokens
+        if (
+            (checkpoint_due or evaluation_due)
+            and optimizer_step != max_steps
+            and not token_endpoint
+        ):
+            for feed in feeds.values():
+                feed.rewind()
+            runtime = capture_runtime(batchers, data_seed=data_seed)
+            if rank == 0:
+                latest_checkpoint = save_checkpoint(
+                    output_root / "checkpoint-latest.pt",
+                    model=model,
+                    optimizer=optimizer,
+                    config=config,
+                    optimizer_step=optimizer_step,
+                    training_seconds=prior_training_seconds + training_seconds,
+                    model_tokens=model_tokens,
+                    filled_residues=filled_residues,
+                    sequences_seen=sequences_seen,
+                    stage=current_stage_name,
+                    parameter_count=parameter_count,
+                    runtime_states=runtime,
+                    data_manifest_sha256=manifest_sha,
+                )
+                _write_json(output_root / "LATEST_CHECKPOINT.json", latest_checkpoint)
+            if world_size > 1:
+                dist.barrier()
+            if evaluation_due:
+                paused = run_periodic_evaluation(
+                    evaluation_command,
+                    checkpoint=output_root / "checkpoint-latest.pt",
+                    output_root=output_root,
+                    optimizer_step=optimizer_step,
+                    device=device,
+                    data_root=data_root,
+                )
+                evaluation_seconds += paused
+                training_started += paused
+
+    for feed in feeds.values():
+        feed.rewind()
+    if world_size > 1:
+        dist.barrier()
+    source_counts: dict[str, dict[str, int]] = {}
+    source_epoch_maxima: dict[str, dict[str, int]] = {}
+    for stage in stages:
+        batcher = batchers[stage.name]
+        stage_sources = sorted(batcher.names)
+        counts = torch.tensor(
+            [batcher.source_counts[name] for name in stage_sources],
+            dtype=torch.int64,
+            device=device,
+        )
+        epochs = torch.tensor(
+            [batcher.row_samplers[name].epoch for name in stage_sources],
+            dtype=torch.int64,
+            device=device,
+        )
+        if world_size > 1:
+            dist.all_reduce(counts, op=dist.ReduceOp.SUM)
+            dist.all_reduce(epochs, op=dist.ReduceOp.MAX)
+        source_counts[stage.name] = {
+            name: int(value) for name, value in zip(stage_sources, counts.tolist(), strict=True)
+        }
+        source_epoch_maxima[stage.name] = {
+            name: int(value) for name, value in zip(stage_sources, epochs.tolist(), strict=True)
+        }
+    peak_memory = torch.tensor(
+        torch.cuda.max_memory_allocated(device),
+        dtype=torch.int64,
+        device=device,
+    )
+    if world_size > 1:
+        dist.all_reduce(peak_memory, op=dist.ReduceOp.MAX)
+    final_checkpoint: dict[str, object] | None = None
+    runtime = capture_runtime(batchers, data_seed=data_seed)
+    if rank == 0:
+        final_checkpoint = save_checkpoint(
+            output_root / "checkpoint-final.pt",
+            model=model,
+            optimizer=optimizer,
+            config=config,
+            optimizer_step=optimizer_step,
+            training_seconds=prior_training_seconds + training_seconds,
+            model_tokens=model_tokens,
+            filled_residues=filled_residues,
+            sequences_seen=sequences_seen,
+            stage=current_stage_name or "stage1",
+            parameter_count=parameter_count,
+            runtime_states=runtime,
+            data_manifest_sha256=manifest_sha,
+        )
+        completion = {
+            "event": "training_complete",
+            "optimizer_steps": optimizer_step,
+            "target_optimizer_steps": max_steps,
+            "schedule_optimizer_steps": schedule_steps,
+            "training_seconds": training_seconds,
+            "cumulative_training_seconds": prior_training_seconds + training_seconds,
+            "periodic_evaluation_seconds": evaluation_seconds,
+            "resume_data_mode": resume_data_mode,
+            "compute_seconds": compute_seconds_total,
+            "data_seconds": data_seconds_total,
+            "walltime_budget_seconds": walltime_seconds,
+            "stop_reason": stop_reason,
+            "model_tokens": model_tokens,
+            "filled_residues": filled_residues,
+            "sequences_seen": sequences_seen,
+            "source_counts": source_counts,
+            "source_epoch_maxima": source_epoch_maxima,
+            "source_counts_scope": (
+                "new_stream_since_gpu_layout_change"
+                if resume_data_mode == "new_deterministic_stream_for_changed_gpu_layout"
+                else "current_sampler_stream_including_restored_history"
+            ),
+            "parameter_count": parameter_count,
+            "peak_cuda_memory_bytes": int(peak_memory.item()),
+            "stage_checkpoint": stage_checkpoint,
+            "final_checkpoint": final_checkpoint,
+        }
+        if global_sampling:
+            completion["source_exposure_global"] = {
+                name: batcher.exposure() for name, batcher in batchers.items()
+            }
+        if max_model_tokens is not None:
+            completion.update(
+                target_model_tokens=max_model_tokens,
+                model_token_budget_reached=model_tokens >= max_model_tokens,
+                model_token_overrun=max(0, model_tokens - max_model_tokens),
+                last_optimizer_step_model_tokens=last_step_model_tokens,
+            )
+        _write_json(output_root / "TRAINING_COMPLETE.json", completion)
+        print(json.dumps(completion, sort_keys=True), flush=True)
+    if world_size > 1:
+        dist.barrier()
+        dist.destroy_process_group()
+
+
+def training_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--data-root", type=Path)
+    parser.add_argument("--output-root", type=Path)
+    parser.add_argument("--walltime-seconds", type=positive_int)
+    parser.add_argument(
+        "--print-config", action="store_true", help="Print resolved YAML and exit"
+    )
+    # SUPPRESS distinguishes an omitted option from an explicit 'none' budget override.
+    for name in ("max-steps", "max-model-tokens", "schedule-steps"):
+        parser.add_argument(f"--{name}", type=optional_positive_int, default=argparse.SUPPRESS)
+    for name in ("seed", "warmup-steps", "checkpoint-interval", "periodic-evaluation-interval"):
+        parser.add_argument(f"--{name}", type=nonnegative_int, default=argparse.SUPPRESS)
+    for name in ("micro-batch-size", "gradient-accumulation"):
+        parser.add_argument(f"--{name}", type=positive_int, default=argparse.SUPPRESS)
+    for name in ("learning-rate", "weight-decay", "peak-bf16-tflops-per-gpu"):
+        parser.add_argument(f"--{name}", type=float, default=argparse.SUPPRESS)
+    parser.add_argument(
+        "--attention-backend",
+        choices=("auto", "math", "flash", "flash3"),
+        default=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--resume",
+        type=Path,
+        help="Restore full model/optimizer state into a fresh output directory",
+    )
+    parser.add_argument(
+        "--resume-data-migration",
+        type=Path,
+        help="Verified append-only data migration receipt for a legacy checkpoint",
+    )
+    return parser
+
+
+def main() -> None:
+    parser = training_parser()
+    args = parser.parse_args()
+    overrides = {
+        key: value
+        for key, value in vars(args).items()
+        if key
+        not in {
+            "config",
+            "data_root",
+            "output_root",
+            "walltime_seconds",
+            "print_config",
+            "resume",
+            "resume_data_migration",
+        }
+    }
+    if args.walltime_seconds is not None:
+        overrides["walltime_seconds"] = args.walltime_seconds
+    if args.print_config:
+        print(
+            yaml.safe_dump(
+                resolve_config_overrides(load_config(args.config), overrides), sort_keys=False
+            )
+        )
+        return
+    if args.data_root is None or args.output_root is None:
+        parser.error("training requires --data-root and --output-root")
+    train(
+        args.config,
+        data_root=args.data_root,
+        output_root=args.output_root,
+        walltime_override=args.walltime_seconds,
+        resume_checkpoint=args.resume,
+        resume_data_migration=args.resume_data_migration,
+        config_overrides=overrides,
+    )
+
+
+if __name__ == "__main__":
+    main()
