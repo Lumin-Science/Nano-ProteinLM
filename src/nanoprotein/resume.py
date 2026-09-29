@@ -66,6 +66,9 @@ def validate_resume(
     # continue when the caller explicitly chooses that same legacy behavior.
     old.setdefault("data_resampling", "allow")
     new.setdefault("data_resampling", old["data_resampling"])
+    if str(old.get("optimizer", "adamw")).lower() in {"muon", "hybrid_muon", "muon_adamw"}:
+        # Muon checkpoints saved before the separate Q/K/V default used fused updates.
+        old.setdefault("muon_split_qkv", False)
     old_world = int(packet["world_size"])
     if migration is not None:
         for key in ("data_sampler", "data_resampling", "data_source_resampling"):

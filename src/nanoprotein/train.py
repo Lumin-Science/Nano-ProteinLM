@@ -50,6 +50,9 @@ def load_config(path: Path) -> dict[str, Any]:
     return config
 
 
+MUON_OPTIMIZERS = frozenset({"muon", "hybrid_muon", "muon_adamw"})
+
+
 def resolve_config_overrides(
     config: dict[str, Any], overrides: dict[str, Any]
 ) -> dict[str, Any]:
@@ -63,6 +66,9 @@ def resolve_config_overrides(
             resolved["stages"][0][key] = value
         else:
             resolved[key] = value
+    if str(resolved.get("optimizer", "adamw")).lower() in MUON_OPTIMIZERS:
+        # Muon updates Q, K and V separately unless a recipe opts out; record the choice.
+        resolved.setdefault("muon_split_qkv", True)
     resolve_step_budgets(resolved)
     resolve_token_budget(resolved)
     return resolved
@@ -562,10 +568,10 @@ def muon_adamw_parameter_groups(
 
 def build_optimizer(model: torch.nn.Module, config: dict[str, Any]) -> object:
     name = str(config.get("optimizer", "adamw")).lower()
-    split_qkv = config.get("muon_split_qkv", False)
+    split_qkv = config.get("muon_split_qkv", name in MUON_OPTIMIZERS)
     if not isinstance(split_qkv, bool):
         raise ValueError("muon_split_qkv must be boolean")
-    if split_qkv and name not in {"muon", "hybrid_muon", "muon_adamw"}:
+    if split_qkv and name not in MUON_OPTIMIZERS:
         raise ValueError("muon_split_qkv requires a Muon optimizer")
     learning_rate = float(config["learning_rate"])
     weight_decay = float(config["weight_decay"])
@@ -577,7 +583,7 @@ def build_optimizer(model: torch.nn.Module, config: dict[str, Any]) -> object:
             eps=1e-8,
             fused=True,
         )
-    if name not in {"muon", "hybrid_muon", "muon_adamw"}:
+    if name not in MUON_OPTIMIZERS:
         raise ValueError(f"unknown optimizer {name!r}")
     if not hasattr(torch.optim, "Muon"):
         raise RuntimeError(

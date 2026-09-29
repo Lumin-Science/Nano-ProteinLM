@@ -4,7 +4,7 @@ Our sequential-search method proposes one change, measures it, keeps or discards
 
 ## Running the example loop
 
-Give any coding agent on your GPU compute node the [one-line launch prompt](../README.md#launch-autoresearch). It follows [setup_karpathy_ar.txt](../autoresearch/setup_karpathy_ar.txt) with the task and program named in the prompt and default paths for everything else, installs the loop skill, prepares the release and leaves the search agent in a tmux session with its prompt typed. Run `tmux attach -t nanoprotein-ar` and press Enter.
+Follow the [launch steps](../README.md#launch-autoresearch) on your GPU compute node: clone the `autoresearch-v0` release without branch history, run setup, install the `ar-loop-n-sleep` skill, start your coding agent in tmux and give it the task and program.
 
 | Method setting | Reward gate | Agent gate |
 |---|---|---|
