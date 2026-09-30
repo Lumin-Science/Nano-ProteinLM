@@ -7,7 +7,7 @@ The `autoresearch-v1` tag is a standalone clean starter with one root commit. It
 - Search evaluates MLM loss and contact P@L on the same fixed 8,192 chains. The MLM reward gate selects candidates; P@L is reported alongside it.
 - Scale-up reports exactly three metrics, each as mean and sample SD: P@L on 26,062 chains across five probe attempts; MLM on those chains across five fixed masks; MLM on the original 12,288 validation proteins across five fixed masks.
 - Probe attempts retain the same 16/4 fit/validation split and vary pair sampling and logistic-fitting seeds. Mask attempts keep protein crops fixed. There is no separate single-mask headline score.
-- Fresh setup requires the organizer-provided, checksummed v3 contact archive or the verified local recovery and prepares eleven MLM caches. The historical v2 source bundle still downloads automatically; the expanded v3 archive is not yet publicly hosted.
+- Fresh setup automatically downloads the pinned, checksummed v2 source and v3 contact archives and prepares eleven MLM caches. Offline archives and the original verified local recovery remain supported.
 - Historical populations and results are preserved as historical records. Remeasure search baselines before using the new reward.
 
 ## Scientific qualifications
@@ -21,7 +21,7 @@ git clone --depth 1 --single-branch --no-tags --branch autoresearch-v1 \
   https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch
 cd nano-protein-autoresearch
 git remote remove origin
-bash scripts/setup.sh --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
+bash scripts/setup.sh
 ```
 
 See `docs/EVALUATION.md` for exact populations, seeds, statistical definitions and data provenance. `RELEASE_MANIFEST.json` in the starter binds every released file by SHA-256. Dataset downloads remain separate from the source archive.

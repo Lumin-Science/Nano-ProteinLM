@@ -45,7 +45,7 @@ while [[ $# -gt 0 ]]; do
     --) shift; break ;;
     -h|--help)
       echo "Usage: bash scripts/setup.sh [--training-shards N | --training-samples N] [--recovered-contact-pool PATH | --contact-v3-archive PATH]"
-      echo "Default: 30 of 565 training Parquet shards; all MLM validation; evaluation v3 requires the verified local recovery or portable v3 archive."
+      echo "Default: 30 of 565 training Parquet shards; all MLM validation; downloads both frozen contact bundles and prepares evaluation v3 masks."
       echo "Choose a fresh DATA_ROOT for a different training shard count."
       return 0 2>/dev/null || exit 0 ;;
     *) echo "Unknown setup argument: $1" >&2; exit 1 ;;
@@ -54,10 +54,6 @@ done
 if [[ -n "$training_shards" && -n "$training_samples" ]]; then
   echo "Choose either --training-shards or --training-samples." >&2
   exit 1
-fi
-if [[ ! -d "$DATA_ROOT/evaluation/contact-v3" && -z "$recovered_contact_pool" && -z "$contact_v3_archive" ]]; then
-  echo "Fresh evaluation v3 setup requires --recovered-contact-pool PATH or --contact-v3-archive PATH." >&2
-  exit 2
 fi
 uv_bin="${UV_BIN:-uv}"
 if ! command -v "$uv_bin" >/dev/null 2>&1; then

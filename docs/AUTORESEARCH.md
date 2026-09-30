@@ -26,12 +26,12 @@ git clone --depth 1 --single-branch --no-tags --branch autoresearch-v1 \
   https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch
 cd nano-protein-autoresearch
 git remote remove origin
-bash scripts/setup.sh --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
+bash scripts/setup.sh
 ```
 
 Record the starter commit and evaluator hashes with the organizer records. A published starter should pin the same source for every participant and contain no other branches, tags or research Git objects. Remove its remote before handing it to the agent. Do not reuse a research clone as a clean search workspace.
 
-`scripts/setup.sh` needs uv `>=0.11.31,<0.12`; it installs the locked Python 3.11 environment, downloads 30 training shards and the original validation/source assets, installs the organizer-provided v3 contact archive, then prepares and verifies the fixed mask caches. Allow roughly 20 GB for data plus space for dependencies, checkpoints and run outputs. Use `--training-shards N` or `--training-samples N` to change the corpus size, and provision enough data for the selected source mixture and budget. Data and outputs default to `data/` and `outputs/` inside the workspace. Each task run checks the four GPUs and records them in its `ENVIRONMENT.json`.
+`scripts/setup.sh` needs uv `>=0.11.31,<0.12`; it installs the locked Python 3.11 environment, downloads 30 training shards and the original validation/source assets, downloads the pinned expanded v3 contact archive, then prepares and verifies the fixed mask caches. Allow roughly 20 GB for data plus space for dependencies, checkpoints and run outputs. Use `--training-shards N` or `--training-samples N` to change the corpus size, and provision enough data for the selected source mixture and budget. Data and outputs default to `data/` and `outputs/` inside the workspace. Each task run checks the four GPUs and records them in its `ENVIRONMENT.json`.
 
 ```bash
 # After preparation, one invocation consumes one search round:
@@ -108,7 +108,7 @@ The reference takes roughly **12 hours on four H100 GPUs**, or about **48 H100 G
 
 ### Final-evaluation command
 
-Prepare enough of the provided corpus for the recipe's source mixture at this token target; `bash scripts/setup.sh --training-samples 103424000 --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz` in a fresh `DATA_ROOT` covers the default mixture at 100,000 updates of batch 1,024 ([data sizing](DATA.md#sizing-a-training-download)). Run the procedure once per recipe with a fresh run name and the same seed. The example uses the round-2 recipe on four H100 GPUs. On other GPUs, use `--attention-backend flash` and raise the 16-hour `--walltime-seconds` guard as needed. If a recipe needs a different micro-batch size for memory, keep the global batch at 1,024 and record the layout.
+Prepare enough of the provided corpus for the recipe's source mixture at this token target; `bash scripts/setup.sh --training-samples 103424000` in a fresh `DATA_ROOT` covers the default mixture at 100,000 updates of batch 1,024 ([data sizing](DATA.md#sizing-a-training-download)). Run the procedure once per recipe with a fresh run name and the same seed. The example uses the round-2 recipe on four H100 GPUs. On other GPUs, use `--attention-backend flash` and raise the 16-hour `--walltime-seconds` guard as needed. If a recipe needs a different micro-batch size for memory, keep the global batch at 1,024 and record the layout.
 
 ```bash
 set -a

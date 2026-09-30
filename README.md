@@ -85,19 +85,19 @@ We open-sourced both the [🤗 Processed data](https://huggingface.co/datasets/L
 
 ### Install the environment and data
 
-For evaluation v3, obtain the verified portable contact archive from the organizer before fresh setup; it is not yet publicly hosted. A verified recovery directory is also supported with `--recovered-contact-pool PATH`. Existing v3 data roots can run setup without either option.
+Setup downloads the pinned v3 contact archive automatically and prepares the fixed MLM masks. Offline archives and verified recovery directories remain supported; see [evaluation setup](docs/EVALUATION.md#data-layout-and-preparation).
 
 ```bash
 git clone https://github.com/Lumin-Science/Nano-ProteinLM.git
 cd Nano-ProteinLM
-bash scripts/setup.sh --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
+bash scripts/setup.sh
 ```
 
 The default downloads **30/565 training shards (29.98M proteins; 5.62 GB compressed, including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. For a larger training set:
 
 ```bash
 # In a fresh DATA_ROOT: 100k steps × batch 1,024, with 1% sampling headroom.
-bash scripts/setup.sh --training-samples 103424000 --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
+bash scripts/setup.sh --training-samples 103424000
 ```
 
 The [earlier search rounds](docs/AUTORESEARCH_BASELINE.md#two-rounds-under-the-previous-search-setting) used a seven-shard selection. The current [AutoResearch protocol](docs/AUTORESEARCH.md#design-space) permits data selection and source-mixture changes within the provided training corpus. Size the download for the run before training; [DATA.md](docs/DATA.md#sizing-a-training-download) explains source coverage and the default no-resampling policy.
@@ -188,10 +188,10 @@ cd nano-protein-autoresearch
 git remote remove origin
 ```
 
-**2. Install the environment and data.** `scripts/setup.sh` installs the locked Python environment, then downloads and verifies 30 training shards and the historical evaluation source bundle, installs the organizer-provided v3 archive and prepares masks in `data/` (about 20 GB). Runs are written to `outputs/`.
+**2. Install the environment and data.** `scripts/setup.sh` installs the locked Python environment, then downloads and verifies 30 training shards and the historical evaluation source bundle, downloads the pinned expanded v3 archive and prepares masks in `data/` (about 20 GB). Runs are written to `outputs/`.
 
 ```bash
-bash scripts/setup.sh --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
+bash scripts/setup.sh
 ```
 
 **3. Install the loop skill.** [`ar-loop-n-sleep`](https://github.com/Lumin-Science/Nano-AutoResearch-Skills) lets the agent sleep while training runs and wake the same tmux pane at the next useful check. Name your agent with `-a`, for example `codex` or `claude-code`.

@@ -3,7 +3,7 @@
 ## Setup
 
 The [README](../README.md#setting-up-data--environments) contains the supported setup and training
-quickstart. For fresh data, run `bash scripts/setup.sh --contact-v3-archive PATH` to prepare the environment and
+quickstart. For fresh data, run `bash scripts/setup.sh` to prepare the environment and
 training data and both MLM/P@L evaluation assets, or `bash scripts/speedrun.sh` to perform setup and train the default
 recipe in one call. The only local settings are `DATA_ROOT` and `OUTPUT_ROOT`
 in an optional `.env`; defaults are the repository's `data/` and `outputs/`.
@@ -26,7 +26,7 @@ For a different training corpus size, choose a fresh `DATA_ROOT` in `.env` and r
 
 ```bash
 # 100k steps × batch 1,024, with 1% sampling headroom for the default mixture.
-bash scripts/setup.sh --training-samples 103424000 --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
+bash scripts/setup.sh --training-samples 103424000
 ```
 
 With `--training-shards N`, the range is **3–565 total training shards**, with at least one per source. Selection extends the source with the least coverage of the 36:11:54 sampling mixture; all selections are deterministic source prefixes. `565` selects the entire training release. Setup without a selection argument reuses the stored shard count on later calls, including calls from speedrun. An explicit different count refuses to overwrite existing prepared data; use another root for that experiment.
@@ -124,7 +124,7 @@ The third argument supplies the training seed. Each task script loads `.env`, qu
 
 After setup, `bash scripts/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint with the scale-up profile: five-probe P@L and five-mask MLM on 26,062 chains, plus five-mask MLM on the original 12,288 proteins, all reported as mean and sample SD. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
 
-Setup installs all MLM validation data plus the frozen contact payload and evaluator under `$DATA_ROOT/evaluation/{contact,source}` and the new `contact-v3`/`prepared-v3` artifacts. Fresh setup requires the organizer-provided portable v3 archive via `--contact-v3-archive PATH` and builds the fixed masks locally. The expanded archive is not yet publicly hosted. A verified local recovery is also accepted through `--recovered-contact-pool PATH`. The installer checks frozen hashes before reporting success and verifies existing installations on reuse. See [contact data provenance](DATA.md#frozen-contact-evaluation-data) and [evaluation provenance](EVALUATION.md#population-provenance).
+Setup installs all MLM validation data plus the frozen contact payload and evaluator under `$DATA_ROOT/evaluation/{contact,source}` and the new `contact-v3`/`prepared-v3` artifacts. Fresh setup downloads the pinned expanded v3 archive automatically and builds the fixed masks locally. Use `--contact-v3-archive PATH` for an offline copy. A verified local recovery is also accepted through `--recovered-contact-pool PATH`. The installer checks frozen hashes before reporting success and verifies existing installations on reuse. See [contact data provenance](DATA.md#frozen-contact-evaluation-data) and [evaluation provenance](EVALUATION.md#population-provenance).
 
 With the two roots loaded in your shell, evaluate a saved checkpoint with the default scale-up profile:
 

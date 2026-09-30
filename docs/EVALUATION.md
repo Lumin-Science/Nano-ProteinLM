@@ -47,11 +47,11 @@ $DATA_ROOT/evaluation/contact-v3/      26,062 evaluation + 20 probe chains and f
 $DATA_ROOT/evaluation/prepared-v3/     11 MLM caches and bound receipts
 ```
 
-Setup downloads the immutable historical v2 source bundle and installs an organizer-provided portable v3 contact archive. The expanded archive is not yet publicly hosted. Setup verifies the checksums and prepares the eleven mask caches locally. With the training/validation stores already prepared, the evaluation installer can also be run directly:
+Setup downloads the immutable historical v2 source bundle and the [expanded v3 contact archive](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/resolve/65b2308ce2d13db5a7844044ef9a657ba0da9980/evaluation/contact-evaluation-v3.tar.gz). Setup verifies the checksums and prepares the eleven mask caches locally. With the training/validation stores already prepared, the evaluation installer can also be run directly:
 
 ```bash
 uv run --frozen python -m nanoprotein.setup_evaluation \
-  --data-root "$DATA_ROOT" --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
+  --data-root "$DATA_ROOT"
 ```
 
 An organizer may alternatively supply a verified local recovery using `--recovered-contact-pool PATH`. For offline setup, the evaluation installer accepts `--archive` for the v2 archive and `--contact-v3-archive` for the v3 archive. Subsequent setup verifies the installed caches and populations. New artifacts live beside the immutable historical data. Cache preparation is outside evaluation timing and does not use model predictions. Masks are shared across candidates, and every evaluation binds its checkpoint, code, source, population and mask-cache hashes.
