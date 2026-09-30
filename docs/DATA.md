@@ -226,37 +226,12 @@ The source publications are Suzek et al.
 
 ## Frozen contact evaluation data
 
-The [P@L setup bundle](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/blob/5eae416dbb415d2df206b9641dd5ddabe04371dc/evaluation/contact-evaluation-v2.tar.gz) contains 16 probe-fit chains, four probe-validation chains, all 20,775 evaluation chains and six frozen evaluator source files. Version 2 removes experiment-report links and machine paths from packaging metadata; chain payloads, splits and numerical source files retain their original hashes. Fresh setup downloads this immutable release. Existing verified research installations remain supported, and historical downloads remain available at their original revision.
+The [contact population archive](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/resolve/65b2308ce2d13db5a7844044ef9a657ba0da9980/evaluation/contact-evaluation-v3.tar.gz) contains normalized coordinates, chain IDs and portable provenance for 26,082 eligible representatives: 16 probe-fit chains, four probe-validation chains and 26,062 evaluation chains. The [pinned source bundle](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/resolve/5eae416dbb415d2df206b9641dd5ddabe04371dc/evaluation/contact-evaluation-v2.tar.gz) supplies six frozen scoring source files, bound by `SOURCE_MANIFEST.json`.
 
-Structures come from the **2024-02-28 RCSB Protein Data Bank snapshot**. Chain
-selection and preprocessing remain unchanged: the benchmark is paper-faithful,
-not claimed to be identical to the ESMC authors' unpublished chain selection.
-The [evaluation contract](EVALUATION.md#contact-pl) defines probe fitting,
-long-range contacts and five-attempt mean/SD reporting.
+Structures come from the RCSB annual snapshot dated 2024-01-01 plus first-release structures through 2024-02-28. Receipts record 216,478 source structures, 781,077 extracted chains, 41,339 MMseqs representatives and 26,082 eligible representatives. The [evaluation contract](EVALUATION.md#population-provenance) defines clustering, contact eligibility and cropping. PDB archive data are available under [CC0 1.0](https://www.wwpdb.org/about/usage-policies); acknowledge the PDB and original structure authors. Chain IDs in `CONTACT_MANIFEST.jsonl` identify the source entries and publications. The evaluator source uses this repository's [MIT license](../LICENSE).
 
-PDB archive data are available under **CC0 1.0**, per the
-[wwPDB usage policy](https://www.wwpdb.org/about/usage-policies).
-Please acknowledge the PDB and original structure authors. Chain IDs remain in
-`CONTACT_MANIFEST.jsonl`; PDB entry pages provide the associated publications.
+Search evaluates MLM and P@L on the same fixed 8,192 chains. Scale-up evaluation uses all 26,062 non-probe chains for P@L and MLM, plus 12,288 validation proteins for MLM. The 20 probe chains remain separate. Contact data live in `evaluation/contact-v3`, the scoring source in `evaluation/source`, and eleven prepared mask caches in `evaluation/prepared-v3`. Setup verifies the pinned archives and creates the masks locally. Use `--contact-v3-archive PATH` for an offline copy of the contact archive.
 
-> Berman, H. M. et al. The Protein Data Bank. *Nucleic Acids Research* 28,
-> 235–242 (2000). [doi:10.1093/nar/28.1.235](https://doi.org/10.1093/nar/28.1.235).
+The archive SHA-256 is `7bcfd14c1a57d970ad84b1ac823f524c7e2fb27c7a2a1a30d303d12bddaf4647` (237,878,369 bytes). Its contact manifest SHA-256 is `35c55cabf6547ef089defb7bb544d6037a84fc60915c17f47d9ed29c1c814977`. Preparing masks does not require model weights or predictions.
 
-The evaluator source is distributed under this repository's [MIT license](../LICENSE).
-Its six source files are copied byte-for-byte from the recorded evaluator bundle;
-`SOURCE_MANIFEST.json` retains their SHA-256 hashes. The contact manifest hash is
-`c135bc806b1a282ea3d38651d55e0cc799578047ca12855c518d77a9274e9ce3`.
-The payload inventory hash is
-`1b73f5f466420c8d0c74be452ebabe46af837482cee357674cad01d99e6f4b70`.
-
-Setup verifies the archive checksum, source files, manifest, inventory and every chain payload before reporting success. Both `evaluation/contact/` and `evaluation/source/` live beneath `DATA_ROOT`.
-
-## Expanded evaluation profile (v3)
-
-Current search evaluates MLM and P@L on the same fixed 8,192 chains. Final evaluation uses all 26,062 eligible non-probe contact chains, plus the original 12,288 MLM validation proteins. The 20 probe chains remain separate. New data live in `evaluation/contact-v3` and eleven prepared mask caches in `evaluation/prepared-v3`; `evaluation/contact` and its public v2 archive remain immutable historical inputs. Fresh setup downloads the immutable [expanded v3 archive](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC/resolve/65b2308ce2d13db5a7844044ef9a657ba0da9980/evaluation/contact-evaluation-v3.tar.gz), verifies its SHA-256, and builds the fixed masks locally. Use `--contact-v3-archive PATH` for an already downloaded copy. An organizer may instead supply the original verified recovery with `--recovered-contact-pool PATH`. The archive contains normalized coordinates, chain IDs and portable provenance, without local machine paths or experiment results.
-
-The training-decontamination counts above apply to the original protected union, which explicitly includes the original 20,775 contact chains and 20 probes. They do not establish homology exclusion of the additional 5,287 recovered chains. The expanded evaluation receipt records that limitation. Search retains the original protected subset and does not draw new IDs from the expanded pool. See [EVALUATION.md](EVALUATION.md) for exact seeds, populations and reporting fields.
-
-The installed expanded training prefix contains exact full-sequence matches for 30 additional chains (29 evaluated-fragment matches). Four original evaluation chains have full-length parent matches but no evaluated-fragment matches. These are training availability checks, not proof of which sequences a given run sampled; homology exclusion remains unverified for the expanded pool.
-
-The portable v3 archive SHA-256 is `7bcfd14c1a57d970ad84b1ac823f524c7e2fb27c7a2a1a30d303d12bddaf4647` (237,878,369 bytes). Its contact manifest SHA-256 is `35c55cabf6547ef089defb7bb544d6037a84fc60915c17f47d9ed29c1c814977`. Preparing masks does not require model weights or predictions.
+The training exclusion audit covers the protected union described above. Homology exclusion is unverified for 5,287 of the full evaluation chains. In the available training prefix, 30 of these chains have exact full-sequence matches, including 29 evaluated-fragment matches. Four protected evaluation chains have matching longer parent sequences but no evaluated-fragment matches. These checks establish training availability, not which sequences a particular checkpoint consumed. See [EVALUATION.md](EVALUATION.md#validation-set) for the scoring population and audit qualification.

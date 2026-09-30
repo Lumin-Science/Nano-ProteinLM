@@ -15,7 +15,7 @@ if [[ ! "$run_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
   exit 2
 fi
 exec "${UV_BIN:-uv}" run --frozen python -m nanoprotein.evaluate \
-  --profile component --run-contact --skip-validation-mlm \
+  --profile component \
   --checkpoint "$OUTPUT_ROOT/$run_name/checkpoint-final.pt" \
   --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/$run_name/contact-diagnostic" \
   --contact-root "$DATA_ROOT/evaluation/contact-v3" --external-src "$DATA_ROOT/evaluation/source" \

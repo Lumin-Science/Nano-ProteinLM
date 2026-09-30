@@ -68,7 +68,7 @@ def run_profile(args) -> dict:
     ready = json.loads((args.contact_root / "PDB_CONTACT_DATASET_READY.json").read_text())
     manifest_sha = file_sha256(args.contact_root / "CONTACT_MANIFEST.jsonl")
     if ready.get("population_protocol") != "nanoprotein-contact-pool-v3" or prepared.get("protocol") != PROTOCOL:
-        raise ValueError("run setup for evaluation v3; legacy populations are not profile inputs")
+        raise ValueError("run setup to install the required evaluation profile inputs")
     if prepared["contact_manifest_sha256"] != manifest_sha or ready["manifest_sha256"] != manifest_sha:
         raise ValueError("prepared MLM/contact populations differ")
     overlap_audit = None
@@ -137,7 +137,7 @@ def run_profile(args) -> dict:
         command = [sys.executable, "-m", "nanoprotein.evaluate", "--profile", "component",
                    "--checkpoint", str(args.checkpoint), "--data-root", str(args.data_root),
                    "--output-root", str(destination), "--external-src", str(args.external_src),
-                   "--contact-root", str(args.contact_root), "--run-contact", "--skip-validation-mlm",
+                   "--contact-root", str(args.contact_root),
                    "--contact-chains", str(count), "--contact-chain-ids", str(ids_path),
                    "--probe-seed", str(seed), "--contact-bootstrap", "0",
                    "--contact-gpus", ",".join(devices)]

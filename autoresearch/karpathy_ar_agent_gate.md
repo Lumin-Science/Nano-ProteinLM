@@ -24,11 +24,11 @@ The task script takes the training seed as its third argument; use seed 42 unles
 bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml trial-001-seed42 42
 ```
 
-The older P@L task entry point is a compatibility alias for the same current MLM objective. Read the completed run's `TRAINING_COMPLETE.json` and `evaluation/EVALUATION.json`, and verify that evaluation matches the final checkpoint and covers the task's full evaluation population. A missing, failed or non-finite measurement cannot support a keep.
+Read the completed run's `TRAINING_COMPLETE.json` and `evaluation/EVALUATION.json`, and verify that evaluation matches the final checkpoint and covers the task's full evaluation population. A missing, failed or non-finite measurement cannot support a keep.
 
 ## Baseline check
 
-Remeasure the untouched starting recipe with seeds 42 and 43 under `profile=search`, using the fixed 8,192 chains for both MLM and P@L. The older 12,288-protein MLM baseline and 20,775-chain P@L values are historical measurements, not checks for this profile. Record profile, population and mask hashes before comparing candidates. For the default validation-loss task, MLM remains the selection objective and P@L is reported alongside it; no contact non-regression condition is added.
+Measure the untouched starting recipe with seeds 42 and 43 under `profile=search`, using the fixed 8,192 chains for both MLM and P@L. Record profile, population and mask hashes before comparing candidates. For the default validation-loss task, MLM remains the selection objective and P@L is reported alongside it; no contact non-regression condition is added.
 
 ## Goal and budget
 

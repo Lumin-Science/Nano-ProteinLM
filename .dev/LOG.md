@@ -233,3 +233,13 @@ The GitHub connector returned 403 for PR creation. A one-time repository Actions
 ## 2026-09-30 — publish evaluation v3 data
 
 After the owner configured a write-capable Hugging Face login, published the 237,878,369-byte contact archive and its receipt to LuminScience/LuminBench-Nano-ESMC at revision 65b2308ce2d13db5a7844044ef9a657ba0da9980. An independent anonymous download matched SHA-256 7bcfd14c1a57d970ad84b1ac823f524c7e2fb27c7a2a1a30d303d12bddaf4647. Setup now downloads this pinned archive automatically, checks its checksum and prepares masks. Updated every active setup example and release-builder template to remove the temporary local-data requirement; offline archives and verified recoveries remain supported. PR creation still returns 403 from the connected integration; the review branch remains available without changing repository permission policy.
+
+## 2026-09-30 — Current 171M baseline measurements
+
+Re-evaluated the saved ESMC 171M, round-1 and round-2 checkpoints with the fixed evaluation profiles: nine search checkpoints (training seeds 42/43/44) and three complete scale-up checkpoints (training seed 42). Each scale-up run reached 24,200,455,289 non-padding tokens in 100,015 updates; round 2 uses its completed RNG/sampler resume. No training was launched.
+
+Updated README, leaderboard and recipe documentation with the measured search means/sample SDs and the three five-attempt final metrics. Final P@L is 26.140% ± 0.049 pp for ESMC, 32.450% ± 0.113 pp for round 1, and 33.679% ± 0.049 pp for round 2. Full-precision results, repeat values and checkpoint digests are in `docs/benchmarks/baselines-evaluation-v3.json`; local checkpoint inventory, raw-report links and verification are in `.dev/report/current-baselines/`.
+
+Removed obsolete P-CORE and single-mask evaluation entry points, the P@L task alias, and superseded result tables/plots from the active documentation. Setup installs the current contact pool and frozen scoring source. Kept checkpoint loading, numerical scoring, model, masking, tokenizer and training-data provenance verification intact.
+
+Validation: all 12 benchmark evaluations completed; means and sample SDs recomputed from individual attempts; all checkpoint digests checked against training receipts; 10 CPU tests passed; isolated source installation/reuse passed; a tiny-model paired 8,192-chain GPU smoke test passed using the cleaned evaluator; documentation links and diff whitespace checked.

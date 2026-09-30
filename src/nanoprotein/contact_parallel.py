@@ -138,8 +138,6 @@ def run_contact_parallel(args: argparse.Namespace, checkpoint_sha256: str) -> di
                     str(args.data_root),
                     "--output-root",
                     str(destination),
-                    "--run-contact",
-                    "--skip-validation-mlm",
                     "--contact-mode",
                     "serial",
                     "--contact-chains",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge exact deterministic P@L shards without running P-CORE."""
+"""Merge deterministic contact evaluation shards."""
 
 from __future__ import annotations
 

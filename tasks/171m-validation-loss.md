@@ -24,7 +24,7 @@ Preserve the declared hardware, compute budget, evaluation code and data, depend
 
 ## Measurement command
 
-The organizer prepares the environment and data before agent access. Use Linux with a working CUDA driver and an allocation exposing exactly four matching H100 or four matching L40S GPUs. Use the `autoresearch-v1` clean starter: one root commit with the updated evaluator and untouched plain model/training baseline. Record its commit and evaluator hashes; do not reuse historical campaign scores. Inside that prepared clean starter:
+The organizer prepares the environment and data before agent access. Use Linux with a working CUDA driver and an allocation exposing exactly four matching H100 or four matching L40S GPUs. Use the `autoresearch-v1` clean starter: one root commit with the updated evaluator and untouched plain model/training baseline. Record its commit and evaluator hashes, and measure the starting recipe on the allocated hardware. Inside that prepared clean starter:
 
 ```bash
 # Inside the organizer-provided evaluation-v3 clean starter:
@@ -33,7 +33,7 @@ bash scripts/setup.sh
 
 The organizer-provided starter must contain one root commit and no other branches or research history; create a campaign branch before committing search changes. An ordinary branch checkout in a research clone retains old Git objects and is not a clean benchmark workspace.
 
-Data and outputs default to `data/` and `outputs/` inside the workspace; set `DATA_ROOT` and `OUTPUT_ROOT` in `.env` to change them. Training stores are under `$DATA_ROOT/training`; frozen contact assets and evaluator sources are under `$DATA_ROOT/evaluation/contact-v3`, `$DATA_ROOT/evaluation/prepared-v3` and `$DATA_ROOT/evaluation/source`. Setup defaults to 30 training shards containing 29,979,351 proteins and includes the original validation and contact source assets; v3 additionally downloads the pinned expanded contact archive and prepares the fixed MLM masks. Allow roughly 20 GB for data plus space for dependencies, checkpoints and outputs. Set `--training-shards N` during preparation to change the initial corpus size. Provision enough records from each source for the chosen mixture and budget; retain `DATA_COVERAGE.json` and report source exposure and any permitted data reuse.
+Data and outputs default to `data/` and `outputs/` inside the workspace; set `DATA_ROOT` and `OUTPUT_ROOT` in `.env` to change them. Training stores are under `$DATA_ROOT/training`; frozen contact assets and evaluator sources are under `$DATA_ROOT/evaluation/contact-v3`, `$DATA_ROOT/evaluation/prepared-v3` and `$DATA_ROOT/evaluation/source`. Setup defaults to 30 training shards containing 29,979,351 proteins and includes the 12,288 validation proteins, pinned contact scoring source, full contact archive and fixed MLM masks. Allow roughly 20 GB for data plus space for dependencies, checkpoints and outputs. Set `--training-shards N` during preparation to change the initial corpus size. Provision enough records from each source for the chosen mixture and budget; retain `DATA_COVERAGE.json` and report source exposure and any permitted data reuse.
 
 Run the measurement from the prepared workspace, supplying a recipe, a fresh run name and an explicit training seed. The example seed 42 is a caller choice, not a task-imposed replication policy:
 
