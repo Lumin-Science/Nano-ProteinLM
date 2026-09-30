@@ -1,0 +1,156 @@
+# Usage
+
+## Setup
+
+The [README](../README.md#preparation) contains the supported setup and training
+quickstart. For fresh data, run `bash scripts/setup.sh` to prepare the environment and
+training data and both MLM/P@L evaluation assets, or `bash scripts/speedrun.sh` to perform setup and train the default
+recipe in one call. The only local settings are `DATA_ROOT` and `OUTPUT_ROOT`
+in an optional `.env`; defaults are the repository's `data/` and `outputs/`.
+
+```text
+$DATA_ROOT/
+  training/             # Verified training subset and MLM validation data
+  cache/                # Downloaded corpus shards and contact archive
+  evaluation/contact/   # Immutable historical contact release
+  evaluation/contact-v3/ # Full 26,062 evaluation + 20 probe chains
+  evaluation/prepared-v3/ # Fixed search/final MLM masks
+  evaluation/source/    # Pinned source containing autoresearch_esm
+$OUTPUT_ROOT/
+  <run-name>/           # Checkpoints, effective config, logs and evaluation records
+```
+
+The default pins the release revision and downloads **30 of 565 training Parquet shards**: 13 UniRef90, 3 MGnify and 14 OMG/IMG, containing 29,979,351 training proteins. Downloads including MLM validation occupy 5.62 GB; prepared token stores add 9.38 GB. Allow 20 GB for the complete data setup, excluding the environment and checkpoints. All three MLM validation shards (12,288 proteins) and the frozen [contact evaluation](DATA.md#frozen-contact-evaluation-data) bundle are always prepared; no P-CORE data are downloaded. A 100k-step run at batch 1,024 needs a larger download: the default trainer prevents source resampling. See [DATA.md](DATA.md#sizing-a-training-download) for sample budgets and source coverage.
+
+For a different training corpus size, choose a fresh `DATA_ROOT` in `.env` and run:
+
+```bash
+# 100k steps × batch 1,024, with 1% sampling headroom for the default mixture.
+bash scripts/setup.sh --training-samples 103424000
+```
+
+With `--training-shards N`, the range is **3–565 total training shards**, with at least one per source. Selection extends the source with the least coverage of the 36:11:54 sampling mixture; all selections are deterministic source prefixes. `565` selects the entire training release. Setup without a selection argument reuses the stored shard count on later calls, including calls from speedrun. An explicit different count refuses to overwrite existing prepared data; use another root for that experiment.
+
+Historical campaigns used seven shards; reproduce those records with `bash scripts/setup.sh --training-shards 7` in a separate `DATA_ROOT`. The current protocol permits data selection and source-mixture changes within the provided corpus. Prepare enough data for the selected recipe and retain its manifest.
+
+For full control, the ordinary data API accepts either `--training-shards` or
+`--training-samples`; it always includes all MLM validation shards. Inspect a
+selection without downloading training shards:
+
+```bash
+uv run --frozen python -m nanoprotein.sharded_data \
+  --revision bd38448d50d8f426d7b9bd4410b53159ea001259 --training-shards 30 \
+  --cache-root data/cache --output-root data/training --plan-only
+```
+
+The contact installer can also use an already downloaded bundle offline:
+
+```bash
+uv run --frozen python -m nanoprotein.setup_evaluation \
+  --data-root data --archive /path/to/contact-evaluation-v2.tar.gz \
+  --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
+```
+
+## Training
+
+The default 171M model targets small-budget experiments and follows the paper's
+170M scaling backbone ([Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29)).
+The two `configs/` subfolders contain the plain ESMC search and final recipes.
+
+The speedrun is a readable shell script that calls the ordinary Python API:
+
+```bash
+# Plain reference, fresh output directory, different seed.
+bash scripts/speedrun.sh configs/test-100k/esmc-171m.yaml reference-seed43 --seed 43
+
+# Plain ESMC reference with the same 100k-step budget.
+bash scripts/speedrun.sh configs/test-100k/esmc-171m.yaml esmc-171m-100k
+```
+
+It uses four GPUs. Arguments after the recipe and run name pass through to
+`nanoprotein.train`, overriding the default 100k-step/16-hour limits. For
+example, `--attention-backend flash` selects FA2 on L40S; a long run on slower
+hardware may also need a larger `--walltime-seconds` guard. `.env` contains paths,
+not these execution settings. Each output directory must be fresh.
+
+For other GPU counts or full control, call the training API directly:
+
+```bash
+set -a
+if [ -f .env ]; then source .env; fi
+source .env.example
+set +a
+uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 \
+  -m nanoprotein.train --config configs/test-100k/esmc-171m.yaml \
+  --max-steps 100000 --walltime-seconds 57600 \
+  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-direct"
+```
+
+The recipe owns model and optimizer settings. CLI options select the execution
+budget and can override seed, attention, warmup and batch layout. Every run
+records the source config hash and saves its effective `config.yaml`. To inspect
+the resolved recipe without GPUs or training:
+
+```bash
+uv run --frozen python -m nanoprotein.train --config configs/test-100k/esmc-171m.yaml \
+  --seed 42 --max-steps 100000 --walltime-seconds 57600 --print-config
+```
+
+Budget arguments accept `none` to clear inherited step/token limits. Batch-layout overrides require a single-stage recipe. Full final checkpoints include optimizer state. Pass `--resume /path/to/checkpoint-final.pt` to the training API with the original recipe and a fresh output directory to continue training; preserve the global batch size when changing the GPU count.
+
+The recipes set `prefetch_batches: 2`: a background thread builds the next two micro-batches while the GPUs compute, in the same order as without prefetching, and checkpoints resume at the first batch not yet trained on. Each training log record reports `step_data_seconds`, the longest time any GPU process waited for data in that step, and `TRAINING_COMPLETE.json` reports the run's total as `data_seconds`.
+
+Before the training clock starts, the AutoResearch task commands copy `$DATA_ROOT/training` (about 10 GB with the default 30 shards) to `/tmp`, or to the folder named by `NANOPROTEIN_STAGE_DIR`, because random batch reads from shared network storage can stall training. Later runs reuse the copy while its manifest is unchanged. If `/tmp` is too small, export `NANOPROTEIN_STAGE_DIR` with another node-local folder.
+
+## AutoResearch
+
+[171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) provide the scientific task definition and its compatibility alias for any AutoResearch method, and [AUTORESEARCH.md](AUTORESEARCH.md) defines the shared search budget and final evaluation. Our sequential-search method comes in two programs: [karpathy_ar_reward_gate.md](../autoresearch/karpathy_ar_reward_gate.md) keeps a candidate by a fixed two-seed rule, and [karpathy_ar_agent_gate.md](../autoresearch/karpathy_ar_agent_gate.md) lets the agent decide. To start it, select the task and program and give your agent the following instruction.
+
+> Read `autoresearch/karpathy_ar_reward_gate.md` and start autoresearch for `tasks/171m-validation-loss.md`.
+
+The older `tasks/171m-p-at-l.md` is a compatibility alias with the same MLM selection objective. Use `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep.
+
+After setup and GPU allocation, run one research measurement:
+
+```bash
+bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml experiment-001 42
+# Compatibility alias for the same paired evaluation and MLM selection objective:
+bash tasks/171m-p-at-l_ar.sh configs/autoresearch/esmc-171m.yaml experiment-p-at-l-001 42
+```
+
+The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports MLM and P@L on the same fixed 8,192 chains with `profile=search`. The default validation-loss task selects by MLM and reports P@L; the older P@L task filename is a compatibility alias for the same objective. Replication, aggregation and acceptance belong to the caller; the programs in `autoresearch/` documents those choices and commands. The agent reviews task boundaries and run completion.
+
+## Evaluation
+
+After setup, `bash scripts/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint with the scale-up profile: five-probe P@L and five-mask MLM on 26,062 chains, plus five-mask MLM on the original 12,288 proteins, all reported as mean and sample SD. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
+
+Setup installs all MLM validation data plus the frozen contact payload and evaluator under `$DATA_ROOT/evaluation/{contact,source}` and the new `contact-v3`/`prepared-v3` artifacts. Fresh setup downloads the pinned expanded v3 archive automatically and builds the fixed masks locally. Use `--contact-v3-archive PATH` for an offline copy. A verified local recovery is also accepted through `--recovered-contact-pool PATH`. The installer checks frozen hashes before reporting success and verifies existing installations on reuse. See [contact data provenance](DATA.md#frozen-contact-evaluation-data) and [evaluation provenance](EVALUATION.md#population-provenance).
+
+With the two roots loaded in your shell, evaluate a saved checkpoint with the default scale-up profile:
+
+```bash
+uv run --frozen python -m nanoprotein.evaluate --profile scaleup \
+  --checkpoint "$OUTPUT_ROOT/default-100k/checkpoint-final.pt" \
+  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-100k/evaluation"
+```
+
+This reports P@L over 26,062 chains with five probe attempts, MLM on those chains with five fixed masks, and MLM on the original 12,288 proteins with five fixed masks. Each metric has a mean and sample SD; there is no separate single-mask score. Use `--profile search` for paired 8,192-chain measurements. `--contact-gpus` and `--contact-workers` control execution, and `--resume-components` resumes an identical request. Explicit `--profile component` is reserved for individual diagnostics and historical evaluation, not a final report. See [EVALUATION.md](EVALUATION.md).
+
+## Repository layout
+
+See [AGENTS.md](../AGENTS.md) for concise layout and modification guidance.
+
+```text
+src/nanoprotein/   # Training, models, data, evaluation and runtime CLI modules
+src/*.sh          # Optional parallel evaluation launchers
+configs/          # Search-setting (autoresearch/) and final-evaluation (test-100k/) recipes
+scripts/          # Setup and speedrun scripts
+tasks/            # Autoresearch definition and measurement command
+autoresearch/     # Agent research-loop guidance
+.dev/             # Development log, TODO list and technical report
+```
+
+The package uses a standard src layout. Run setup after updating an existing
+checkout to refresh the installed package. Direct commands now use
+`python -m nanoprotein.train` and `python -m nanoprotein.evaluate`.
+Existing checkpoints remain loadable; saved recipe values and model names are unchanged.
