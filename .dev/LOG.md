@@ -215,3 +215,21 @@ Future entries should record the date, hypothesis, frozen comparison, raw
 metric and uncertainty, what worked, what failed, and the keep/reject decision.
 Do not add private paths, credentials, scheduler details, or results that
 cannot be traced to a retained receipt.
+
+## 2026-09-30: paired search and repeated final evaluation defaults
+
+Implemented evaluation v3: MLM-selected search with MLM and P@L on the same fixed 8,192 chains; final evaluation reports five-probe P@L and five-mask MLM on all 26,062 non-probe contact chains, plus five-mask MLM on the original 12,288 validation proteins, each as mean and sample SD. Added versioned contact/mask artifacts, exact population/checkpoint/cache bindings, and updated setup, launchers, task programs, seed summaries and documentation. Historical results and checkpoint formats are preserved. The earlier mention of three masks was superseded by the owner's final explicit five-mask specification.
+
+Verified five CPU contract tests, exact search input equivalence, identical crops across all fixed masks, an exact real-reference search rerun (MLM 2.3903482673322287; P@L 0.32233269057790404), and full-population/five-repeat GPU integration with a small untrained fixture. The fixture is an execution test, not a scientific comparison. The expanded pool has known exact training-sequence overlap and is not a fully held-out population; receipts carry the audit. See [migration report](report/EVALUATION_V3_MIGRATION.md) and [verification](report/EVALUATION_V3_VERIFIED.json).
+
+## 2026-09-30 — evaluation v3 documentation and release preparation
+
+Audited the active README, protocol, tasks, setup/usage, data/evaluation and leaderboard pages. Historical measurements retain their original population labels; older P@L task names now consistently describe the MLM-selected paired task. Integrated main's bb17aaa update, including its numbered launch flow and removal of the old setup prompt. Prepared autoresearch-v1 from the plain v0 root with an explicit evaluator overlay; model, trainer, resume implementation and baseline configs remain byte-identical to v0. The release excludes research findings and ancestry and includes a complete SHA-256 file manifest.
+
+Packaged the 26,082 normalized contact payloads into a portable archive, with local paths removed from provenance. Fresh archive installation verified all payload hashes, the 26,062/20 split and unchanged 8,192 search IDs. The existing Hugging Face token is read-only (upload returned 403), so publication of that data archive remains pending; setup explicitly requires an organizer-provided archive or recovery directory for fresh v3 data roots. Existing prepared roots remain usable without these arguments.
+
+The GitHub connector returned 403 for PR creation. A one-time repository Actions attempt confirmed that the repository forbids Actions from creating/approving pull requests. Removed that temporary workflow without changing repository permissions. The review branch is published; PR creation needs an authorized user or a connection with PR-write access. Release publication uses a separate tag workflow with contents-only permissions.
+
+## 2026-09-30 — publish evaluation v3 data
+
+After the owner configured a write-capable Hugging Face login, published the 237,878,369-byte contact archive and its receipt to LuminScience/LuminBench-Nano-ESMC at revision 65b2308ce2d13db5a7844044ef9a657ba0da9980. An independent anonymous download matched SHA-256 7bcfd14c1a57d970ad84b1ac823f524c7e2fb27c7a2a1a30d303d12bddaf4647. Setup now downloads this pinned archive automatically, checks its checksum and prepares masks. Updated every active setup example and release-builder template to remove the temporary local-data requirement; offline archives and verified recoveries remain supported. PR creation still returns 403 from the connected integration; the review branch remains available without changing repository permission policy.

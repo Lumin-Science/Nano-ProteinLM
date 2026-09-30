@@ -15,21 +15,23 @@ The protocol applies to any AutoResearch algorithm. Our implementation of Karpat
 
 ## Preparation
 
-Benchmark attempts start from the `autoresearch-v0` release tag: a single root commit containing the plain ESMC implementation, with no research history. Allocate four matching H100 GPUs or four matching L40S GPUs on Linux with a working CUDA driver. A search round provides 20 minutes on H100 with FlashAttention-3 or one hour on L40S with FlashAttention-2; these budgets are roughly equivalent. Declare one hardware profile before search and fix the GPU model and backend across every method in a comparison.
+Use the `autoresearch-v1` clean starter for evaluation v3. It contains the updated evaluator and task contracts while preserving the plain ESMC model and training baseline. The historical `autoresearch-v0` release uses different evaluation populations; remeasure baselines for every new v3 campaign.
 
-The organizer prepares the workspace on the allocated node before giving it to an agent. Clone only the release commit into a new directory outside existing Git checkouts, remove the remote and run setup:
+Benchmark attempts start from `autoresearch-v1`: a single root commit containing the plain ESMC implementation and updated evaluation, with no research history. Allocate four matching H100 GPUs or four matching L40S GPUs on Linux with a working CUDA driver. A search round provides 20 minutes on H100 with FlashAttention-3 or one hour on L40S with FlashAttention-2; these budgets are roughly equivalent. Declare one hardware profile before search and fix the GPU model and backend across every method in a comparison.
+
+The organizer prepares the workspace on the allocated node before giving it to an agent. Install the declared clean starter into a new directory outside existing Git checkouts, keep it isolated from research history, and run setup:
 
 ```bash
-git clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 \
+git clone --depth 1 --single-branch --no-tags --branch autoresearch-v1 \
   https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch
 cd nano-protein-autoresearch
 git remote remove origin
 bash scripts/setup.sh
 ```
 
-`--depth 1 --single-branch --no-tags` downloads only the tagged commit, so the workspace has no `main` branch, other tags or research history. The tag pins the same starting point for every participant; record `git rev-parse HEAD` with the organizer records. Removing the remote prevents fetching other branches by accident. The clone starts on a detached HEAD at the release commit; a search method creates its own branch before committing. Do not reuse an existing research clone, which retains old Git objects.
+Record the starter commit and evaluator hashes with the organizer records. A published starter should pin the same source for every participant and contain no other branches, tags or research Git objects. Remove its remote before handing it to the agent. Do not reuse a research clone as a clean search workspace.
 
-`scripts/setup.sh` needs uv `>=0.11.31,<0.12`; it installs the locked Python 3.11 environment, downloads 30 training shards and all MLM validation and contact assets, and verifies their checksums. Allow roughly 20 GB for data plus space for dependencies, checkpoints and run outputs. Use `--training-shards N` or `--training-samples N` to change the corpus size, and provision enough data for the selected source mixture and budget. Data and outputs default to `data/` and `outputs/` inside the workspace. Each task run checks the four GPUs and records them in its `ENVIRONMENT.json`.
+`scripts/setup.sh` needs uv `>=0.11.31,<0.12`; it installs the locked Python 3.11 environment, downloads 30 training shards and the original validation/source assets, downloads the pinned expanded v3 contact archive, then prepares and verifies the fixed mask caches. Allow roughly 20 GB for data plus space for dependencies, checkpoints and run outputs. Use `--training-shards N` or `--training-samples N` to change the corpus size, and provision enough data for the selected source mixture and budget. Data and outputs default to `data/` and `outputs/` inside the workspace. Each task run checks the four GPUs and records them in its `ENVIRONMENT.json`.
 
 ```bash
 # After preparation, one invocation consumes one search round:
@@ -60,7 +62,7 @@ A budgeted round consists of one training run and its evaluation. Each method re
 | Total search training allowance | **24 node-hours / 96 H100 GPU-hours**, or **72 node-hours / 288 L40S GPU-hours** |
 | Global batch | **256 sequences**, for example 64 per GPU on four GPUs |
 | Learning-rate schedule | 500 linear warmup steps, then constant peak learning rate with no decay |
-| Measurement after each round | Final checkpoint; all 12,288 MLM validation proteins, plus all 20,775 contact chains for the P@L task |
+| Measurement after each round | Final checkpoint; MLM and P@L on the same fixed 8,192 chains |
 | Outside the training clock | Environment/data setup, final checkpoint saving and evaluation; report their time separately |
 
 Methods may spend rounds exploring new recipes or repeating earlier recipes. Two baseline runs of the untouched starting recipe, with seeds 42 and 43 on the allocated hardware, are free and calibrate the setup; every other training run, including a seed repeat or a further reference measurement, consumes a round. Retain failed attempts and their consumed compute; declare any infrastructure-failure replacement policy before the benchmark. A method's internal iteration may contain several budgeted rounds.
@@ -71,18 +73,17 @@ Search results use the fixed evaluation described below. Proposal generation, re
 
 ## Hill-climbing evaluation
 
-The default hill-climbing reward is **MLM validation loss**, which we use for a more stable search signal. It is the mean per-protein masked-token negative log-likelihood on held-out sequences; lower is better. Each round evaluates the final checkpoint from its 20-minute H100 run or one-hour L40S run. The AutoResearch method decides how to use these measurements to propose and retain recipes.
+The default reward is sequence-mean MLM negative log-likelihood on the fixed 8,192 contact chains. Every search checkpoint also reports P@L on those exact same chains. MLM remains the candidate-selection signal; P@L adds no non-regression gate. The older P@L task filename is a compatibility alias for this same MLM-selected paired evaluation.
 
 | Measurement | Search setting |
-|---|---|
-| Default reward | **MLM validation loss ↓** |
-| Validation data | **All 12,288 held-out validation proteins**, context 512, with crops and masks fixed per protein |
-| Contact P@L | **All 20,775 frozen chains** with a chain-bootstrap 95% interval; evaluated only for the P@L task |
+| --- | --- |
+| Default reward | MLM NLL, lower is better |
+| MLM | Fixed 8,192 chains, context 512, one fixed mask seed 20260821 |
+| Contact P@L | Same 8,192 chains, one probe attempt with seed 20260819 |
 | Scored checkpoint | Final checkpoint at the round's training-time limit |
+| Required receipt | `profile=search`, complete MLM and P@L populations |
 
-Context 512 is the maximum input length in tokens. The evaluator scores every protein in the three validation shards once, and each protein's crop and mask positions derive from its SHA-256, so the score does not depend on batch size. Earlier results used sampled 4,096- or 32-protein evaluations and keep those labels; [EVALUATION.md](EVALUATION.md#validation-set) describes the validation set.
-
-Contact P@L measures precision among the top L predicted long-range contacts, where L is the evaluated chain length, averaged over the frozen chains. Higher is better. It is the P@L task's reward; the validation-loss task skips it during search because the contact evaluation is slow, and the owner reports it in final evaluation. A method may repeat training runs within its search allowance; each repeat consumes another round.
+Mask preparation is outside evaluation timing. Search baseline runs must be measured again with the updated evaluator; old 12,288-protein scores cannot serve as the new baseline. [EVALUATION.md](EVALUATION.md) specifies frozen IDs, deterministic crops, mask caches and contact-probe details. Each repeat training run still consumes one search round.
 
 ## Final evaluation
 
@@ -94,12 +95,12 @@ After search, each method submits its selected recipe for owner-run final evalua
 | Batch and schedule | **Global batch 1,024**; 1,000 linear warmup steps, then constant learning rate; learning rate and weight decay from the recipe |
 | Training seeds | **1 per recipe**, 42 unless declared otherwise, matched between the selected recipe and reference |
 | Hardware | Not fixed, because the token target defines the budget; the reference takes about 12 hours on four H100 GPUs |
-| MLM validation | **All 12,288 validation proteins**, context 512 |
-| Contact P@L | **All 20,775 frozen chains** |
+| MLM validation | **26,062 contact chains × five fixed masks**, plus **original 12,288 proteins × five fixed masks**, context 512 |
+| Contact P@L | **All 26,062 non-probe eligible chains**, five probe attempts |
 | Scored checkpoint | Final checkpoint at the token target |
-| Reported results | MLM validation loss and P@L, with a chain-bootstrap 95% interval for P@L |
+| Reported results | Three means and sample SDs: contact P@L, contact-population MLM, original-validation MLM; no separate single-mask score |
 
-Final evaluation reports both metrics at the larger training budget. Contact evaluation fits one probe per checkpoint using the fixed probe split and uses 5,000 chain-bootstrap replicates. Its interval describes variation over evaluated chains. With one training seed, across-seed variability is not estimated.
+Final evaluation uses `--profile scaleup`. Its three SDs quantify variation across five probe attempts or five masks, keeping checkpoint, protein populations and crops fixed. They do not quantify training-seed variability. The original 20 probes remain separate from the 26,062 scored chains. Training exclusion of the extra 5,287 recovered chains is not yet verified; retain this qualification in reports.
 
 The final training budget is separate from the 72-round search allowance. Prepare the required portion of the provided corpus before training and record each recipe's data selection, source exposure and any reuse. Keep the evaluation data and code fixed across recipes.
 
@@ -131,12 +132,12 @@ uv run --frozen python -m torch.distributed.run --standalone --nproc-per-node=4 
 uv run --frozen python -m nanoprotein.evaluate \
   --checkpoint "$run_dir/checkpoint-final.pt" --data-root "$DATA_ROOT/training" \
   --output-root "$run_dir/evaluation" \
-  --validation-context 512 \
-  --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
-  --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
+  --profile scaleup \
+  --contact-root "$DATA_ROOT/evaluation/contact-v3" --external-src "$DATA_ROOT/evaluation/source" \
+  --prepared-root "$DATA_ROOT/evaluation/prepared-v3"
 ```
 
-Require `stop_reason=max_model_tokens` and `model_token_budget_reached=true` in `TRAINING_COMPLETE.json`. The count includes BOS/EOS and excludes padding. An early wall-time stop is incomplete: continue it to the token target with `--resume` before scoring ([training and continuation](USAGE.md#training)). Report the actual tokens and overrun, the validation loss and P@L from `evaluation/EVALUATION.json`, and the contact-chain bootstrap interval.
+Require `stop_reason=max_model_tokens` and `model_token_budget_reached=true` in `TRAINING_COMPLETE.json`. The count includes BOS/EOS and excludes padding. An early wall-time stop is incomplete: continue it to the token target with `--resume` before scoring ([training and continuation](USAGE.md#training)). Report the actual tokens and overrun, the three mean/SD metrics from `evaluation/EVALUATION.json`.
 
 This test measures whether search improvements carry over to longer training. It uses evaluation assets also available during search, so it does not establish performance on a blind holdout. Training a larger model requires its own agreed model size and comparison budget.
 

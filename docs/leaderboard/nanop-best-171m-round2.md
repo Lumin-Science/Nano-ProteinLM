@@ -2,7 +2,7 @@
 
 Round 2 of our [sequential AutoResearch](../AUTORESEARCH_BASELINE.md#round-2-contact-pl) optimized contact P@L, starting from [nanop-best-171m-round1](nanop-best-171m-round1.md). It accepted two additions; the owner kept separate Q/K/V Muon updates and dropped query centering with RMS restoration. This recipe therefore contains every change from plain ESMC in the table below and is our current best recipe, found by GPT-6 with human effort across both rounds.
 
-Configs: [search setting](../../configs/autoresearch/nanop-best-171m-round2.yaml) · [final evaluation](../../configs/test-100k/nanop-best-171m-round2.yaml). [LEADERBOARD.md](../LEADERBOARD.md) holds results under the current protocol.
+Configs: [search setting](../../configs/autoresearch/nanop-best-171m-round2.yaml) · [final evaluation](../../configs/test-100k/nanop-best-171m-round2.yaml). [LEADERBOARD.md](../LEADERBOARD.md) holds historical results with their evaluation populations. [Evaluation v3](../EVALUATION.md) defines the current protocol.
 
 ## What differs from plain ESMC
 
@@ -28,7 +28,7 @@ With `muon_split_qkv: true`, the fused QKV weight keeps its shape and checkpoint
 
 ## 100k-step component study under the previous protocol
 
-Each arm trained from scratch for **100,000 updates on four L40S GPUs** with FA2, seed 42, global batch 1,024, context 512, base LR 5e-4 and 1,000 warmup steps followed by constant LR. Each consumed 102,400,000 sequences and 24,196,983,520 non-padding model tokens from a 111-shard corpus, with no repeated source epochs. Evaluation used 4,096 MLM validation sequences and all 20,775 contact chains with 5,000 chain-bootstrap replicates. These settings differ from the current final evaluation; the [leaderboard](../LEADERBOARD.md#final-evaluation) labels the selected recipe's result as a previous-protocol run while its H100 rerun is pending.
+Each arm trained from scratch for **100,000 updates on four L40S GPUs** with FA2, seed 42, global batch 1,024, context 512, base LR 5e-4 and 1,000 warmup steps followed by constant LR. Each consumed 102,400,000 sequences and 24,196,983,520 non-padding model tokens from a 111-shard corpus, with no repeated source epochs. Evaluation used 4,096 MLM validation sequences and all 20,775 contact chains with 5,000 chain-bootstrap replicates. These settings differ from the current final evaluation; the [leaderboard](../LEADERBOARD.md#final-evaluation) labels the selected recipe's result as a previous-protocol run; no v3 result is recorded on this page.
 
 | Recipe | Separate Q/K/V Muon | Query centering + RMS restoration | Validation loss ↓ | P@L ↑ | P@L chain-bootstrap 95% CI | Training hours on 4 L40S |
 |---|---|---|---:|---:|---:|---:|

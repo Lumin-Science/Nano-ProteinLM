@@ -3,7 +3,7 @@
 ## Setup
 
 The [README](../README.md#setting-up-data--environments) contains the supported setup and training
-quickstart. Run `bash scripts/setup.sh` to prepare the environment and
+quickstart. For fresh data, run `bash scripts/setup.sh` to prepare the environment and
 training data and both MLM/P@L evaluation assets, or `bash scripts/speedrun.sh` to perform setup and train the default
 recipe in one call. The only local settings are `DATA_ROOT` and `OUTPUT_ROOT`
 in an optional `.env`; defaults are the repository's `data/` and `outputs/`.
@@ -12,7 +12,9 @@ in an optional `.env`; defaults are the repository's `data/` and `outputs/`.
 $DATA_ROOT/
   training/             # Verified training subset and MLM validation data
   cache/                # Downloaded corpus shards and contact archive
-  evaluation/contact/   # Frozen 20-chain probe + 20,775-chain P@L dataset
+  evaluation/contact/   # Immutable historical contact release
+  evaluation/contact-v3/ # Full 26,062 evaluation + 20 probe chains
+  evaluation/prepared-v3/ # Fixed search/final MLM masks
   evaluation/source/    # Pinned source containing autoresearch_esm
 $OUTPUT_ROOT/
   <run-name>/           # Checkpoints, effective config, logs and evaluation records
@@ -45,7 +47,8 @@ The contact installer can also use an already downloaded bundle offline:
 
 ```bash
 uv run --frozen python -m nanoprotein.setup_evaluation \
-  --data-root data --archive /path/to/contact-evaluation-v2.tar.gz
+  --data-root data --archive /path/to/contact-evaluation-v2.tar.gz \
+  --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
 ```
 
 ## Training
@@ -101,40 +104,37 @@ Before the training clock starts, the AutoResearch task commands copy `$DATA_ROO
 
 ## AutoResearch
 
-[171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) each contain the complete scientific task definition for any AutoResearch method, and [AUTORESEARCH.md](AUTORESEARCH.md) defines the shared search budget and final evaluation. Our sequential-search method comes in two programs: [karpathy_ar_reward_gate.md](../autoresearch/karpathy_ar_reward_gate.md) keeps a candidate by a fixed two-seed rule, and [karpathy_ar_agent_gate.md](../autoresearch/karpathy_ar_agent_gate.md) lets the agent decide. To start it, select the task and program and give your agent the following instruction.
+[171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) provide the scientific task definition and its compatibility alias for any AutoResearch method, and [AUTORESEARCH.md](AUTORESEARCH.md) defines the shared search budget and final evaluation. Our sequential-search method comes in two programs: [karpathy_ar_reward_gate.md](../autoresearch/karpathy_ar_reward_gate.md) keeps a candidate by a fixed two-seed rule, and [karpathy_ar_agent_gate.md](../autoresearch/karpathy_ar_agent_gate.md) lets the agent decide. To start it, select the task and program and give your agent the following instruction.
 
 > Read `autoresearch/karpathy_ar_reward_gate.md` and start autoresearch for `tasks/171m-validation-loss.md`.
 
-Use `tasks/171m-p-at-l.md` in that instruction to optimize contact P@L instead, or `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep.
+The older `tasks/171m-p-at-l.md` is a compatibility alias with the same MLM selection objective. Use `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep.
 
 After setup and GPU allocation, run one research measurement:
 
 ```bash
 bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml experiment-001 42
-# Or use P@L as the reward; this also runs the contact evaluation:
+# Compatibility alias for the same paired evaluation and MLM selection objective:
 bash tasks/171m-p-at-l_ar.sh configs/autoresearch/esmc-171m.yaml experiment-p-at-l-001 42
 ```
 
-The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports loss on all 12,288 validation proteins; the P@L task also scores P@L over all 20,775 contact chains. The validation-loss task scores `validation_mlm.sequence_mean_nll` (lower is better); the P@L task scores `contact.precision_at_l` (higher is better). Replication, aggregation and acceptance belong to the caller; [our sequential method](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents those choices and commands. The agent reviews task boundaries and run completion.
+The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports MLM and P@L on the same fixed 8,192 chains with `profile=search`. The default validation-loss task selects by MLM and reports P@L; the older P@L task filename is a compatibility alias for the same objective. Replication, aggregation and acceptance belong to the caller; [our sequential method](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents those choices and commands. The agent reviews task boundaries and run completion.
 
 ## Evaluation
 
-After setup, `bash scripts/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint on all 12,288 MLM validation proteins and parallel contact P@L over all 20,775 chains. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
+After setup, `bash scripts/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint with the scale-up profile: five-probe P@L and five-mask MLM on 26,062 chains, plus five-mask MLM on the original 12,288 proteins, all reported as mean and sample SD. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
 
-Setup installs all MLM validation data plus the frozen contact payload and evaluator under `$DATA_ROOT/evaluation/{contact,source}`. The installer checks all frozen hashes before reporting success and verifies existing installations on reuse. See [contact data provenance](DATA.md#frozen-contact-evaluation-data) and [evaluation provenance](EVALUATION.md#dataset-provenance-and-split-contract).
+Setup installs all MLM validation data plus the frozen contact payload and evaluator under `$DATA_ROOT/evaluation/{contact,source}` and the new `contact-v3`/`prepared-v3` artifacts. Fresh setup downloads the pinned expanded v3 archive automatically and builds the fixed masks locally. Use `--contact-v3-archive PATH` for an offline copy. A verified local recovery is also accepted through `--recovered-contact-pool PATH`. The installer checks frozen hashes before reporting success and verifies existing installations on reuse. See [contact data provenance](DATA.md#frozen-contact-evaluation-data) and [evaluation provenance](EVALUATION.md#population-provenance).
 
-With the two roots loaded in your shell, evaluate a saved checkpoint. Contact P@L uses parallel workers across the visible GPUs by default (32 workers on four GPUs), with one shared probe and the full 20,775-chain population:
+With the two roots loaded in your shell, evaluate a saved checkpoint with the default scale-up profile:
 
 ```bash
-uv run --frozen python -m nanoprotein.evaluate \
+uv run --frozen python -m nanoprotein.evaluate --profile scaleup \
   --checkpoint "$OUTPUT_ROOT/default-100k/checkpoint-final.pt" \
-  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-100k/evaluation" \
-  --validation-context 512 \
-  --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
-  --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source"
+  --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-100k/evaluation"
 ```
 
-Omit `--run-contact` and the contact arguments for MLM alone. Use `--contact-mode serial` for one-process contact evaluation, or `--contact-gpus` and `--contact-workers` to select devices and concurrency. Both research tasks use the standard parallel evaluator automatically. [EVALUATION.md](EVALUATION.md#evaluation-execution) documents caching, resuming and the compatibility launcher. Final evaluation is owner-run; [AUTORESEARCH.md](AUTORESEARCH.md#final-evaluation) gives its command.
+This reports P@L over 26,062 chains with five probe attempts, MLM on those chains with five fixed masks, and MLM on the original 12,288 proteins with five fixed masks. Each metric has a mean and sample SD; there is no separate single-mask score. Use `--profile search` for paired 8,192-chain measurements. `--contact-gpus` and `--contact-workers` control execution, and `--resume-components` resumes an identical request. Explicit `--profile component` is reserved for individual diagnostics and historical evaluation, not a final report. See [EVALUATION.md](EVALUATION.md).
 
 ## Repository layout
 

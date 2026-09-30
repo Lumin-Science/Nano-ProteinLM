@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument("--external-src", type=Path, required=True)
     parser.add_argument("--contact-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--probe-seed", type=int, default=20260819)
     args = parser.parse_args()
     if not torch.cuda.is_available():
         raise RuntimeError("contact probe fitting requires CUDA")
@@ -34,6 +35,7 @@ def main() -> None:
         dataset_root=args.contact_root,
         external_src=args.external_src,
         device=device,
+        probe_seed=args.probe_seed,
     )
     write_json(args.output, receipt)
     print(

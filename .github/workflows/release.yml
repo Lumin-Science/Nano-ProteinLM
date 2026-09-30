@@ -1,0 +1,37 @@
+name: Publish clean AutoResearch release
+on:
+  push:
+    tags:
+      - 'autoresearch-v*'
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Verify the standalone starter and publish its release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init starter
+          cd starter
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth 2 origin "refs/tags/${GITHUB_REF_NAME}"
+          git checkout --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "$(git rev-list --count HEAD)" = 1
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+          manifest = json.loads(pathlib.Path('RELEASE_MANIFEST.json').read_text())
+          assert manifest['release'] == os.environ['GITHUB_REF_NAME']
+          files = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')[:-1]
+          assert set(files) == set(manifest['files']) | {'RELEASE_MANIFEST.json'}
+          for name, digest in manifest['files'].items():
+              assert hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest() == digest, name
+          assert manifest['baseline'] == 'plain-esmc-autoresearch-v0'
+          PY
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --title "$GITHUB_REF_NAME: paired search and repeated final evaluation" \
+            --notes-file RELEASE_NOTES.md --latest

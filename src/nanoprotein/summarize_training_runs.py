@@ -45,6 +45,12 @@ def summarize(runs: list[Path], validation_sequences: int) -> dict:
         evaluation = json.loads((root / "evaluation/EVALUATION.json").read_text())
         if evaluation["checkpoint_sha256"] != completion["final_checkpoint"]["sha256"]:
             raise ValueError("evaluation does not match the final training checkpoint")
+        if evaluation.get("profile") == "scaleup":
+            raise ValueError("scale-up reports already aggregate probe/mask attempts; this utility summarizes search training seeds")
+        if evaluation.get("profile") != "search":
+            raise ValueError("current search summaries require the paired 8192 evaluation profile; historical summaries stay with their original checkout")
+        if validation_sequences != 8192:
+            raise ValueError("search evaluation has exactly 8192 proteins")
         if evaluation["validation_mlm"]["sequences"] != validation_sequences:
             raise ValueError("incomplete MLM evaluation sample")
         validation_settings = evaluation["validation_mlm"].get("settings")
@@ -52,7 +58,7 @@ def summarize(runs: list[Path], validation_sequences: int) -> dict:
             raise ValueError("runs must use the same MLM evaluation settings")
         reference_validation_settings = validation_settings
         contact = evaluation.get("contact")
-        if contact is not None and contact["evaluation_chains"] != 20775:
+        if contact is None or contact["evaluation_chains"] != 8192:
             raise ValueError("incomplete contact evaluation population")
         if rows and (contact is None) != (rows[0]["p_at_l"] is None):
             raise ValueError("runs must all include or all omit contact P@L")
@@ -84,7 +90,7 @@ def summarize(runs: list[Path], validation_sequences: int) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("runs", nargs="+", type=Path)
-    parser.add_argument("--validation-sequences", type=int, required=True)
+    parser.add_argument("--validation-sequences", type=int, default=8192)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     report = summarize(args.runs, args.validation_sequences)

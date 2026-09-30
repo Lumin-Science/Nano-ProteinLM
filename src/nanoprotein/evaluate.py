@@ -212,13 +212,19 @@ def validation_settings(context_length: int) -> dict[str, object]:
 
 
 def validation_example(
-    residues: np.ndarray, digest: bytes, *, residue_limit: int, tokenizer: ProteinTokenizer
+    residues: np.ndarray, digest: bytes, *, residue_limit: int, tokenizer: ProteinTokenizer,
+    mask_seed: int = VALIDATION_MLM_SEED,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Crop and mask one protein using randomness derived only from its sequence digest."""
     seed = hashlib.sha256(VALIDATION_MLM_SEED.to_bytes(8, "big") + digest).digest()
     generator = torch.Generator().manual_seed(int.from_bytes(seed[:8], "big"))
     excess = int(residues.size) - residue_limit
     offset = int(torch.randint(excess + 1, (1,), generator=generator)) if excess > 0 else 0
+    # Every mask attempt uses the original deterministic crop. Attempt zero also
+    # preserves the old RNG stream exactly, including its consumed crop draw.
+    if mask_seed != VALIDATION_MLM_SEED:
+        mask_digest = hashlib.sha256(mask_seed.to_bytes(8, "big") + digest).digest()
+        generator = torch.Generator().manual_seed(int.from_bytes(mask_digest[:8], "big"))
     kept = residues[offset : offset + residue_limit]
     kept = torch.from_numpy(np.asarray(kept, dtype=np.int64))
     tokens = torch.cat(
@@ -716,6 +722,7 @@ def fit_contact_probe_receipt(
     dataset_root: Path,
     external_src: Path,
     device: torch.device,
+    probe_seed: int = 20260819,
 ) -> dict[str, object]:
     """Fit the frozen probe once so deterministic inference shards can share it."""
 
@@ -724,7 +731,7 @@ def fit_contact_probe_receipt(
         from autoresearch_esm.paper_contact_model import (  # type: ignore[import-not-found]
             sampled_pair_feature_matrix,
         )
-        from autoresearch_esm.paper_contact_runtime import (
+        from .contact_dataset import (
             ContactDataset,  # type: ignore[import-not-found]
         )
     finally:
@@ -740,7 +747,7 @@ def fit_contact_probe_receipt(
             attention,
             chain.cb_distances,
             chain_id=chain_id,
-            seed=20260819,
+            seed=probe_seed,
             maximum_per_class=4096,
         )
         features.append(x)
@@ -751,7 +758,7 @@ def fit_contact_probe_receipt(
         labels[:16],
         features[16:],
         labels[16:],
-        seed=20260819,
+        seed=probe_seed,
     )
     if coefficients.size != model.config.n_layers * model.config.n_heads:
         raise ValueError("frozen probe channel count differs from model attention channels")
@@ -762,7 +769,7 @@ def fit_contact_probe_receipt(
         "dataset_manifest_sha256": dataset.manifest_receipt.manifest_sha256,
         "probe_train_chain_ids": dataset.train_ids[:16],
         "probe_validation_chain_ids": dataset.train_ids[16:],
-        "pair_sampling_seed": 20260819,
+        "pair_sampling_seed": probe_seed,
         "maximum_pairs_per_class": 4096,
         "channels": int(coefficients.size),
         "coefficients": np.asarray(coefficients, dtype=np.float64).tolist(),
@@ -1007,6 +1014,7 @@ def load_contact_probe_receipt(
     checkpoint_sha256: str,
     dataset_manifest_sha256: str,
     channels: int,
+    probe_seed: int = 20260819,
 ) -> tuple[np.ndarray, float, float, object]:
     """Load an exact fitted-probe receipt with checkpoint and dataset binding."""
 
@@ -1016,7 +1024,7 @@ def load_contact_probe_receipt(
         and receipt.get("protocol") == "autoresearch-frozen-contact-probe-v1"
         and receipt.get("checkpoint_sha256") == checkpoint_sha256
         and receipt.get("dataset_manifest_sha256") == dataset_manifest_sha256
-        and receipt.get("pair_sampling_seed") == 20260819
+        and receipt.get("pair_sampling_seed") == probe_seed
         and receipt.get("maximum_pairs_per_class") == 4096
         and receipt.get("channels") == channels
     ):
@@ -1039,6 +1047,8 @@ def run_contact_lite(
     external_src: Path,
     device: torch.device,
     evaluation_chains: int,
+    chain_ids_path: Path | None = None,
+    probe_seed: int = 20260819,
     bootstrap: int,
     shard_index: int = 0,
     shard_count: int = 1,
@@ -1055,7 +1065,7 @@ def run_contact_lite(
             SEQUENCE_SEPARATION,
             score_chain,
         )
-        from autoresearch_esm.paper_contact_runtime import (
+        from .contact_dataset import (
             ContactDataset,  # type: ignore[import-not-found]
         )
     finally:
@@ -1073,6 +1083,7 @@ def run_contact_lite(
             checkpoint_sha256=checkpoint_sha256,
             dataset_manifest_sha256=dataset.manifest_receipt.manifest_sha256,
             channels=model.config.n_layers * model.config.n_heads,
+            probe_seed=probe_seed,
         )
         probe_receipt_sha256 = file_sha256(probe_receipt)
     else:
@@ -1082,6 +1093,7 @@ def run_contact_lite(
             dataset_root=dataset_root,
             external_src=external_src,
             device=device,
+            probe_seed=probe_seed,
         )
         coefficients = np.asarray(fitted["coefficients"], dtype=np.float64)
         intercept = float(fitted["intercept"])
@@ -1092,6 +1104,14 @@ def run_contact_lite(
         dataset.eval_ids,
         key=lambda chain_id: hashlib.sha256(f"20260820:{chain_id}".encode()).digest(),
     )[:evaluation_chains]
+    if chain_ids_path is not None:
+        ranked_all = chain_ids_path.read_text().splitlines()
+        if len(ranked_all) != evaluation_chains or len(set(ranked_all)) != evaluation_chains:
+            raise ValueError("contact selection must have exact unique chain count")
+        if not set(ranked_all).issubset(dataset.eval_ids):
+            raise ValueError("contact selection includes non-evaluation chains")
+    if len(ranked_all) != evaluation_chains:
+        raise ValueError("contact selection exceeds available population")
     ranked = ranked_all[shard_index::shard_count]
     scoring_cache: ContactScoringCache | None = None
     if scoring_cache_root is not None or scoring_cache_preflight is not None:
@@ -1144,7 +1164,10 @@ def run_contact_lite(
     return {
         "protocol": "esmc-paper-contact-lite-v1",
         "claim_level": "paper_aligned_diagnostic_not_paper_identical",
-        "selection": "sha256_rank_uniform_without_replacement",
+        "selection": "explicit_fixed_ids" if chain_ids_path else "sha256_rank_uniform_without_replacement",
+        "chain_ids_sha256": file_sha256(chain_ids_path) if chain_ids_path else None,
+        "probe_seed": probe_seed,
+        "dataset_manifest_sha256": dataset.manifest_receipt.manifest_sha256,
         "selection_seed": 20260820,
         "selection_total_chains": len(ranked_all),
         "shard_index": shard_index,
@@ -1193,6 +1216,10 @@ def merge_contact_evaluation(
             raise ValueError(f"duplicate contact shard {shard_index}")
         shards[shard_index] = (path, report, contact)
 
+    signatures = {(part.get("chain_ids_sha256"), part.get("probe_seed"), part.get("dataset_manifest_sha256"))
+                  for _, _, part in shards.values()}
+    if len(signatures) != 1:
+        raise ValueError("contact shards use different populations or probe seeds")
     shard_count = len(shards)
     if set(shards) != set(range(shard_count)):
         raise ValueError("contact shard indices are incomplete")
@@ -1427,6 +1454,11 @@ def merge_full_evaluation(
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--profile", choices=("search", "scaleup", "component"), default="scaleup",
+                        help="search: paired 8192; scaleup: 5 probe/5 mask final metrics; component: internal or historical")
+    parser.add_argument("--prepared-root", type=Path, help="verified fixed MLM caches")
+    parser.add_argument("--contact-chain-ids", type=Path)
+    parser.add_argument("--probe-seed", type=int, default=20260819)
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--data-root", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
@@ -1441,7 +1473,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--validation-context", type=int, default=512)
     parser.add_argument(
-        "--contact-chains", type=int, default=20775, help="default: all 20,775 chains"
+        "--contact-chains", type=int, help="component population size; profiles freeze their own counts"
     )
     parser.add_argument("--contact-bootstrap", type=int, default=5000)
     parser.add_argument(
@@ -1470,6 +1502,24 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--skip-validation-mlm", action="store_true")
     parser.add_argument("--resume-components", action="store_true")
     args = parser.parse_args(argv)
+    if args.profile != "component":
+        expected_count = 8192 if args.profile == "search" else 26062
+        if args.contact_chains not in (None, expected_count) or args.validation_context != 512:
+            parser.error("profile populations and context are fixed")
+        if args.contact_mode != "parallel" or args.probe_seed != 20260819:
+            parser.error("profile execution uses parallel contact and fixed probe seeds")
+        if args.skip_validation_mlm or args.run_pcore or args.run_pcore_diagnostic:
+            parser.error("profiles require their complete metrics; use --profile component for diagnostics")
+        if args.contact_chain_ids is not None or args.contact_probe_receipt is not None or args.contact_shard_count != 1:
+            parser.error("profile populations and probes are fixed; custom shards require --profile component")
+        evaluation_root = args.data_root.parent / "evaluation"
+        args.external_src = args.external_src or evaluation_root / "source"
+        args.contact_root = args.contact_root or evaluation_root / "contact-v3"
+        args.prepared_root = args.prepared_root or evaluation_root / "prepared-v3"
+    if args.contact_chains is None:
+        args.contact_chains = 8192 if args.profile == "search" else 26062
+    if args.validation_batch_size <= 0:
+        parser.error("validation batch size must be positive")
     if args.run_pcore and args.run_pcore_diagnostic:
         parser.error("choose either --run-pcore or --run-pcore-diagnostic")
     if args.pcore_diagnostic_timeout <= 0 or args.pcore_probe_threads <= 0:
@@ -1491,6 +1541,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.profile != "component":
+        from .evaluation_profiles import run_profile
+        run_profile(args)
+        return
     if not torch.cuda.is_available():
         raise RuntimeError("evaluation requires CUDA")
     np.random.seed(20260821)
@@ -1570,6 +1624,8 @@ def main() -> None:
                 external_src=args.external_src,
                 device=device,
                 evaluation_chains=args.contact_chains,
+                chain_ids_path=args.contact_chain_ids,
+                probe_seed=args.probe_seed,
                 bootstrap=args.contact_bootstrap,
                 shard_index=args.contact_shard_index,
                 shard_count=args.contact_shard_count,
