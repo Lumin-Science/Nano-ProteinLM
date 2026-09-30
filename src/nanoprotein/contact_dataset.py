@@ -73,4 +73,3 @@ class ContactDataset:
         if observed != entry:
             raise ValueError(f"contact payload differs from manifest: {chain_id}")
         return payload, chain
-
