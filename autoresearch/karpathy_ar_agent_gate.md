@@ -24,18 +24,11 @@ The task script takes the training seed as its third argument; use seed 42 unles
 bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml trial-001-seed42 42
 ```
 
-Use the selected task's entry point for other objectives. Read the completed run's `TRAINING_COMPLETE.json` and `evaluation/EVALUATION.json`, and verify that evaluation matches the final checkpoint and covers the task's full evaluation population. A missing, failed or non-finite measurement cannot support a keep.
+The older P@L task entry point is a compatibility alias for the same current MLM objective. Read the completed run's `TRAINING_COMPLETE.json` and `evaluation/EVALUATION.json`, and verify that evaluation matches the final checkpoint and covers the task's full evaluation population. A missing, failed or non-finite measurement cannot support a keep.
 
 ## Baseline check
 
-The owner measured the untouched starting recipe, `configs/autoresearch/esmc-171m.yaml`, with this release's task command on the four-H100 profile, using seeds 42, 43 and 44:
-
-| Task score | Mean ± sample SD over seeds 42, 43 and 44 |
-|---|---:|
-| `validation_mlm.sequence_mean_nll` | 2.70552 ± 0.00245 |
-| `contact.precision_at_l` | 0.09841 ± 0.00250 |
-
-On that profile, your two baseline runs should land close to these values. A clearly different result points to a setup problem: check the environment, data and GPUs, and tell the user before continuing. On other hardware the scores will differ.
+Remeasure the untouched starting recipe with seeds 42 and 43 under `profile=search`, using the fixed 8,192 chains for both MLM and P@L. The older 12,288-protein MLM baseline and 20,775-chain P@L values are historical measurements, not checks for this profile. Record profile, population and mask hashes before comparing candidates. For the default validation-loss task, MLM remains the selection objective and P@L is reported alongside it; no contact non-regression condition is added.
 
 ## Goal and budget
 
@@ -45,7 +38,7 @@ Apart from the two baseline runs, every task invocation consumes one round of th
 
 ## Evidence from each run
 
-- **Task score:** in `evaluation/EVALUATION.json`. For the validation-loss task, the per-source and median losses (`source_sequence_mean_nll`, `sequence_median_nll`) show where a change helps.
+- **Task score:** in `evaluation/EVALUATION.json`. Read `validation_mlm.sequence_mean_nll` for the MLM objective and `contact.precision_at_l` for the accompanying structural diagnostic; per-chain MLM losses are retained in the worker receipts.
 - **Training curve:** `metrics.jsonl` logs the training loss every 10 optimizer steps, together with the learning rate, gradient norm, tokens per second, MFU and the time spent waiting for data (`step_data_seconds`).
 - **Run totals:** `TRAINING_COMPLETE.json` records the optimizer steps, model tokens and training seconds reached within the time limit, the peak GPU memory and the parameter count.
 - **The change itself:** the resolved configuration and the candidate's diff.

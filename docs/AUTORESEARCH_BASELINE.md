@@ -4,7 +4,7 @@ Our sequential-search method proposes one change, measures it, keeps or discards
 
 ## Running the example loop
 
-Follow the [launch steps](../README.md#launch-autoresearch) on your GPU compute node: clone the `autoresearch-v0` release without branch history, run setup, install the `ar-loop-n-sleep` skill, start your coding agent in tmux and give it the task and program.
+Follow the [launch steps](../README.md#launch-autoresearch) on your GPU compute node: clone the `autoresearch-v1` release without branch history, run setup, install the `ar-loop-n-sleep` skill, start your coding agent in tmux and give it the task and program.
 
 | Method setting | Reward gate | Agent gate |
 |---|---|---|
@@ -12,7 +12,7 @@ Follow the [launch steps](../README.md#launch-autoresearch) on your GPU compute 
 | Candidate cost | One round if screened out, otherwise two | One round per run the agent chooses |
 | Acceptance | Two-seed mean gain larger than the larger of the two seed SDs | The agent's reasoning about the final evaluation, recorded with its evidence |
 | Task measurement | 20 minutes on four H100 GPUs with FA3; 4/3 H100 GPU-hours per round | Same |
-| Search evaluation | All 12,288 validation proteins; the P@L task adds all 20,775 contact chains | Same |
+| Search evaluation | MLM and P@L on the same fixed 8,192 chains; default selection remains MLM | Same |
 
 The two baseline runs, seeds 42 and 43 of the starting recipe on the allocated GPUs, do not count toward the allowance. Under the reward gate each candidate then takes one or two rounds, so 72 rounds cover 36–72 candidates; under the agent gate, the count depends on how many rounds the agent spends on repeats and refinements. Each program lists the records to keep for every run.
 

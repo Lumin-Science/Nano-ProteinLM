@@ -215,3 +215,15 @@ Future entries should record the date, hypothesis, frozen comparison, raw
 metric and uncertainty, what worked, what failed, and the keep/reject decision.
 Do not add private paths, credentials, scheduler details, or results that
 cannot be traced to a retained receipt.
+
+## 2026-09-30: paired search and repeated final evaluation defaults
+
+Implemented evaluation v3: MLM-selected search with MLM and P@L on the same fixed 8,192 chains; final evaluation reports five-probe P@L and five-mask MLM on all 26,062 non-probe contact chains, plus five-mask MLM on the original 12,288 validation proteins, each as mean and sample SD. Added versioned contact/mask artifacts, exact population/checkpoint/cache bindings, and updated setup, launchers, task programs, seed summaries and documentation. Historical results and checkpoint formats are preserved. The earlier mention of three masks was superseded by the owner's final explicit five-mask specification.
+
+Verified five CPU contract tests, exact search input equivalence, identical crops across all fixed masks, an exact real-reference search rerun (MLM 2.3903482673322287; P@L 0.32233269057790404), and full-population/five-repeat GPU integration with a small untrained fixture. The fixture is an execution test, not a scientific comparison. The expanded pool has known exact training-sequence overlap and is not a fully held-out population; receipts carry the audit. See [migration report](report/EVALUATION_V3_MIGRATION.md) and [verification](report/EVALUATION_V3_VERIFIED.json).
+
+## 2026-09-30 — evaluation v3 documentation and release preparation
+
+Audited the active README, protocol, tasks, setup/usage, data/evaluation and leaderboard pages. Historical measurements retain their original population labels; older P@L task names now consistently describe the MLM-selected paired task. Integrated main's bb17aaa update, including its numbered launch flow and removal of the old setup prompt. Prepared autoresearch-v1 from the plain v0 root with an explicit evaluator overlay; model, trainer, resume implementation and baseline configs remain byte-identical to v0. The release excludes research findings and ancestry and includes a complete SHA-256 file manifest.
+
+Packaged the 26,082 normalized contact payloads into a portable archive, with local paths removed from provenance. Fresh archive installation verified all payload hashes, the 26,062/20 split and unchanged 8,192 search IDs. The existing Hugging Face token is read-only (upload returned 403), so publication of that data archive remains pending; setup explicitly requires an organizer-provided archive or recovery directory for fresh v3 data roots. Existing prepared roots remain usable without these arguments.

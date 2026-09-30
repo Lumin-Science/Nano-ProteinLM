@@ -19,12 +19,12 @@ GPT-6 and human effort produced our current best recipe over two rounds of [sequ
 
 ### Final-evaluation leaderboard
 
-Final evaluation trains each recipe from scratch to 24.2B non-padding tokens at global batch 1,024 with seed 42, then scores MLM validation loss on all 12,288 validation proteins and contact P@L on 20,775 chains ([protocol](docs/AUTORESEARCH.md#final-evaluation)). ESMC and round 1 have completed their H100 reruns. Round 2 shows its previous L40S result while its H100 rerun is pending.
+The historical evaluation below trained each recipe from scratch to 24.2B non-padding tokens at global batch 1,024 with seed 42, then scored MLM validation loss on all 12,288 validation proteins and contact P@L on 20,775 chains ([historical contract](docs/history/EVALUATION_PRE_V3.md)). ESMC and round 1 have completed their H100 reruns. Round 2 shows its previous L40S result while its H100 rerun is pending.
 
 | Recipe | Run / MLM validation proteins | MLM validation loss ↓ | P@L ↑ |
 |---|---|---:|---:|
-| [ESMC 171M reference](configs/test-100k/esmc-171m.yaml) | Current H100 rerun / 12,288 | 2.459574 | 26.088% |
-| [nanop-best-171m-round1](docs/leaderboard/nanop-best-171m-round1.md) | Current H100 rerun / 12,288 | 2.411284 | 32.418% |
+| [ESMC 171M reference](configs/test-100k/esmc-171m.yaml) | Historical H100 rerun / 12,288 | 2.459574 | 26.088% |
+| [nanop-best-171m-round1](docs/leaderboard/nanop-best-171m-round1.md) | Historical H100 rerun / 12,288 | 2.411284 | 32.418% |
 | [nanop-best-171m-round2](docs/leaderboard/nanop-best-171m-round2.md) | Previous L40S run / 4,096 | 2.410035 | 33.450% |
 
 Round 2's previous run used 100,000 steps on four L40S GPUs with FA2 and the earlier 4,096-protein validation protocol. Its MLM loss is not directly comparable with the two reruns' 12,288-protein losses. All three P@L scores use the same 20,775 contact chains; the [full leaderboard](docs/LEADERBOARD.md#final-evaluation) records confidence intervals and training budgets.
@@ -85,17 +85,19 @@ We open-sourced both the [🤗 Processed data](https://huggingface.co/datasets/L
 
 ### Install the environment and data
 
+For evaluation v3, obtain the verified portable contact archive from the organizer before fresh setup; it is not yet publicly hosted. A verified recovery directory is also supported with `--recovered-contact-pool PATH`. Existing v3 data roots can run setup without either option.
+
 ```bash
 git clone https://github.com/Lumin-Science/Nano-ProteinLM.git
 cd Nano-ProteinLM
-bash scripts/setup.sh
+bash scripts/setup.sh --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
 ```
 
 The default downloads **30/565 training shards (29.98M proteins; 5.62 GB compressed, including MLM validation)**: 13 UniRef90, 3 MGnify and 14 OMG/IMG shards. For a larger training set:
 
 ```bash
 # In a fresh DATA_ROOT: 100k steps × batch 1,024, with 1% sampling headroom.
-bash scripts/setup.sh --training-samples 103424000
+bash scripts/setup.sh --training-samples 103424000 --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
 ```
 
 The [earlier search rounds](docs/AUTORESEARCH_BASELINE.md#two-rounds-under-the-previous-search-setting) used a seven-shard selection. The current [AutoResearch protocol](docs/AUTORESEARCH.md#design-space) permits data selection and source-mixture changes within the provided training corpus. Size the download for the run before training; [DATA.md](docs/DATA.md#sizing-a-training-download) explains source coverage and the default no-resampling policy.
@@ -107,7 +109,9 @@ Data and outputs default to `data/` and `outputs/`. To use another path, copy
 $DATA_ROOT/                     # Default: data/
   cache/                       # Downloaded Parquet shards and contact archive
   training/                    # Prepared token stores, MLM validation and receipts
-  evaluation/contact/          # Frozen P@L chains and probe splits
+  evaluation/contact/          # Historical frozen contact bundle
+  evaluation/contact-v3/       # 26,062 evaluation + 20 probe chains, fixed search IDs
+  evaluation/prepared-v3/      # Eleven verified MLM mask caches
   evaluation/source/           # Frozen contact evaluator
 $OUTPUT_ROOT/<run-name>/        # Default: outputs/<run-name>/
   checkpoint-final.pt          # Final model and optimizer state for resuming
@@ -136,8 +140,8 @@ Recipes live in two folders: [configs/autoresearch/](configs/autoresearch/) for 
 
 ### Evaluate a checkpoint
 
-- **MLM validation loss ↓:** mean per-protein masked-token loss on held-out data; the reward for the [validation-loss task](tasks/171m-validation-loss.md).
-- **Contact P@L ↑:** precision among the top L predicted long-range contacts, where L is chain length, averaged over 20,775 chains; the reward for the [P@L task](tasks/171m-p-at-l.md).
+- **MLM validation loss ↓:** mean per-protein masked-token loss on the declared evaluation population; the reward for the [validation-loss task](tasks/171m-validation-loss.md).
+- **Contact P@L ↑:** mean precision among each chain's top L predicted long-range contacts; reported alongside the default MLM selection score.
 
 After training finishes, evaluate a completed run with:
 
@@ -145,7 +149,7 @@ After training finishes, evaluate a completed run with:
 bash scripts/speedrun.sh --evaluate default-100k
 ```
 
-This loads your paths, reports MLM loss on **all 12,288 held-out validation proteins**, and scores P@L over **all 20,775 chains** using the accelerated parallel evaluator. Replace `default-100k` with your run name; additional [evaluation options](docs/EVALUATION.md#evaluation-execution) can follow it. Evaluation is separate from training and keeps the same sample counts for short training trials.
+This loads your paths and reports three means and sample SDs: P@L on all 26,062 non-probe chains with five probe fits, MLM on those chains with five fixed masks, and MLM on the original 12,288 validation proteins with five fixed masks. The default search profile instead evaluates both MLM and P@L on the same frozen 8,192 chains, with selection by MLM. [EVALUATION.md](docs/EVALUATION.md) defines the data setup, repeat semantics and training-overlap qualification. Historical leaderboard scores retain their original populations and are not v3 results.
 
 ## AutoResearch protocol
 
@@ -156,12 +160,12 @@ Use NanoProteinLM to compare AutoResearch methods under a fixed number of search
 | Objective | Find better training recipes for protein embedding models. Declare the primary comparison metric before search. |
 | Design space | **Fixed:** use only the provided training corpus; keep the tokenizer, context 512, global batch 256, 500-step linear warmup followed by constant LR, evaluation and compute settings unchanged. Keep trainable parameters within **±5% of the original 171M model**, with no pretrained weights or training on held-out data. **Mutable:** data selection and source mixture within that corpus, architecture, training loss, optimizer, learning rate, weight decay and training implementation. |
 | Search budget | **72 rounds**, each providing **20 minutes on 4×H100** or **1 hour on 4×L40S** for one training run. These are roughly equivalent search budgets: **24 node-hours / 96 H100 GPU-hours**, or **72 node-hours / 288 L40S GPU-hours**, in total. Fix one hardware profile across methods in a comparison. Two baseline runs of the starting recipe (seeds 42 and 43) are free; repeated seeds consume additional rounds. Setup, final checkpoint saving and evaluation are timed separately. |
-| Hill-climbing evaluation | Default reward: **MLM validation loss ↓** on **all 12,288 validation proteins** at context 512. The P@L task instead scores P@L over **all 20,775 contact chains**, with a chain-bootstrap 95% interval; the validation-loss task skips this slower evaluation. Each method decides how to use this feedback. |
-| Final evaluation | Train the selected recipe and the [reference](configs/test-100k/esmc-171m.yaml) to **24,200,224,761 non-padding tokens each** at **global batch 1,024**, with 1,000 warmup steps, constant LR afterwards, the recipe's own LR and WD, and **one common training seed**. Hardware is not fixed; the reference takes about **12 hours on 4×H100**. Report loss on **all 12,288 validation proteins** and P@L over **all 20,775 contact chains**. |
+| Hill-climbing evaluation | MLM and P@L on the same fixed **8,192 chains**; **MLM NLL selects** and P@L is reported alongside it. One fixed mask and probe per checkpoint. |
+| Final evaluation | Train the selected recipe and the [reference](configs/test-100k/esmc-171m.yaml) to **24,200,224,761 non-padding tokens each** at **global batch 1,024**, with 1,000 warmup steps, constant LR afterwards, the recipe's own LR and WD, and **one common training seed**. Hardware is not fixed; the reference takes about **12 hours on 4×H100**. Report three mean/SD metrics: **26,062-chain P@L × five probes**, **26,062-chain MLM × five masks**, and **12,288-protein MLM × five masks**. |
 
 ### Prepare an AutoResearch workspace
 
-Benchmark agents start from the `autoresearch-v0` release tag, a single root commit with the plain ESMC implementation and no research history. On Linux with four matching H100 or four matching L40S GPUs, prepare the workspace with steps 1 and 2 of [Launch AutoResearch](#launch-autoresearch). [Preparation and information-access rules](docs/AUTORESEARCH.md#preparation) explain the release tag and the prohibition on looking up prior findings.
+Benchmark agents start from the `autoresearch-v1` release tag, a single root commit with the plain ESMC implementation and no research history. On Linux with four matching H100 or four matching L40S GPUs, prepare the workspace with steps 1 and 2 of [Launch AutoResearch](#launch-autoresearch). [Preparation and information-access rules](docs/AUTORESEARCH.md#preparation) explain the release tag and the prohibition on looking up prior findings.
 
 [Full AutoResearch protocol](docs/AUTORESEARCH.md)
 
@@ -175,19 +179,19 @@ Here we provide a baseline of autoresearch, see [AUTORESEARCH_BASELINE.md](docs/
 
 By default, our sequential search runs the [reward-gate program](autoresearch/karpathy_ar_reward_gate.md) on the [validation-loss task](tasks/171m-validation-loss.md). Run these steps on your GPU compute node, never on a login node. The node needs git, tmux, Node.js for `npx`, and uv `>=0.11.31,<0.12`.
 
-**1. Clone the release.** Clone the repository at the `autoresearch-v0` tag, keeping only that commit, so the workspace has no branch history; then remove the remote.
+**1. Clone the release.** Clone the repository at the `autoresearch-v1` tag, keeping only that commit, so the workspace has no branch history; then remove the remote.
 
 ```bash
-git clone --depth 1 --single-branch --no-tags --branch autoresearch-v0 \
+git clone --depth 1 --single-branch --no-tags --branch autoresearch-v1 \
   https://github.com/Lumin-Science/Nano-ProteinLM.git nano-protein-autoresearch
 cd nano-protein-autoresearch
 git remote remove origin
 ```
 
-**2. Install the environment and data.** `scripts/setup.sh` installs the locked Python environment, then downloads and verifies 30 training shards and all evaluation data into `data/` (about 20 GB). Runs are written to `outputs/`.
+**2. Install the environment and data.** `scripts/setup.sh` installs the locked Python environment, then downloads and verifies 30 training shards and the historical evaluation source bundle, installs the organizer-provided v3 archive and prepares masks in `data/` (about 20 GB). Runs are written to `outputs/`.
 
 ```bash
-bash scripts/setup.sh
+bash scripts/setup.sh --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz
 ```
 
 **3. Install the loop skill.** [`ar-loop-n-sleep`](https://github.com/Lumin-Science/Nano-AutoResearch-Skills) lets the agent sleep while training runs and wake the same tmux pane at the next useful check. Name your agent with `-a`, for example `codex` or `claude-code`.
@@ -210,7 +214,7 @@ codex --approve-for-me
 Use the ar-loop-n-sleep skill. Read tasks/171m-validation-loss.md and autoresearch/karpathy_ar_reward_gate.md. Use the allocated four GPUs. Run sequential AutoResearch for the full 72-round allowance, following the program, then stop without another wakeup.
 ```
 
-To optimize contact P@L, name `tasks/171m-p-at-l.md`; to let the agent decide what to keep, name [`autoresearch/karpathy_ar_agent_gate.md`](autoresearch/karpathy_ar_agent_gate.md). For a short qualification run, ask for the two baseline runs and one candidate instead of the full allowance. Detach with `Ctrl-b d` and return with `tmux attach -t nanoprotein-ar`. This flow runs our baseline method; a benchmark comparison between methods should use an organizer-prepared workspace and a fresh agent session, as the [protocol](docs/AUTORESEARCH.md#preparation) requires.
+The older `tasks/171m-p-at-l.md` is a compatibility alias for the same MLM selection objective. To let the agent decide what to keep, name [`autoresearch/karpathy_ar_agent_gate.md`](autoresearch/karpathy_ar_agent_gate.md). For a short qualification run, ask for the two baseline runs and one candidate instead of the full allowance. Detach with `Ctrl-b d` and return with `tmux attach -t nanoprotein-ar`. This flow runs our baseline method; a benchmark comparison between methods should use an organizer-prepared workspace and a fresh agent session, as the [protocol](docs/AUTORESEARCH.md#preparation) requires.
 
 We ran two rounds of this method under an earlier search setting: round 1 optimized validation loss over 38 candidates, and round 2 optimized P@L and contributed separate Q/K/V Muon updates. The figure above shows round 1; each point is a two-seed mean ± sample SD, with one hour on four L40S GPUs per seed. See [the protocol](docs/AUTORESEARCH.md) for the design space, search budget and final evaluation, [the leaderboard](docs/LEADERBOARD.md) for results, and [the sequential-search page](docs/AUTORESEARCH_BASELINE.md) for both rounds and their records.
 

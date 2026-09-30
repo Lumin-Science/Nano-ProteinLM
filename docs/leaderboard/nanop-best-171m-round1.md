@@ -2,7 +2,7 @@
 
 Round 1 of our [sequential AutoResearch](../AUTORESEARCH_BASELINE.md#round-1-validation-loss) changed plain ESMC in three ways, which a human-run scale-up then kept: a Muon package (Muon for transformer matrices with AdamW for embeddings and the MLM head, parameter-free RMSNorm, learned residual routing and depth-scaled initialization), batch balancing across GPUs, and sqrt-mask-count loss weighting. [Round 2](nanop-best-171m-round2.md) adds separate Q/K/V Muon updates.
 
-Configs: [search setting](../../configs/autoresearch/nanop-best-171m-round1.yaml) · [final evaluation](../../configs/test-100k/nanop-best-171m-round1.yaml). [LEADERBOARD.md](../LEADERBOARD.md) holds results under the current protocol.
+Configs: [search setting](../../configs/autoresearch/nanop-best-171m-round1.yaml) · [final evaluation](../../configs/test-100k/nanop-best-171m-round1.yaml). [LEADERBOARD.md](../LEADERBOARD.md) holds historical results with their evaluation populations. [Evaluation v3](../EVALUATION.md) defines the current protocol.
 
 ## H100 100k-step comparison under the previous protocol
 
@@ -31,7 +31,7 @@ This is our ESMC-like project baseline, not a released ESMC checkpoint or an exa
 
 All runs share 100,000 Stage-1 optimizer steps, seed 20260824, context 512, four H100 GPUs, and batch 1,024 = **64 proteins/GPU × 4 GPUs × 4 accumulation microsteps**. Each processes exactly **102.4M sampled sequences** and **24,200,224,761 non-padding model tokens**, including BOS/EOS. These are training exposures, not counts of unique proteins. BF16 autocast, FP32 model parameters, pinned FA3, gradient clipping at 1.0, the corpus, sampling mixture, and evaluators are shared. Compilation and activation checkpointing are off.
 
-The LR warms up for 1,000 steps, then stays constant for this Stage-1-only comparison. The nominal LR is 5e-4 and nominal WD is 0.01. This historical evaluation used **4,096 fixed sequences / 139,963 masked targets**, with **256 batches of 16**, for sequence-mean MLM NLL and the same **20,775 contact chains**. The contact probe used the same 16 fit chains, four regularization-selection chains and 16 inference shards. Preserve these recorded scores; the current evaluator's 1,024 batches of four use a different fixed sample and masking.
+The LR warms up for 1,000 steps, then stays constant for this Stage-1-only comparison. The nominal LR is 5e-4 and nominal WD is 0.01. This historical evaluation used **4,096 fixed sequences / 139,963 masked targets**, with **256 batches of 16**, for sequence-mean MLM NLL and the same **20,775 contact chains**. The contact probe used the same 16 fit chains, four regularization-selection chains and 16 inference shards. Preserve these recorded scores; the current v3 profiles use different populations and repeated masks, so these losses are not directly comparable.
 
 [EVALUATION.md](../EVALUATION.md) describes the evaluation protocol.
 

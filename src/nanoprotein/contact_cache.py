@@ -1,4 +1,4 @@
-"""Receipt-bound static scoring cache for the frozen 20,775-chain P@L set."""
+"""Receipt-bound static scoring cache for the verified P@L populations."""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def build_contact_scoring_cache(
             DISTANCE_THRESHOLD_ANGSTROM,
             SEQUENCE_SEPARATION,
         )
-        from autoresearch_esm.paper_contact_runtime import (  # type: ignore[import-not-found]
+        from .contact_dataset import (  # type: ignore[import-not-found]
             ContactDataset,
         )
     finally:
@@ -156,7 +156,7 @@ def verify_contact_scoring_cache(*, cache_root: Path, output: Path) -> dict[str,
     if not (
         receipt.get("status") == "complete"
         and receipt.get("protocol") == CACHE_PROTOCOL
-        and receipt.get("evaluation_chains") == 20_775
+        and receipt.get("evaluation_chains") in (20_775, 26_062)
     ):
         raise ValueError("contact scoring cache receipt is incomplete")
     for key in ("entries", "masks"):

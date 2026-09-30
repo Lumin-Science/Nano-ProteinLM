@@ -129,8 +129,16 @@ def main() -> None:
     parser.add_argument(
         "--archive", type=Path, help="use a previously downloaded frozen bundle"
     )
+    parser.add_argument("--recovered-contact-pool", type=Path)
+    parser.add_argument("--contact-v3-archive", type=Path, help="use a downloaded v3 bundle offline")
+    parser.add_argument("--historical-only", action="store_true", help="install only the historical v2 source bundle")
     args = parser.parse_args()
-    print(json.dumps(prepare_evaluation(args.data_root, args.archive), indent=2))
+    receipt = prepare_evaluation(args.data_root, args.archive)
+    if not args.historical_only:
+        from .prepare_evaluation_profiles import prepare_profiles
+        profiles = prepare_profiles(args.data_root, args.recovered_contact_pool, args.contact_v3_archive)
+        receipt = {"status": "verified", "protocol": profiles["protocol"], "prepared_caches": len(profiles["caches"])}
+    print(json.dumps(receipt, indent=2))
 
 
 if __name__ == "__main__":

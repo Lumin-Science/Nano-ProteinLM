@@ -5,6 +5,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
+export PYTHONPATH="$repo_root/src${PYTHONPATH:+:$PYTHONPATH}"
 if [[ "${1:-}" == "--evaluate" ]]; then
   shift
   run_name="default-100k"
@@ -23,9 +24,9 @@ if [[ "${1:-}" == "--evaluate" ]]; then
   exec "${UV_BIN:-uv}" run --frozen python -m nanoprotein.evaluate \
     --checkpoint "$OUTPUT_ROOT/$run_name/checkpoint-final.pt" \
     --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/$run_name/evaluation" \
-    --validation-context 512 \
-    --run-contact --contact-chains 20775 --contact-bootstrap 5000 \
-    --contact-root "$DATA_ROOT/evaluation/contact" --external-src "$DATA_ROOT/evaluation/source" \
+    --profile scaleup \
+    --contact-root "$DATA_ROOT/evaluation/contact-v3" --external-src "$DATA_ROOT/evaluation/source" \
+    --prepared-root "$DATA_ROOT/evaluation/prepared-v3" \
     "$@"
 fi
 

@@ -20,24 +20,17 @@ Environment and data must be prepared before timing. The task command copies the
 
 ## Reward and seeds
 
-The reward is the selected task's score, oriented so that higher is better: the negative of `validation_mlm.sequence_mean_nll` for the validation-loss task, or `contact.precision_at_l` for the P@L task. Every recipe is trained with seed 42 first and seed 43 second. The task script takes the seed as its third argument:
+The current reward is the negative of `validation_mlm.sequence_mean_nll`, so higher reward is better. Report `contact.precision_at_l` alongside it; contact does not enter the keep rule. The older P@L task filename is a compatibility alias for the same paired measurement and MLM objective. Every recipe is trained with seed 42 first and seed 43 second. The task script takes the seed as its third argument:
 
 ```bash
 bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml trial-001-seed42 42
 ```
 
-Use the selected task's entry point for other objectives. Read the completed run's `TRAINING_COMPLETE.json` and `evaluation/EVALUATION.json`, and verify that evaluation matches the final checkpoint and covers the task's full evaluation population. A missing, failed or non-finite measurement is a failed run, and a failed run discards its candidate.
+The older P@L task entry point is a compatibility alias for the same current MLM objective. Read the completed run's `TRAINING_COMPLETE.json` and `evaluation/EVALUATION.json`, and verify that evaluation matches the final checkpoint and covers the task's full evaluation population. A missing, failed or non-finite measurement is a failed run, and a failed run discards its candidate.
 
 ## Baseline check
 
-The owner measured the untouched starting recipe, `configs/autoresearch/esmc-171m.yaml`, with this release's task command on the four-H100 profile, using seeds 42, 43 and 44:
-
-| Task score | Mean ± sample SD over seeds 42, 43 and 44 |
-|---|---:|
-| `validation_mlm.sequence_mean_nll` | 2.70552 ± 0.00245 |
-| `contact.precision_at_l` | 0.09841 ± 0.00250 |
-
-On that profile, your two baseline runs should land close to these values. A clearly different result points to a setup problem: check the environment, data and GPUs, and tell the user before continuing. On other hardware the scores will differ.
+Remeasure the untouched starting recipe with seeds 42 and 43 under `profile=search`, using the fixed 8,192 chains for both MLM and P@L. The older 12,288-protein MLM baseline and 20,775-chain P@L values are historical measurements, not checks for this profile. Record profile, population and mask hashes before comparing candidates. For the default validation-loss task, MLM remains the selection objective and P@L is reported alongside it; no contact non-regression condition is added.
 
 ## Keep rule
 
@@ -55,7 +48,7 @@ Before each candidate, write the hypothesis. After each measurement, record the 
 Append one row per task invocation to `results.tsv`, using tab-separated cells on one line and `NA` for unavailable values. Suggested columns are:
 
 ```tsv
-timestamp_utc	round_id	trial_id	seed	code_revision	incumbent_id	score	reward	incumbent_mean	incumbent_sd	candidate_mean	candidate_sd	decision	decision_reason	artifacts
+timestamp_utc	round_id	trial_id	seed	code_revision	incumbent_id	score	reward	p_at_l	evaluation_profile	incumbent_mean	incumbent_sd	candidate_mean	candidate_sd	decision	decision_reason	artifacts
 ```
 
 Use `baseline`, `pending` (seed 42 passed step 2), `keep`, `discard` or `failed` for the decision. `score` is the task's raw metric and `reward` its oriented value. Give the two baseline rows `round_id` 0, since they do not count toward the allowance.

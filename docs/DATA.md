@@ -15,7 +15,7 @@ whose independently verified manifest contains 665,970,495 training proteins:
 | OMG/IMG | 262,845,186 | 65,256,646,612 | 244 |
 | **Total** | **665,970,495** | **151,304,238,405** | **565** |
 
-Each source also has one 4,096-protein validation shard, for 12,288 validation proteins in total. The complete artifact contains 568 train/validation shards and occupies 109,661,312,410 compressed bytes. Setup downloads 30 training shards by default (29,979,351 proteins), plus all validation shards. `bash scripts/setup.sh --training-shards N` selects 3–565 whole training shards; choose a fresh `DATA_ROOT` for another selection. The direct data API also supports a requested sample budget. Both routes use checksum-bound source prefixes and always include complete MLM validation. The setup command separately installs the [frozen P@L bundle](#frozen-contact-evaluation-data).
+Each source also has one 4,096-protein validation shard, for 12,288 validation proteins in total. The complete artifact contains 568 train/validation shards and occupies 109,661,312,410 compressed bytes. Setup downloads 30 training shards by default (29,979,351 proteins), plus all validation shards. `bash scripts/setup.sh --training-shards N` selects 3–565 whole training shards; choose a fresh `DATA_ROOT` for another selection. The direct data API also supports a requested sample budget. Both routes use checksum-bound source prefixes and always include complete MLM validation. The setup command separately installs the [frozen P@L bundle](#frozen-contact-evaluation-data). For a fresh v3 data root, add `--contact-v3-archive PATH` or `--recovered-contact-pool PATH` to the setup commands below; the expanded archive is not yet publicly hosted.
 
 The companion [raw clustering release](https://huggingface.co/datasets/LuminScience/LuminBench-Nano-ESMC-RAW)
 preserves the source-specific 70%-identity representative FASTAs and cluster
@@ -41,7 +41,7 @@ Storage estimates use decimal GB and include MLM validation: the cache holds com
 
 At 100k steps, global batches 1,024 and 2,048 sample 102.4M and 204.8M proteins respectively. The 105- and 209-shard rows cover the expected draws under the normalized 36:11:54 mixture before sampling headroom. Source selection is stochastic. The trainer checks each source with 1% headroom by default and stops on exhaustion unless the recipe explicitly permits resampling; 30 shards are insufficient for either no-repeat run.
 
-For the default mixture at 100k steps and batch 1,024, use `bash scripts/setup.sh --training-samples 103424000` in a fresh `DATA_ROOT`; batch 2,048 needs `--training-samples 206848000`. These budgets include the default 1% headroom, and the planner rounds each source up to whole shards. Changed mixtures require their own source-coverage check. `DATA_COVERAGE.json` records the resolved budget and policy. `data_resampling: allow` enables intentional repeated-data experiments, which must report their reuse; headroom alone is not a guarantee against stochastic exhaustion.
+For the default mixture at 100k steps and batch 1,024, use `bash scripts/setup.sh --training-samples 103424000 --contact-v3-archive /path/to/contact-evaluation-v3.tar.gz` in a fresh `DATA_ROOT`; batch 2,048 needs `--training-samples 206848000`. These budgets include the default 1% headroom, and the planner rounds each source up to whole shards. Changed mixtures require their own source-coverage check. `DATA_COVERAGE.json` records the resolved budget and policy. `data_resampling: allow` enables intentional repeated-data experiments, which must report their reuse; headroom alone is not a guarantee against stochastic exhaustion.
 
 **Stored residues are not the training token budget.** Stage 1 crops proteins
 to at most 510 residues and adds BOS/EOS; padding is excluded from model tokens.
@@ -232,7 +232,7 @@ Structures come from the **2024-02-28 RCSB Protein Data Bank snapshot**. Chain
 selection and preprocessing remain unchanged: the benchmark is paper-faithful,
 not claimed to be identical to the ESMC authors' unpublished chain selection.
 The [evaluation contract](EVALUATION.md#contact-pl) defines probe fitting,
-long-range contacts and confidence intervals.
+long-range contacts and five-attempt mean/SD reporting.
 
 PDB archive data are available under **CC0 1.0**, per the
 [wwPDB usage policy](https://www.wwpdb.org/about/usage-policies).
@@ -250,3 +250,13 @@ The payload inventory hash is
 `1b73f5f466420c8d0c74be452ebabe46af837482cee357674cad01d99e6f4b70`.
 
 Setup verifies the archive checksum, source files, manifest, inventory and every chain payload before reporting success. Both `evaluation/contact/` and `evaluation/source/` live beneath `DATA_ROOT`.
+
+## Expanded evaluation profile (v3)
+
+Current search evaluates MLM and P@L on the same fixed 8,192 chains. Final evaluation uses all 26,062 eligible non-probe contact chains, plus the original 12,288 MLM validation proteins. The 20 probe chains remain separate. New data live in `evaluation/contact-v3` and eleven prepared mask caches in `evaluation/prepared-v3`; `evaluation/contact` and its public v2 archive remain immutable historical inputs. Fresh setup requires the organizer-provided portable `contact-evaluation-v3.tar.gz` via `--contact-v3-archive PATH`, verifies its SHA-256, and builds the fixed masks locally. This new archive is not yet publicly hosted. An organizer may instead supply the original verified recovery with `--recovered-contact-pool PATH`. The archive contains normalized coordinates, chain IDs and portable provenance, without local machine paths or experiment results.
+
+The training-decontamination counts above apply to the original protected union, which explicitly includes the original 20,775 contact chains and 20 probes. They do not establish homology exclusion of the additional 5,287 recovered chains. The expanded evaluation receipt records that limitation. Search retains the original protected subset and does not draw new IDs from the expanded pool. See [EVALUATION.md](EVALUATION.md) for exact seeds, populations and reporting fields.
+
+The installed expanded training prefix contains exact full-sequence matches for 30 additional chains (29 evaluated-fragment matches). Four original evaluation chains have full-length parent matches but no evaluated-fragment matches. These are training availability checks, not proof of which sequences a given run sampled; homology exclusion remains unverified for the expanded pool.
+
+The portable v3 archive SHA-256 is `7bcfd14c1a57d970ad84b1ac823f524c7e2fb27c7a2a1a30d303d12bddaf4647` (237,878,369 bytes). Its contact manifest SHA-256 is `35c55cabf6547ef089defb7bb544d6037a84fc60915c17f47d9ed29c1c814977`. Preparing masks does not require model weights or predictions.
