@@ -46,7 +46,9 @@ class ContactDataset:
             raise ValueError("contact manifest contains duplicate chain IDs")
         self.train_ids = [entry.chain_id for entry in self.entries if entry.role == "train"]
         self.eval_ids = [entry.chain_id for entry in self.entries if entry.role == "eval"]
-        expected = 26062 if self.ready.get("population_protocol") == "nanoprotein-contact-pool-v3" else 20775
+        if self.ready.get("population_protocol") != "nanoprotein-contact-pool-v3":
+            raise ValueError("contact population protocol mismatch")
+        expected = 26062
         if len(self.train_ids) != 20 or len(self.eval_ids) != expected:
             raise ValueError("contact dataset does not have the declared exact train/eval coverage")
         if self.train_ids[:16] != list(self.ready["probe_train_chain_ids"]):

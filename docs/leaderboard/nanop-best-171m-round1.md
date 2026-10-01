@@ -1,41 +1,10 @@
 # nanop-best-171m-round1
 
-Round 1 of our [sequential AutoResearch](../AUTORESEARCH_BASELINE.md#round-1-validation-loss) changed plain ESMC in three ways, which a human-run scale-up then kept: a Muon package (Muon for transformer matrices with AdamW for embeddings and the MLM head, parameter-free RMSNorm, learned residual routing and depth-scaled initialization), batch balancing across GPUs, and sqrt-mask-count loss weighting. [Round 2](nanop-best-171m-round2.md) adds separate Q/K/V Muon updates.
+Round 1 combines Muon with RMSNorm, learned residual routing, depth-scaled initialization, batch balancing and sqrt-weighted training loss in the 171M ESMC backbone.
 
-Configs: [search setting](../../configs/autoresearch/nanop-best-171m-round1.yaml) · [final evaluation](../../configs/test-100k/nanop-best-171m-round1.yaml). [LEADERBOARD.md](../LEADERBOARD.md) holds historical results with their evaluation populations. [Evaluation v3](../EVALUATION.md) defines the current protocol.
+Configs: [search](../../configs/autoresearch/nanop-best-171m-round1.yaml) · [scale-up](../../configs/test-100k/nanop-best-171m-round1.yaml). The [leaderboard](../LEADERBOARD.md) reports the three-seed search comparison and five-attempt scale-up metrics defined by the [evaluation contract](../EVALUATION.md).
 
-## H100 100k-step comparison under the previous protocol
-
-This six-run comparison ran before the current final-evaluation protocol. It used seed 20260824, the seven-shard corpus with repeated source epochs, and a different 4,096-protein MLM sample (256 batches of 16). Its numbers explain how round 1 was selected; they are not leaderboard entries.
-
-**The round-1 recipe is best in this completed six-run comparison.** It reduces validation loss from **2.47436 to 2.41872** and increases long-range contact P@L from **26.505% to 32.682%**. Training takes **12h 34m 40s**, compared with **12h 00m 42s** for the baseline: 2.25% lower loss, 6.18 percentage points higher P@L, and 4.71% longer training.
-
-The complete change is **hybrid Muon/AdamW + parameter-free transformer RMSNorm + learned residual/input routing + depth-scaled initialization + batch balancing + sqrt-mask-count loss**. The optimizer also retains the Muon recipe's per-group learning-rate and weight-decay multipliers. Muon, RMSNorm, balancing and sqrt loss are therefore most of the story, but routing, initialization and the optimizer-group settings also matter to reproducing this result.
-
-This is our ESMC-like project baseline, not a released ESMC checkpoint or an exact reproduction of all paper settings. The models have approximately 171M parameters and target small-budget training, using the backbone from [ESMC Appendix A.1.4.1, Table S4](https://www.biorxiv.org/content/10.64898/2026.06.03.729735v1.full.pdf#page=29). The eight-H100 batch-2,048 Nibi run is a separate experiment; the results below all use batch 1,024.
-
-## 1. The complete comparison
-
-| Recipe | Validation loss ↓ | P@L ↑ | P@L 95% CI | Training time |
-|---|---:|---:|---:|---:|
-| ESMC-like baseline — AdamW | 2.47436 | 26.505% | 26.295–26.719% | 12h 01m |
-| Muon recipe — RoPE20k | 2.43698 | 30.310% | 30.079–30.547% | 12h 57m |
-| Muon recipe — RoPE10k | 2.43781 | 30.165% | 29.936–30.394% | 12h 58m |
-| + batch balance | 2.43872 | 30.715% | 30.487–30.948% | 12h 34m |
-| **+ sqrt loss (round 1)** | **2.41872** | **32.682%** | **32.447–32.920%** | **12h 35m** |
-| + tied embeddings | 2.42304 | 31.884% | 31.651–32.123% | 12h 33m |
-
-![Six completed recipes, comparing held-out MLM loss and contact P@L with chain-bootstrap intervals. The round-1 recipe is best on both metrics.](../figures/best-recipe/scaleup-results.png)
-
-*Figure 1. Measured results, with zoomed axes. Contact error bars are 95% intervals from 5,000 bootstrap resamples of the same 20,775 chains. There is one training seed per recipe; these intervals do not measure training-seed variation. No validation-loss seed error bar is available. Times in the table are approximate to the minute and exclude evaluation; linked run records retain second-resolution durations.*
-
-All runs share 100,000 Stage-1 optimizer steps, seed 20260824, context 512, four H100 GPUs, and batch 1,024 = **64 proteins/GPU × 4 GPUs × 4 accumulation microsteps**. Each processes exactly **102.4M sampled sequences** and **24,200,224,761 non-padding model tokens**, including BOS/EOS. These are training exposures, not counts of unique proteins. BF16 autocast, FP32 model parameters, pinned FA3, gradient clipping at 1.0, the corpus, sampling mixture, and evaluators are shared. Compilation and activation checkpointing are off.
-
-The LR warms up for 1,000 steps, then stays constant for this Stage-1-only comparison. The nominal LR is 5e-4 and nominal WD is 0.01. This historical evaluation used **4,096 fixed sequences / 139,963 masked targets**, with **256 batches of 16**, for sequence-mean MLM NLL and the same **20,775 contact chains**. The contact probe used the same 16 fit chains, four regularization-selection chains and 16 inference shards. Preserve these recorded scores; the current v3 profiles use different populations and repeated masks, so these losses are not directly comparable.
-
-[EVALUATION.md](../EVALUATION.md) describes the evaluation protocol.
-
-## 2. Exactly what differs from the baseline
+## What differs from the baseline
 
 | Component | AdamW baseline | Round-1 recipe |
 |---|---|---|
@@ -53,7 +22,7 @@ The LR warms up for 1,000 steps, then stays constant for this Stage-1-only compa
 | Input/output embeddings | Untied | Untied |
 | Trainable parameters | 170,671,168 | 170,559,856 |
 
-The earlier Muon recipe used RoPE20k. The four cumulative variants reset it to 10k. **RoPE is therefore not a best-versus-baseline difference.** R22's FFN-narrowing change was deferred, and tied embeddings did not improve on the default recipe. Neither belongs in the best recipe.
+Both recipes use RoPE base 10,000, FFN width 2,048 and untied embeddings. Round 1 uses fused QKV Muon updates (`muon_split_qkv: false`).
 
 ### Hybrid optimizer and its actual LR/WD settings
 
@@ -90,7 +59,7 @@ The round-1 recipe also reinitializes only the attention-output and FFN-down pro
 
 Implementation: [`ESMCRMSNorm`, model initialization and routing](../../src/nanoprotein/model.py), and [`muon_adamw_parameter_groups` / `build_optimizer`](../../src/nanoprotein/train.py).
 
-## 3. Batch balance: equalize work across GPUs
+## Batch balance: equalize work across GPUs
 
 ### Why equal protein counts can still give unequal work
 
@@ -114,7 +83,7 @@ No sequence is split, concatenated with another sequence, dropped, resampled, or
 
 ![Worked example showing eight proteins redistributed across four GPUs. Original loads are 992, 864, 224 and 96 tokens; each balanced GPU receives 544 tokens.](../figures/best-recipe/batch-balance-example.png)
 
-*Figure 2. An intentionally uneven illustration with two examples per GPU; production uses 64. A–H identify the same examples before and after assignment. Lengths count valid model tokens, including BOS/EOS.*
+*Figure 1. An intentionally uneven illustration with two examples per GPU; production uses 64. A–H identify the same examples before and after assignment. Lengths count valid model tokens, including BOS/EOS.*
 
 | GPU | Original examples (token lengths) | Original load | Balanced examples | Balanced load |
 |---|---|---:|---|---:|
@@ -133,7 +102,7 @@ With 64 examples per rank, averaging each rank's equal-protein loss and then ave
 
 Implementation: [`balanced_partitions` and `rebalance_masked_batch`](../../src/nanoprotein/batch_balance.py). Regression tests exercise example/label preservation, equal row counts, unchanged RNG state and gradient equivalence to the unpartitioned reference.
 
-## 4. Sqrt loss: change protein weighting, not the validation metric
+## Sqrt-weighted training loss
 
 Let `m_i` be the **actual number of selected MLM target residues** in protein `i`, and let its mean target cross-entropy be
 
@@ -184,7 +153,7 @@ $$
 
 ![Illustrative shares of each protein's loss under equal-protein, sqrt-target and equal-target weighting, and the three resulting objective values.](../figures/best-recipe/sqrt-loss-example.png)
 
-*Figure 3. The predictions are identical in all three columns: only their weighting changes. A smaller number here is not evidence of a better model. Equal-target weighting is a reference for understanding the rule and was not used by either of these two recipes.*
+*Figure 2. The predictions are identical in all three columns: only their weighting changes. A smaller number here is not evidence of a better model. Equal-target weighting is a reference for understanding the rule and was not used by either of these two recipes.*
 
 For a fixed microstep, the coefficient on an individual target is proportional to `1/m_i` under the baseline, `1/sqrt(m_i)` under sqrt weighting, and a constant under equal-target weighting. Thus protein C has 16 times as many targets as A, but receives only four times A's total weight in the sqrt objective.
 
@@ -207,31 +176,3 @@ This is generally different from normalizing once across all 1,024 proteins in t
 Training's `objective_loss` reports the global sqrt-weighted objective averaged over the four microsteps. Its ordinary `loss` field remains the **rank-0 sequence-mean diagnostic**, averaged over its four microsteps; it is not an all-rank diagnostic reduction. Most importantly, the **held-out evaluator still reports the same equal-protein `sequence_mean_nll` for every recipe**. The leaderboard improvement therefore cannot be explained merely by changing the definition of validation loss.
 
 Implementation: [`training_losses` and the accumulation loop](../../src/nanoprotein/train.py). Regression tests compare loss values and gradients against an independent pooled reference, including unequal target counts across ranks and ranks with no targets.
-
-## 5. What the incremental runs establish
-
-| Change | Validation-loss change | P@L change | Training-time change |
-|---|---:|---:|---:|
-| Add batch balancing | +0.000911 | +0.5506 pp | −3.11% |
-| Add sqrt loss | −0.019999 | +1.9673 pp | +0.13% |
-| Add tied embeddings | +0.004323 | −0.7984 pp | −0.19% |
-
-Batch balancing improved time and P@L here, while its validation loss was slightly higher. Sqrt weighting then improved both evaluation metrics with almost unchanged training time. Tying embeddings regressed both metrics. The paired-chain 95% CI for the P@L change is **+1.9056 to +2.0263 percentage points** for sqrt loss and **−0.8583 to −0.7368 points** for tying embeddings.
-
-These runs isolate the latter increments along this particular recipe path. The baseline-to-R02 change bundles optimizer, normalization, routing, initialization and group hyperparameters, so it does not isolate a Muon-only or RMSNorm-only gain. One matched training seed and chain-bootstrap intervals support comparisons of these checkpoints, not a claim about reproducible effects over independent training seeds. Timing also comes from one run per recipe on its assigned node.
-
-## 6. Reproduction and figures
-
-The baseline and round-1 runs used the recipes published as [configs/test-100k/esmc-171m.yaml](../../configs/test-100k/esmc-171m.yaml) and [configs/test-100k/nanop-best-171m-round1.yaml](../../configs/test-100k/nanop-best-171m-round1.yaml), with seed 20260824 and the seven-shard corpus. The best checkpoint SHA-256 is `f28021f4c8069c344279172da5fe25c1afd36d07eddee111e5e17ce1eba0e29d`; the baseline SHA-256 is `96783380e4ecebab468e429e76a2ffcbb2bcfb4d11d7ab960a86791e6e7bc477`. Checkpoints and run records are kept outside the repository.
-
-Vector versions: [comparison](../figures/best-recipe/scaleup-results.svg), [batch balancing](../figures/best-recipe/batch-balance-example.svg), and [sqrt weighting](../figures/best-recipe/sqrt-loss-example.svg).
-
-## 7. Longer-training reference
-
-| Model | P@L ↑ | Estimated training FLOPs |
-|---|---:|---:|
-| ESMC-600M | 58.031% | 2.491 × 10²² |
-| ESMC-300M | 53.867% | 1.480 × 10²² |
-| **nanop-best-171m-round1, longer training** | **46.264%** | **2.334 × 10²¹** |
-
-The round-1 recipe trained longer at batch 2,048 reaches **46.264% P@L**. All three models use the same frozen 20,775-chain contact evaluation, but their training corpora and compute budgets differ, so this is a capability reference rather than a leaderboard entry. FLOPs are estimated as `3 × (2 × parameters + 4 × layers × context × width) × tokens`, with nominal tokens from batch size × maximum context × updates; they are not measured hardware operations.

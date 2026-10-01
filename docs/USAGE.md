@@ -12,7 +12,6 @@ in an optional `.env`; defaults are the repository's `data/` and `outputs/`.
 $DATA_ROOT/
   training/             # Verified training subset and MLM validation data
   cache/                # Downloaded corpus shards and contact archive
-  evaluation/contact/   # Immutable historical contact release
   evaluation/contact-v3/ # Full 26,062 evaluation + 20 probe chains
   evaluation/prepared-v3/ # Fixed search/final MLM masks
   evaluation/source/    # Pinned source containing autoresearch_esm
@@ -20,7 +19,7 @@ $OUTPUT_ROOT/
   <run-name>/           # Checkpoints, effective config, logs and evaluation records
 ```
 
-The default pins the release revision and downloads **30 of 565 training Parquet shards**: 13 UniRef90, 3 MGnify and 14 OMG/IMG, containing 29,979,351 training proteins. Downloads including MLM validation occupy 5.62 GB; prepared token stores add 9.38 GB. Allow 20 GB for the complete data setup, excluding the environment and checkpoints. All three MLM validation shards (12,288 proteins) and the frozen [contact evaluation](DATA.md#frozen-contact-evaluation-data) bundle are always prepared; no P-CORE data are downloaded. A 100k-step run at batch 1,024 needs a larger download: the default trainer prevents source resampling. See [DATA.md](DATA.md#sizing-a-training-download) for sample budgets and source coverage.
+The default pins the release revision and downloads **30 of 565 training Parquet shards**: 13 UniRef90, 3 MGnify and 14 OMG/IMG, containing 29,979,351 training proteins. Downloads including MLM validation occupy 5.62 GB; prepared token stores add 9.38 GB. Allow 20 GB for the complete data setup, excluding the environment and checkpoints. All three MLM validation shards (12,288 proteins) and the frozen [contact evaluation](DATA.md#frozen-contact-evaluation-data) bundle are always prepared. A 100k-step run at batch 1,024 needs a larger download: the default trainer prevents source resampling. See [DATA.md](DATA.md#sizing-a-training-download) for sample budgets and source coverage.
 
 For a different training corpus size, choose a fresh `DATA_ROOT` in `.env` and run:
 
@@ -104,27 +103,25 @@ Before the training clock starts, the AutoResearch task commands copy `$DATA_ROO
 
 ## AutoResearch
 
-[171m-validation-loss.md](../tasks/171m-validation-loss.md) and [171m-p-at-l.md](../tasks/171m-p-at-l.md) provide the scientific task definition and its compatibility alias for any AutoResearch method, and [AUTORESEARCH.md](AUTORESEARCH.md) defines the shared search budget and final evaluation. Our sequential-search method comes in two programs: [karpathy_ar_reward_gate.md](../autoresearch/karpathy_ar_reward_gate.md) keeps a candidate by a fixed two-seed rule, and [karpathy_ar_agent_gate.md](../autoresearch/karpathy_ar_agent_gate.md) lets the agent decide. To start it, select the task and program and give your agent the following instruction.
+[171m-validation-loss.md](../tasks/171m-validation-loss.md) provides the scientific task definition for any AutoResearch method, and [AUTORESEARCH.md](AUTORESEARCH.md) defines the shared search budget and final evaluation. Our sequential-search method comes in two programs: [karpathy_ar_reward_gate.md](../autoresearch/karpathy_ar_reward_gate.md) keeps a candidate by a fixed two-seed rule, and [karpathy_ar_agent_gate.md](../autoresearch/karpathy_ar_agent_gate.md) lets the agent decide. To start it, select the task and program and give your agent the following instruction.
 
 > Read `autoresearch/karpathy_ar_reward_gate.md` and start autoresearch for `tasks/171m-validation-loss.md`.
 
-The older `tasks/171m-p-at-l.md` is a compatibility alias with the same MLM selection objective. Use `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep.
+Use `autoresearch/karpathy_ar_agent_gate.md` to let the agent decide what to keep.
 
 After setup and GPU allocation, run one research measurement:
 
 ```bash
 bash tasks/171m-validation-loss_ar.sh configs/autoresearch/esmc-171m.yaml experiment-001 42
-# Compatibility alias for the same paired evaluation and MLM selection objective:
-bash tasks/171m-p-at-l_ar.sh configs/autoresearch/esmc-171m.yaml experiment-p-at-l-001 42
 ```
 
-The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports MLM and P@L on the same fixed 8,192 chains with `profile=search`. The default validation-loss task selects by MLM and reports P@L; the older P@L task filename is a compatibility alias for the same objective. Replication, aggregation and acceptance belong to the caller; [our sequential method](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents those choices and commands. The agent reviews task boundaries and run completion.
+The third argument supplies the training seed. Each task script loads `.env`, qualifies the declared GPU model and attention backend, saves the recipe and performs one training run through the standard APIs. Its `evaluation/EVALUATION.json` reports MLM and P@L on the same fixed 8,192 chains with `profile=search`. The default validation-loss task selects by MLM and reports P@L. Replication, aggregation and acceptance belong to the caller; [our sequential method](AUTORESEARCH_BASELINE.md#running-the-example-loop) documents those choices and commands. The agent reviews task boundaries and run completion.
 
 ## Evaluation
 
 After setup, `bash scripts/speedrun.sh --evaluate default-100k` loads your local paths and evaluates that run’s final checkpoint with the scale-up profile: five-probe P@L and five-mask MLM on 26,062 chains, plus five-mask MLM on the original 12,288 proteins, all reported as mean and sample SD. Replace `default-100k` with another run name; evaluation CLI options can follow it. This command performs evaluation only.
 
-Setup installs all MLM validation data plus the frozen contact payload and evaluator under `$DATA_ROOT/evaluation/{contact,source}` and the new `contact-v3`/`prepared-v3` artifacts. Fresh setup downloads the pinned expanded v3 archive automatically and builds the fixed masks locally. Use `--contact-v3-archive PATH` for an offline copy. A verified local recovery is also accepted through `--recovered-contact-pool PATH`. The installer checks frozen hashes before reporting success and verifies existing installations on reuse. See [contact data provenance](DATA.md#frozen-contact-evaluation-data) and [evaluation provenance](EVALUATION.md#population-provenance).
+Setup installs MLM validation data, the frozen scoring source under `$DATA_ROOT/evaluation/source`, the contact population under `contact-v3`, and prepared masks under `prepared-v3`. Fresh setup downloads the pinned expanded v3 archive automatically and builds the fixed masks locally. Use `--contact-v3-archive PATH` for an offline copy. The installer checks frozen hashes before reporting success and verifies existing installations on reuse. See [contact data provenance](DATA.md#frozen-contact-evaluation-data) and [evaluation provenance](EVALUATION.md#population-provenance).
 
 With the two roots loaded in your shell, evaluate a saved checkpoint with the default scale-up profile:
 
@@ -134,7 +131,7 @@ uv run --frozen python -m nanoprotein.evaluate --profile scaleup \
   --data-root "$DATA_ROOT/training" --output-root "$OUTPUT_ROOT/default-100k/evaluation"
 ```
 
-This reports P@L over 26,062 chains with five probe attempts, MLM on those chains with five fixed masks, and MLM on the original 12,288 proteins with five fixed masks. Each metric has a mean and sample SD; there is no separate single-mask score. Use `--profile search` for paired 8,192-chain measurements. `--contact-gpus` and `--contact-workers` control execution, and `--resume-components` resumes an identical request. Explicit `--profile component` is reserved for individual diagnostics and historical evaluation, not a final report. See [EVALUATION.md](EVALUATION.md).
+This reports P@L over 26,062 chains with five probe attempts, MLM on those chains with five fixed masks, and MLM on the original 12,288 proteins with five fixed masks. Each metric has a mean and sample SD; there is no separate single-mask score. Use `--profile search` for paired 8,192-chain measurements. `--contact-gpus` and `--contact-workers` control execution, and `--resume-components` resumes an identical request. The evaluator uses `--profile component` internally for contact workers. See [EVALUATION.md](EVALUATION.md).
 
 ## Repository layout
 

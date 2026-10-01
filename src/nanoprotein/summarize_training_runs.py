@@ -48,7 +48,7 @@ def summarize(runs: list[Path], validation_sequences: int) -> dict:
         if evaluation.get("profile") == "scaleup":
             raise ValueError("scale-up reports already aggregate probe/mask attempts; this utility summarizes search training seeds")
         if evaluation.get("profile") != "search":
-            raise ValueError("current search summaries require the paired 8192 evaluation profile; historical summaries stay with their original checkout")
+            raise ValueError("search summaries require the paired 8192 evaluation profile")
         if validation_sequences != 8192:
             raise ValueError("search evaluation has exactly 8192 proteins")
         if evaluation["validation_mlm"]["sequences"] != validation_sequences:

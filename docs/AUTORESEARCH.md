@@ -15,7 +15,7 @@ The protocol applies to any AutoResearch algorithm. Our implementation of Karpat
 
 ## Preparation
 
-Use the `autoresearch-v1` clean starter for evaluation v3. It contains the updated evaluator and task contracts while preserving the plain ESMC model and training baseline. The historical `autoresearch-v0` release uses different evaluation populations; remeasure baselines for every new v3 campaign.
+Use the `autoresearch-v1` clean starter for evaluation v3. It contains the updated evaluator and task contracts while preserving the plain ESMC model and training baseline. Measure the starting recipe with seeds 42 and 43 at the beginning of each campaign.
 
 Benchmark attempts start from `autoresearch-v1`: a single root commit containing the plain ESMC implementation and updated evaluation, with no research history. Allocate four matching H100 GPUs or four matching L40S GPUs on Linux with a working CUDA driver. A search round provides 20 minutes on H100 with FlashAttention-3 or one hour on L40S with FlashAttention-2; these budgets are roughly equivalent. Declare one hardware profile before search and fix the GPU model and backend across every method in a comparison.
 
@@ -73,7 +73,7 @@ Search results use the fixed evaluation described below. Proposal generation, re
 
 ## Hill-climbing evaluation
 
-The default reward is sequence-mean MLM negative log-likelihood on the fixed 8,192 contact chains. Every search checkpoint also reports P@L on those exact same chains. MLM remains the candidate-selection signal; P@L adds no non-regression gate. The older P@L task filename is a compatibility alias for this same MLM-selected paired evaluation.
+The default reward is sequence-mean MLM negative log-likelihood on the fixed 8,192 contact chains. Every search checkpoint also reports P@L on those exact same chains. MLM remains the candidate-selection signal; P@L adds no non-regression gate.
 
 | Measurement | Search setting |
 | --- | --- |
@@ -83,7 +83,7 @@ The default reward is sequence-mean MLM negative log-likelihood on the fixed 8,1
 | Scored checkpoint | Final checkpoint at the round's training-time limit |
 | Required receipt | `profile=search`, complete MLM and P@L populations |
 
-Mask preparation is outside evaluation timing. Search baseline runs must be measured again with the updated evaluator; old 12,288-protein scores cannot serve as the new baseline. [EVALUATION.md](EVALUATION.md) specifies frozen IDs, deterministic crops, mask caches and contact-probe details. Each repeat training run still consumes one search round.
+Mask preparation is outside evaluation timing. Measure search baselines with the same evaluator and hardware allocation as their candidates. [EVALUATION.md](EVALUATION.md) specifies frozen IDs, deterministic crops, mask caches and contact-probe details. Each repeat training run still consumes one search round.
 
 ## Final evaluation
 
